@@ -1,0 +1,89 @@
+plugins {
+  id 'java'
+  id 'org.springframework.boot' version '3.2.5'
+  id 'io.spring.dependency-management' version '1.1.5'
+  id 'com.github.node-gradle.node' version '7.1.0'
+  id 'com.diffplug.spotless' version '7.1.0'
+}
+
+import com.github.gradle.node.npm.task.NpmTask
+
+group = 'com.mahjong'
+version = '0.0.1-SNAPSHOT'
+
+java {
+  sourceCompatibility = '17'
+}
+
+repositories {
+  mavenCentral()
+}
+
+configurations.all {
+  exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+}
+
+dependencies {
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+  implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+  implementation 'org.springframework.boot:spring-boot-starter-validation'
+  runtimeOnly 'com.h2database:h2'
+  compileOnly 'org.projectlombok:lombok'
+  annotationProcessor 'org.projectlombok:lombok'
+}
+
+def frontendDir = "${projectDir}/frontend"
+
+node {
+  version = '18.20.4'
+  download = true
+  workDir = file("${projectDir}/.gradle/nodejs")
+  npmWorkDir = file("${projectDir}/.gradle/npm")
+  nodeProjectDir = file(frontendDir)
+}
+
+tasks.register('npmBuild', NpmTask) {
+  dependsOn npmInstall
+  workingDir = file(frontendDir)
+  args = ['run', 'build']
+  inputs.dir("${frontendDir}/src")
+  inputs.file("${frontendDir}/index.html")
+  inputs.file("${frontendDir}/vite.config.ts")
+  outputs.dir("${frontendDir}/dist")
+}
+
+tasks.register('copyFrontend', Copy) {
+  dependsOn npmBuild
+  from "${frontendDir}/dist"
+  into "${projectDir}/src/main/resources/static"
+}
+
+processResources.dependsOn copyFrontend
+
+spotless {
+  encoding 'UTF-8'
+
+  java {
+    target fileTree('src') {
+      include '**/*.java'
+    }
+
+    toggleOffOn()
+    removeUnusedImports()
+    googleJavaFormat('1.15.0')
+    indentWithSpaces(2)
+    trimTrailingWhitespace()
+    endWithNewline()
+  }
+
+  groovyGradle {
+    target 'build.gradle', 'settings.gradle'
+
+    toggleOffOn()
+    trimTrailingWhitespace()
+    greclipse()
+    indentWithSpaces(2)
+    endWithNewline()
+  }
+}
