@@ -20,7 +20,7 @@ export default function HomePage() {
         <div className="feature-card">
           <div className="feature-icon">🀄</div>
           <h3>Multiple Modes</h3>
-          <p>东北麻将, 立直麻将, 国标麻将 — play your favorite variant.</p>
+          <p>国标麻将, 抗日麻将, 立直麻将 — play your favorite variant.</p>
         </div>
         <div className="feature-card">
           <div className="feature-icon">📊</div>
