@@ -1,9 +1,9 @@
 spring:
   datasource:
-    url: jdbc:h2:file:./data/mahjong-omakase
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: ${DB_URL:jdbc:h2:file:./data/mahjong-omakase}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: update
@@ -14,9 +14,8 @@ spring:
       enabled: false
 
 server:
-  port: 8080
-  address: 0.0.0.0
+  port: ${PORT:8080}
 
 app:
   cors:
-    allowed-origins: http://localhost:5173
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}

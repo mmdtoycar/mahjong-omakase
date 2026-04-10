@@ -11,7 +11,7 @@ export default function HomePage() {
           Track scores, compete with friends, and view stats across multiple mahjong variants.
         </p>
         <div className="landing-actions">
-          <Link to="/dashboard" className="btn btn-accent btn-large">Start Playing</Link>
+          <Link to="/game" className="btn btn-accent btn-large">Start Playing</Link>
           <Link to="/signup" className="btn btn-outline btn-large">Sign Up</Link>
         </div>
       </div>
