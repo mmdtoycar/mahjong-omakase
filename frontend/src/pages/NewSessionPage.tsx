@@ -80,8 +80,8 @@ export default function NewSessionPage() {
           <div className="player-chips" style={{ marginBottom: 10 }}>
             {selectedPlayers.map(p => (
               <span className="chip selected" key={p.id}>
-                {p.firstName} {p.lastName}
-                <span className="chip-username">@{p.userName}</span>
+                {p.userName}
+                <span className="chip-username">{p.firstName[0]}.{p.lastName}</span>
                 <span className="remove" onClick={() => removePlayer(p.id)}>&times;</span>
               </span>
             ))}
@@ -108,8 +108,8 @@ export default function NewSessionPage() {
                     className="dropdown-item"
                     onClick={() => addPlayer(p.id)}
                   >
-                    <span>{p.firstName} {p.lastName}</span>
-                    <span className="dropdown-username">@{p.userName}</span>
+                    <span>{p.userName}</span>
+                    <span className="dropdown-username">{p.firstName[0]}.{p.lastName}</span>
                   </div>
                 ))
               )}

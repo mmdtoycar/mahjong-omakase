@@ -5,6 +5,8 @@ import NewSessionPage from './pages/NewSessionPage'
 import SessionPage from './pages/SessionPage'
 import StatsPage from './pages/StatsPage'
 import SignUpPage from './pages/SignUpPage'
+import PlayerDetailPage from './pages/PlayerDetailPage'
+import AdminPage from './pages/AdminPage'
 
 function App() {
   return (
@@ -15,10 +17,10 @@ function App() {
           <h1>Mahjong Omakase</h1>
         </Link>
         <nav>
-          <Link to="/home">Home</Link>
-          <Link to="/game">Game</Link>
-          <Link to="/stats">Stats</Link>
-          <Link to="/signup" className="btn-signup">Sign Up</Link>
+          <Link to="/home">HOME</Link>
+          <Link to="/game">GAME</Link>
+          <Link to="/stats">STATS</Link>
+          <Link to="/signup" className="btn-signup">SIGN UP</Link>
         </nav>
       </header>
       <main>
@@ -30,6 +32,8 @@ function App() {
           <Route path="/new-session" element={<NewSessionPage />} />
           <Route path="/session/:id" element={<SessionPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/player/:id" element={<PlayerDetailPage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </main>
     </div>

@@ -73,3 +73,21 @@ export interface PlayerStats {
   avgScore: number;
   wins: number;
 }
+
+export interface PlayerGameEntry {
+  sessionId: number;
+  sessionName: string;
+  gameMode: GameModeKey;
+  gameModeDisplayName: string;
+  status: 'IN_PROGRESS' | 'COMPLETED';
+  createdAt: string;
+  totalScore: number;
+}
+
+export interface PlayerDetail {
+  playerId: number;
+  userName: string;
+  firstName: string;
+  lastName: string;
+  games: PlayerGameEntry[];
+}

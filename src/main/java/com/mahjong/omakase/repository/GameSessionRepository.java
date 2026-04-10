@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GameSessionRepository extends JpaRepository<GameSession, Long> {
   List<GameSession> findAllByOrderByCreatedAtDesc();
+
+  List<GameSession> findByPlayersPlayerIdOrderByCreatedAtDesc(Long playerId);
 }

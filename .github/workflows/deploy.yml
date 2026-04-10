@@ -69,6 +69,7 @@ jobs:
               --restart always \
               -p 8080:8080 \
               -v mahjong-data:/app/data \
+              -e ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
               "$IMAGE:latest"
 
             docker image prune -f
