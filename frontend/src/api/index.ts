@@ -1,4 +1,4 @@
-import { Player, GameSession, SessionDetail, PlayerStats, AddRoundData } from '../types';
+import { Player, GameSession, SessionDetail, PlayerStats, PlayerDetail, AddRoundData } from '../types';
 
 const API = '/api';
 
@@ -24,10 +24,6 @@ export async function checkUserName(userName: string): Promise<boolean> {
   const res = await fetch(`${API}/players/check-username?userName=${encodeURIComponent(userName)}`);
   const data = await res.json();
   return data.available;
-}
-
-export async function deletePlayer(id: number): Promise<void> {
-  await fetch(`${API}/players/${id}`, { method: 'DELETE' });
 }
 
 export async function fetchSessions(): Promise<GameSession[]> {
@@ -68,5 +64,10 @@ export async function completeSession(id: number): Promise<void> {
 export async function fetchStats(gameMode?: string): Promise<PlayerStats[]> {
   const params = gameMode ? `?gameMode=${gameMode}` : '';
   const res = await fetch(`${API}/stats${params}`);
+  return res.json();
+}
+
+export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {
+  const res = await fetch(`${API}/players/${id}/detail`);
   return res.json();
 }

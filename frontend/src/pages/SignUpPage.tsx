@@ -45,8 +45,7 @@ export default function SignUpPage() {
   return (
     <div className="signup-container">
       <div className="card signup-card">
-        <h2>Sign Up</h2>
-        <p className="signup-subtitle">Register to join mahjong games with your friends.</p>
+        <p className="signup-title">Register to join mahjong games with your friends!</p>
 
         {error && <div className="error-banner">{error}</div>}
 

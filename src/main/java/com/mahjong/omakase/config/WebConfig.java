@@ -17,6 +17,6 @@ public class WebConfig implements WebMvcConfigurer {
         .addMapping("/api/**")
         .allowedOrigins(allowedOrigins)
         .allowedMethods("GET", "POST", "PUT", "DELETE")
-        .allowedHeaders("Content-Type");
+        .allowedHeaders("Content-Type", "X-Admin-Password");
   }
 }

@@ -1,6 +1,7 @@
 package com.mahjong.omakase.controller;
 
 import com.mahjong.omakase.dto.CreatePlayerRequest;
+import com.mahjong.omakase.dto.PlayerDetailResponse;
 import com.mahjong.omakase.model.Player;
 import com.mahjong.omakase.service.GameService;
 import jakarta.validation.Valid;
@@ -32,6 +33,11 @@ public class PlayerController {
   @GetMapping("/check-username")
   public Map<String, Boolean> checkUserName(@RequestParam String userName) {
     return Map.of("available", !gameService.isUserNameTaken(userName));
+  }
+
+  @GetMapping("/{id}/detail")
+  public PlayerDetailResponse detail(@PathVariable Long id) {
+    return gameService.getPlayerDetail(id);
   }
 
   @DeleteMapping("/{id}")

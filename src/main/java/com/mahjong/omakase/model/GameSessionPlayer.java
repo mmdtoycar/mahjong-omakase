@@ -16,7 +16,7 @@ public class GameSessionPlayer {
   private GameSession gameSession;
 
   @ManyToOne(fetch = FetchType.EAGER)
-  @JoinColumn(name = "player_id", nullable = false)
+  @JoinColumn(name = "player_id")
   private Player player;
 
   public Long getId() {

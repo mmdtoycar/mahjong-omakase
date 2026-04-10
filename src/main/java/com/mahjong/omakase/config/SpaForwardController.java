@@ -6,7 +6,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 public class SpaForwardController {
   @RequestMapping(
-      value = {"/home", "/game", "/signup", "/new-session", "/session/**", "/stats"})
+      value = {
+        "/home",
+        "/game",
+        "/signup",
+        "/new-session",
+        "/session/**",
+        "/stats",
+        "/player/**",
+        "/admin"
+      })
   public String forward() {
     return "forward:/index.html";
   }

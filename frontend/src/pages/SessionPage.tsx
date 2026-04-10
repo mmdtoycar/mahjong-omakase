@@ -28,14 +28,13 @@ export default function SessionPage() {
   const isRiichi = session.gameMode === 'RIICHI'
   const isDongbei = session.gameMode === 'DONGBEI'
   const isGuobiao = session.gameMode === 'GUOBIAO'
-  const needsDealer = isRiichi || isDongbei
 
   const resetForm = () => {
     setWinnerId('')
     setScore('')
     setHan('')
     setFu('')
-    // Keep dealerId and bimenPlayerIds between rounds
+    setBimenPlayerIds([])
     setIsSelfDraw(false)
     setDealInPlayerId('')
   }
@@ -114,17 +113,17 @@ export default function SessionPage() {
         if (winnerIsDealer) {
           const each = r100(basic * 2) + honbaBonus
           const numOthers = session.playerCount - 1
-          return `Tsumo (親): ${numOthers} players each pay ${each}${honbaNum > 0 ? ` (incl. ${honbaNum}本場)` : ''} → total +${each * numOthers}`
+          return `自摸 (亲家): ${numOthers}人各付${each}${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''} → 共+${each * numOthers}`
         } else {
           const dealerPays = r100(basic * 2) + honbaBonus
           const otherPays = r100(basic) + honbaBonus
           const numNonDealers = session.playerCount - 2
           const total = dealerPays + numNonDealers * otherPays
-          return `Tsumo: dealer pays ${dealerPays}, ${numNonDealers > 0 ? `others pay ${otherPays} each, ` : ''}${honbaNum > 0 ? `(incl. ${honbaNum}本場) ` : ''}total +${total}`
+          return `自摸: 亲家付${dealerPays}, ${numNonDealers > 0 ? `其他各付${otherPays}, ` : ''}${honbaNum > 0 ? `(含${honbaNum}本场) ` : ''}共+${total}`
         }
       } else {
         const total = (winnerIsDealer ? r100(basic * 6) : r100(basic * 4)) + 300 * honbaNum
-        return `Ron${winnerIsDealer ? ' (親)' : ''}: ${total} pts${honbaNum > 0 ? ` (incl. ${honbaNum}本場)` : ''}`
+        return `荣和${winnerIsDealer ? ' (亲家)' : ''}: ${total}点${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}`
       }
     }
 
@@ -159,8 +158,8 @@ export default function SessionPage() {
         parts.push(`${p.userName}:${payment}${flags.length ? '(' + flags.join('+') + ')' : ''}`)
         total += payment
       }
-      if (parts.length === 0) return 'No one pays'
-      return `${parts.join(', ')} → total +${total}`
+      if (parts.length === 0) return null
+      return `${parts.join(', ')} → 共+${total}`
     }
 
     return null
@@ -198,7 +197,7 @@ export default function SessionPage() {
               <tr>
                 <th>Round</th>
                 {session.players.map(p => (
-                  <th key={p.id} style={{ textAlign: 'center' }}>{p.displayName}</th>
+                  <th key={p.id} style={{ textAlign: 'center' }}>{p.userName}</th>
                 ))}
                 {session.status === 'IN_PROGRESS' && <th></th>}
               </tr>
@@ -250,96 +249,114 @@ export default function SessionPage() {
           <div className="round-form">
             <h3 className="round-form-title">Add Round</h3>
 
-            {needsDealer && (
-              <>
+            {isRiichi ? (
               <div className="round-form-grid">
                 <div className="form-group">
-                  <label>Dealer ({isDongbei ? '庄家' : '親'})</label>
+                  <label>亲家</label>
                   <select value={dealerId} onChange={e => setDealerId(e.target.value)}>
-                    <option value="">-- Who is dealer? --</option>
+                    <option value=""></option>
                     {session.players.map(p => (
                       <option key={p.id} value={p.id}>{p.userName}</option>
                     ))}
                   </select>
                 </div>
-
-                {isRiichi && (
+                <div className="form-group">
+                  <label>本场</label>
+                  <input
+                    type="number"
+                    value={honba}
+                    onChange={e => setHonba(e.target.value)}
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>
+                    番
+                    <a href="https://linlexiao.com/maj/#/calculator" target="_blank" rel="noopener noreferrer" className="score-calc-link">Calculator</a>
+                  </label>
+                  <select value={han} onChange={e => setHan(e.target.value)}>
+                    <option value=""></option>
+                    {HAN_OPTIONS.map(h => (
+                      <option key={h} value={h}>{h}{h >= 5 ? (h >= 13 ? ' (役満)' : h >= 11 ? ' (三倍満)' : h >= 8 ? ' (倍満)' : h >= 6 ? ' (跳満)' : ' (満貫)') : ''}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>符数</label>
+                  <select value={fu} onChange={e => setFu(e.target.value)}>
+                    <option value=""></option>
+                    {FU_OPTIONS.map(f => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>赢家</label>
+                  <select value={winnerId} onChange={e => { setWinnerId(e.target.value); setDealInPlayerId('') }}>
+                    <option value=""></option>
+                    {session.players.map(p => (
+                      <option key={p.id} value={p.id}>{p.userName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <>
+              {isDongbei && (
+                <div className="round-form-grid">
                   <div className="form-group">
-                    <label>本場 (Honba)</label>
+                    <label>庄家</label>
+                    <select value={dealerId} onChange={e => setDealerId(e.target.value)}>
+                      <option value=""></option>
+                      {session.players.map(p => (
+                        <option key={p.id} value={p.id}>{p.userName}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+              <div className="round-form-grid">
+                <div className="form-group">
+                  <label>赢家</label>
+                  <select value={winnerId} onChange={e => { setWinnerId(e.target.value); setDealInPlayerId('') }}>
+                    <option value=""></option>
+                    {session.players.map(p => (
+                      <option key={p.id} value={p.id}>{p.userName}</option>
+                    ))}
+                  </select>
+                </div>
+                {isDongbei ? (
+                  <div className="form-group">
+                    <label>番</label>
                     <input
                       type="number"
-                      value={honba}
-                      onChange={e => setHonba(e.target.value)}
-                      min="0"
-                      placeholder="0"
+                      value={han}
+                      onChange={e => setHan(e.target.value)}
+                      placeholder="输入番"
+                      min="1"
+                    />
+                  </div>
+                ) : (
+                  <div className="form-group">
+                    <label>
+                      分数
+                      {isGuobiao && (
+                        <a href="https://tool.xdean.cn/tool/guobiao" target="_blank" rel="noopener noreferrer" className="score-calc-link">Score Calculator</a>
+                      )}
+                    </label>
+                    <input
+                      type="number"
+                      value={score}
+                      onChange={e => setScore(e.target.value)}
+                      placeholder="输入分数"
+                      min="1"
                     />
                   </div>
                 )}
               </div>
               </>
             )}
-
-            <div className="round-form-grid">
-              <div className="form-group">
-                <label>Winner</label>
-                <select value={winnerId} onChange={e => { setWinnerId(e.target.value); setDealInPlayerId('') }}>
-                  <option value="">-- Select Winner --</option>
-                  {session.players.map(p => (
-                    <option key={p.id} value={p.id}>{p.userName}</option>
-                  ))}
-                </select>
-              </div>
-
-              {isRiichi ? (
-                <>
-                  <div className="form-group">
-                    <label>番 (Han)</label>
-                    <select value={han} onChange={e => setHan(e.target.value)}>
-                      <option value="">-- Han --</option>
-                      {HAN_OPTIONS.map(h => (
-                        <option key={h} value={h}>{h}{h >= 5 ? (h >= 13 ? ' (役満)' : h >= 11 ? ' (三倍満)' : h >= 8 ? ' (倍満)' : h >= 6 ? ' (跳満)' : ' (満貫)') : ''}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>符 (Fu)</label>
-                    <select value={fu} onChange={e => setFu(e.target.value)}>
-                      <option value="">-- Fu --</option>
-                      {FU_OPTIONS.map(f => (
-                        <option key={f} value={f}>{f}</option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              ) : isDongbei ? (
-                <div className="form-group">
-                  <label>番 (Fan)</label>
-                  <input
-                    type="number"
-                    value={han}
-                    onChange={e => setHan(e.target.value)}
-                    placeholder="Enter fan"
-                    min="1"
-                  />
-                </div>
-              ) : (
-                <div className="form-group">
-                  <label>
-                    Score
-                    {isGuobiao && (
-                      <a href="https://tool.xdean.cn/tool/guobiao" target="_blank" rel="noopener noreferrer" className="score-calc-link">Score Calculator</a>
-                    )}
-                  </label>
-                  <input
-                    type="number"
-                    value={score}
-                    onChange={e => setScore(e.target.value)}
-                    placeholder="Enter score"
-                    min="1"
-                  />
-                </div>
-              )}
-            </div>
 
             <div className="form-group">
               <label className="zimo-toggle">
@@ -348,15 +365,15 @@ export default function SessionPage() {
                   checked={isSelfDraw}
                   onChange={e => { setIsSelfDraw(e.target.checked); setDealInPlayerId('') }}
                 />
-                <span>自摸 (Self-draw — all others pay)</span>
+                <span>自摸</span>
               </label>
             </div>
 
             {!isSelfDraw && winnerId && (
               <div className="form-group">
-                <label>Deal-in Player (点炮)</label>
+                <label>点炮</label>
                 <select value={dealInPlayerId} onChange={e => setDealInPlayerId(e.target.value)}>
-                  <option value="">-- Who dealt in? --</option>
+                  <option value=""></option>
                   {otherPlayers.map(p => (
                     <option key={p.id} value={p.id}>{p.userName}</option>
                   ))}
@@ -366,7 +383,7 @@ export default function SessionPage() {
 
             {isDongbei && winnerId && (
               <div className="form-group">
-                <label>闭门 Players (select all that apply)</label>
+                <label>闭门</label>
                 <div className="player-chips">
                   {otherPlayers.map(p => (
                     <span
@@ -415,7 +432,7 @@ export default function SessionPage() {
                     <td className={i < 3 ? `rank-${i + 1}` : ''}>
                       #{i + 1}
                     </td>
-                    <td>{p.displayName}</td>
+                    <td>{p.userName}</td>
                     <td style={{
                       textAlign: 'right',
                       fontVariantNumeric: 'tabular-nums',

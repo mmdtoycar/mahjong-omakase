@@ -8,6 +8,7 @@ RUN chmod +x gradlew && ./gradlew build -x test -x spotlessCheck -x spotlessAppl
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
+RUN mkdir -p /app/data
 COPY --from=build /app/build/libs/mahjong-omakase-*-SNAPSHOT.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-Xmx512m", "-Xms256m", "-jar", "app.jar"]

@@ -14,7 +14,7 @@ public class RoundScore {
   private Round round;
 
   @ManyToOne(fetch = FetchType.EAGER)
-  @JoinColumn(name = "player_id", nullable = false)
+  @JoinColumn(name = "player_id")
   private Player player;
 
   @Column(nullable = false)

@@ -22,6 +22,7 @@ public class GameService {
   private final GameSessionRepository sessionRepo;
   private final RoundRepository roundRepo;
   private final RoundScoreRepository roundScoreRepo;
+  private final GameSessionPlayerRepository gameSessionPlayerRepo;
   private final RiichiScoreCalculator riichiCalculator;
   private final DongbeiScoreCalculator dongbeiCalculator;
   private final GuobiaoScoreCalculator guobiaoCalculator;
@@ -31,6 +32,7 @@ public class GameService {
       GameSessionRepository sessionRepo,
       RoundRepository roundRepo,
       RoundScoreRepository roundScoreRepo,
+      GameSessionPlayerRepository gameSessionPlayerRepo,
       RiichiScoreCalculator riichiCalculator,
       DongbeiScoreCalculator dongbeiCalculator,
       GuobiaoScoreCalculator guobiaoCalculator) {
@@ -38,6 +40,7 @@ public class GameService {
     this.sessionRepo = sessionRepo;
     this.roundRepo = roundRepo;
     this.roundScoreRepo = roundScoreRepo;
+    this.gameSessionPlayerRepo = gameSessionPlayerRepo;
     this.riichiCalculator = riichiCalculator;
     this.dongbeiCalculator = dongbeiCalculator;
     this.guobiaoCalculator = guobiaoCalculator;
@@ -68,6 +71,21 @@ public class GameService {
 
   public void deletePlayer(Long id) {
     log.info("Deleting player id={}", id);
+
+    // Prevent deletion if player is in any active game
+    List<GameSession> activeSessions =
+        sessionRepo.findByPlayersPlayerIdOrderByCreatedAtDesc(id).stream()
+            .filter(s -> s.getStatus() == SessionStatus.IN_PROGRESS)
+            .toList();
+    if (!activeSessions.isEmpty()) {
+      log.warn(
+          "Cannot delete player id={}, in {} active game(s)", id, activeSessions.size());
+      throw new IllegalStateException(
+          "Cannot delete player who is in " + activeSessions.size() + " active game(s)");
+    }
+
+    roundScoreRepo.nullifyPlayerScores(id);
+    gameSessionPlayerRepo.deleteByPlayerId(id);
     playerRepo.deleteById(id);
   }
 
@@ -123,6 +141,7 @@ public class GameService {
 
     resp.setPlayers(
         session.getPlayers().stream()
+            .filter(gsp -> gsp.getPlayer() != null)
             .map(
                 gsp ->
                     new SessionDetailResponse.PlayerInfo(
@@ -138,6 +157,7 @@ public class GameService {
                 round -> {
                   Map<Long, Integer> scores =
                       round.getScores().stream()
+                          .filter(rs -> rs.getPlayer() != null)
                           .collect(
                               Collectors.toMap(rs -> rs.getPlayer().getId(), RoundScore::getScore));
                   return new SessionDetailResponse.RoundInfo(round.getRoundNumber(), scores);
@@ -147,7 +167,9 @@ public class GameService {
     Map<Long, Integer> totals = new HashMap<>();
     for (var round : session.getRounds()) {
       for (var rs : round.getScores()) {
-        totals.merge(rs.getPlayer().getId(), rs.getScore(), Integer::sum);
+        if (rs.getPlayer() != null) {
+          totals.merge(rs.getPlayer().getId(), rs.getScore(), Integer::sum);
+        }
       }
     }
     resp.setTotalScores(totals);
@@ -167,7 +189,10 @@ public class GameService {
     }
 
     List<Long> sessionPlayerIds =
-        session.getPlayers().stream().map(gsp -> gsp.getPlayer().getId()).toList();
+        session.getPlayers().stream()
+            .filter(gsp -> gsp.getPlayer() != null)
+            .map(gsp -> gsp.getPlayer().getId())
+            .toList();
 
     if (!sessionPlayerIds.contains(request.getWinnerId())) {
       throw new IllegalArgumentException("Winner is not in this session");
@@ -299,7 +324,7 @@ public class GameService {
             ? roundScoreRepo.getTotalScoresByGameMode(gameMode)
             : roundScoreRepo.getTotalScoresAllTime();
     for (Object[] row : scoreRows) {
-      totalScores.put((Long) row[0], ((Number) row[1]).intValue());
+      if (row[0] != null) totalScores.put((Long) row[0], ((Number) row[1]).intValue());
     }
 
     Map<Long, Integer> gamesPlayed = new HashMap<>();
@@ -308,7 +333,7 @@ public class GameService {
             ? roundScoreRepo.getGamesPlayedPerPlayerByGameMode(gameMode)
             : roundScoreRepo.getGamesPlayedPerPlayer();
     for (Object[] row : gamesRows) {
-      gamesPlayed.put((Long) row[0], ((Number) row[1]).intValue());
+      if (row[0] != null) gamesPlayed.put((Long) row[0], ((Number) row[1]).intValue());
     }
 
     Map<Long, Integer> wins = new HashMap<>();
@@ -322,10 +347,11 @@ public class GameService {
       if (!sessionScores.isEmpty()) {
         long winnerId =
             sessionScores.stream()
+                .filter(r -> r[0] != null)
                 .max(Comparator.comparingInt(r -> ((Number) r[1]).intValue()))
                 .map(r -> (Long) r[0])
                 .orElse(-1L);
-        wins.merge(winnerId, 1, Integer::sum);
+        if (winnerId != -1L) wins.merge(winnerId, 1, Integer::sum);
       }
     }
 
@@ -345,5 +371,46 @@ public class GameService {
               return stat;
             })
         .collect(Collectors.toList());
+  }
+
+  public PlayerDetailResponse getPlayerDetail(Long playerId) {
+    Player player =
+        playerRepo
+            .findById(playerId)
+            .orElseThrow(() -> new NoSuchElementException("Player not found"));
+
+    List<GameSession> sessions = sessionRepo.findByPlayersPlayerIdOrderByCreatedAtDesc(playerId);
+
+    List<PlayerDetailResponse.GameEntry> games =
+        sessions.stream()
+            .map(
+                session -> {
+                  List<Object[]> scores = roundScoreRepo.getTotalScoresBySession(session.getId());
+                  int totalScore =
+                      scores.stream()
+                          .filter(r -> r[0] != null && ((Long) r[0]).equals(playerId))
+                          .map(r -> ((Number) r[1]).intValue())
+                          .findFirst()
+                          .orElse(0);
+
+                  PlayerDetailResponse.GameEntry entry = new PlayerDetailResponse.GameEntry();
+                  entry.setSessionId(session.getId());
+                  entry.setSessionName(session.getName());
+                  entry.setGameMode(session.getGameMode().name());
+                  entry.setGameModeDisplayName(session.getGameMode().getDisplayName());
+                  entry.setStatus(session.getStatus().name());
+                  entry.setCreatedAt(session.getCreatedAt());
+                  entry.setTotalScore(totalScore);
+                  return entry;
+                })
+            .collect(Collectors.toList());
+
+    PlayerDetailResponse resp = new PlayerDetailResponse();
+    resp.setPlayerId(player.getId());
+    resp.setUserName(player.getUserName());
+    resp.setFirstName(player.getFirstName());
+    resp.setLastName(player.getLastName());
+    resp.setGames(games);
+    return resp;
   }
 }

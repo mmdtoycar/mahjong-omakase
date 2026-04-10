@@ -372,20 +372,6 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   border-top: 2px solid var(--primary);
 }
 
-.score-input {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  margin-top: 16px;
-}
-
-.score-input .form-group {
-  flex: 1;
-  min-width: 120px;
-  margin-bottom: 0;
-}
-
 .round-form {
   margin-top: 20px;
   padding-top: 20px;
@@ -417,6 +403,39 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   width: 18px;
   height: 18px;
   accent-color: var(--primary);
+}
+
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.tab-btn {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-active {
+  background: var(--primary);
+  color: white;
+}
+
+.tab-active:hover {
+  color: white;
 }
 
 .score-preview {
@@ -481,15 +500,6 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   gap: 12px;
 }
 
-.inline-form {
-  display: flex;
-  gap: 8px;
-}
-
-.inline-form input {
-  flex: 1;
-}
-
 .rank-1 { color: #d4a017; font-weight: 700; }
 .rank-2 { color: #95a5a6; font-weight: 600; }
 .rank-3 { color: #cd7f32; font-weight: 600; }
@@ -517,10 +527,13 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   max-width: 480px;
 }
 
-.signup-subtitle {
-  color: var(--text-light);
-  font-size: 0.95rem;
-  margin-bottom: 24px;
+.signup-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-align: center;
+  margin-bottom: 28px;
+  line-height: 1.5;
 }
 
 .signup-btn {
@@ -598,41 +611,6 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   font-size: 0.9rem;
   font-weight: 600;
   margin-bottom: 10px;
-}
-
-.mode-selector {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.mode-btn {
-  padding: 10px 20px;
-  border: 2px solid var(--border);
-  border-radius: 8px;
-  background: white;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: var(--text);
-}
-
-.mode-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.mode-btn-active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.mode-btn-active:hover {
-  background: var(--primary-light);
-  border-color: var(--primary-light);
-  color: white;
 }
 
 .player-search-dropdown {
@@ -726,6 +704,17 @@ tr:hover td { background: rgba(0,0,0,0.02); }
     gap: 10px;
   }
 
+  .tab-bar {
+    align-self: stretch;
+  }
+
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
   .form-row {
     flex-direction: column;
     gap: 0;
@@ -735,11 +724,6 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   th, td {
     padding: 8px 6px;
     font-size: 0.85rem;
-  }
-
-  .score-input {
-    flex-direction: column;
-    gap: 8px;
   }
 
   .round-form-grid {
@@ -758,15 +742,6 @@ tr:hover td { background: rgba(0,0,0,0.02); }
 
   .dropdown-list {
     position: relative;
-  }
-
-  .score-input .form-group {
-    min-width: 100%;
-  }
-
-  .score-input .btn {
-    width: 100%;
-    justify-content: center;
   }
 
   /* Stats grid: 2 columns on phone */
@@ -819,11 +794,6 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   .btn-signup {
     padding: 4px 10px;
     font-size: 0.8rem;
-  }
-
-  /* Leaderboard: hide less important columns */
-  .stats-table-hide-mobile {
-    display: none;
   }
 
   /* Landing page mobile */
