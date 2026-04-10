@@ -70,6 +70,7 @@ jobs:
               -p 8080:8080 \
               -v mahjong-data:/app/data \
               -e ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
+              -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
               "$IMAGE:latest"
 
             docker image prune -f
