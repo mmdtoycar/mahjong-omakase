@@ -1,0 +1,23 @@
+# Build output
+build/
+data/
+
+# Gradle
+.gradle/
+
+# Generated static files (built from frontend/)
+src/main/resources/static/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+*.iml
+
+# Claude
+.claude
+
+# OS
+.DS_Store
