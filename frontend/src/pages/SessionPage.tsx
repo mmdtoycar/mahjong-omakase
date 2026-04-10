@@ -432,8 +432,8 @@ export default function SessionPage() {
       )}
 
       <div style={{ marginTop: 16 }}>
-        <button className="btn btn-outline btn-small" onClick={() => navigate('/dashboard')}>
-          Back to Dashboard
+        <button className="btn btn-outline btn-small" onClick={() => navigate('/game')}>
+          Back to Game
         </button>
       </div>
     </>

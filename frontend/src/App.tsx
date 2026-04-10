@@ -16,7 +16,7 @@ function App() {
         </Link>
         <nav>
           <Link to="/home">Home</Link>
-          <Link to="/dashboard">Dashboard</Link>
+          <Link to="/game">Game</Link>
           <Link to="/stats">Stats</Link>
           <Link to="/signup" className="btn-signup">Sign Up</Link>
         </nav>
@@ -25,7 +25,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="/home" element={<HomePage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/game" element={<DashboardPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/new-session" element={<NewSessionPage />} />
           <Route path="/session/:id" element={<SessionPage />} />
