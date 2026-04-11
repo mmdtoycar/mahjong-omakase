@@ -8,8 +8,8 @@ public class CreatePlayerRequest {
   @NotBlank(message = "Username is required")
   @Size(min = 2, max = 30, message = "Username must be 2-30 characters")
   @Pattern(
-      regexp = "^[a-zA-Z0-9_]+$",
-      message = "Username can only contain letters, numbers, and underscores")
+      regexp = "^[a-zA-Z0-9_\\u4e00-\\u9fa5]+$",
+      message = "Username can only contain letters, numbers, underscores, and Chinese characters")
   private String userName;
 
   @NotBlank(message = "First name is required")
