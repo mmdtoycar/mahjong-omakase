@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, HAN_OPTIONS, FU_OPTIONS } from '../types'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const [session, setSession] = useState<SessionDetail | null>(null)
   const [winnerId, setWinnerId] = useState<string>('')
   const [score, setScore] = useState('')
@@ -540,12 +539,6 @@ export default function SessionPage() {
           </div>
         </div>
       )}
-
-      <div style={{ marginTop: 16 }}>
-        <button className="btn btn-outline btn-small" onClick={() => navigate('/game')}>
-          返回
-        </button>
-      </div>
     </>
   )
 }
