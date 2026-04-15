@@ -8,6 +8,19 @@ type Tab = 'games' | 'players'
 const seasons = getAvailableSeasons()
 const currentSeason = getCurrentSeason()
 
+const statFontSize = (text: string) => {
+  const len = text.length
+  const mobile = window.innerWidth <= 640
+  if (mobile) {
+    if (len <= 6) return '1.4rem'
+    if (len <= 10) return '1.1rem'
+    return '0.9rem'
+  }
+  if (len <= 8) return '2rem'
+  if (len <= 12) return '1.5rem'
+  return '1.2rem'
+}
+
 export default function StatsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -78,7 +91,7 @@ export default function StatsPage() {
               <select
                 value={seasonKey}
                 onChange={e => setSeasonKey(e.target.value)}
-                style={{ width: 'auto', minWidth: 160 }}
+                className="select-inline"
               >
                 {seasons.map(s => (
                   <option key={`${s.year}-${s.quarter}`} value={`${s.year}-${s.quarter}`}>{s.label}</option>
@@ -94,7 +107,7 @@ export default function StatsPage() {
               <select
                 value={gameMode}
                 onChange={e => setGameMode(e.target.value as GameModeKey)}
-                style={{ width: 'auto', minWidth: 120 }}
+                className="select-inline"
               >
                 {GAME_MODES.map(m => (
                   <option key={m.key} value={m.key}>{m.label}</option>
@@ -113,11 +126,11 @@ export default function StatsPage() {
               <div className="stat-label">游戏场次</div>
             </div>
             <div className="stat-card">
-              <div className="stat-value">{topScorer?.userName || '-'}</div>
+              <div className="stat-value" style={{ fontSize: statFontSize(topScorer?.userName || '-') }}>{topScorer?.userName || '-'}</div>
               <div className="stat-label">🏆 赛季冠军</div>
             </div>
             <div className="stat-card">
-              <div className="stat-value">{topWinner?.userName || '-'}</div>
+              <div className="stat-value" style={{ fontSize: statFontSize(topWinner?.userName || '-') }}>{topWinner?.userName || '-'}</div>
               <div className="stat-label">👑 最多胜场</div>
             </div>
           </div>
@@ -125,7 +138,8 @@ export default function StatsPage() {
           {activeStats.length === 0 ? (
             <div className="card">
               <div className="empty-state">
-                <p>暂无{selectedSeason?.label || ''} {GAME_MODES.find(m => m.key === gameMode)?.label}的统计数据。先来一局吧！</p>
+                <p>暂无{selectedSeason?.label || ''} {GAME_MODES.find(m => m.key === gameMode)?.label}的统计数据。</p>
+                <p>先来一局吧！</p>
               </div>
             </div>
           ) : (

@@ -56,6 +56,7 @@ export default function SignUpPage() {
               value={userName}
               onChange={e => setUserName(e.target.value)}
               placeholder="选择一个唯一的用户名"
+              maxLength={16}
               autoFocus
             />
             {userName.trim() && (

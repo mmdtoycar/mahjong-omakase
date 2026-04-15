@@ -52,7 +52,7 @@ export default function PlayerDetailPage() {
                     onClick={() => navigate(`/session/${g.sessionId}`)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <td>{g.sessionName || `Game #${g.sessionId}`}</td>
+                    <td>{g.sessionName || `游戏 #${g.sessionId}`}</td>
                     <td>{g.gameModeDisplayName}</td>
                     <td>{new Date(g.createdAt).toLocaleDateString()}</td>
                     <td>
