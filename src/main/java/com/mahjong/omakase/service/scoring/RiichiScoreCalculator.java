@@ -47,6 +47,8 @@ public class RiichiScoreCalculator implements ScoreCalculator {
     Long dealerId =
         params.get("dealerId") != null ? ((Number) params.get("dealerId")).longValue() : null;
     int honba = params.get("honba") != null ? ((Number) params.get("honba")).intValue() : 0;
+    int kyoutaku =
+        params.get("kyoutaku") != null ? ((Number) params.get("kyoutaku")).intValue() : 0;
     boolean winnerIsDealer = dealerId != null && dealerId.equals(winnerId);
     boolean selfDraw = dealInPlayerId == null;
 
@@ -85,13 +87,13 @@ public class RiichiScoreCalculator implements ScoreCalculator {
           }
         }
       }
-      result.put(winnerId, winnerGets);
+      result.put(winnerId, winnerGets + kyoutaku);
     } else {
       // Ron: honba bonus = 300 × honba (all from the discarder)
       int total =
           (winnerIsDealer ? roundUp100(basicPoints * 6) : roundUp100(basicPoints * 4))
               + 300 * honba;
-      result.put(winnerId, total);
+      result.put(winnerId, total + kyoutaku);
       result.put(dealInPlayerId, -total);
     }
 

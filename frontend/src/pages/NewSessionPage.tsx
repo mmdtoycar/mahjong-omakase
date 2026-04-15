@@ -58,15 +58,15 @@ export default function NewSessionPage() {
 
   return (
     <div className="card">
-      <h2>New Game Session</h2>
+      <h2>新建游戏</h2>
 
       <div className="form-group">
-        <label>Game Mode</label>
+        <label>游戏模式</label>
         <select
           value={gameMode}
           onChange={e => setGameMode(e.target.value as GameModeKey)}
         >
-          <option value="">-- Select Game Mode --</option>
+          <option value="">-- 选择游戏模式 --</option>
           {GAME_MODES.map(m => (
             <option key={m.key} value={m.key}>{m.label}</option>
           ))}
@@ -74,7 +74,7 @@ export default function NewSessionPage() {
       </div>
 
       <div className="form-group">
-        <label>Players ({selectedIds.length} selected)</label>
+        <label>玩家 (已选{selectedIds.length}人)</label>
 
         {selectedPlayers.length > 0 && (
           <div className="player-chips" style={{ marginBottom: 10 }}>
@@ -93,13 +93,13 @@ export default function NewSessionPage() {
             value={search}
             onChange={e => { setSearch(e.target.value); setDropdownOpen(true) }}
             onFocus={() => { if (search.trim()) setDropdownOpen(true) }}
-            placeholder="Search players by name or username..."
+            placeholder="搜索玩家..."
           />
           {dropdownOpen && (
             <div className="dropdown-list">
               {filteredPlayers.length === 0 ? (
                 <div className="dropdown-empty">
-                  {availablePlayers.length === 0 ? 'All players selected' : 'No match found'}
+                  {availablePlayers.length === 0 ? '已选择全部玩家' : '未找到匹配玩家'}
                 </div>
               ) : (
                 filteredPlayers.map(p => (
@@ -119,21 +119,21 @@ export default function NewSessionPage() {
 
         {players.length === 0 && (
           <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: 8 }}>
-            No players registered. <Link to="/signup">Sign up players</Link> first.
+            暂无玩家。请先<Link to="/signup">注册</Link>。
           </p>
         )}
       </div>
 
       <div style={{ marginTop: 24 }}>
         {selectedIds.length > 0 && selectedIds.length < 3 && (
-          <p className="warning-text">At least 3 players are needed to start a game.</p>
+          <p className="warning-text">至少需要3名玩家才能开始游戏。</p>
         )}
         <button
           className="btn btn-accent"
           onClick={handleStart}
           disabled={!canStart}
         >
-          Start Game ({selectedIds.length} players)
+          开始游戏 ({selectedIds.length}人)
         </button>
       </div>
     </div>

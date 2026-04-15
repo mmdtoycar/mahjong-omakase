@@ -3,11 +3,10 @@ package com.mahjong.omakase.service;
 import com.mahjong.omakase.dto.*;
 import com.mahjong.omakase.model.*;
 import com.mahjong.omakase.repository.*;
-import com.mahjong.omakase.service.scoring.DongbeiScoreCalculator;
-import com.mahjong.omakase.service.scoring.GuobiaoScoreCalculator;
-import com.mahjong.omakase.service.scoring.RiichiScoreCalculator;
-import com.mahjong.omakase.service.scoring.ScoreCalculator;
+import com.mahjong.omakase.service.handler.GameModeHandler;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,9 +22,7 @@ public class GameService {
   private final RoundRepository roundRepo;
   private final RoundScoreRepository roundScoreRepo;
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
-  private final RiichiScoreCalculator riichiCalculator;
-  private final DongbeiScoreCalculator dongbeiCalculator;
-  private final GuobiaoScoreCalculator guobiaoCalculator;
+  private final Map<GameMode, GameModeHandler> handlers;
 
   public GameService(
       PlayerRepository playerRepo,
@@ -33,17 +30,15 @@ public class GameService {
       RoundRepository roundRepo,
       RoundScoreRepository roundScoreRepo,
       GameSessionPlayerRepository gameSessionPlayerRepo,
-      RiichiScoreCalculator riichiCalculator,
-      DongbeiScoreCalculator dongbeiCalculator,
-      GuobiaoScoreCalculator guobiaoCalculator) {
+      List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
     this.roundRepo = roundRepo;
     this.roundScoreRepo = roundScoreRepo;
     this.gameSessionPlayerRepo = gameSessionPlayerRepo;
-    this.riichiCalculator = riichiCalculator;
-    this.dongbeiCalculator = dongbeiCalculator;
-    this.guobiaoCalculator = guobiaoCalculator;
+    this.handlers =
+        handlerList.stream()
+            .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
   }
 
   public List<Player> getAllPlayers() {
@@ -72,14 +67,12 @@ public class GameService {
   public void deletePlayer(Long id) {
     log.info("Deleting player id={}", id);
 
-    // Prevent deletion if player is in any active game
     List<GameSession> activeSessions =
         sessionRepo.findByPlayersPlayerIdOrderByCreatedAtDesc(id).stream()
             .filter(s -> s.getStatus() == SessionStatus.IN_PROGRESS)
             .toList();
     if (!activeSessions.isEmpty()) {
-      log.warn(
-          "Cannot delete player id={}, in {} active game(s)", id, activeSessions.size());
+      log.warn("Cannot delete player id={}, in {} active game(s)", id, activeSessions.size());
       throw new IllegalStateException(
           "Cannot delete player who is in " + activeSessions.size() + " active game(s)");
     }
@@ -194,92 +187,34 @@ public class GameService {
             .map(gsp -> gsp.getPlayer().getId())
             .toList();
 
-    if (!sessionPlayerIds.contains(request.getWinnerId())) {
-      throw new IllegalArgumentException("Winner is not in this session");
+    // Common validation for WIN rounds
+    if (!request.isDrawnGame()) {
+      if (request.getWinnerId() == null) {
+        throw new IllegalArgumentException("Winner is required");
+      }
+      if (!sessionPlayerIds.contains(request.getWinnerId())) {
+        throw new IllegalArgumentException("Winner is not in this session");
+      }
+      if (!request.isSelfDraw() && !sessionPlayerIds.contains(request.getDealInPlayerId())) {
+        throw new IllegalArgumentException("Deal-in player is not in this session");
+      }
+      if (!request.isSelfDraw() && request.getWinnerId().equals(request.getDealInPlayerId())) {
+        throw new IllegalArgumentException("Winner and deal-in player cannot be the same");
+      }
     }
-    if (!request.isSelfDraw() && !sessionPlayerIds.contains(request.getDealInPlayerId())) {
-      throw new IllegalArgumentException("Deal-in player is not in this session");
-    }
-    if (!request.isSelfDraw() && request.getWinnerId().equals(request.getDealInPlayerId())) {
-      throw new IllegalArgumentException("Winner and deal-in player cannot be the same");
-    }
+
+    GameModeHandler handler = getHandler(session.getGameMode());
+    Map<Long, Integer> computedScores = handler.calculateRoundScores(request, sessionPlayerIds);
 
     int nextRoundNumber = roundRepo.countByGameSessionId(sessionId) + 1;
     log.info(
-        "Adding round {} to session id={}, winner={}, selfDraw={}, mode={}",
+        "Adding round {} to session id={}, type={}, mode={}",
         nextRoundNumber,
         sessionId,
-        request.getWinnerId(),
-        request.isSelfDraw(),
+        request.getParsedRoundType(),
         session.getGameMode());
 
-    Round round = new Round();
-    round.setGameSession(session);
-    round.setRoundNumber(nextRoundNumber);
-    round = roundRepo.save(round);
-
-    // Build mode-specific params and choose calculator
-    Map<String, Object> params = new HashMap<>();
-    ScoreCalculator calculator;
-
-    if (session.getGameMode() == GameMode.RIICHI) {
-      if (request.getHan() == null || request.getFu() == null) {
-        throw new IllegalArgumentException("Han and Fu are required for Riichi mode");
-      }
-      if (request.getDealerId() == null) {
-        throw new IllegalArgumentException("Dealer (親) is required for Riichi mode");
-      }
-      if (!sessionPlayerIds.contains(request.getDealerId())) {
-        throw new IllegalArgumentException("Dealer is not in this session");
-      }
-      params.put("han", request.getHan());
-      params.put("fu", request.getFu());
-      params.put("dealerId", request.getDealerId());
-      params.put("honba", request.getHonba() != null ? request.getHonba() : 0);
-      calculator = riichiCalculator;
-    } else if (session.getGameMode() == GameMode.DONGBEI) {
-      if (request.getHan() == null) {
-        throw new IllegalArgumentException("Fan (番) is required for Dongbei mode");
-      }
-      if (request.getDealerId() == null) {
-        throw new IllegalArgumentException("Dealer (庄家) is required for Dongbei mode");
-      }
-      if (!sessionPlayerIds.contains(request.getDealerId())) {
-        throw new IllegalArgumentException("Dealer is not in this session");
-      }
-      params.put("fan", request.getHan());
-      params.put("dealerId", request.getDealerId());
-      params.put(
-          "bimenPlayerIds",
-          request.getBimenPlayerIds() != null
-              ? request.getBimenPlayerIds()
-              : java.util.Collections.emptyList());
-      calculator = dongbeiCalculator;
-    } else if (session.getGameMode() == GameMode.GUOBIAO) {
-      if (request.getScore() == null) {
-        throw new IllegalArgumentException("Score is required");
-      }
-      params.put("score", request.getScore());
-      calculator = guobiaoCalculator;
-    } else {
-      throw new IllegalArgumentException("Unsupported game mode: " + session.getGameMode());
-    }
-
-    Map<Long, Integer> computedScores =
-        calculator.calculate(
-            sessionPlayerIds, request.getWinnerId(), request.getDealInPlayerId(), params);
-
-    for (Map.Entry<Long, Integer> entry : computedScores.entrySet()) {
-      Player player =
-          playerRepo
-              .findById(entry.getKey())
-              .orElseThrow(() -> new NoSuchElementException("Player not found: " + entry.getKey()));
-      RoundScore rs = new RoundScore();
-      rs.setRound(round);
-      rs.setPlayer(player);
-      rs.setScore(entry.getValue());
-      roundScoreRepo.save(rs);
-    }
+    saveRoundScores(session, nextRoundNumber, computedScores);
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -315,23 +250,34 @@ public class GameService {
     log.info("Completed session id={}", sessionId);
   }
 
-  public List<PlayerStatsResponse> getPlayerStats(GameMode gameMode) {
+  public List<PlayerStatsResponse> getPlayerStats(
+      GameMode gameMode, LocalDateTime start, LocalDateTime end) {
     List<Player> players = playerRepo.findAll();
+    boolean hasDateRange = start != null && end != null;
 
     Map<Long, Integer> totalScores = new HashMap<>();
-    List<Object[]> scoreRows =
-        gameMode != null
-            ? roundScoreRepo.getTotalScoresByGameMode(gameMode)
-            : roundScoreRepo.getTotalScoresAllTime();
+    List<Object[]> scoreRows;
+    if (gameMode != null && hasDateRange) {
+      scoreRows = roundScoreRepo.getTotalScoresByGameModeAndDateRange(gameMode, start, end);
+    } else if (gameMode != null) {
+      scoreRows = roundScoreRepo.getTotalScoresByGameMode(gameMode);
+    } else {
+      scoreRows = roundScoreRepo.getTotalScoresAllTime();
+    }
     for (Object[] row : scoreRows) {
       if (row[0] != null) totalScores.put((Long) row[0], ((Number) row[1]).intValue());
     }
 
     Map<Long, Integer> gamesPlayed = new HashMap<>();
-    List<Object[]> gamesRows =
-        gameMode != null
-            ? roundScoreRepo.getGamesPlayedPerPlayerByGameMode(gameMode)
-            : roundScoreRepo.getGamesPlayedPerPlayer();
+    List<Object[]> gamesRows;
+    if (gameMode != null && hasDateRange) {
+      gamesRows =
+          roundScoreRepo.getGamesPlayedPerPlayerByGameModeAndDateRange(gameMode, start, end);
+    } else if (gameMode != null) {
+      gamesRows = roundScoreRepo.getGamesPlayedPerPlayerByGameMode(gameMode);
+    } else {
+      gamesRows = roundScoreRepo.getGamesPlayedPerPlayer();
+    }
     for (Object[] row : gamesRows) {
       if (row[0] != null) gamesPlayed.put((Long) row[0], ((Number) row[1]).intValue());
     }
@@ -341,6 +287,10 @@ public class GameService {
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
             .filter(s -> gameMode == null || s.getGameMode() == gameMode)
+            .filter(
+                s ->
+                    !hasDateRange
+                        || (!s.getCreatedAt().isBefore(start) && s.getCreatedAt().isBefore(end)))
             .toList();
     for (GameSession session : completedSessions) {
       List<Object[]> sessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
@@ -412,5 +362,33 @@ public class GameService {
     resp.setLastName(player.getLastName());
     resp.setGames(games);
     return resp;
+  }
+
+  private GameModeHandler getHandler(GameMode mode) {
+    GameModeHandler handler = handlers.get(mode);
+    if (handler == null) {
+      throw new IllegalArgumentException("Unsupported game mode: " + mode);
+    }
+    return handler;
+  }
+
+  private void saveRoundScores(
+      GameSession session, int roundNumber, Map<Long, Integer> computedScores) {
+    Round round = new Round();
+    round.setGameSession(session);
+    round.setRoundNumber(roundNumber);
+    round = roundRepo.save(round);
+
+    for (Map.Entry<Long, Integer> entry : computedScores.entrySet()) {
+      Player player =
+          playerRepo
+              .findById(entry.getKey())
+              .orElseThrow(() -> new NoSuchElementException("Player not found: " + entry.getKey()));
+      RoundScore rs = new RoundScore();
+      rs.setRound(round);
+      rs.setPlayer(player);
+      rs.setScore(entry.getValue());
+      roundScoreRepo.save(rs);
+    }
   }
 }
