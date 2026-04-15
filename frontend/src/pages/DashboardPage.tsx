@@ -14,17 +14,17 @@ export default function DashboardPage() {
     })
   }, [])
 
-  if (loading) return <div className="empty-state"><p>Loading...</p></div>
+  if (loading) return <div className="empty-state"><p>加载中...</p></div>
 
   return (
     <div className="card">
       <div className="flex-between">
-        <h2>Game Sessions</h2>
-        <Link to="/new-session" className="btn btn-primary">+ New Game</Link>
+        <h2>游戏记录</h2>
+        <Link to="/new-session" className="btn btn-primary">+ 新建游戏</Link>
       </div>
       {sessions.length === 0 ? (
         <div className="empty-state">
-          <p>No games yet. Start your first mahjong session!</p>
+          <p>暂无游戏记录。开始你的第一局吧！</p>
         </div>
       ) : (
         sessions.map(s => (
@@ -33,11 +33,11 @@ export default function DashboardPage() {
               <div className="session-info">
                 <h3>{s.name || `Game #${s.id}`}</h3>
                 <span className="session-meta">
-                  {s.gameModeDisplayName} &middot; {s.playerCount} players &middot; {new Date(s.createdAt).toLocaleDateString()}
+                  {s.gameModeDisplayName} &middot; {s.playerCount}玩家 &middot; {new Date(s.createdAt).toLocaleDateString()}
                 </span>
               </div>
               <span className={`badge ${s.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
-                {s.status === 'IN_PROGRESS' ? 'In Progress' : 'Completed'}
+                {s.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
               </span>
             </div>
           </Link>

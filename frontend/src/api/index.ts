@@ -61,9 +61,15 @@ export async function completeSession(id: number): Promise<void> {
   await fetch(`${API}/sessions/${id}/complete`, { method: 'PUT' });
 }
 
-export async function fetchStats(gameMode?: string): Promise<PlayerStats[]> {
-  const params = gameMode ? `?gameMode=${gameMode}` : '';
-  const res = await fetch(`${API}/stats${params}`);
+export async function fetchStats(gameMode?: string, year?: number, quarter?: number): Promise<PlayerStats[]> {
+  const params = new URLSearchParams();
+  if (gameMode) params.set('gameMode', gameMode);
+  if (year != null && quarter != null) {
+    params.set('year', String(year));
+    params.set('quarter', String(quarter));
+  }
+  const qs = params.toString();
+  const res = await fetch(`${API}/stats${qs ? `?${qs}` : ''}`);
   return res.json();
 }
 

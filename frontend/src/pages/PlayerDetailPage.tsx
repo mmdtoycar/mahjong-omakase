@@ -18,7 +18,7 @@ export default function PlayerDetailPage() {
     })
   }, [id])
 
-  if (loading || !player) return <div className="empty-state"><p>Loading...</p></div>
+  if (loading || !player) return <div className="empty-state"><p>加载中...</p></div>
 
   return (
     <>
@@ -28,21 +28,21 @@ export default function PlayerDetailPage() {
       </div>
 
       <div className="card">
-        <h2>Game History ({player.games.length})</h2>
+        <h2>游戏记录 ({player.games.length})</h2>
         {player.games.length === 0 ? (
           <div className="empty-state">
-            <p>No games played yet.</p>
+            <p>暂无游戏记录。</p>
           </div>
         ) : (
           <div className="score-table">
             <table>
               <thead>
                 <tr>
-                  <th>Game</th>
-                  <th>Mode</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Score</th>
+                  <th>游戏</th>
+                  <th>模式</th>
+                  <th>日期</th>
+                  <th>状态</th>
+                  <th style={{ textAlign: 'right' }}>分数</th>
                 </tr>
               </thead>
               <tbody>
@@ -57,7 +57,7 @@ export default function PlayerDetailPage() {
                     <td>{new Date(g.createdAt).toLocaleDateString()}</td>
                     <td>
                       <span className={`badge ${g.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
-                        {g.status === 'IN_PROGRESS' ? 'In Progress' : 'Completed'}
+                        {g.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
                       </span>
                     </td>
                     <td style={{
@@ -77,7 +77,7 @@ export default function PlayerDetailPage() {
 
       <div style={{ marginTop: 16 }}>
         <button className="btn btn-outline btn-small" onClick={() => navigate(`/stats?tab=${fromTab}`)}>
-          Back to Stats
+          返回统计
         </button>
       </div>
     </>
