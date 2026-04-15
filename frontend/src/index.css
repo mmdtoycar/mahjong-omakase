@@ -82,6 +82,10 @@ main {
   display: flex;
   flex-direction: column;
   gap: 32px;
+  width: 100vw;
+  margin-left: calc(-1 * (100vw - 100%) / 2);
+  padding: 0 48px;
+  box-sizing: border-box;
 }
 
 .landing-hero {
@@ -334,6 +338,7 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .badge-progress {
@@ -818,9 +823,15 @@ tr:hover td { background: rgba(0,0,0,0.02); }
 
   /* Session list items */
   .session-list-item {
-    flex-direction: column;
-    align-items: flex-start;
     gap: 6px;
+  }
+
+  .session-info {
+    min-width: 0;
+  }
+
+  .session-meta {
+    display: inline;
   }
 
   .session-list-item:hover {
@@ -855,6 +866,10 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   }
 
   /* Landing page mobile */
+  .landing {
+    padding: 0 12px;
+  }
+
   .landing-hero {
     padding: 32px 16px 24px;
   }

@@ -16,7 +16,7 @@ export default function HomePage() {
         <div className="feature-card">
           <div className="feature-icon">🀄</div>
           <h3>多种模式</h3>
-          <p>国标麻将, 东北麻将, 立直麻将 — 选择你最爱的玩法。</p>
+          <p>国标麻将，抗日麻将，立直麻将，etc。</p>
         </div>
         <div className="feature-card">
           <div className="feature-icon">📊</div>
