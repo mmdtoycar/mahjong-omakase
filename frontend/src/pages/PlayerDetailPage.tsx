@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPlayerDetail } from '../api'
 import { PlayerDetail } from '../types'
 
 export default function PlayerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const fromTab = searchParams.get('from') || 'games'
   const [player, setPlayer] = useState<PlayerDetail | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -73,12 +71,6 @@ export default function PlayerDetailPage() {
             </table>
           </div>
         )}
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <button className="btn btn-outline btn-small" onClick={() => navigate(`/stats?tab=${fromTab}`)}>
-          返回统计
-        </button>
       </div>
     </>
   )
