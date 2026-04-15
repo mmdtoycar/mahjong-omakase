@@ -209,7 +209,7 @@ export default function SessionPage() {
       <div className="card">
         <div className="flex-between">
           <div>
-            <h2>{session.name || `Game #${session.id}`}</h2>
+            <h2>{session.name || `游戏 #${session.id}`}</h2>
             <span className="session-meta">
               {session.gameModeDisplayName} &middot; {session.playerCount}玩家 &middot; {new Date(session.createdAt).toLocaleDateString()}
               &nbsp;
@@ -507,6 +507,7 @@ export default function SessionPage() {
       {session.rounds.length > 0 && (
         <div className="card">
           <h2>排名</h2>
+          <div className="score-table">
           <table>
             <thead>
               <tr>
@@ -536,6 +537,7 @@ export default function SessionPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

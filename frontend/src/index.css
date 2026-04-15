@@ -28,7 +28,7 @@ body {
   padding: 12px 24px;
   background: var(--primary);
   color: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);ec
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .logo-link {
@@ -283,6 +283,11 @@ input, select {
   background: white;
 }
 
+select.select-inline {
+  width: auto;
+  min-width: 120px;
+}
+
 input:focus, select:focus {
   outline: none;
   border-color: var(--primary);
@@ -518,6 +523,8 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   font-size: 2rem;
   font-weight: 700;
   color: var(--primary);
+  line-height: 2.5rem;
+  height: 2.5rem;
 }
 
 .stat-card .stat-label {
@@ -751,7 +758,8 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   }
 
   .flex-between select {
-    width: 100% !important;
+    width: 100%;
+    min-width: 0;
   }
 
   .tab-bar {
@@ -831,7 +839,7 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   }
 
   /* Buttons full-width */
-  .btn-accent, .btn-primary, .btn-outline {
+  .btn-accent, .btn-primary, .btn-outline, .btn-danger {
     width: 100%;
     justify-content: center;
   }
