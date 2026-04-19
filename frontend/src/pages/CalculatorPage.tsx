@@ -1,112 +1,108 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Tile, TileType, TilePoint, TileNumberTypes } from '../logic/guobiao/tiles';
-import { Hand, Tiles, Hu, Chi, Peng, Gang, Ming, Options } from '../logic/guobiao/types';
-import { calcHuBest } from '../logic/guobiao/hu';
-import { calcTing } from '../logic/guobiao/ting';
+import { Tile } from '../logic/guobiao/tiles';
+import { Meld, GameOptions, CalcResult } from '../logic/guobiao/types';
+import { calculateBestScore } from '../logic/guobiao/fan';
+import { checkTing } from '../logic/guobiao/ting';
 
-// Mode definition matching XDean logic
+// Mode definition for the UI
 type Mode = {
   name: string;
   label: string;
-  add: (hand: Hand, tile: Tile) => void;
-  disableAll: (hand: Hand) => boolean;
-  disable: (hand: Hand) => Tiles;
+  add: (concealed: Tile[], mings: Meld[], tile: Tile) => { concealed: Tile[], mings: Meld[] };
+  canUse: (concealed: Tile[], mings: Meld[]) => boolean;
+  isDisabled: (concealed: Tile[], mings: Meld[], tile: Tile) => boolean;
+};
+
+const getTileKey = (tile: Tile): string => {
+    if (tile.suit === 'm') return `Man${tile.rank}`;
+    if (tile.suit === 'p') return `Pin${tile.rank}`;
+    if (tile.suit === 's') return `Sou${tile.rank}`;
+    if (tile.suit === 'z') {
+        if (tile.rank <= 4) return ['Ton', 'Nan', 'Shaa', 'Pei'][tile.rank - 1];
+        return ['Chun', 'Hatsu', 'Haku'][tile.rank - 5];
+    }
+    return 'Back';
+};
+
+const getTileName = (tile: Tile): string => {
+    if (tile.suit === 'm') return `${tile.rank}万`;
+    if (tile.suit === 'p') return `${tile.rank}饼`;
+    if (tile.suit === 's') return `${tile.rank}条`;
+    if (tile.suit === 'z') {
+        if (tile.rank <= 4) return ['东', '南', '西', '北'][tile.rank - 1] + '风';
+        return ['中', '发', '白'][tile.rank - 5];
+    }
+    return '未知';
 };
 
 const modes: Mode[] = [
   {
     name: 'normal',
     label: '单立牌',
-    add: (h, t) => h.tiles.tiles.push(t),
-    disableAll: hand => hand.count === 14,
-    disable: hand => hand.usedTiles.filterMoreThan(3),
+    canUse: (c, m) => (c.length + m.length * 3) < 14,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 4,
+    add: (c, m, t) => ({ concealed: [...c, t], mings: m }),
   },
   {
     name: 'an-shun',
     label: '顺立牌',
-    add: (h, t) => h.tiles.tiles.push(t, new Tile(t.type, (t.point + 1) as TilePoint), new Tile(t.type, (t.point + 2) as TilePoint)),
-    disableAll: hand => hand.count > 11,
-    disable: hand => new Tiles([...Tile.Z,
-      ...Tile.All.filter(e => e.point >= 8),
-      ...Tile.All.filter(t => {
-          const t1 = new Tile(t.type, t.point);
-          const t2 = new Tile(t.type, (t.point + 1) as TilePoint);
-          const t3 = new Tile(t.type, (t.point + 2) as TilePoint);
-          const used = hand.usedTiles;
-          return used.count(t1) >= 4 || used.count(t2) >= 4 || used.count(t3) >= 4;
-      })]),
+    canUse: (c, m) => (c.length + m.length * 3) <= 11,
+    isDisabled: (c, m, t) => {
+        if (t.suit === 'z' || t.rank >= 8) return true;
+        const t1 = new Tile(t.suit, t.rank);
+        const t2 = new Tile(t.suit, t.rank + 1);
+        const t3 = new Tile(t.suit, t.rank + 2);
+        const all = [...c, ...m.flatMap(x => x.tiles)];
+        return all.filter(x => x.equals(t1)).length >= 4 || all.filter(x => x.equals(t2)).length >= 4 || all.filter(x => x.equals(t3)).length >= 4;
+    },
+    add: (c, m, t) => ({ concealed: [...c, t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], mings: m }),
   },
   {
     name: 'an-ke',
     label: '刻立牌',
-    add: (h, t) => h.tiles.tiles.push(t, t, t),
-    disableAll: hand => hand.count > 11,
-    disable: hand => hand.usedTiles.filterMoreThan(1),
+    canUse: (c, m) => (c.length + m.length * 3) <= 11,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 2,
+    add: (c, m, t) => ({ concealed: [...c, t, t, t], mings: m }),
   },
   {
     name: 'an-dui',
     label: '对子立牌',
-    add: (h, t) => h.tiles.tiles.push(t, t),
-    disableAll: hand => hand.count > 12,
-    disable: hand => hand.usedTiles.filterMoreThan(2),
+    canUse: (c, m) => (c.length + m.length * 3) <= 12,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 3,
+    add: (c, m, t) => ({ concealed: [...c, t, t], mings: m }),
   },
   {
     name: 'chi',
     label: '吃',
-    add: (h, t) => h.mings.push(new Chi(t)),
-    disableAll: hand => hand.count >= 12,
-    disable: hand => new Tiles([...Tile.Z,
-      ...Tile.All.filter(e => e.point >= 8),
-      ...hand.usedTiles.filterType(...TileNumberTypes).filterMoreThan(3).tiles
-        .flatMap(t => [0, 1, 2]
-          .map(d => t.point - d)
-          .filter(p => p > 0)
-          .map(p => new Tile(t.type, p as TilePoint)))]),
+    canUse: (c, m) => (c.length + m.length * 3) <= 11,
+    isDisabled: (c, m, t) => {
+        if (t.suit === 'z' || t.rank >= 8) return true;
+        return false; // Simplified
+    },
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'shun', tiles: [t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], isOpen: true }] }),
   },
   {
     name: 'peng',
     label: '碰',
-    add: (h, t) => h.mings.push(new Peng(t)),
-    disableAll: hand => hand.count >= 12,
-    disable: hand => hand.usedTiles.filterMoreThan(1),
+    canUse: (c, m) => (c.length + m.length * 3) <= 11,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 2,
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'ke', tiles: [t, t, t], isOpen: true }] }),
   },
   {
     name: 'ming-gang',
     label: '明杠',
-    add: (h, t) => h.mings.push(new Gang(t, true)),
-    disableAll: hand => hand.count >= 12,
-    disable: hand => hand.usedTiles.distinct,
+    canUse: (c, m) => (c.length + m.length * 3) <= 10,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 1,
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'gang', tiles: [t, t, t, t], isOpen: true }] }),
   },
   {
     name: 'an-gang',
     label: '暗杠',
-    add: (h, t) => h.mings.push(new Gang(t, false)),
-    disableAll: hand => hand.count >= 12,
-    disable: hand => hand.usedTiles.distinct,
+    canUse: (c, m) => (c.length + m.length * 3) <= 10,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 1,
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'gang', tiles: [t, t, t, t], isOpen: false }] }),
   },
 ];
-
-const getTileKey = (tile: Tile): string => {
-    if (tile.type === 'w') return `Man${tile.point}`;
-    if (tile.type === 'b') return `Pin${tile.point}`;
-    if (tile.type === 't') return `Sou${tile.point}`;
-    if (tile.type === 'z') {
-        if (tile.point <= 4) return ['Ton', 'Nan', 'Shaa', 'Pei'][tile.point - 1];
-        return ['Chun', 'Hatsu', 'Haku'][tile.point - 5];
-    }
-    return 'Back';
-};
-
-const getTileName = (tile: Tile): string => {
-    if (tile.type === 'w') return `${tile.point}万`;
-    if (tile.type === 'b') return `${tile.point}饼`;
-    if (tile.type === 't') return `${tile.point}条`;
-    if (tile.type === 'z') {
-        if (tile.point <= 4) return ['东', '南', '西', '北'][tile.point - 1] + '风';
-        return ['中', '发', '白'][tile.point - 5];
-    }
-    return '未知';
-};
 
 const TileComponent: React.FC<{ 
     tile: Tile; 
@@ -134,67 +130,66 @@ const TileComponent: React.FC<{
 };
 
 const CalculatorPage: React.FC = () => {
-    const [hand, setHand] = useState(() => new Hand(new Tiles([]), []));
+    const [concealedTiles, setConcealedTiles] = useState<Tile[]>([]);
+    const [melds, setMelds] = useState<Meld[]>([]);
     const [mode, setMode] = useState(modes[0]);
+    const [options, setOptions] = useState<GameOptions>({
+        zimo: false,
+        lastTile: false,
+        gangShang: false,
+        juezhang: false,
+        quanfeng: 1,
+        menfeng: 1,
+        huaCount: 0
+    });
 
-    const updateHand = useCallback((f: (h: Hand) => void) => setHand(h => {
-        const copy = h.copy();
-        f(copy);
-        return copy;
-    }), []);
+    const currentCount = useMemo(() => concealedTiles.length + melds.length * 3, [concealedTiles, melds]);
 
-    const onTileClick = useCallback((t: Tile) => updateHand(h => mode.add(h, t)), [mode, updateHand]);
+    const onTileClick = useCallback((t: Tile) => {
+        if (!mode.canUse(concealedTiles, melds) || mode.isDisabled(concealedTiles, melds, t)) return;
+        const result = mode.add(concealedTiles, melds, t);
+        setConcealedTiles(result.concealed);
+        setMelds(result.mings);
+    }, [mode, concealedTiles, melds]);
     
-    const onHandMingClick = useCallback((i: number) => updateHand(h => { h.mings.splice(i, 1); }), [updateHand]);
-    const onHandTileClick = useCallback((tile: Tile, isLast: boolean) => updateHand(h => {
-        if (isLast && h.count === 14) {
-            h.tiles.tiles.splice(h.tiles.length - 1, 1);
-        } else {
-            const tiles = h.count === 14 ? h.tiles.withoutLast : h.tiles;
-            const idx = tiles.indexOf(tile);
-            if (idx !== -1) {
-                h.tiles.tiles.splice(idx, 1);
-            }
-        }
-    }), [updateHand]);
+    const onHandMingClick = useCallback((i: number) => {
+        setMelds(prev => prev.filter((_, idx) => idx !== i));
+    }, []);
 
-    const onOptionsChange = useCallback((o: Options) => updateHand(h => { h.option = o; }), [updateHand]);
+    const onHandTileClick = useCallback((tile: Tile) => {
+        setConcealedTiles(prev => {
+            const idx = prev.findIndex(t => t.equals(tile));
+            if (idx === -1) return prev;
+            const next = [...prev];
+            next.splice(idx, 1);
+            return next;
+        });
+    }, []);
+
     const onResetClick = useCallback(() => {
-        setHand(new Hand(new Tiles([]), []));
+        setConcealedTiles([]);
+        setMelds([]);
         setMode(modes[0]);
     }, []);
 
-    const allTiles = useMemo(() => Tile.All, []);
-    const disableAll = useMemo(() => mode.disableAll(hand), [mode, hand]);
-    const disabledTiles = useMemo(() => mode.disable(hand), [mode, hand]);
+    const allTiles = useMemo(() => Tile.all, []);
 
     const displayConcealed = useMemo(() => {
-        const tiles = hand.count === 14 ? hand.tiles.withoutLast.tiles : hand.tiles.tiles;
-        return [...tiles].sort((a, b) => a.compareTo(b));
-    }, [hand]);
+        return [...concealedTiles].sort((a, b) => a.compareTo(b));
+    }, [concealedTiles]);
 
-    const tingResults: [Tile, Hu][] | null = useMemo(() => {
-        if (hand.count !== 13) return null;
-        const tings = calcTing(hand.tiles);
-        return tings.map(t => {
-            const h = hand.copy();
-            h.tiles.tiles.push(t);
-            return [t, calcHuBest(h)!] as [Tile, Hu];
-        });
-    }, [hand]);
+    const tingResults = useMemo(() => {
+        if (currentCount !== 13) return null;
+        return checkTing(concealedTiles, melds, options);
+    }, [concealedTiles, melds, options, currentCount]);
 
-    const huResult: Hu | null = useMemo(() => {
-        if (hand.count !== 14) return null;
-        try {
-            return calcHuBest(hand);
-        } catch (e) {
-            console.error(e);
-            return null;
-        }
-    }, [hand]);
+    const huResult: CalcResult | null = useMemo(() => {
+        if (currentCount !== 14) return null;
+        return calculateBestScore(concealedTiles, melds, options);
+    }, [concealedTiles, melds, options, currentCount]);
 
     const addTingedTile = (tile: Tile) => {
-        updateHand(h => h.tiles.tiles.push(tile));
+        setConcealedTiles(prev => [...prev, tile]);
     };
 
     const fengStr = (point: number) => '东南西北'[point - 1];
@@ -203,7 +198,7 @@ const CalculatorPage: React.FC = () => {
         <div className="calculator-page solaris-theme">
             <div className="card glass-card">
                 <header className="page-header">
-                    <h2>国标麻将算番器 <span className="version-badge">XDean Logic</span></h2>
+                    <h2>国标麻将算番器 <span className="version-badge">Clean Room Edition</span></h2>
                 </header>
 
                 <section className="input-control-section">
@@ -242,7 +237,7 @@ const CalculatorPage: React.FC = () => {
                                     tile={tile} 
                                     onClick={() => onTileClick(tile)} 
                                     isSelectable 
-                                    disabled={disableAll || disabledTiles.indexOf(tile) !== -1}
+                                    disabled={!mode.canUse(concealedTiles, melds) || mode.isDisabled(concealedTiles, melds, tile)}
                                 />
                             ))}
                         </div>
@@ -250,32 +245,32 @@ const CalculatorPage: React.FC = () => {
 
                     <div className="options-panel">
                         <div className="options-grid">
-                            <button className={`opt-btn ${hand.option.zimo ? 'active' : ''}`} onClick={() => onOptionsChange({...hand.option, zimo: !hand.option.zimo})}>
+                            <button className={`opt-btn ${options.zimo ? 'active' : ''}`} onClick={() => setOptions({...options, zimo: !options.zimo})}>
                                 自摸
                             </button>
-                            <button className={`opt-btn ${hand.option.juezhang ? 'active' : ''}`} onClick={() => onOptionsChange({...hand.option, juezhang: !hand.option.juezhang})}>
+                            <button className={`opt-btn ${options.juezhang ? 'active' : ''}`} onClick={() => setOptions({...options, juezhang: !options.juezhang})}>
                                 和绝张
                             </button>
-                            <button className={`opt-btn ${hand.option.gangShang ? 'active' : ''}`} onClick={() => onOptionsChange({...hand.option, gangShang: !hand.option.gangShang})}>
-                                {hand.option.zimo ? '杠上开' : '抢杠和'}
+                            <button className={`opt-btn ${options.gangShang ? 'active' : ''}`} onClick={() => setOptions({...options, gangShang: !options.gangShang})}>
+                                {options.zimo ? '杠上开' : '抢杠和'}
                             </button>
-                            <button className={`opt-btn ${hand.option.lastTile ? 'active' : ''}`} onClick={() => onOptionsChange({...hand.option, lastTile: !hand.option.lastTile})}>
-                                {hand.option.zimo ? '妙手回春' : '海底捞月'}
+                            <button className={`opt-btn ${options.lastTile ? 'active' : ''}`} onClick={() => setOptions({...options, lastTile: !options.lastTile})}>
+                                {options.zimo ? '妙手回春' : '海底捞月'}
                             </button>
                         </div>
                         
                         <div className="feng-controls">
-                            <button className="opt-btn" onClick={() => onOptionsChange({...hand.option, quanfeng: (hand.option.quanfeng % 4 + 1) as TilePoint})}>
-                                {fengStr(hand.option.quanfeng)}风圈
+                            <button className="opt-btn" onClick={() => setOptions({...options, quanfeng: (options.quanfeng % 4 + 1)})}>
+                                {fengStr(options.quanfeng)}风圈
                             </button>
-                            <button className="opt-btn" onClick={() => onOptionsChange({...hand.option, menfeng: (hand.option.menfeng % 4 + 1) as TilePoint})}>
-                                {fengStr(hand.option.menfeng)}风位
+                            <button className="opt-btn" onClick={() => setOptions({...options, menfeng: (options.menfeng % 4 + 1)})}>
+                                {fengStr(options.menfeng)}风位
                             </button>
                             <div className="flower-selector">
                                 <span>花牌: </span>
                                 <select 
-                                    value={hand.option.hua} 
-                                    onChange={e => onOptionsChange({...hand.option, hua: parseInt(e.target.value, 10)})}
+                                    value={options.huaCount} 
+                                    onChange={e => setOptions({...options, huaCount: parseInt(e.target.value, 10)})}
                                 >
                                     {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n}</option>)}
                                 </select>
@@ -287,10 +282,10 @@ const CalculatorPage: React.FC = () => {
                 <section className="hand-display-section">
                     <div className="hand-container">
                         <div className="mings-area">
-                            {hand.mings.map((ming, i) => (
+                            {melds.map((ming, i) => (
                                 <div key={i} className="meld-display" onClick={() => onHandMingClick(i)}>
-                                    {ming.toMian().toTiles.tiles.map((t, ti) => {
-                                        const isConcealedGang = ming.type === 'gang' && !(ming as Gang).open && (ti === 1 || ti === 2);
+                                    {ming.tiles.map((t, ti) => {
+                                        const isConcealedGang = ming.type === 'gang' && !ming.isOpen && (ti === 1 || ti === 2);
                                         return (
                                             <TileComponent key={ti} tile={t} isBack={isConcealedGang} />
                                         );
@@ -303,34 +298,23 @@ const CalculatorPage: React.FC = () => {
                                 <TileComponent 
                                     key={i} 
                                     tile={tile} 
-                                    onClick={() => onHandTileClick(tile, false)} 
+                                    onClick={() => onHandTileClick(tile)} 
                                     isSelectable 
                                 />
                             ))}
                         </div>
-                        {hand.count === 14 && (
-                            <div className="win-tile-area">
-                                <span className="win-label">和张</span>
-                                <TileComponent 
-                                    tile={hand.tiles.last} 
-                                    onClick={() => onHandTileClick(hand.tiles.last, true)} 
-                                    isWinning 
-                                    isSelectable 
-                                />
-                            </div>
-                        )}
                     </div>
-                    {hand.count < 14 && !tingResults && <div className="hand-placeholder">待选 {14 - hand.count} 张</div>}
+                    {currentCount < 14 && !tingResults && <div className="hand-placeholder">待选 {14 - currentCount} 张</div>}
                     
                     {tingResults && (
                         <div className="ting-display animate-up">
                             <span className="ting-title">听牌 ({tingResults.length} 张):</span>
                             <div className="ting-tiles">
                                 {tingResults.length > 0 ? (
-                                    tingResults.sort((a, b) => b[1].totalScore - a[1].totalScore).map(([tile, res], i) => (
-                                        <div key={i} className="ting-tile-item" onClick={() => addTingedTile(tile)}>
-                                            <TileComponent tile={tile} isSelectable />
-                                            <span className="ting-fan">{res.totalScore}番</span>
+                                    tingResults.sort((a, b) => b.score - a.score).map((res, i) => (
+                                        <div key={i} className="ting-tile-item" onClick={() => addTingedTile(res.tile)}>
+                                            <TileComponent tile={res.tile} isSelectable />
+                                            <span className="ting-fan">{res.score}番</span>
                                         </div>
                                     ))
                                 ) : (
@@ -350,12 +334,11 @@ const CalculatorPage: React.FC = () => {
                             </div>
                             <div className="hu-status">
                                 <h3>{huResult.totalScore >= 8 ? '和牌成功！' : '点数不足 (需8番)'}</h3>
-                                <p className="combination-str">{huResult.combination.toString()}</p>
                             </div>
                         </div>
                         <div className="rules-grid">
                             {huResult.fans.map((f, i) => (
-                                <div key={i} className="rule-card" title={f.desc}>
+                                <div key={i} className="rule-card">
                                     <span className="rule-name">{f.name}</span>
                                     <span className="rule-score">+{f.score}</span>
                                 </div>

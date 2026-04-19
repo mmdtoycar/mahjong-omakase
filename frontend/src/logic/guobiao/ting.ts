@@ -1,20 +1,24 @@
-import {Tiles} from './types';
-import {Tile} from './tiles';
-import {findAllCombinations} from './hu';
+import { Tile } from './tiles';
+import { Meld, GameOptions } from './types';
+import { calculateBestScore } from './fan';
 
-// Simple assert replacement
-function assert(condition: any, message?: string) {
-    if (!condition) {
-        throw new Error(message || "Assertion failed");
+/**
+ * Ting Prediction Logic
+ */
+
+export function checkTing(concealedTiles: Tile[], melds: Meld[], options: GameOptions) {
+  const tings: { tile: Tile; score: number }[] = [];
+  const allPossible = Tile.all;
+
+  allPossible.forEach(testTile => {
+    const hand = [...concealedTiles, testTile];
+    if (hand.length === 14) {
+      const best = calculateBestScore(hand, melds, options);
+      if (best && best.totalScore >= 8) {
+        tings.push({ tile: testTile, score: best.totalScore });
+      }
     }
-}
-
-export function calcTing(tiles: Tiles): Tile[] {
-  assert(tiles.length < 14 && (tiles.length % 3) === 1, '听牌必须少于14张且余一张');
-  return Tile.All.filter(t => {
-    if (tiles.count(t) >= 4)
-      return false;
-    const complete = tiles.withTile(t);
-    return findAllCombinations(complete).length > 0;
   });
+
+  return tings;
 }
