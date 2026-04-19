@@ -11,6 +11,7 @@ Check every file in frontend/src/pages/ and frontend/src/App.tsx for any user-vi
 - Navigation links
 
 Note: SignUpPage.tsx ("Join Leo's friends' mahjong games!") is intentionally English — do not flag it.
+Note: AdminPage.tsx is intentionally English — do not flag it.
 
 ## Part 2: Mobile Check
 Read frontend/src/index.css and all files in frontend/src/pages/ to check for potential mobile issues on screens under 640px width. Check for:

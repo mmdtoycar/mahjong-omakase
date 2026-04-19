@@ -53,4 +53,15 @@ public class AdminController {
     log.info("Admin deleted player id={}", id);
     return Map.of("message", "Player deleted");
   }
+
+  @PutMapping("/players/{id}")
+  public Player updatePlayer(
+      @PathVariable Long id,
+      @RequestHeader("X-Admin-Password") String password,
+      @RequestBody Map<String, String> body) {
+    checkPassword(password);
+    Player updated = gameService.updatePlayer(id, body.get("firstName"), body.get("lastName"));
+    log.info("Admin updated player id={}", id);
+    return updated;
+  }
 }

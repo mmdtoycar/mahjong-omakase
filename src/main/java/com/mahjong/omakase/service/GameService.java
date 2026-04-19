@@ -64,6 +64,21 @@ public class GameService {
     return playerRepo.existsByUserName(userName);
   }
 
+  public Player updatePlayer(Long id, String firstName, String lastName) {
+    Player player =
+        playerRepo
+            .findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Player not found"));
+    if (firstName != null && !firstName.isBlank()) {
+      player.setFirstName(firstName.trim());
+    }
+    if (lastName != null && !lastName.isBlank()) {
+      player.setLastName(lastName.trim());
+    }
+    log.info("Updated player id={}, name='{} {}'", id, player.getFirstName(), player.getLastName());
+    return playerRepo.save(player);
+  }
+
   public void deletePlayer(Long id) {
     log.info("Deleting player id={}", id);
 
@@ -282,6 +297,20 @@ public class GameService {
       if (row[0] != null) gamesPlayed.put((Long) row[0], ((Number) row[1]).intValue());
     }
 
+    Map<Long, Integer> roundsPlayed = new HashMap<>();
+    List<Object[]> roundsRows;
+    if (gameMode != null && hasDateRange) {
+      roundsRows =
+          roundScoreRepo.getRoundsPlayedPerPlayerByGameModeAndDateRange(gameMode, start, end);
+    } else if (gameMode != null) {
+      roundsRows = roundScoreRepo.getRoundsPlayedPerPlayerByGameMode(gameMode);
+    } else {
+      roundsRows = roundScoreRepo.getRoundsPlayedPerPlayer();
+    }
+    for (Object[] row : roundsRows) {
+      if (row[0] != null) roundsPlayed.put((Long) row[0], ((Number) row[1]).intValue());
+    }
+
     Map<Long, Integer> wins = new HashMap<>();
     List<GameSession> completedSessions =
         sessionRepo.findAll().stream()
@@ -314,9 +343,9 @@ public class GameService {
               stat.setDisplayName(p.getDisplayName());
               stat.setGamesPlayed(gamesPlayed.getOrDefault(p.getId(), 0));
               stat.setTotalScore(totalScores.getOrDefault(p.getId(), 0));
-              int games = gamesPlayed.getOrDefault(p.getId(), 0);
+              int rounds = roundsPlayed.getOrDefault(p.getId(), 0);
               stat.setAvgScore(
-                  games > 0 ? (double) totalScores.getOrDefault(p.getId(), 0) / games : 0);
+                  rounds > 0 ? (double) totalScores.getOrDefault(p.getId(), 0) / rounds : 0);
               stat.setWins(wins.getOrDefault(p.getId(), 0));
               return stat;
             })

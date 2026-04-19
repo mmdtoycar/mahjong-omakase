@@ -9,6 +9,9 @@ export default function AdminPage() {
   const [error, setError] = useState('')
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editFirst, setEditFirst] = useState('')
+  const [editLast, setEditLast] = useState('')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,6 +58,38 @@ export default function AdminPage() {
     } else {
       const data = await res.json().catch(() => ({ message: 'Delete failed' }))
       alert(data.message || 'Delete failed')
+    }
+  }
+
+  const startEdit = (p: Player) => {
+    setEditingId(p.id)
+    setEditFirst(p.firstName)
+    setEditLast(p.lastName)
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditFirst('')
+    setEditLast('')
+  }
+
+  const handleSave = async (id: number) => {
+    if (!editFirst.trim() || !editLast.trim()) return
+    const res = await fetch(`${API}/players/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Password': password,
+      },
+      body: JSON.stringify({ firstName: editFirst.trim(), lastName: editLast.trim() }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setPlayers(players.map(p => p.id === id ? updated : p))
+      cancelEdit()
+    } else {
+      const data = await res.json().catch(() => ({ message: 'Update failed' }))
+      alert(data.message || 'Update failed')
     }
   }
 
@@ -113,15 +148,52 @@ export default function AdminPage() {
                 <tr key={p.id}>
                   <td>{p.id}</td>
                   <td>{p.userName}</td>
-                  <td>{p.firstName} {p.lastName}</td>
+                  <td>
+                    {editingId === p.id ? (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          value={editFirst}
+                          onChange={e => setEditFirst(e.target.value)}
+                          style={{ width: 80 }}
+                          placeholder="First"
+                          autoFocus
+                        />
+                        <input
+                          value={editLast}
+                          onChange={e => setEditLast(e.target.value)}
+                          style={{ width: 80 }}
+                          placeholder="Last"
+                          onKeyDown={e => e.key === 'Enter' && handleSave(p.id)}
+                        />
+                      </div>
+                    ) : (
+                      <>{p.firstName} {p.lastName}</>
+                    )}
+                  </td>
                   <td>{new Date(p.createdAt).toLocaleDateString()}</td>
                   <td>
-                    <button
-                      className="btn btn-danger btn-small"
-                      onClick={() => handleDelete(p.id, p.userName)}
-                    >
-                      Delete
-                    </button>
+                    {editingId === p.id ? (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn btn-primary btn-small" onClick={() => handleSave(p.id)}>
+                          Save
+                        </button>
+                        <button className="btn btn-small btn-outline" onClick={cancelEdit}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn btn-small btn-outline" onClick={() => startEdit(p)}>
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-danger btn-small"
+                          onClick={() => handleDelete(p.id, p.userName)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

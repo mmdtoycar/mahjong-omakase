@@ -715,6 +715,34 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   text-align: center;
 }
 
+.player-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.player-select-card {
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.player-select-card.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
+
+.player-select-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ===== Mobile responsive ===== */
 @media (max-width: 640px) {
   .app-header {
@@ -769,13 +797,6 @@ tr:hover td { background: rgba(0,0,0,0.02); }
 
   .tab-bar {
     align-self: stretch;
-  }
-
-  .tab-btn {
-    flex: 1;
-    text-align: center;
-    padding: 6px 12px;
-    font-size: 0.85rem;
   }
 
   .form-row {
@@ -849,10 +870,14 @@ tr:hover td { background: rgba(0,0,0,0.02); }
     font-size: 0.8rem;
   }
 
-  /* Buttons full-width */
+  /* Buttons full-width (except small buttons in inline groups) */
   .btn-accent, .btn-primary, .btn-outline, .btn-danger {
     width: 100%;
     justify-content: center;
+  }
+
+  .btn-small {
+    width: auto;
   }
 
   /* Signup */
@@ -907,7 +932,6 @@ tr:hover td { background: rgba(0,0,0,0.02); }
     padding: 14px 36px;
     font-size: 1rem;
     letter-spacing: 2px;
-    width: auto;
   }
 
   th {
@@ -918,6 +942,22 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   .landing-features {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .player-select-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -1003,7 +1043,7 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   padding: 6px 8px;
   border-radius: 6px;
   align-items: center;
-  overflow: hidden;
+  overflow-x: auto;
   width: 100%;
 }
 
