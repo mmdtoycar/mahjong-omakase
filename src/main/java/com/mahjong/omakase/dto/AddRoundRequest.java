@@ -1,26 +1,44 @@
 package com.mahjong.omakase.dto;
 
-import jakarta.validation.constraints.NotNull;
+import com.mahjong.omakase.model.RoundType;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
 
 public class AddRoundRequest {
-  @NotNull(message = "Winner is required")
+  private String roundType; // "WIN" (default) or "DRAWN_GAME"
+
   private Long winnerId;
 
-  // For non-Riichi modes: raw score
   @Positive(message = "Score must be positive")
   private Integer score;
 
-  // For Riichi mode
   private Integer han;
   private Integer fu;
-  private Long dealerId; // the table dealer (親) player ID
-  private Integer honba; // 本場 count
+  private Long dealerId;
+  private Integer honba;
+  private Integer kyoutaku;
 
-  private Long dealInPlayerId; // null means 自摸 (self-draw)
+  private Long dealInPlayerId;
 
-  private List<Long> bimenPlayerIds; // 闭门 players (for Dongbei)
+  private List<Long> bimenPlayerIds;
+
+  private List<Long> tenpaiPlayerIds; // for drawn games
+
+  public String getRoundType() {
+    return roundType;
+  }
+
+  public void setRoundType(String roundType) {
+    this.roundType = roundType;
+  }
+
+  public RoundType getParsedRoundType() {
+    return RoundType.fromString(roundType);
+  }
+
+  public boolean isDrawnGame() {
+    return getParsedRoundType() == RoundType.DRAWN_GAME;
+  }
 
   public Long getWinnerId() {
     return winnerId;
@@ -70,6 +88,14 @@ public class AddRoundRequest {
     this.honba = honba;
   }
 
+  public Integer getKyoutaku() {
+    return kyoutaku;
+  }
+
+  public void setKyoutaku(Integer kyoutaku) {
+    this.kyoutaku = kyoutaku;
+  }
+
   public Long getDealInPlayerId() {
     return dealInPlayerId;
   }
@@ -88,5 +114,13 @@ public class AddRoundRequest {
 
   public void setBimenPlayerIds(List<Long> bimenPlayerIds) {
     this.bimenPlayerIds = bimenPlayerIds;
+  }
+
+  public List<Long> getTenpaiPlayerIds() {
+    return tenpaiPlayerIds;
+  }
+
+  public void setTenpaiPlayerIds(List<Long> tenpaiPlayerIds) {
+    this.tenpaiPlayerIds = tenpaiPlayerIds;
   }
 }

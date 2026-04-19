@@ -17,7 +17,8 @@ frontend/dist/
 *.iml
 
 # Claude
-.claude
+.claude/*
+!.claude/commands
 
 # OS
 .DS_Store

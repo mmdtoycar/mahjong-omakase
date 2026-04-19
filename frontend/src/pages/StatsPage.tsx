@@ -1,9 +1,25 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchStats, fetchPlayers } from '../api'
-import { PlayerStats, Player, GameModeKey, GAME_MODES } from '../types'
+import { PlayerStats, Player, GameModeKey, GAME_MODES, Season, getCurrentSeason, getAvailableSeasons } from '../types'
 
 type Tab = 'games' | 'players'
+
+const seasons = getAvailableSeasons()
+const currentSeason = getCurrentSeason()
+
+const statFontSize = (text: string) => {
+  const len = text.length
+  const mobile = window.innerWidth <= 640
+  if (mobile) {
+    if (len <= 6) return '1.4rem'
+    if (len <= 10) return '1.1rem'
+    return '0.9rem'
+  }
+  if (len <= 8) return '2rem'
+  if (len <= 12) return '1.5rem'
+  return '1.2rem'
+}
 
 export default function StatsPage() {
   const navigate = useNavigate()
@@ -14,10 +30,18 @@ export default function StatsPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
+  const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.quarter}`)
 
-  const loadStats = (mode: GameModeKey) => {
+  const loadStats = (mode: GameModeKey, sKey: string) => {
     setLoading(true)
-    fetchStats(mode).then(s => {
+    let year: number | undefined
+    let quarter: number | undefined
+    if (sKey !== 'all') {
+      const [y, q] = sKey.split('-').map(Number)
+      year = y
+      quarter = q
+    }
+    fetchStats(mode, year, quarter).then(s => {
       setStats(s.sort((a, b) => b.totalScore - a.totalScore))
       setLoading(false)
     })
@@ -32,15 +56,16 @@ export default function StatsPage() {
   }
 
   useEffect(() => {
-    if (tab === 'games') loadStats(gameMode)
+    if (tab === 'games') loadStats(gameMode, seasonKey)
     else loadPlayers()
-  }, [gameMode, tab])
+  }, [gameMode, seasonKey, tab])
 
   const abbr = (s: PlayerStats) => `${s.displayName.split(' ')[0][0]}.${s.displayName.split(' ').slice(1).join(' ')}`
 
   const activeStats = stats.filter(s => s.gamesPlayed > 0)
+  const selectedSeason = seasons.find(s => `${s.year}-${s.quarter}` === seasonKey)
 
-  if (loading) return <div className="empty-state"><p>Loading...</p></div>
+  if (loading) return <div className="empty-state"><p>加载中...</p></div>
 
   const totalGames = activeStats.length > 0 ? Math.max(...activeStats.map(s => s.gamesPlayed)) : 0
   const topScorer = activeStats[0]
@@ -50,10 +75,10 @@ export default function StatsPage() {
     <>
       <div className="card">
         <div className="flex-between">
-          <h2>Stats</h2>
+          <h2>统计</h2>
           <div className="tab-bar">
-            <button className={`tab-btn ${tab === 'games' ? 'tab-active' : ''}`} onClick={() => setTab('games')}>Games</button>
-            <button className={`tab-btn ${tab === 'players' ? 'tab-active' : ''}`} onClick={() => setTab('players')}>Players</button>
+            <button className={`tab-btn ${tab === 'games' ? 'tab-active' : ''}`} onClick={() => setTab('games')}>游戏</button>
+            <button className={`tab-btn ${tab === 'players' ? 'tab-active' : ''}`} onClick={() => setTab('players')}>玩家</button>
           </div>
         </div>
       </div>
@@ -62,11 +87,27 @@ export default function StatsPage() {
         <>
           <div className="card">
             <div className="flex-between">
-              <h2>Game Mode</h2>
+              <h2>赛季</h2>
+              <select
+                value={seasonKey}
+                onChange={e => setSeasonKey(e.target.value)}
+                className="select-inline"
+              >
+                {seasons.map(s => (
+                  <option key={`${s.year}-${s.quarter}`} value={`${s.year}-${s.quarter}`}>{s.label}</option>
+                ))}
+                <option value="all">全部赛季</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="flex-between">
+              <h2>游戏模式</h2>
               <select
                 value={gameMode}
                 onChange={e => setGameMode(e.target.value as GameModeKey)}
-                style={{ width: 'auto' }}
+                className="select-inline"
               >
                 {GAME_MODES.map(m => (
                   <option key={m.key} value={m.key}>{m.label}</option>
@@ -78,41 +119,42 @@ export default function StatsPage() {
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-value">{activeStats.length}</div>
-              <div className="stat-label">Players</div>
+              <div className="stat-label">参与玩家</div>
             </div>
             <div className="stat-card">
               <div className="stat-value">{totalGames}</div>
-              <div className="stat-label">Games Played</div>
+              <div className="stat-label">游戏场次</div>
             </div>
             <div className="stat-card">
-              <div className="stat-value">{topScorer?.userName || '-'}</div>
-              <div className="stat-label">Top Scorer</div>
+              <div className="stat-value" style={{ fontSize: statFontSize(topScorer?.userName || '-') }}>{topScorer?.userName || '-'}</div>
+              <div className="stat-label">🏆 赛季冠军</div>
             </div>
             <div className="stat-card">
-              <div className="stat-value">{topWinner?.userName || '-'}</div>
-              <div className="stat-label">Most Wins</div>
+              <div className="stat-value" style={{ fontSize: statFontSize(topWinner?.userName || '-') }}>{topWinner?.userName || '-'}</div>
+              <div className="stat-label">👑 最多胜场</div>
             </div>
           </div>
 
           {activeStats.length === 0 ? (
             <div className="card">
               <div className="empty-state">
-                <p>No stats yet for {GAME_MODES.find(m => m.key === gameMode)?.label}. Play some games first!</p>
+                <p>暂无{selectedSeason?.label || ''} {GAME_MODES.find(m => m.key === gameMode)?.label}的统计数据。</p>
+                <p>先来一局吧！</p>
               </div>
             </div>
           ) : (
             <div className="card">
-              <h2>Leaderboard</h2>
+              <h2>排行榜</h2>
               <div className="score-table">
               <table>
                 <thead>
                   <tr>
-                    <th>Rank</th>
-                    <th>Player</th>
-                    <th style={{ textAlign: 'right' }}>Games</th>
-                    <th style={{ textAlign: 'right' }}>Wins</th>
-                    <th style={{ textAlign: 'right' }}>Total Score</th>
-                    <th style={{ textAlign: 'right' }}>Avg Score</th>
+                    <th>名次</th>
+                    <th>玩家</th>
+                    <th style={{ textAlign: 'right' }}>场次</th>
+                    <th style={{ textAlign: 'right' }}>胜场</th>
+                    <th style={{ textAlign: 'right' }}>总分</th>
+                    <th style={{ textAlign: 'right' }}>均分</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -141,23 +183,16 @@ export default function StatsPage() {
 
       {tab === 'players' && (
         <>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-value">{players.length}</div>
-              <div className="stat-label">Total Registered</div>
-            </div>
-          </div>
-
           <div className="card">
-            <h2>All Players</h2>
+            <h2>全部玩家</h2>
             <div className="score-table">
             <table>
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Username</th>
-                  <th>Name</th>
-                  <th>Joined</th>
+                  <th>用户名</th>
+                  <th>姓名</th>
+                  <th>注册日期</th>
                 </tr>
               </thead>
               <tbody>
@@ -174,7 +209,7 @@ export default function StatsPage() {
             </div>
             {players.length === 0 && (
               <div className="empty-state">
-                <p>No players registered yet.</p>
+                <p>暂无注册玩家。</p>
               </div>
             )}
           </div>

@@ -37,7 +37,7 @@ export default function SignUpPage() {
       await createPlayer(userName.trim(), firstName.trim(), lastName.trim())
       navigate('/')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
+      setError(err instanceof Error ? err.message : '注册失败')
       setSubmitting(false)
     }
   }
@@ -45,41 +45,42 @@ export default function SignUpPage() {
   return (
     <div className="signup-container">
       <div className="card signup-card">
-        <p className="signup-title">Register to join mahjong games with your friends!</p>
+        <p className="signup-title">Join Leo's friends' mahjong games!</p>
 
         {error && <div className="error-banner">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Username</label>
+            <label>用户名</label>
             <input
               value={userName}
               onChange={e => setUserName(e.target.value)}
-              placeholder="Choose a unique username"
+              placeholder="选择一个唯一的用户名"
+              maxLength={16}
               autoFocus
             />
             {userName.trim() && (
               <span className={`field-hint ${userNameAvailable === true ? 'hint-success' : userNameAvailable === false ? 'hint-error' : ''}`}>
-                {checking ? 'Checking...' : userNameAvailable === true ? 'Available' : userNameAvailable === false ? 'Already taken' : ''}
+                {checking ? '检查中...' : userNameAvailable === true ? '可用' : userNameAvailable === false ? '已被占用' : ''}
               </span>
             )}
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label>First Name</label>
+              <label>名</label>
               <input
                 value={firstName}
                 onChange={e => setFirstName(e.target.value)}
-                placeholder="First name"
+                placeholder="名"
               />
             </div>
             <div className="form-group">
-              <label>Last Name</label>
+              <label>姓</label>
               <input
                 value={lastName}
                 onChange={e => setLastName(e.target.value)}
-                placeholder="Last name"
+                placeholder="姓"
               />
             </div>
           </div>
@@ -89,7 +90,7 @@ export default function SignUpPage() {
             className="btn btn-primary signup-btn"
             disabled={!canSubmit}
           >
-            {submitting ? 'Signing up...' : 'Sign Up'}
+            {submitting ? '注册中...' : '注册'}
           </button>
         </form>
       </div>

@@ -65,14 +65,14 @@ spotless {
   encoding 'UTF-8'
 
   java {
-    target fileTree('src') {
+    target fileTree('src/main/java') {
       include '**/*.java'
     }
 
     toggleOffOn()
     removeUnusedImports()
     googleJavaFormat('1.15.0')
-    indentWithSpaces(2)
+    leadingTabsToSpaces(2)
     trimTrailingWhitespace()
     endWithNewline()
   }
@@ -83,7 +83,7 @@ spotless {
     toggleOffOn()
     trimTrailingWhitespace()
     greclipse()
-    indentWithSpaces(2)
+    leadingTabsToSpaces(2)
     endWithNewline()
   }
 }

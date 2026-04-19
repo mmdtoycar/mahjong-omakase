@@ -17,10 +17,10 @@ function App() {
           <h1>Mahjong Omakase</h1>
         </Link>
         <nav>
-          <Link to="/home">HOME</Link>
-          <Link to="/game">GAME</Link>
-          <Link to="/stats">STATS</Link>
-          <Link to="/signup" className="btn-signup">SIGN UP</Link>
+          <Link to="/home">首页</Link>
+          <Link to="/game">游戏</Link>
+          <Link to="/stats">统计</Link>
+          <Link to="/signup" className="btn-signup">注册</Link>
         </nav>
       </header>
       <main>
