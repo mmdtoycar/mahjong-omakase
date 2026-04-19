@@ -18,6 +18,8 @@ export interface Meld {
 export interface HandCombination {
   melds: Meld[];
   isSpecial?: boolean;
+  isBuKao?: boolean;     // 全不靠 hand
+  isZuHeLong?: boolean;  // 组合龙 hand
 }
 
 /**
