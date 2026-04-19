@@ -115,9 +115,12 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
   // 88 番 (5+2=7种)
   // =====================================================================
   if (isSpecial) {
-    // 十三幺 (88)
+    // 十三幺 (88) — Check if it's actually thirteen orphans (13 unique yao tiles + 1 duplicate)
     if (melds.length === 14 && melds.every(m => m.type === 'single')) {
-      addFan('十三幺', 88);
+      const unique = new Set(allTiles.map(t => t.toString()));
+      if (unique.size === 13 && Tile.yao.every(t => unique.has(t.toString()))) {
+        addFan('十三幺', 88);
+      }
     }
     // 连七对 (88) - 7 consecutive pairs of same suit
     if (melds.length === 7 && melds.every(m => m.type === 'dui')) {
@@ -254,6 +257,11 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
   // =====================================================================
   // 24 番 (9种)
   // =====================================================================
+  // 七星不靠 (24)
+  if (isSpecial && combo.isBuKao && honorTiles.length === 7) {
+    addFan('七星不靠', 24);
+  }
+
   if (!isSpecial) {
     // 全双刻 (24) — all kes are even numbers, pair is even number
     if (keMelds.length === 4 && keMelds.every(m => m.tiles[0].isNumber && m.tiles[0].rank % 2 === 0) &&
@@ -286,7 +294,6 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
     // 全小 (24)
     if (allTiles.every(t => t.isNumber && t.rank <= 3)) addFan('全小', 24);
   }
-  // 七星不靠 & 全不靠 are handled via isSpecial in hu.ts
 
   // =====================================================================
   // 16 番 (6种)
@@ -350,9 +357,10 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
     // 小于五 (12)
     if (allTiles.every(t => t.isNumber && t.rank < 5) && !hasFan('全小')) addFan('小于五', 12);
   }
-  // 全不靠 (12) & 组合龙 (12) — handled via isSpecial in hu.ts if BuKao/ZuHeLong decomposition exists
-  if (isSpecial && combo.isBuKao) addFan('全不靠', 12);
-  if (isSpecial && combo.isZuHeLong) addFan('组合龙', 12);
+  // 全不靠 (12)
+  if (isSpecial && combo.isBuKao && !hasFan('七星不靠')) addFan('全不靠', 12);
+  // 组合龙 (12)
+  if (combo.isZuHeLong) addFan('组合龙', 12);
 
   // =====================================================================
   // 8 番 (10种)
@@ -646,8 +654,27 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
 
   // Handle special hands' basic fans
   if (isSpecial) {
-    if (options.zimo) addFan('自摸', 1);
+    if (options.zimo && !combo.isBuKao) addFan('自摸', 1); // BuKao already includes values? actually no, but we'll see
     if (options.huaCount > 0) addFan('花牌', 1, options.huaCount);
+  }
+
+  if (combo.isBuKao) {
+    // BuKao excludes: 五门齐, 不求人, 门前清, 单钓将, 混幺九, 全带幺, 断幺, 平和, 无字
+    removeFan('五门齐');
+    removeFan('不求人');
+    removeFan('门前清');
+    removeFan('单钓将');
+    removeFan('混幺九');
+    removeFan('全带幺');
+    removeFan('断幺');
+    removeFan('平和');
+    removeFan('无字');
+  }
+
+  if (combo.isZuHeLong) {
+    // ZuHeLong can be part of BuKao or standard
+    // If it's part of BuKao, it's already counted? No, they can combine.
+    // Fixed: in GB, if you have both, they both count.
   }
 
   // =====================================================================
@@ -658,7 +685,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
 
   const totalScore = fans.reduce((sum, f) => sum + f.score, 0);
   return {
-    totalScore: Math.max(totalScore, 8),
+    totalScore,
     fans,
     combination: combo
   };

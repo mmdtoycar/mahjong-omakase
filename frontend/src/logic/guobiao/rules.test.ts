@@ -65,9 +65,10 @@ function parseHand(str: string, opts: Partial<GameOptions> = {}): {
   return { concealed, melds, options };
 }
 
-function calcHu(handStr: string, opts: Partial<GameOptions> = {}) {
+function calcHu(handStr: string, opts: Partial<GameOptions> = {}): CalcResult | null {
   const { concealed, melds, options } = parseHand(handStr, opts);
-  return calculateBestScore(concealed, melds, options);
+  const lastTile = concealed.length > 0 ? concealed[concealed.length - 1] : undefined;
+  return calculateBestScore(concealed, melds, options, lastTile);
 }
 
 function expectFans(handStr: string, expectedFanNames: string[], opts: Partial<GameOptions> = {}) {
@@ -172,6 +173,32 @@ describe('Hand Decomposition', () => {
     const specialCombos = combos.filter(c => c.isSpecial);
     expect(specialCombos.length).toBeGreaterThan(0);
   });
+
+  test('ZuHeLong (组合龙)', () => {
+    // w147 p258 s369 + w11 pair + s123 shun = 14 tiles
+    const tiles = [
+      new Tile('m', 1), new Tile('m', 4), new Tile('m', 7),
+      new Tile('p', 2), new Tile('p', 5), new Tile('p', 8),
+      new Tile('s', 3), new Tile('s', 6), new Tile('s', 9),
+      new Tile('m', 1), new Tile('m', 1),
+      new Tile('s', 1), new Tile('s', 2), new Tile('s', 3)
+    ];
+    const combos = findAllCombinations(tiles, []);
+    expect(combos.some(c => c.isZuHeLong)).toBe(true);
+  });
+
+  test('BuKao (全不靠)', () => {
+    // w147 p258 s369 + z12345
+    const tiles = [
+      new Tile('m', 1), new Tile('m', 4), new Tile('m', 7),
+      new Tile('p', 2), new Tile('p', 5), new Tile('p', 8),
+      new Tile('s', 3), new Tile('s', 6), new Tile('s', 9),
+      new Tile('z', 1), new Tile('z', 2), new Tile('z', 3),
+      new Tile('z', 4), new Tile('z', 5)
+    ];
+    const combos = findAllCombinations(tiles, []);
+    expect(combos.some(c => c.isBuKao)).toBe(true);
+  });
 });
 
 // =============================================================
@@ -242,7 +269,24 @@ describe('64 Point Fans', () => {
   });
 });
 
+describe('12 Point Fans', () => {
+  test('Combination Dragon (组合龙)', () => {
+    // w147 b258 t369 + w11 pair + t123 shun
+    expectFans('w147 b258 t369 w11 t123', ['组合龙']);
+  });
+
+  test('Greater Honors and Knitted Tiles (全不靠)', () => {
+    // w147 b258 t369 + z12345
+    expectFans('w147 b258 t369 z12345', ['全不靠']);
+  });
+});
+
 describe('24 Point Fans', () => {
+  test('Seven Star Greater Honors and Knitted Tiles (七星不靠)', () => {
+    // w147 b25 t36 + z1234567 = 14 tiles
+    expectFans('w147 b25 t36 z1234567', ['七星不靠']);
+  });
+
   test('Pure One Suit (清一色)', () => {
     expectFans('w12323455578922', ['清一色']);
   });
