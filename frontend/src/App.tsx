@@ -8,6 +8,7 @@ import SignUpPage from './pages/SignUpPage'
 import PlayerDetailPage from './pages/PlayerDetailPage'
 import AdminPage from './pages/AdminPage'
 import FanTablePage from './pages/FanTablePage'
+import CalculatorPage from './pages/CalculatorPage'
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Link to="/game">游戏</Link>
           <Link to="/stats">统计</Link>
           <Link to="/fan-table">番表</Link>
+          <Link to="/calculator">算番器</Link>
           <Link to="/signup" className="btn-signup">注册</Link>
         </nav>
       </header>
@@ -35,6 +37,7 @@ function App() {
           <Route path="/session/:id" element={<SessionPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/fan-table" element={<FanTablePage />} />
+          <Route path="/calculator" element={<CalculatorPage />} />
           <Route path="/player/:id" element={<PlayerDetailPage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
