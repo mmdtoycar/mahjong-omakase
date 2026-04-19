@@ -517,6 +517,24 @@ const CalculatorPage: React.FC = () => {
                     .options-panel { flex-direction: row; flex-wrap: wrap; }
                     .glass-card { padding: 20px; }
                 }
+
+                @media (max-width: 640px) {
+                    .calculator-page { padding: 8px; }
+                    .glass-card { padding: 12px; border-radius: 16px; }
+                    .calc-tile-container { width: 30px; height: 40px; padding: 2px; }
+                    .tile-grid { grid-template-columns: repeat(9, 30px); gap: 3px; }
+                    .tile-picker-card { padding: 10px; width: auto; }
+                    .hand-display-section { padding: 20px 10px 10px; overflow-x: auto; }
+                    .hand-container { gap: 10px; flex-wrap: nowrap; }
+                    .concealed-area { padding-left: 10px; }
+                    .options-grid { grid-template-columns: 1fr; }
+                    .feng-controls { flex-direction: column; }
+                    .mode-group { gap: 3px; }
+                    .group-hint { width: auto; font-size: 0.6rem; }
+                    .mode-btn { padding: 3px 7px; font-size: 0.7rem; }
+                    .ting-tile-item .calc-tile-container { width: 26px; height: 36px; }
+                    .rules-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+                }
             `}</style>
         </div>
     );
