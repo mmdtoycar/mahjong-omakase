@@ -39,7 +39,7 @@ export default function NewSessionPage() {
   const handleStart = async () => {
     if (!canStart) return
     const now = new Date()
-    const defaultName = `Game ${now.toLocaleDateString()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`
+    const defaultName = `游戏 ${now.toLocaleDateString()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`
     const session = await createSession(defaultName, gameMode, selectedIds)
     navigate(`/session/${session.id}`)
   }
@@ -78,7 +78,7 @@ export default function NewSessionPage() {
         )}
 
         {players.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+          <div className="player-select-grid">
             {filteredPlayers.map(p => {
               const isSelected = selectedIds.includes(p.id)
               const isDisabled = !isSelected && selectedIds.length >= 4
@@ -87,17 +87,7 @@ export default function NewSessionPage() {
                 <div
                   key={p.id}
                   onClick={() => !isDisabled && togglePlayer(p.id)}
-                  style={{
-                    padding: '12px',
-                    border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
-                    borderRadius: 'var(--radius)',
-                    background: isSelected ? 'var(--primary)' : 'var(--card)',
-                    color: isSelected ? 'white' : 'var(--text)',
-                    cursor: isDisabled ? 'not-allowed' : 'pointer',
-                    textAlign: 'center',
-                    transition: 'all 0.2s',
-                    opacity: isDisabled ? 0.5 : 1
-                  }}
+                  className={`player-select-card${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}`}
                 >
                   <div style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: 4 }}>{p.userName}</div>
                   <div style={{ fontSize: '0.85rem', opacity: isSelected ? 0.9 : 0.6 }}>
