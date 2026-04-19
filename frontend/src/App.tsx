@@ -7,6 +7,7 @@ import StatsPage from './pages/StatsPage'
 import SignUpPage from './pages/SignUpPage'
 import PlayerDetailPage from './pages/PlayerDetailPage'
 import AdminPage from './pages/AdminPage'
+import FanTablePage from './pages/FanTablePage'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Link to="/home">首页</Link>
           <Link to="/game">游戏</Link>
           <Link to="/stats">统计</Link>
+          <Link to="/fan-table">番表</Link>
           <Link to="/signup" className="btn-signup">注册</Link>
         </nav>
       </header>
@@ -32,6 +34,7 @@ function App() {
           <Route path="/new-session" element={<NewSessionPage />} />
           <Route path="/session/:id" element={<SessionPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/fan-table" element={<FanTablePage />} />
           <Route path="/player/:id" element={<PlayerDetailPage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
