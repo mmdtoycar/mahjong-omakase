@@ -185,7 +185,8 @@ const CalculatorPage: React.FC = () => {
 
     const huResult: CalcResult | null = useMemo(() => {
         if (currentCount !== 14) return null;
-        return calculateBestScore(concealedTiles, melds, options);
+        const lastTile = concealedTiles.length > 0 ? concealedTiles[concealedTiles.length - 1] : undefined;
+        return calculateBestScore(concealedTiles, melds, options, lastTile);
     }, [concealedTiles, melds, options, currentCount]);
 
     const addTingedTile = (tile: Tile) => {

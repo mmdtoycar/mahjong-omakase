@@ -1,5 +1,5 @@
 import { Tile } from './tiles';
-import { HandCombination, GameOptions, FanResult, CalcResult, Meld, tileCount } from './types';
+import { HandCombination, GameOptions, FanResult, CalcResult, Meld, tileCount, removeTilesOnce } from './types';
 import { findAllCombinations } from './hu';
 
 /**
@@ -7,13 +7,24 @@ import { findAllCombinations } from './hu';
  * Complete implementation of all 81 fan types per GB/T 16491—2008.
  */
 
-export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], options: GameOptions): CalcResult | null {
+export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], options: GameOptions, lastTile?: Tile): CalcResult | null {
   const combinations = findAllCombinations(concealedTiles, melds);
   if (combinations.length === 0) return null;
 
+  // Determine ting count: remove lastTile from concealed, check how many tiles complete the hand
+  let tingCount = -1; // -1 = unknown
+  if (lastTile) {
+    const withoutLast = removeTilesOnce(concealedTiles, [lastTile]);
+    tingCount = 0;
+    for (const t of Tile.all) {
+      const testHand = [...withoutLast, t];
+      if (findAllCombinations(testHand, melds).length > 0) tingCount++;
+    }
+  }
+
   let best: CalcResult | null = null;
   for (const combo of combinations) {
-    const scored = scoreCombination(combo, concealedTiles, options);
+    const scored = scoreCombination(combo, concealedTiles, options, lastTile, tingCount);
     if (!best || scored.totalScore > best.totalScore) {
       best = scored;
     }
@@ -59,7 +70,7 @@ const TUI_BU_DAO_TILES = new Set([
   '7z' // 白
 ]);
 
-function scoreCombination(combo: HandCombination, concealedTiles: Tile[], options: GameOptions): CalcResult {
+function scoreCombination(combo: HandCombination, concealedTiles: Tile[], options: GameOptions, lastTile?: Tile, tingCount: number = -1): CalcResult {
   const fans: FanResult[] = [];
   const melds = combo.melds;
   const allTiles = melds.flatMap(m => m.tiles);
@@ -587,12 +598,44 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
       addFan('无字', 1);
     }
 
-    // 边张 (1) — Single wait on 3 in 123 or 7 in 789
-    // 坎张 (1) — Single wait on middle tile of a chow
-    // 单钓将 (1) — Single wait on pair
-    // These depend on ting analysis; simplified: check if the last tile forms only one wait pattern
-    // For now, to properly implement we'd need ting info passed in.
-    // Simplified version: not implemented as full ting analysis in scoring context
+    // 边张 / 坎张 / 单钓将 — only counted when listening on exactly 1 tile
+    if (lastTile && tingCount === 1) {
+      // Find which meld(s) in this combination contain the lastTile
+      const meldsWithLast = melds.filter(m =>
+        !m.isOpen && m.tiles.some(t => t.equals(lastTile))
+      );
+
+      let isBianZhang = false;
+      let isKanZhang = false;
+      let isDanDiao = false;
+
+      for (const m of meldsWithLast) {
+        if (m.type === 'dui') {
+          isDanDiao = true;
+        }
+        if (m.type === 'shun') {
+          const startRank = m.tiles[0].rank;
+          // 边张: waiting on 3 in 123, or 7 in 789
+          if ((startRank === 1 && lastTile.rank === 3) ||
+              (startRank === 7 && lastTile.rank === 7)) {
+            isBianZhang = true;
+          }
+          // 坎张: waiting on middle tile of sequence
+          if (lastTile.rank === startRank + 1) {
+            isKanZhang = true;
+          }
+        }
+      }
+
+      // Exclusion priority: 单钓将 > 坎张 > 边张
+      if (isDanDiao && !hasFan('全求人')) {
+        addFan('单钓将', 1);
+      } else if (isKanZhang) {
+        addFan('坎张', 1);
+      } else if (isBianZhang) {
+        addFan('边张', 1);
+      }
+    }
 
     // 自摸 (1)
     if (options.zimo && !hasFan('不求人') && !hasFan('妙手回春') && !hasFan('杠上开花')) addFan('自摸', 1);
