@@ -1,0 +1,354 @@
+[
+  {
+    "hand": "ct1234 lw77",
+    "opts": "",
+    "fans": [
+      "YiSeSiBuGao",
+      "QuanQiuRen",
+      "PingHu",
+      "QueYiMen"
+    ]
+  },
+  {
+    "hand": "b123345567789w77",
+    "opts": "",
+    "fans": [
+      "YiSeSiBuGao",
+      "DanDiaoJiang",
+      "PingHu",
+      "QueYiMen",
+      "MenQianQing"
+    ]
+  },
+  {
+    "hand": "cw1471 lt11",
+    "opts": "",
+    "fans": [
+      "QingLong",
+      "QuanQiuRen",
+      "PingHu",
+      "YiBanGao",
+      "QueYiMen"
+    ]
+  },
+  {
+    "hand": "cw1474 lt11",
+    "opts": "",
+    "fans": [
+      "QingLong",
+      "QuanQiuRen",
+      "PingHu",
+      "YiBanGao",
+      "QueYiMen"
+    ]
+  },
+  {
+    "hand": "pb2t3w4b5 lz11",
+    "opts": "",
+    "fans": [
+      "SanSeSanJieGao",
+      "PengPengHu",
+      "QuanQiuRen"
+    ]
+  },
+  {
+    "hand": "cw5b4t36 lz11",
+    "opts": "",
+    "fans": [
+      "SanSeSanBuGao",
+      "QuanQiuRen",
+      "LianLiu"
+    ]
+  },
+  {
+    "hand": "ct33b3 lw77888",
+    "opts": "",
+    "fans": [
+      "DuanYao",
+      "YiBanGao",
+      "XiXiangFeng"
+    ]
+  },
+  {
+    "hand": "b555666777t55567",
+    "opts": "zimo: true",
+    "fans": [
+      "YiSeSanTongShun",
+      "QuanDaiWu",
+      "BuQiuRen",
+      "PingHu",
+      "XiXiangFeng",
+      "QueYiMen"
+    ]
+  },
+  {
+    "hand": "cw14b7t1 lz11",
+    "opts": "",
+    "fans": [
+      "HuaLong",
+      "QuanQiuRen",
+      "XiXiangFeng"
+    ]
+  },
+  {
+    "hand": "cw17t17 lz11",
+    "opts": "",
+    "fans": [
+      "QuanQiuRen",
+      "QuanDaiYao",
+      "XiXiangFeng",
+      "XiXiangFeng",
+      "LaoShaoFu",
+      "QueYiMen"
+    ]
+  },
+  {
+    "hand": "b11223344556688",
+    "opts": "zimo: true",
+    "fans": [
+      "QiDuiFan",
+      "QingYiSe",
+      "BuQiuRen"
+    ]
+  },
+  {
+    "hand": "pt2 lz11 b123456789",
+    "opts": "juezhang: true",
+    "fans": [
+      "QingLong",
+      "QueYiMen",
+      "HuJueZhang"
+    ]
+  },
+  {
+    "hand": "pt2 lb123456789 z11",
+    "opts": "juezhang: true",
+    "fans": [
+      "QingLong",
+      "DanDiaoJiang",
+      "QueYiMen"
+    ]
+  },
+  {
+    "hand": "pt2 lb123456789 z11",
+    "opts": "gangShang: true",
+    "fans": [
+      "QingLong",
+      "DanDiaoJiang",
+      "QueYiMen"
+    ]
+  },
+  {
+    "hand": "pt2 lb123456789 z11",
+    "opts": "gangShang: true, zimo: true",
+    "fans": [
+      "QingLong",
+      "DanDiaoJiang",
+      "QueYiMen",
+      "ZiMo"
+    ]
+  },
+  {
+    "hand": "pt2 lz11 b123456789",
+    "opts": "gangShang: true",
+    "fans": [
+      "QingLong",
+      "QueYiMen",
+      "QiangGangHu"
+    ]
+  },
+  {
+    "hand": "gt2 lz11 b123456789",
+    "opts": "gangShang: true, zimo: true",
+    "fans": [
+      "QingLong",
+      "QueYiMen",
+      "GangShangKaiHua",
+      "MingGang"
+    ]
+  },
+  {
+    "hand": "gt2 lz11 b123456789",
+    "opts": "lastTile: true, zimo: true",
+    "fans": [
+      "QingLong",
+      "QueYiMen",
+      "MingGang",
+      "MiaoShouHuiChun"
+    ]
+  },
+  {
+    "hand": "gt2 lz11 b123456789",
+    "opts": "lastTile: true",
+    "fans": [
+      "QingLong",
+      "QueYiMen",
+      "MingGang",
+      "HaiDiLaoYue"
+    ]
+  },
+  {
+    "hand": "gt2 lz11 b123456789",
+    "opts": "gangShang: true, lastTile: true, zimo: true",
+    "fans": [
+      "QingLong",
+      "QueYiMen",
+      "MingGang",
+      "MiaoShouHuiChun",
+      "GangShangKaiHua"
+    ]
+  },
+  {
+    "hand": "gt2 lz11 b123456789",
+    "opts": "gangShang: true, lastTile: true",
+    "fans": [
+      "QingLong",
+      "QueYiMen",
+      "MingGang",
+      "HaiDiLaoYue",
+      "QiangGangHu"
+    ]
+  },
+  {
+    "hand": "ct7b7w7 lt789 66",
+    "opts": "",
+    "fans": [
+      "DaYuWu",
+      "SanSeSanTongShun",
+      "PingHu",
+      "YiBanGao"
+    ]
+  },
+  {
+    "hand": "pb7 lt123 67 w789 z11 t5",
+    "opts": "hua: 2",
+    "fans": [
+      "WuFanHu",
+      "Hua",
+      "Hua"
+    ]
+  },
+  {
+    "hand": "b111999w111z111t55",
+    "opts": "menfeng: 1, quanfeng: 1",
+    "fans": [
+      "SiAnKe",
+      "ShuangTongKe",
+      "QuanFengKe",
+      "MenFengKe",
+      "YaoJiuKe",
+      "YaoJiuKe",
+      "YaoJiuKe",
+      "DanDiaoJiang"
+    ]
+  },
+  {
+    "hand": "pw3z3t1 lz66b333",
+    "opts": "",
+    "fans": [
+      "ShuangTongKe",
+      "YaoJiuKe",
+      "YaoJiuKe",
+      "WuMenQi",
+      "PengPengHu"
+    ]
+  },
+  {
+    "hand": "t345345b234w345z66",
+    "opts": "",
+    "fans": [
+      "YiBanGao",
+      "DanDiaoJiang",
+      "XiXiangFeng",
+      "MenQianQing"
+    ]
+  },
+  {
+    "hand": "t123789w123789b66",
+    "opts": "",
+    "fans": [
+      "DanDiaoJiang",
+      "XiXiangFeng",
+      "PingHu",
+      "XiXiangFeng",
+      "LaoShaoFu",
+      "MenQianQing"
+    ]
+  },
+  {
+    "hand": "t19w19b19z12345671",
+    "opts": "zimo: true",
+    "fans": [
+      "ShiSanYao",
+      "ZiMo"
+    ]
+  },
+  {
+    "hand": "pt8 lt66 234 234 342",
+    "opts": "",
+    "fans": [
+      "LvYiSe",
+      "YiSeSanJieGao",
+      "PengPengHu",
+      "ShuangAnKe",
+      "QingYiSe",
+      "DuanYao"
+    ]
+  },
+  {
+    "hand": "pt8 lt123 34 b234 w66 t2",
+    "opts": "",
+    "fans": [
+      "XiXiangFeng",
+      "WuZi"
+    ]
+  },
+  {
+    "hand": "t222 b234 pt8 lw55 t132",
+    "opts": "",
+    "fans": [
+      "SiGuiYi",
+      "WuZi"
+    ]
+  },
+  {
+    "hand": "gt2 at4 lt66688z66 t8",
+    "opts": "",
+    "fans": [
+      "LvYiSe",
+      "MingAnGang",
+      "PengPengHu",
+      "ShuangAnKe"
+    ]
+  },
+  {
+    "hand": "t234567 b23456 w33 b7",
+    "opts": "",
+    "fans": [
+      "MenQianQing",
+      "PingHu",
+      "DuanYao",
+      "XiXiangFeng",
+      "XiXiangFeng",
+      "LianLiu"
+    ]
+  },
+  {
+    "hand": "aw19t19lb11@",
+    "opts": "",
+    "fans": [
+      "QingYaoJiu",
+      "SiAnKe",
+      "SiGang"
+    ]
+  },
+  {
+    "hand": "t123567w34589z55w7@",
+    "opts": "",
+    "fans": [
+      "MenQianQing",
+      "QueYiMen",
+      "BianZhang"
+    ]
+  }
+]

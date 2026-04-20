@@ -13,6 +13,8 @@ public class SpaForwardController {
         "/new-session",
         "/session/**",
         "/stats",
+        "/fan-table",
+        "/calculator",
         "/player/**",
         "/admin"
       })

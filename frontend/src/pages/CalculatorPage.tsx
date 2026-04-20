@@ -1,112 +1,109 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Tile, TileType, TilePoint, TileNumberTypes } from '../logic/guobiao/tiles';
-import { Hand, Tiles, Hu, Chi, Peng, Gang, Ming, Options } from '../logic/guobiao/types';
-import { calcHuBest } from '../logic/guobiao/hu';
-import { calcTing } from '../logic/guobiao/ting';
+import { Link } from 'react-router-dom';
+import { Tile } from '../logic/guobiao/tiles';
+import { Meld, GameOptions, CalcResult } from '../logic/guobiao/types';
+import { calculateBestScore } from '../logic/guobiao/fan';
+import { checkTing } from '../logic/guobiao/ting';
 
-// Mode definition matching XDean logic
+// Mode definition for the UI
 type Mode = {
   name: string;
   label: string;
-  add: (hand: Hand, tile: Tile) => void;
-  disableAll: (hand: Hand) => boolean;
-  disable: (hand: Hand) => Tiles;
+  add: (concealed: Tile[], mings: Meld[], tile: Tile) => { concealed: Tile[], mings: Meld[] };
+  canUse: (concealed: Tile[], mings: Meld[]) => boolean;
+  isDisabled: (concealed: Tile[], mings: Meld[], tile: Tile) => boolean;
+};
+
+const getTileKey = (tile: Tile): string => {
+    if (tile.suit === 'm') return `Man${tile.rank}`;
+    if (tile.suit === 'p') return `Pin${tile.rank}`;
+    if (tile.suit === 's') return `Sou${tile.rank}`;
+    if (tile.suit === 'z') {
+        if (tile.rank <= 4) return ['Ton', 'Nan', 'Shaa', 'Pei'][tile.rank - 1];
+        return ['Chun', 'Hatsu', 'Haku'][tile.rank - 5];
+    }
+    return 'Back';
+};
+
+const getTileName = (tile: Tile): string => {
+    if (tile.suit === 'm') return `${tile.rank}万`;
+    if (tile.suit === 'p') return `${tile.rank}饼`;
+    if (tile.suit === 's') return `${tile.rank}条`;
+    if (tile.suit === 'z') {
+        if (tile.rank <= 4) return ['东', '南', '西', '北'][tile.rank - 1] + '风';
+        return ['中', '发', '白'][tile.rank - 5];
+    }
+    return '未知';
 };
 
 const modes: Mode[] = [
   {
     name: 'normal',
     label: '单立牌',
-    add: (h, t) => h.tiles.tiles.push(t),
-    disableAll: hand => hand.count === 14,
-    disable: hand => hand.usedTiles.filterMoreThan(3),
+    canUse: (c, m) => (c.length + m.length * 3) < 14,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 4,
+    add: (c, m, t) => ({ concealed: [...c, t], mings: m }),
   },
   {
     name: 'an-shun',
     label: '顺立牌',
-    add: (h, t) => h.tiles.tiles.push(t, new Tile(t.type, (t.point + 1) as TilePoint), new Tile(t.type, (t.point + 2) as TilePoint)),
-    disableAll: hand => hand.count > 11,
-    disable: hand => new Tiles([...Tile.Z,
-      ...Tile.All.filter(e => e.point >= 8),
-      ...Tile.All.filter(t => {
-          const t1 = new Tile(t.type, t.point);
-          const t2 = new Tile(t.type, (t.point + 1) as TilePoint);
-          const t3 = new Tile(t.type, (t.point + 2) as TilePoint);
-          const used = hand.usedTiles;
-          return used.count(t1) >= 4 || used.count(t2) >= 4 || used.count(t3) >= 4;
-      })]),
+    canUse: (c, m) => (c.length + m.length * 3) <= 11,
+    isDisabled: (c, m, t) => {
+        if (t.suit === 'z' || t.rank >= 8) return true;
+        const t1 = new Tile(t.suit, t.rank);
+        const t2 = new Tile(t.suit, t.rank + 1);
+        const t3 = new Tile(t.suit, t.rank + 2);
+        const all = [...c, ...m.flatMap(x => x.tiles)];
+        return all.filter(x => x.equals(t1)).length >= 4 || all.filter(x => x.equals(t2)).length >= 4 || all.filter(x => x.equals(t3)).length >= 4;
+    },
+    add: (c, m, t) => ({ concealed: [...c, t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], mings: m }),
   },
   {
     name: 'an-ke',
     label: '刻立牌',
-    add: (h, t) => h.tiles.tiles.push(t, t, t),
-    disableAll: hand => hand.count > 11,
-    disable: hand => hand.usedTiles.filterMoreThan(1),
+    canUse: (c, m) => (c.length + m.length * 3) <= 11,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 2,
+    add: (c, m, t) => ({ concealed: [...c, t, t, t], mings: m }),
   },
   {
     name: 'an-dui',
     label: '对子立牌',
-    add: (h, t) => h.tiles.tiles.push(t, t),
-    disableAll: hand => hand.count > 12,
-    disable: hand => hand.usedTiles.filterMoreThan(2),
+    canUse: (c, m) => (c.length + m.length * 3) <= 12,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 3,
+    add: (c, m, t) => ({ concealed: [...c, t, t], mings: m }),
   },
   {
     name: 'chi',
     label: '吃',
-    add: (h, t) => h.mings.push(new Chi(t)),
-    disableAll: hand => hand.count >= 12,
-    disable: hand => new Tiles([...Tile.Z,
-      ...Tile.All.filter(e => e.point >= 8),
-      ...hand.usedTiles.filterType(...TileNumberTypes).filterMoreThan(3).tiles
-        .flatMap(t => [0, 1, 2]
-          .map(d => t.point - d)
-          .filter(p => p > 0)
-          .map(p => new Tile(t.type, p as TilePoint)))]),
+    canUse: (c, m) => (c.length + m.length * 3) <= 11,
+    isDisabled: (c, m, t) => {
+        if (t.suit === 'z' || t.rank >= 8) return true;
+        return false; // Simplified
+    },
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'shun', tiles: [t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], isOpen: true }] }),
   },
   {
     name: 'peng',
     label: '碰',
-    add: (h, t) => h.mings.push(new Peng(t)),
-    disableAll: hand => hand.count >= 12,
-    disable: hand => hand.usedTiles.filterMoreThan(1),
+    canUse: (c, m) => (c.length + m.length * 3) <= 11,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 2,
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'ke', tiles: [t, t, t], isOpen: true }] }),
   },
   {
     name: 'ming-gang',
     label: '明杠',
-    add: (h, t) => h.mings.push(new Gang(t, true)),
-    disableAll: hand => hand.count >= 12,
-    disable: hand => hand.usedTiles.distinct,
+    canUse: (c, m) => (c.length + m.length * 3) <= 10,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 1,
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'gang', tiles: [t, t, t, t], isOpen: true }] }),
   },
   {
     name: 'an-gang',
     label: '暗杠',
-    add: (h, t) => h.mings.push(new Gang(t, false)),
-    disableAll: hand => hand.count >= 12,
-    disable: hand => hand.usedTiles.distinct,
+    canUse: (c, m) => (c.length + m.length * 3) <= 10,
+    isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 1,
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'gang', tiles: [t, t, t, t], isOpen: false }] }),
   },
 ];
-
-const getTileKey = (tile: Tile): string => {
-    if (tile.type === 'w') return `Man${tile.point}`;
-    if (tile.type === 'b') return `Pin${tile.point}`;
-    if (tile.type === 't') return `Sou${tile.point}`;
-    if (tile.type === 'z') {
-        if (tile.point <= 4) return ['Ton', 'Nan', 'Shaa', 'Pei'][tile.point - 1];
-        return ['Chun', 'Hatsu', 'Haku'][tile.point - 5];
-    }
-    return 'Back';
-};
-
-const getTileName = (tile: Tile): string => {
-    if (tile.type === 'w') return `${tile.point}万`;
-    if (tile.type === 'b') return `${tile.point}饼`;
-    if (tile.type === 't') return `${tile.point}条`;
-    if (tile.type === 'z') {
-        if (tile.point <= 4) return ['东', '南', '西', '北'][tile.point - 1] + '风';
-        return ['中', '发', '白'][tile.point - 5];
-    }
-    return '未知';
-};
 
 const TileComponent: React.FC<{ 
     tile: Tile; 
@@ -116,11 +113,12 @@ const TileComponent: React.FC<{
     isSelectable?: boolean; 
     disabled?: boolean;
     className?: string;
-}> = ({ tile, onClick, isWinning, isBack, isSelectable, disabled, className = "" }) => {
+    size?: 'normal' | 'small';
+}> = ({ tile, onClick, isWinning, isBack, isSelectable, disabled, className = "", size = 'normal' }) => {
   const tileKey = isBack ? 'Back' : getTileKey(tile);
   return (
     <div 
-      className={`calc-tile-container ${isSelectable && !disabled ? 'selectable' : ''} ${disabled ? 'disabled' : ''} ${className}`} 
+      className={`calc-tile-container ${size} ${isSelectable && !disabled ? 'selectable' : ''} ${disabled ? 'disabled' : ''} ${className}`} 
       onClick={!disabled ? onClick : undefined}
       title={isBack ? '暗面' : getTileName(tile)}
     >
@@ -134,67 +132,118 @@ const TileComponent: React.FC<{
 };
 
 const CalculatorPage: React.FC = () => {
-    const [hand, setHand] = useState(() => new Hand(new Tiles([]), []));
+    const initialOptions: GameOptions = {
+        zimo: false,
+        lastTile: false,
+        gangShang: false,
+        juezhang: false,
+        quanfeng: 1,
+        menfeng: 1,
+        huaCount: 0,
+        showTingFans: true
+    };
+
+    const [concealedTiles, setConcealedTiles] = useState<Tile[]>([]);
+    const [melds, setMelds] = useState<Meld[]>([]);
     const [mode, setMode] = useState(modes[0]);
+    const [options, setOptions] = useState<GameOptions>(initialOptions);
 
-    const updateHand = useCallback((f: (h: Hand) => void) => setHand(h => {
-        const copy = h.copy();
-        f(copy);
-        return copy;
-    }), []);
+    const currentCount = useMemo(() => concealedTiles.length + melds.length * 3, [concealedTiles, melds]);
 
-    const onTileClick = useCallback((t: Tile) => updateHand(h => mode.add(h, t)), [mode, updateHand]);
+    const onTileClick = useCallback((t: Tile) => {
+        if (!mode.canUse(concealedTiles, melds) || mode.isDisabled(concealedTiles, melds, t)) return;
+        const result = mode.add(concealedTiles, melds, t);
+        setConcealedTiles(result.concealed);
+        setMelds(result.mings);
+    }, [mode, concealedTiles, melds]);
     
-    const onHandMingClick = useCallback((i: number) => updateHand(h => { h.mings.splice(i, 1); }), [updateHand]);
-    const onHandTileClick = useCallback((tile: Tile, isLast: boolean) => updateHand(h => {
-        if (isLast && h.count === 14) {
-            h.tiles.tiles.splice(h.tiles.length - 1, 1);
-        } else {
-            const tiles = h.count === 14 ? h.tiles.withoutLast : h.tiles;
-            const idx = tiles.indexOf(tile);
-            if (idx !== -1) {
-                h.tiles.tiles.splice(idx, 1);
-            }
-        }
-    }), [updateHand]);
-
-    const onOptionsChange = useCallback((o: Options) => updateHand(h => { h.option = o; }), [updateHand]);
-    const onResetClick = useCallback(() => {
-        setHand(new Hand(new Tiles([]), []));
-        setMode(modes[0]);
+    const onHandMingClick = useCallback((i: number) => {
+        setMelds(prev => prev.filter((_, idx) => idx !== i));
     }, []);
 
-    const allTiles = useMemo(() => Tile.All, []);
-    const disableAll = useMemo(() => mode.disableAll(hand), [mode, hand]);
-    const disabledTiles = useMemo(() => mode.disable(hand), [mode, hand]);
+    const onHandTileClick = useCallback((tile: Tile) => {
+        setConcealedTiles(prev => {
+            const idx = prev.findIndex(t => t.equals(tile));
+            if (idx === -1) return prev;
+            const next = [...prev];
+            next.splice(idx, 1);
+            return next;
+        });
+    }, []);
+
+    const onResetClick = useCallback(() => {
+        setConcealedTiles([]);
+        setMelds([]);
+        setMode(modes[0]);
+        setOptions(prev => ({
+            ...initialOptions
+        }));
+    }, [initialOptions]);
+
+    const allTiles = useMemo(() => Tile.all, []);
 
     const displayConcealed = useMemo(() => {
-        const tiles = hand.count === 14 ? hand.tiles.withoutLast.tiles : hand.tiles.tiles;
-        return [...tiles].sort((a, b) => a.compareTo(b));
-    }, [hand]);
-
-    const tingResults: [Tile, Hu][] | null = useMemo(() => {
-        if (hand.count !== 13) return null;
-        const tings = calcTing(hand.tiles);
-        return tings.map(t => {
-            const h = hand.copy();
-            h.tiles.tiles.push(t);
-            return [t, calcHuBest(h)!] as [Tile, Hu];
-        });
-    }, [hand]);
-
-    const huResult: Hu | null = useMemo(() => {
-        if (hand.count !== 14) return null;
-        try {
-            return calcHuBest(hand);
-        } catch (e) {
-            console.error(e);
-            return null;
+        const sorted = [...concealedTiles].sort((a, b) => a.compareTo(b));
+        if (currentCount === 14 && concealedTiles.length > 0) {
+            const last = concealedTiles[concealedTiles.length - 1];
+            const idx = sorted.findIndex(t => t.equals(last));
+            if (idx !== -1) sorted.splice(idx, 1);
+            return sorted;
         }
-    }, [hand]);
+        return sorted;
+    }, [concealedTiles, currentCount]);
+
+    const tingResults = useMemo(() => {
+        if (currentCount !== 13) return null;
+        return checkTing(concealedTiles, melds, options);
+    }, [concealedTiles, melds, options, currentCount]);
+
+    const huResult: CalcResult | null = useMemo(() => {
+        if (currentCount !== 14) return null;
+        const lastTile = concealedTiles.length > 0 ? concealedTiles[concealedTiles.length - 1] : undefined;
+        return calculateBestScore(concealedTiles, melds, options, lastTile);
+    }, [concealedTiles, melds, options, currentCount]);
+
+    const validationError = useMemo(() => {
+        if (currentCount === 13 && options.juezhang) {
+            const rawTings = checkTing(concealedTiles, melds, { ...options, juezhang: false });
+            if (rawTings.length > 0) {
+                const impossibleTings = rawTings.filter(res => {
+                    const countInHand = concealedTiles.filter(t => t.equals(res.tile)).length + 
+                                       melds.reduce((acc, m) => acc + m.tiles.filter(t => t.equals(res.tile)).length, 0);
+                    return countInHand >= 1; // If I already have 1, winning on the 2nd (pair) makes 5 tiles needed for Juezhang (3 table + 2 hand)
+                });
+                if (impossibleTings.length === rawTings.length) {
+                    return `绝张错误：当前为“单调将”或类似听牌（手牌已持有所听之牌），不可能凑齐场面显现 3 张且你和第 4 张（共需 5 张）。`;
+                }
+            }
+        }
+
+        if (currentCount === 14 && options.gangShang && !options.zimo) {
+            const lastTile = concealedTiles[concealedTiles.length - 1];
+            if (lastTile) {
+                const countInHand = concealedTiles.filter(t => t.equals(lastTile)).length + 
+                                   melds.reduce((acc, m) => acc + m.tiles.filter(t => t.equals(lastTile)).length, 0);
+                if (countInHand > 1) {
+                    return `抢杠逻辑错误：你手牌已有 ${countInHand-1} 张 ${getTileName(lastTile)}，对方不可能有刻子来给你抢杠。`;
+                }
+            }
+        }
+        if (currentCount === 14 && options.juezhang) {
+            const lastTile = concealedTiles[concealedTiles.length - 1];
+            if (lastTile) {
+                const countInHand = concealedTiles.filter(t => t.equals(lastTile)).length + 
+                                   melds.reduce((acc, m) => acc + m.tiles.filter(t => t.equals(lastTile)).length, 0);
+                if (countInHand > 1) {
+                    return `绝张逻辑错误：你手牌已有 ${countInHand-1} 张 ${getTileName(lastTile)}，场面上不可能已显现 3 张。`;
+                }
+            }
+        }
+        return null;
+    }, [concealedTiles, melds, options, currentCount]);
 
     const addTingedTile = (tile: Tile) => {
-        updateHand(h => h.tiles.tiles.push(tile));
+        setConcealedTiles(prev => [...prev, tile]);
     };
 
     const fengStr = (point: number) => '东南西北'[point - 1];
@@ -202,11 +251,37 @@ const CalculatorPage: React.FC = () => {
     return (
         <div className="calculator-page solaris-theme">
             <div className="card glass-card">
-                <header className="page-header">
-                    <h2>国标麻将算番器 <span className="version-badge">XDean Logic</span></h2>
+                <header className="page-header compact-header">
+                    <Link to="/home" className="back-home-link">
+                        <span className="back-icon">←</span> 返回首页
+                    </Link>
+                    <h2>国标麻将算番器</h2>
                 </header>
 
                 <section className="input-control-section">
+                    <div className="options-panel-top">
+                        <div className="extra-options-row">
+                            <div className="mini-option">
+                                <span className="mini-opt-label">圈:</span>
+                                {[1,2,3,4].map(v => (
+                                    <button key={v} className={`micro-btn ${options.quanfeng === v ? 'active' : ''}`} onClick={() => setOptions({...options, quanfeng: v})}>{fengStr(v)}</button>
+                                ))}
+                            </div>
+                            <div className="mini-option">
+                                <span className="mini-opt-label">门:</span>
+                                {[1,2,3,4].map(v => (
+                                    <button key={v} className={`micro-btn ${options.menfeng === v ? 'active' : ''}`} onClick={() => setOptions({...options, menfeng: v})}>{fengStr(v)}</button>
+                                ))}
+                            </div>
+                            <div className="mini-option flowers">
+                                <span className="mini-opt-label">花:</span>
+                                <select className="micro-select" value={options.huaCount} onChange={(e) => setOptions({...options, huaCount: parseInt(e.target.value)})}>
+                                    {[0,1,2,3,4,5,6,7,8].map(v => <option key={v} value={v}>{v}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="tile-picker-card">
                         <div className="mode-selector-container">
                             <div className="mode-group">
@@ -242,95 +317,84 @@ const CalculatorPage: React.FC = () => {
                                     tile={tile} 
                                     onClick={() => onTileClick(tile)} 
                                     isSelectable 
-                                    disabled={disableAll || disabledTiles.indexOf(tile) !== -1}
+                                    disabled={!mode.canUse(concealedTiles, melds) || mode.isDisabled(concealedTiles, melds, tile)}
                                 />
                             ))}
-                        </div>
-                    </div>
-
-                    <div className="options-panel">
-                        <div className="options-grid">
-                            <button className={`opt-btn ${hand.option.zimo ? 'active' : ''}`} onClick={() => onOptionsChange({...hand.option, zimo: !hand.option.zimo})}>
-                                自摸
-                            </button>
-                            <button className={`opt-btn ${hand.option.juezhang ? 'active' : ''}`} onClick={() => onOptionsChange({...hand.option, juezhang: !hand.option.juezhang})}>
-                                和绝张
-                            </button>
-                            <button className={`opt-btn ${hand.option.gangShang ? 'active' : ''}`} onClick={() => onOptionsChange({...hand.option, gangShang: !hand.option.gangShang})}>
-                                {hand.option.zimo ? '杠上开' : '抢杠和'}
-                            </button>
-                            <button className={`opt-btn ${hand.option.lastTile ? 'active' : ''}`} onClick={() => onOptionsChange({...hand.option, lastTile: !hand.option.lastTile})}>
-                                {hand.option.zimo ? '妙手回春' : '海底捞月'}
-                            </button>
-                        </div>
-                        
-                        <div className="feng-controls">
-                            <button className="opt-btn" onClick={() => onOptionsChange({...hand.option, quanfeng: (hand.option.quanfeng % 4 + 1) as TilePoint})}>
-                                {fengStr(hand.option.quanfeng)}风圈
-                            </button>
-                            <button className="opt-btn" onClick={() => onOptionsChange({...hand.option, menfeng: (hand.option.menfeng % 4 + 1) as TilePoint})}>
-                                {fengStr(hand.option.menfeng)}风位
-                            </button>
-                            <div className="flower-selector">
-                                <span>花牌: </span>
-                                <select 
-                                    value={hand.option.hua} 
-                                    onChange={e => onOptionsChange({...hand.option, hua: parseInt(e.target.value, 10)})}
-                                >
-                                    {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n}</option>)}
-                                </select>
-                            </div>
                         </div>
                     </div>
                 </section>
 
                 <section className="hand-display-section">
-                    <div className="hand-container">
-                        <div className="mings-area">
-                            {hand.mings.map((ming, i) => (
-                                <div key={i} className="meld-display" onClick={() => onHandMingClick(i)}>
-                                    {ming.toMian().toTiles.tiles.map((t, ti) => {
-                                        const isConcealedGang = ming.type === 'gang' && !(ming as Gang).open && (ti === 1 || ti === 2);
-                                        return (
-                                            <TileComponent key={ti} tile={t} isBack={isConcealedGang} />
-                                        );
-                                    })}
+                    <div className="hand-display-area">
+                        {melds.length > 0 && (
+                            <div className="hand-group animate-left">
+                                <span className="group-hint">副露区:</span>
+                                {melds.map((m, i) => (
+                                    <div key={i} className="meld-box" onClick={() => onHandMingClick(i)}>
+                                        {m.tiles.map((t, ti) => {
+                                            const isConcealedGang = m.type === 'gang' && !m.isOpen && (ti === 1 || ti === 2);
+                                            return <TileComponent key={ti} tile={t} isBack={isConcealedGang} size="small" />;
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        
+                        {melds.length > 0 && concealedTiles.length > 0 && <div className="hand-divider"></div>}
+                        
+                        {concealedTiles.length > 0 && (
+                            <div className="hand-group animate-right">
+                                <span className="group-hint">立牌区:</span>
+                                <div className="tiles-row">
+                                    {displayConcealed.map((tile, i) => (
+                                        <TileComponent 
+                                            key={i} 
+                                            tile={tile} 
+                                            onClick={() => onHandTileClick(tile)} 
+                                            isSelectable 
+                                        />
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                        <div className="concealed-area">
-                            {displayConcealed.map((tile, i) => (
-                                <TileComponent 
-                                    key={i} 
-                                    tile={tile} 
-                                    onClick={() => onHandTileClick(tile, false)} 
-                                    isSelectable 
-                                />
-                            ))}
-                        </div>
-                        {hand.count === 14 && (
-                            <div className="win-tile-area">
-                                <span className="win-label">和张</span>
-                                <TileComponent 
-                                    tile={hand.tiles.last} 
-                                    onClick={() => onHandTileClick(hand.tiles.last, true)} 
-                                    isWinning 
-                                    isSelectable 
-                                />
+                                {currentCount === 14 && concealedTiles.length > 0 && (
+                                    <div className="win-tile-area">
+                                        <span className="win-label">和</span>
+                                        <TileComponent 
+                                            tile={concealedTiles[concealedTiles.length - 1]} 
+                                            onClick={() => onHandTileClick(concealedTiles[concealedTiles.length - 1])}
+                                            isWinning
+                                            isSelectable
+                                        />
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
-                    {hand.count < 14 && !tingResults && <div className="hand-placeholder">待选 {14 - hand.count} 张</div>}
+                    {currentCount < 14 && !tingResults && concealedTiles.length === 0 && melds.length === 0 && (
+                        <div className="hand-placeholder">待选 {14 - currentCount} 张</div>
+                    )}
                     
-                    {tingResults && (
+                    {tingResults && !validationError && (
                         <div className="ting-display animate-up">
                             <span className="ting-title">听牌 ({tingResults.length} 张):</span>
                             <div className="ting-tiles">
                                 {tingResults.length > 0 ? (
-                                    tingResults.sort((a, b) => b[1].totalScore - a[1].totalScore).map(([tile, res], i) => (
-                                        <div key={i} className="ting-tile-item" onClick={() => addTingedTile(tile)}>
-                                            <TileComponent tile={tile} isSelectable />
-                                            <span className="ting-fan">{res.totalScore}番</span>
+                                    tingResults.sort((a, b) => b.score - a.score).map((res, i) => (
+                                        <div key={i} className="ting-tile-item with-fans" onClick={() => addTingedTile(res.tile)}>
+                                            <TileComponent tile={res.tile} isSelectable />
+                                            <div className="ting-info">
+                                                <span className={`ting-fan ${res.score < 8 ? 'low-score' : ''}`}>
+                                                    {res.score}番 {res.score < 8 && <span className="low-status-tag">起和不足</span>}
+                                                </span>
+                                                {res.fans && (
+                                                    <div className="ting-fan-labels">
+                                                        {res.fans.map((f: any, fi: number) => (
+                                                            <span key={fi} className="mini-fan-name">
+                                                                {f.name}({f.score}){f.count && f.count > 1 ? `x${f.count}` : ''}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     ))
                                 ) : (
@@ -339,24 +403,54 @@ const CalculatorPage: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    {(tingResults || currentCount === 14) && (
+                        <div className="winning-options-section animate-up">
+                            <span className="section-label">和牌状态:</span>
+                            <div className="options-grid">
+                                <button className={`opt-btn ${options.zimo ? 'active' : ''}`} onClick={() => setOptions({...options, zimo: !options.zimo})}>
+                                    自摸 <span className="btn-hint">+{options.zimo && melds.filter(m=>m.isOpen).length===0 ? '4 (不求人)' : '1'}</span>
+                                </button>
+                                <button className={`opt-btn ${options.juezhang ? 'active' : ''}`} onClick={() => setOptions({...options, juezhang: !options.juezhang})}>
+                                    和绝张 <span className="btn-hint">+4</span>
+                                </button>
+                                <button className={`opt-btn ${options.gangShang ? 'active' : ''}`} onClick={() => setOptions({...options, gangShang: !options.gangShang})}>
+                                    {options.zimo ? '杠上开花' : '抢杠和'} <span className="btn-hint">+8</span>
+                                </button>
+                                <button className={`opt-btn ${options.lastTile ? 'active' : ''}`} onClick={() => setOptions({...options, lastTile: !options.lastTile})}>
+                                    {options.zimo ? '妙手回春' : '海底捞月'} <span className="btn-hint">+8</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </section>
 
-                {huResult && (
+                {validationError && (
+                    <div className="validation-alert animate-up">
+                        <span className="alert-icon">⚠️</span>
+                        {validationError}
+                    </div>
+                )}
+
+                {huResult && !validationError && (
                     <section className="result-panel animate-up">
                         <div className="result-header">
-                            <div className="score-badge">
+                            <div className={`score-badge ${huResult.totalScore < 8 ? 'low-score' : ''}`}>
                                 <span className="score-num">{huResult.totalScore}</span>
                                 <span className="score-unit">番</span>
                             </div>
                             <div className="hu-status">
-                                <h3>{huResult.totalScore >= 8 ? '和牌成功！' : '点数不足 (需8番)'}</h3>
-                                <p className="combination-str">{huResult.combination.toString()}</p>
+                                <h3>{huResult.totalScore >= 8 ? '和牌成功！' : '及点不足'}</h3>
+                                <p style={{opacity: 0.6, margin: '4px 0 0 0'}}>{huResult.totalScore >= 8 ? '符合国标8番起和点数' : '还差 ' + (8 - huResult.totalScore) + ' 番'}</p>
                             </div>
                         </div>
                         <div className="rules-grid">
                             {huResult.fans.map((f, i) => (
-                                <div key={i} className="rule-card" title={f.desc}>
-                                    <span className="rule-name">{f.name}</span>
+                                <div key={i} className="rule-card">
+                                    <div className="rule-info">
+                                        <span className="rule-name">{f.name}</span>
+                                        {f.count !== undefined && f.count > 1 && <span className="rule-count"> x {f.count}</span>}
+                                    </div>
                                     <span className="rule-score">+{f.score}</span>
                                 </div>
                             ))}
@@ -439,7 +533,8 @@ const CalculatorPage: React.FC = () => {
                 }
 
                 .highlighted-tile {
-                    box-shadow: inset 0 0 0 2px var(--solaris-orange) !important;
+                    box-shadow: inset 0 0 0 3px var(--solaris-yellow) !important;
+                    filter: drop-shadow(0 0 8px rgba(181, 137, 0, 0.4));
                 }
 
                 .back-tile-svg { filter: saturate(0.5) brightness(0.9); }
@@ -473,67 +568,170 @@ const CalculatorPage: React.FC = () => {
                     justify-content: start; 
                 }
 
-                .options-panel { display: flex; flex-direction: column; gap: 8px; }
-                .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-                .opt-btn { padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; font-weight: 500; background: #fff; border: 1px solid var(--solaris-base1); }
-                .opt-btn.active { background: var(--solaris-cyan); color: white; border-color: var(--solaris-cyan); }
+                .options-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+                .opt-btn { padding: 10px 6px; border-radius: 10px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; font-weight: 700; background: #fff; border: 1px solid var(--solaris-base1); color: var(--solaris-base01); }
+                .opt-btn.active { background: var(--solaris-cyan); color: white; border-color: var(--solaris-cyan); box-shadow: 0 4px 10px rgba(42, 161, 152, 0.3); }
 
-                .feng-controls { display: flex; flex-direction: column; gap: 6px; }
-                .flower-selector { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-radius: 8px; font-size: 0.8rem; background: #fff; border: 1px solid var(--solaris-base1); }
+                .winning-options-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed rgba(0,0,0,0.1); }
+                .section-label { display: block; font-size: 0.75rem; font-weight: 800; color: var(--solaris-base1); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
 
-                .hand-display-section { padding: 25px 20px 15px; border-radius: 12px; margin-bottom: 25px; position: relative; background: var(--solaris-bg-alt); }
-                .hand-container { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; min-height: 55px; }
-                .mings-area { display: flex; gap: 8px; position: relative; }
-                .mings-area::before { content: '副露 (MELDS)'; position: absolute; top: -18px; left: 0; font-size: 0.55rem; font-weight: 800; opacity: 0.5; letter-spacing: 0.05em; }
-                .meld-display { display: flex; gap: 1px; cursor: pointer; }
-                .concealed-area { display: flex; gap: 1px; padding-left: 20px; border-left: 4px solid var(--solaris-base1); position: relative; }
-                .concealed-area::before { content: '立牌 (HAND)'; position: absolute; top: -18px; left: 20px; font-size: 0.55rem; font-weight: 800; opacity: 0.5; letter-spacing: 0.05em; }
-                .win-tile-area { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-left: 4px; padding-left: 12px; border-left: 1px dashed rgba(0,0,0,0.2); }
-                .win-label { font-size: 0.55rem; font-weight: 800; color: var(--solaris-orange); text-transform: uppercase; }
-                .hand-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.15; font-size: 1rem; pointer-events: none; }
+                 .extra-options { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding: 12px; background: rgba(0,0,0,0.02); border-radius: 12px; }
+                .option-group { display: flex; align-items: center; gap: 10px; }
+                .opt-label { font-size: 0.75rem; font-weight: 700; color: var(--solaris-base01); min-width: 40px; }
+                .opt-btns-row { display: flex; gap: 4px; }
+                .hua-btns-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; flex: 1; }
+                .mini-opt-btn { padding: 4px 0; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 600; font-size: 0.8rem; background: #fff; border: 1px solid var(--solaris-base1); min-width: 28px; text-align: center; }
+                .mini-opt-btn.active { background: var(--solaris-blue); color: white; border-color: var(--solaris-blue); box-shadow: 0 2px 6px rgba(38, 139, 210, 0.4); }
+                .mini-opt-btn:hover:not(.active) { background: var(--solaris-bg); }
+
+                .hand-display-section { padding: 45px 25px 35px; border-radius: 20px; margin-bottom: 25px; position: relative; background: var(--solaris-bg-alt); box-shadow: inset 0 0 30px rgba(0,0,0,0.06); }
+                .hand-display-area { display: flex; align-items: flex-end; gap: 8px; min-height: 80px; justify-content: center; flex-wrap: wrap; }
+                .hand-group { display: flex; align-items: flex-end; gap: 4px; position: relative; flex-wrap: wrap; justify-content: center; }
+                .hand-group .group-hint { position: absolute; top: -28px; left: 0; margin: 0; width: auto; font-size: 0.7rem; font-weight: 700; color: var(--solaris-blue); opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
+                .meld-box { display: flex; gap: 1px; align-items: flex-end; transition: transform 0.2s; cursor: pointer; flex-shrink: 0; }
+                .meld-box:hover { transform: translateY(-3px); }
+                .tiles-row { display: flex; gap: 1px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
+                .hand-divider { width: 3px; height: 50px; background: var(--solaris-base1); margin: 0 10px; opacity: 0.3; flex-shrink: 0; align-self: flex-end; border-radius: 2px; }
+                .win-tile-area { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-left: 5px; padding-left: 10px; border-left: 2px dashed rgba(0,0,0,0.1); position: relative; flex-shrink: 0; }
+                .win-label { font-size: 0.65rem; font-weight: 800; color: var(--solaris-yellow); position: absolute; top: -22px; width: 100%; text-align: center; }
+                .hand-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.15; font-size: 1.1rem; font-weight: 700; pointer-events: none; }
 
                 .ting-display { margin-top: 15px; padding-top: 12px; border-top: 1px dashed rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; }
                 .ting-title { font-size: 0.8rem; font-weight: 700; color: var(--solaris-base01); white-space: nowrap; }
-                .ting-tiles { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-                .ting-tile-item { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; transition: transform 0.15s; }
+                .ting-tiles { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px; }
+                 .ting-tile-item { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; transition: transform 0.15s; position: relative; }
+                .ting-tile-item.with-fans { flex-direction: row; align-items: flex-start; gap: 8px; padding: 6px 10px; background: rgba(0,0,0,0.03); border-radius: 12px; }
                 .ting-tile-item:hover { transform: translateY(-3px); }
-                .ting-tile-item .calc-tile-container { width: 30px; height: 42px; }
-                .ting-fan { font-size: 0.7rem; font-weight: 800; color: var(--solaris-green); }
+                .ting-tile-item .calc-tile-container { width: 30px; height: 42px; flex-shrink: 0; }
+                .ting-info { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+                .ting-tile-item.with-fans .ting-info { align-items: flex-start; }
+                .ting-fan { font-size: 0.85rem; font-weight: 900; color: var(--solaris-blue); display: flex; align-items: center; gap: 6px; }
+                .ting-fan.low-score { color: var(--solaris-base1); }
+                .low-status-tag { 
+                    font-size: 0.6rem; background: var(--solaris-bg); color: var(--solaris-base1); 
+                    padding: 1px 4px; border-radius: 4px; border: 1px solid var(--solaris-base1);
+                    text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;
+                }
+                .ting-fan-labels { display: flex; flex-wrap: wrap; gap: 2px; max-width: 100%; }
+                .mini-fan-name { font-size: 0.6rem; font-weight: 700; background: var(--solaris-bg-alt); padding: 1px 4px; border-radius: 4px; color: var(--solaris-base01); white-space: nowrap; }
                 .no-ting { font-size: 0.85rem; color: var(--solaris-red); font-style: italic; }
 
-                .hu-status p { font-size: 0.85rem; font-weight: 500; }
+                .result-panel { margin-top: 30px; padding: 30px; border-radius: 24px; background: rgba(255,255,255,0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 15px 35px rgba(0,0,0,0.05); }
+                .result-header { display: flex; align-items: center; gap: 30px; margin-bottom: 30px; }
                 
-                .rules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-                .rule-card { padding: 12px 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-                .rule-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-                .rule-name { font-weight: 600; font-size: 0.9rem; }
-                .rule-score { font-weight: 900; }
-
-                .animate-up { animation: fadeInUp 0.5s ease-out; }
-                @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-                @media (max-width: 900px) {
-                    .input-control-section { grid-template-columns: 1fr; }
-                    .options-panel { flex-direction: row; flex-wrap: wrap; }
-                    .glass-card { padding: 20px; }
+                .score-badge { 
+                    width: 100px; height: 100px; border-radius: 50%; 
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    background: linear-gradient(135deg, var(--solaris-yellow), #d4a017);
+                    color: white; box-shadow: 0 10px 25px rgba(181, 137, 0, 0.3);
+                    animation: pulse-yellow 2s infinite;
+                    flex-shrink: 0;
+                }
+                .score-badge.low-score { background: linear-gradient(135deg, var(--solaris-base01), var(--solaris-base02)); box-shadow: none; animation: none; opacity: 0.8; }
+                .score-num { font-size: 2.2rem; font-weight: 900; line-height: 1; }
+                .score-unit { font-size: 0.8rem; font-weight: 700; opacity: 0.9; }
+                
+                @keyframes pulse-yellow {
+                    0% { box-shadow: 0 0 0 0 rgba(181, 137, 0, 0.4); }
+                    70% { box-shadow: 0 0 0 15px rgba(181, 137, 0, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(181, 137, 0, 0); }
                 }
 
-                @media (max-width: 640px) {
-                    .calculator-page { padding: 8px; }
-                    .glass-card { padding: 12px; border-radius: 16px; }
-                    .calc-tile-container { width: 30px; height: 40px; padding: 2px; }
-                    .tile-grid { grid-template-columns: repeat(9, 30px); gap: 3px; }
-                    .tile-picker-card { padding: 10px; width: auto; }
-                    .hand-display-section { padding: 20px 10px 10px; overflow-x: auto; }
-                    .hand-container { gap: 10px; flex-wrap: nowrap; }
-                    .concealed-area { padding-left: 10px; }
-                    .options-grid { grid-template-columns: 1fr; }
-                    .feng-controls { flex-direction: column; }
-                    .mode-group { gap: 3px; }
-                    .group-hint { width: auto; font-size: 0.6rem; }
-                    .mode-btn { padding: 3px 7px; font-size: 0.7rem; }
-                    .ting-tile-item .calc-tile-container { width: 26px; height: 36px; }
-                    .rules-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+                .hu-status h3 { font-size: 1.8rem; font-weight: 900; margin: 0; background: linear-gradient(to right, var(--solaris-base01), var(--solaris-base00)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+                
+                .rules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+                .rule-card { 
+                    padding: 14px 20px; border-radius: 16px; 
+                    display: flex; justify-content: space-between; align-items: center; 
+                    background: #fff; border: 1px solid var(--solaris-base2);
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .rule-card:hover { transform: scale(1.03) translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.06); border-color: var(--solaris-blue); }
+                .rule-info { display: flex; align-items: center; gap: 6px; }
+                .rule-name { font-weight: 700; font-size: 1rem; color: var(--solaris-base01); }
+                .rule-count { font-size: 0.8rem; font-weight: 800; color: var(--solaris-orange); font-style: italic; opacity: 0.8; }
+                .rule-score { 
+                    background: var(--solaris-bg); padding: 4px 10px; border-radius: 6px;
+                    color: var(--solaris-blue); font-weight: 900; font-size: 0.9rem;
+                    border: 1px solid var(--solaris-base1);
+                }
+
+                .animate-up { animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+                @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+                .validation-alert { 
+                    margin-top: 25px; padding: 15px 20px; border-radius: 16px; 
+                    background: #fff5f5; border: 1px solid #feb2b2; color: #c53030;
+                    display: flex; align-items: center; gap: 12px; font-weight: 700;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                }
+                .alert-icon { font-size: 1.4rem; }
+                .btn-hint { font-size: 0.65rem; opacity: 0.7; display: block; font-weight: 500; font-family: monospace; }
+                .opt-btn.active .btn-hint { color: rgba(255,255,255,0.9); }
+
+                .compact-header { 
+                    display: flex; align-items: center; justify-content: space-between; 
+                    margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 8px;
+                }
+                .compact-header h2 { margin: 0; font-size: 1.2rem; }
+                .back-home-link { 
+                    display: flex; align-items: center; gap: 4px; color: var(--solaris-blue); 
+                    text-decoration: none; font-size: 0.85rem; font-weight: 700;
+                }
+
+                .options-panel-top { margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.03); border-radius: 12px; }
+                .extra-options-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+                .mini-option { display: flex; align-items: center; gap: 4px; }
+                .mini-opt-label { font-size: 0.75rem; font-weight: 700; color: var(--solaris-base01); }
+                .micro-btn { 
+                    padding: 2px 6px; border-radius: 4px; border: 1px solid var(--solaris-base1);
+                    background: #fff; font-size: 0.7rem; font-weight: 700; cursor: pointer;
+                }
+                .micro-btn.active { background: var(--solaris-blue); color: white; border-color: var(--solaris-blue); }
+                .micro-select { padding: 1px 4px; border-radius: 4px; border: 1px solid var(--solaris-base1); font-size: 0.75rem; font-weight: 700; }
+
+                .mobile-back-home { display: none; }
+                @media (max-width: 600px) {
+                    .app-header { display: none !important; }
+                    .mobile-back-home { display: none; }
+                    .compact-header { padding: 4px 0; margin-bottom: 8px; }
+                    .compact-header h2 { font-size: 1.1rem; }
+                    .back-home-link { font-size: 0.8rem; }
+                    
+                    .calculator-page { padding: 0; }
+                    .glass-card { border-radius: 0; padding: 10px 8px; border: none; box-shadow: none; }
+                    .input-control-section { grid-template-columns: 1fr; gap: 8px; }
+                    .tile-picker-card { padding: 6px; width: 100%; border: none; background: transparent; }
+                    .tile-grid { grid-template-columns: repeat(9, 1fr); width: 100%; gap: 2px; }
+                    .calc-tile-container { width: auto; height: 46px; padding: 1px; }
+                    .mode-selector-container { gap: 4px; margin-bottom: 8px; }
+                    .mode-group { gap: 2px; }
+                    .group-hint { width: 45px; font-size: 0.6rem; }
+                    .mode-btn { padding: 2px 5px; font-size: 0.65rem; }
+                    .btn-reset { font-size: 0.65rem; padding: 2px 8px; }
+                    
+                    .options-panel-top { padding: 6px; margin-bottom: 6px; }
+                    .extra-options-row { gap: 8px; justify-content: space-around; }
+                    .mini-option.flowers { margin-left: auto; }
+
+                    .hand-display-section { padding: 30px 8px 15px; margin-bottom: 12px; }
+                    .hand-group .group-hint { top: -22px; font-size: 0.6rem; }
+                    .hand-divider { margin: 0 6px; height: 35px; }
+                    .win-tile-area { margin-left: 6px; padding-left: 6px; }
+                    .win-label { top: -18px; }
+                    
+                    .hand-display-area .calc-tile-container { height: 44px; width: 33px; }
+                    .ting-display { flex-direction: column; align-items: flex-start; margin-top: 10px; padding-top: 8px; }
+                    .ting-tile-item.with-fans { width: 100%; padding: 4px 8px; }
+                    .options-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+                    .opt-btn { padding: 6px 4px; border-radius: 8px; font-size: 0.75rem; }
+                    
+                    .score-badge { width: 60px; height: 60px; }
+                    .score-num { font-size: 1.4rem; }
+                    .hu-status h3 { font-size: 1.2rem; }
+                    .rules-grid { grid-template-columns: 1fr; gap: 8px; }
+                    .rule-card { padding: 8px 12px; border-radius: 12px; }
+                    .rule-name { font-size: 0.85rem; }
                 }
             `}</style>
         </div>
