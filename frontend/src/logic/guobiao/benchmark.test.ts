@@ -52,7 +52,7 @@ function expectFans(handStr: string, expectedFanNames: string[], opts: Partial<G
   }
 }
 
-describe('Guobiao Benchmarks - Automated From XDean Samples', () => {
+describe('Guobiao Benchmarks - Automated From External Samples', () => {
   test('Sample 1: 一般高', () => {
     expectFans('p3 p3 p4 p4 p5 p5 s6 s6 s6 m3 m4 m5 z3 z3', ['一般高'], {});
   });
