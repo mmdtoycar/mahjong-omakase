@@ -3,9 +3,8 @@ import { Tile, TileSuit } from './tiles';
 import { Meld, GameOptions, CalcResult } from './types';
 import { calculateBestScore } from './fan';
 
-/**
  * Comprehensive Test Suite for Guobiao Mahjong Logic.
- * References from XDean's engine (https://github.com/XDean/tool.xdean.cn)
+ * References from external engine validation.
  */
 
 function parseHand(handStr: string, opts: Partial<GameOptions> = {}): { concealed: Tile[], melds: Meld[], options: GameOptions } {
@@ -60,7 +59,7 @@ function expectFans(handStr: string, expectedFanNames: string[], opts: Partial<G
   }
 }
 
-describe('Guobiao Logic XDean Compliance', () => {
+describe('Guobiao Logic External Engine Compliance', () => {
   test('Case 1: Pure 4 Steps (一色四步高)', () => {
     expectFans('chi:s123 chi:s234 chi:s345 chi:s456 m77', ['一色四步高', '全求人', '平和', '缺一门']);
   });

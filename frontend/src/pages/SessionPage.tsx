@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, HAN_OPTIONS, FU_OPTIONS } from '../types'
 
@@ -425,7 +425,7 @@ export default function SessionPage() {
                     <label>
                       分数
                       {isGuobiao && (
-                        <a href="https://tool.xdean.cn/tool/guobiao" target="_blank" rel="noopener noreferrer" className="score-calc-link">计算器</a>
+                        <Link to="/calculator" target="_blank" className="score-calc-link">计算器</Link>
                       )}
                     </label>
                     <input
