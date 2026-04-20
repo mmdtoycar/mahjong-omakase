@@ -1,26 +1,10 @@
 import {Tiles} from './types';
 
-export type TileType = 'b' | 't' | 'w' | 'z';
-export type TileSuit = 'm' | 'p' | 's' | 'z'; // HEAD compatibility
-
+export type TileType = 'b' | 't' | 'w' | 'z'
 export const TileNumberTypes: TileType[] = ['t', 'b', 'w'];
 export const TileTypes: TileType[] = ['b', 't', 'w', 'z'];
-export type TilePoint = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export type TilePoint = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 export const TilePoints: TilePoint[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
-const suitToType: Record<string, TileType> = {
-  'm': 'w',
-  'p': 'b',
-  's': 't',
-  'z': 'z'
-};
-
-const typeToSuit: Record<string, TileSuit> = {
-  'w': 'm',
-  'b': 'p',
-  't': 's',
-  'z': 'z'
-};
 
 export class Tile {
   constructor(
@@ -29,34 +13,29 @@ export class Tile {
   ) {
   }
 
-  // HEAD compatibility getters
-  get suit(): TileSuit { return typeToSuit[this.type]; }
-  get rank(): number { return this.point; }
-
-  // HEAD compatibility methods
-  get isHonor(): boolean { return this.type === 'z'; }
-  get isNumber(): boolean { return this.type !== 'z'; }
-  get isTerminal(): boolean { return this.isNumber && (this.point === 1 || this.point === 9); }
-  get isTerminalOrHonor(): boolean { return this.isTerminal || this.isHonor; }
-  get isWind(): boolean { return this.type === 'z' && this.point >= 1 && this.point <= 4; }
-  get isDragon(): boolean { return this.type === 'z' && this.point >= 5 && this.point <= 7; }
-  get isGreen(): boolean {
-    return (this.type === 't' && [2, 3, 4, 6, 8].includes(this.point)) ||
-           (this.type === 'z' && this.point === 6);
+  get suit(): 'm' | 'p' | 's' | 'z' {
+    switch (this.type) {
+      case 'w': return 'm';
+      case 'b': return 'p';
+      case 't': return 's';
+      default: return 'z';
+    }
   }
 
-  toString(): string { return `${this.point}${this.suit}`; }
+  get rank(): number {
+    return this.point;
+  }
 
   get prev() {
     if (this.type === 'z' || this.point === 1) {
-      throw new Error('cannot get prev tile');
+      throw 'cannot get prev tile';
     }
     return new Tile(this.type, (this.point - 1) as TilePoint);
   }
 
   get next() {
     if (this.type === 'z' || this.point === 9) {
-      throw new Error('cannot get next tile');
+      throw 'cannot get next tile';
     }
     return new Tile(this.type, (this.point + 1) as TilePoint);
   }
@@ -87,8 +66,7 @@ export class Tile {
   }
 
   equals(tile: Tile) {
-    if (!tile) return false;
-    return this.type === tile.type && this.point === tile.point;
+    return this.toNumber() == tile.toNumber();
   }
 
   get unicode() {
@@ -112,12 +90,14 @@ export class Tile {
 
   static fromString(s: string): Tile {
     const point = parseInt(s[0], 10) as TilePoint;
-    const suit = s[1] as TileSuit;
+    const suit = s[1] as 'm' | 'p' | 's' | 'z';
+    const suitToType: Record<string, TileType> = {
+      'm': 'w',
+      'p': 'b',
+      's': 't',
+      'z': 'z'
+    };
     return new Tile(suitToType[suit], point);
-  }
-
-  static get all(): Tile[] {
-    return Tile.All;
   }
 
   static T = TilePoints.map(p => new Tile('t', p));

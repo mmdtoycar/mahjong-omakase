@@ -2,15 +2,8 @@ import { contentEquals } from './util';
 import { Fan } from './fan';
 import { Tile, TilePoint, TileType, TileTypes } from './tiles';
 
-// Simple assert replacement
-function assert(condition: any, message?: string) {
-    if (!condition) {
-        throw new Error(message || "Assertion failed");
-    }
-}
-
 /**
- * Meld (面子) Definitions - HEAD Compatibility
+ * Meld (面子) Definitions - Compatibility
  */
 export type MeldType = 'shun' | 'ke' | 'gang' | 'dui' | 'single' | 'knitted' | 'zuhelong';
 
@@ -18,21 +11,21 @@ export interface Meld {
   type: MeldType;
   tiles: Tile[];
   isOpen: boolean;
-  isGang?: boolean; // Distinguishes gang from ke in internal combos
+  isGang?: boolean; 
 }
 
 /**
- * Hand Combination (胡牌组合) - HEAD Compatibility
+ * Hand Combination (胡牌组合) - Compatibility
  */
 export interface HandCombination {
   melds: Meld[];
   isSpecial?: boolean;
-  isBuKao?: boolean;     // 全不靠 hand
-  isZuHeLong?: boolean;  // 组合龙 hand
+  isBuKao?: boolean;     
+  isZuHeLong?: boolean;  
 }
 
 /**
- * Game Context/Options - HEAD Compatibility
+ * Game Options - Compatibility
  */
 export interface GameOptions {
   zimo: boolean;
@@ -46,17 +39,16 @@ export interface GameOptions {
 }
 
 /**
- * Fans (番种) Scored - HEAD Compatibility
+ * Fan Result - Compatibility
  */
 export interface FanResult {
   name: string;
-  nameEn?: string;
   score: number;
   count?: number;
 }
 
 /**
- * Final Calculation Result - HEAD Compatibility
+ * Calculation Result - Compatibility
  */
 export interface CalcResult {
   totalScore: number;
@@ -64,7 +56,12 @@ export interface CalcResult {
   combination: HandCombination;
 }
 
-// --- Utility Functions ---
+// Simple assert replacement
+function assert(condition: any, message?: string) {
+    if (!condition) {
+        throw new Error(message || "Assertion failed");
+    }
+}
 
 export function sortTiles(tiles: Tile[]): Tile[] {
   return [...tiles].sort((a, b) => a.compareTo(b));
@@ -91,8 +88,6 @@ export function removeTilesOnce(all: Tile[], toRemove: Tile[]): Tile[] {
   }
   return result;
 }
-
-// --- Main Classes (XDean Logic) ---
 
 export type Options = {
   zimo: boolean
