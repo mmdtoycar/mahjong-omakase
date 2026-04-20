@@ -51,6 +51,10 @@ Then open http://localhost:8080.
 
 Produces a single deployable JAR at `build/libs/mahjong-omakase-*.jar` with both backend and frontend bundled.
 
+## Acknowledgment
+
+This project draws inspiration and logic concepts from [XDean/tool.xdean.cn](https://github.com/XDean/tool.xdean.cn). We would like to clarify that while we referred to XDean's engine logic for validation and benchmark purposes, all codebase and scoring logic in **Mahjong Omakase** have been completely rewritten from scratch in TypeScript to follow our own design system and architectural principles.
+
 ## License
 
 [GPL-3.0](LICENSE)

@@ -24,9 +24,26 @@ export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], option
 
   let best: CalcResult | null = null;
   for (const combo of combinations) {
-    const scored = scoreCombination(combo, concealedTiles, options, lastTile, tingCount);
-    if (!best || scored.totalScore > best.totalScore) {
-      best = scored;
+    let tries = [ { combo, completedMeldIdx: -1 } ];
+    if (!options.zimo && lastTile && !combo.isSpecial) {
+       combo.melds.forEach((m, idx) => {
+         if (!m.isOpen && m.tiles.some(t => t.equals(lastTile))) {
+           tries.push({ combo, completedMeldIdx: idx });
+         }
+       });
+    }
+
+    for (const t of tries) {
+      if (t.completedMeldIdx !== -1) {
+         t.combo.melds[t.completedMeldIdx] = { ...t.combo.melds[t.completedMeldIdx], completedByDiscard: true } as any;
+      }
+      const scored = scoreCombination(t.combo, concealedTiles, options, lastTile, tingCount);
+      if (!best || scored.totalScore > best.totalScore) {
+        best = scored;
+      }
+      if (t.completedMeldIdx !== -1) {
+         delete (t.combo.melds[t.completedMeldIdx] as any).completedByDiscard;
+      }
     }
   }
   return best;
@@ -70,7 +87,7 @@ const TUI_BU_DAO_TILES = new Set([
   '7z' // 白
 ]);
 
-function scoreCombination(combo: HandCombination, concealedTiles: Tile[], options: GameOptions, lastTile?: Tile, tingCount: number = -1): CalcResult {
+export function scoreCombination(combo: HandCombination, concealedTiles: Tile[], options: GameOptions, lastTile?: Tile, tingCount: number = -1): CalcResult {
   const fans: FanResult[] = [];
   const melds = combo.melds;
   const allTiles = melds.flatMap(m => m.tiles);
@@ -99,17 +116,32 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
   }));
 
   // Helper functions
-  const addFan = (name: string, score: number, count: number = 1) => {
-    for (let i = 0; i < count; i++) fans.push({ name, score });
+  const addFan = (name: string, score: number, countToAdd: number = 1) => {
+    const existing = fans.find(f => f.name === name);
+    if (existing) {
+        existing.count = (existing.count || 1) + countToAdd;
+        existing.score += score * countToAdd;
+    } else {
+        fans.push({ name, score: score * countToAdd, count: countToAdd });
+    }
   };
-  const removeFan = (name: string, count: number = 1) => {
-    for (let i = 0; i < count; i++) {
-      const idx = fans.findIndex(f => f.name === name);
-      if (idx !== -1) fans.splice(idx, 1);
+  const removeFan = (name: string, countToRemove: number = 1) => {
+    const existing = fans.find(f => f.name === name);
+    if (existing) {
+        const baseScore = existing.score / (existing.count || 1);
+        existing.count = Math.max(0, (existing.count || 1) - countToRemove);
+        existing.score = existing.count * baseScore;
+        if (existing.count === 0) {
+            const idx = fans.indexOf(existing);
+            fans.splice(idx, 1);
+        }
     }
   };
   const hasFan = (name: string) => fans.some(f => f.name === name);
-  const countFan = (name: string) => fans.filter(f => f.name === name).length;
+  const countFan = (name: string) => {
+    const existing = fans.find(f => f.name === name);
+    return existing ? (existing.count || 1) : 0;
+  };
 
   // =====================================================================
   // 88 番 (5+2=7种)
@@ -133,7 +165,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
     }
   }
 
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 大四喜 (88)
     if (keMelds.filter(m => m.tiles[0].isWind).length === 4) addFan('大四喜', 88);
     // 大三元 (88)
@@ -165,7 +197,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
   // =====================================================================
   // 64 番 (6种)
   // =====================================================================
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 小四喜 (64)
     const windKes = keMelds.filter(m => m.tiles[0].isWind).length;
     const windDui = duiMelds.filter(m => m.tiles[0].isWind).length;
@@ -180,7 +212,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
     if (allTiles.every(t => t.isHonor)) addFan('字一色', 64);
 
     // 四暗刻 (64)
-    if (keMelds.filter(m => !m.isOpen).length === 4) addFan('四暗刻', 64);
+    if (keMelds.filter(m => !m.isOpen && !(m as any).completedByDiscard).length === 4) addFan('四暗刻', 64);
 
     // 清幺九 (64)
     if (allTiles.every(t => t.isTerminal)) addFan('清幺九', 64);
@@ -207,7 +239,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
   // =====================================================================
   // 48 番 (2种)
   // =====================================================================
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 一色四同顺 (48) — 4 shuns, same suit, same rank
     if (shunMelds.length === 4) {
       const ss = shunStarts;
@@ -229,7 +261,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
   // =====================================================================
   // 32 番 (3种)
   // =====================================================================
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 一色四步高 (32) — 4 shuns, same suit, consecutive diff 1 or 2
     if (shunMelds.length === 4) {
       const ss = shunStarts;
@@ -262,7 +294,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
     addFan('七星不靠', 24);
   }
 
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 全双刻 (24) — all kes are even numbers, pair is even number
     if (keMelds.length === 4 && keMelds.every(m => m.tiles[0].isNumber && m.tiles[0].rank % 2 === 0) &&
         duiMelds.length === 1 && duiMelds[0].tiles[0].isNumber && duiMelds[0].tiles[0].rank % 2 === 0) {
@@ -273,18 +305,20 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
     // 一色三同顺 (24) — 3 shuns, same suit, same rank
     for (const s of ['m', 'p', 's']) {
       const suitShuns = shunStarts.filter(x => x.suit === s);
-      const rankCounts = new Map<number, number>();
-      suitShuns.forEach(x => rankCounts.set(x.rank, (rankCounts.get(x.rank) || 0) + 1));
-      for (const [, c] of rankCounts) {
-        if (c >= 3) { addFan('一色三同顺', 24); break; }
-      }
-      if (hasFan('一色三同顺')) break;
+      const counts = new Map<number, number>();
+      suitShuns.forEach(ss => counts.set(ss.rank, (counts.get(ss.rank) || 0) + 1));
+      let found = false;
+      counts.forEach(c => { if (c >= 3) { addFan('一色三同顺', 24); found = true; } });
+      if (found) break;
     }
     // 一色三节高 (24) — 3 kes, same suit, consecutive ranks
-    for (const triple of triples(keStarts)) {
-      if (hasSameTypeAndDiff(triple, 1)) {
-        addFan('一色三节高', 24);
-        break;
+    for (const s of ['m', 'p', 's']) {
+      const suitKes = keStarts.filter(x => x.suit === s).map(x => x.rank).sort((a, b) => a - b);
+      for (let i = 0; i <= suitKes.length - 3; i++) {
+        if (suitKes[i + 1] === suitKes[i] + 1 && suitKes[i + 2] === suitKes[i] + 2) {
+          addFan('一色三节高', 24);
+          break;
+        }
       }
     }
     // 全大 (24)
@@ -298,74 +332,78 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
   // =====================================================================
   // 16 番 (6种)
   // =====================================================================
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 清龙 (16)
     for (const s of ['m', 'p', 's']) {
-      const ranks = shunStarts.filter(x => x.suit === s).map(x => x.rank);
-      if (ranks.includes(1) && ranks.includes(4) && ranks.includes(7)) {
+      if (shunStarts.some(ss => ss.suit === s && ss.rank === 1) &&
+          shunStarts.some(ss => ss.suit === s && ss.rank === 4) &&
+          shunStarts.some(ss => ss.suit === s && ss.rank === 7)) {
         addFan('清龙', 16);
         break;
       }
     }
-    // 三色双龙会 (16) — two different suits each have 123+789, third suit has pair of 5
-    if (shunMelds.length === 4 && duiMelds.length === 1 && !hasHonors) {
-      const duiTile = duiMelds[0].tiles[0];
-      if (duiTile.isNumber && duiTile.rank === 5) {
-        const otherSuits = ['m', 'p', 's'].filter(s => s !== duiTile.suit);
-        if (otherSuits.length === 2) {
-          const has1 = (s: string) => shunStarts.some(x => x.suit === s && x.rank === 1);
-          const has7 = (s: string) => shunStarts.some(x => x.suit === s && x.rank === 7);
-          if (has1(otherSuits[0]) && has7(otherSuits[0]) && has1(otherSuits[1]) && has7(otherSuits[1])) {
-            addFan('三色双龙会', 16);
-          }
-        }
+    // 三色双龙会 (16) — 2 123 shuns of two suits, 2 789 shuns of same two suits, pair of 5 of third suit
+    if (shunMelds.length === 4 && duiMelds.length === 1 && duiMelds[0].tiles[0].isNumber && duiMelds[0].tiles[0].rank === 5) {
+      const dSuit = duiMelds[0].tiles[0].suit;
+      const otherSuits = ['m', 'p', 's'].filter(s => s !== dSuit);
+      const reqStarts = [
+        { suit: otherSuits[0], rank: 1 }, { suit: otherSuits[0], rank: 7 },
+        { suit: otherSuits[1], rank: 1 }, { suit: otherSuits[1], rank: 7 }
+      ];
+      let matches = 0;
+      const usedShuns = new Set<number>();
+      for (const req of reqStarts) {
+        const idx = shunStarts.findIndex((s, i) => !usedShuns.has(i) && s.suit === req.suit && s.rank === req.rank);
+        if (idx !== -1) { matches++; usedShuns.add(idx); }
       }
+      if (matches === 4) addFan('三色双龙会', 16);
     }
-    // 一色三步高 (16)
+    // 一色三步高 (16) — same suit, 3 shuns, diff 1 or 2
     for (const s of ['m', 'p', 's']) {
-      const suitShuns = shunStarts.filter(x => x.suit === s);
-      for (const triple of triples(suitShuns)) {
-        if (hasSameTypeAndDiff(triple, 1) || hasSameTypeAndDiff(triple, 2)) {
-          if (!hasFan('一色四步高')) addFan('一色三步高', 16);
-          break;
-        }
-      }
-      if (hasFan('一色三步高')) break;
-    }
-    // 全带五 (16)
-    if (melds.every(m => m.tiles.some(t => t.isNumber && t.rank === 5))) addFan('全带五', 16);
-    // 三同刻 (16) — 3 kes of same rank but different suits
-    for (const triple of triples(keStarts)) {
-      if (triple.every(t => t.rank === triple[0].rank) && new Set(triple.map(t => t.suit)).size === 3) {
-        addFan('三同刻', 16);
+      const suitShuns = shunStarts.filter(x => x.suit === s).map(x => x.rank).sort((a, b) => a - b);
+      if (hasSameTypeAndDiff(suitShuns.map(r => ({ suit: s, rank: r })), 1) ||
+          hasSameTypeAndDiff(suitShuns.map(r => ({ suit: s, rank: r })), 2)) {
+        if (!hasFan('一色四步高')) addFan('一色三步高', 16);
         break;
       }
     }
+    // 全带五 (16)
+    if (melds.every(m => m.tiles.some(t => t.rank === 5))) addFan('全带五', 16);
+    // 三同刻 (16)
+    const keCounts = new Map<number, number>();
+    keStarts.forEach(k => keCounts.set(k.rank, (keCounts.get(k.rank) || 0) + 1));
+    let hasSanTongKe = false;
+    keCounts.forEach(c => { if (c >= 3) hasSanTongKe = true; });
+    if (hasSanTongKe) addFan('三同刻', 16);
     // 三暗刻 (16)
-    if (keMelds.filter(m => !m.isOpen).length === 3 && !hasFan('四暗刻')) addFan('三暗刻', 16);
+    if (keMelds.filter(m => !m.isOpen && !(m as any).completedByDiscard).length === 3 && !hasFan('四暗刻')) addFan('三暗刻', 16);
   }
 
   // =====================================================================
   // 12 番 (5种)
   // =====================================================================
-  if (!isSpecial) {
-    // 三风刻 (12)
-    const windKeCount = keMelds.filter(m => m.tiles[0].isWind).length;
-    if (windKeCount === 3 && !hasFan('大四喜') && !hasFan('小四喜')) addFan('三风刻', 12);
-    // 大于五 (12)
-    if (allTiles.every(t => t.isNumber && t.rank > 5) && !hasFan('全大')) addFan('大于五', 12);
-    // 小于五 (12)
-    if (allTiles.every(t => t.isNumber && t.rank < 5) && !hasFan('全小')) addFan('小于五', 12);
-  }
   // 全不靠 (12)
-  if (isSpecial && combo.isBuKao && !hasFan('七星不靠')) addFan('全不靠', 12);
+  if (isSpecial && combo.isBuKao && honorTiles.length < 7 && !hasFan('七星不靠')) {
+    addFan('全不靠', 12);
+  }
   // 组合龙 (12)
-  if (combo.isZuHeLong) addFan('组合龙', 12);
+  if (combo.isZuHeLong) {
+    addFan('组合龙', 12);
+  }
+
+  if (true) { // removed isSpecial restriction
+    // 大于五 (12)
+    if (allTiles.every(t => t.isNumber && t.rank >= 6)) addFan('大于五', 12);
+    // 小于五 (12)
+    if (allTiles.every(t => t.isNumber && t.rank <= 4)) addFan('小于五', 12);
+    // 三风刻 (12)
+    if (keMelds.filter(m => m.tiles[0].isWind).length === 3) addFan('三风刻', 12);
+  }
 
   // =====================================================================
   // 8 番 (10种)
   // =====================================================================
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 三色三同顺 (8)
     for (const triple of triples(shunStarts)) {
       if (triple.every(t => t.rank === triple[0].rank) && new Set(triple.map(t => t.suit)).size === 3) {
@@ -396,20 +434,12 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
     // 双暗杠 (8)
     if (gangMelds.filter(m => !m.isOpen).length === 2) addFan('双暗杠', 8);
     // 无番和 — added at end
-    // 妙手回春 (8)
-    if (options.lastTile && options.zimo) addFan('妙手回春', 8);
-    // 海底捞月 (8)
-    if (options.lastTile && !options.zimo) addFan('海底捞月', 8);
-    // 杠上开花 (8)
-    if (options.gangShang && options.zimo && gangMelds.length > 0) addFan('杠上开花', 8);
-    // 抢杠和 (8)
-    if (options.gangShang && !options.zimo) addFan('抢杠和', 8);
   }
 
   // =====================================================================
   // 6 番 (7种)
   // =====================================================================
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 碰碰和 (6)
     if (keMelds.length === 4 && !hasFan('一色四节高')) addFan('碰碰和', 6);
     // 混一色 (6)
@@ -447,7 +477,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
   // =====================================================================
   // 4 番 (4种)
   // =====================================================================
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 全带幺 (4)
     if (melds.every(m => m.tiles.some(t => t.isTerminalOrHonor)) &&
         !hasFan('混幺九') && !hasFan('清幺九') && !hasFan('字一色')) {
@@ -465,7 +495,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
   // =====================================================================
   // 2 番 (10种)
   // =====================================================================
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 箭刻 (2)
     const dragonKeCount = keMelds.filter(m => m.tiles[0].isDragon).length;
     if (dragonKeCount === 1 && !hasFan('大三元') && !hasFan('小三元') && !hasFan('双箭刻')) addFan('箭刻', 2);
@@ -499,7 +529,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
     }
 
     // 双暗刻 (2)
-    const anKeCount2 = keMelds.filter(m => !m.isOpen).length;
+    const anKeCount2 = keMelds.filter(m => !m.isOpen && !(m as any).completedByDiscard).length;
     if (anKeCount2 === 2 && !hasFan('三暗刻') && !hasFan('四暗刻')) addFan('双暗刻', 2);
 
     // 暗杠 (2)
@@ -515,7 +545,7 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
   // =====================================================================
   // 1 番 (13种)
   // =====================================================================
-  if (!isSpecial) {
+  if (true) { // removed isSpecial restriction
     // 一般高 (1) — 2 identical shuns (same suit+rank)
     const shunKeysCounts = new Map<string, number>();
     shunStarts.forEach(s => {
@@ -644,32 +674,67 @@ function scoreCombination(combo: HandCombination, concealedTiles: Tile[], option
         addFan('边张', 1);
       }
     }
+  } // End of !isSpecial block
 
-    // 自摸 (1)
-    if (options.zimo && !hasFan('不求人') && !hasFan('妙手回春') && !hasFan('杠上开花')) addFan('自摸', 1);
-
-    // 花牌 (1 each)
-    if (options.huaCount > 0) addFan('花牌', 1, options.huaCount);
+  // --- Situational Fans (和牌方式) ---
+  const hasGang = gangMelds.length > 0;
+  if (options.zimo && options.gangShang && hasGang) addFan('杠上开花', 8);
+  if (!options.zimo && options.gangShang) {
+    // 抢杠和 doesn't require a gang in YOUR hand. You rob someone else's gang.
+    // However, Guobiao requires the winning tile to be a single tile wait or at least impossible to be a gang if you have 2. 
+    // Specifically, if you have 2+ of the winning tile, someone else couldn't possibly be konging it.
+    if (lastTile && tileCount(allTiles, lastTile) <= 2) {
+      addFan('抢杠和', 8);
+    }
   }
+  if (options.zimo && options.lastTile) addFan('妙手回春', 8);
+  if (!options.zimo && options.lastTile) addFan('海底捞月', 8);
+  if (options.juezhang) addFan('和绝张', 4);
+  if (options.zimo && allClosed) addFan('不求人', 4);
+  if (!options.zimo && allClosed && !isSpecial) addFan('门前清', 2);
+  if (options.zimo && !hasFan('不求人') && !hasFan('妙手回春') && !hasFan('杠上开花')) addFan('自摸', 1);
+  if (options.huaCount > 0) addFan('花牌', 1, options.huaCount);
 
-  // Handle special hands' basic fans
-  if (isSpecial) {
-    if (options.zimo && !combo.isBuKao) addFan('自摸', 1); // BuKao already includes values? actually no, but we'll see
-    if (options.huaCount > 0) addFan('花牌', 1, options.huaCount);
-  }
+  if (isSpecial) { }
 
+  // =====================================================================
+  // EXCLUSIONS (不计)
+  if (hasFan('十三幺')) { removeFan('五门齐'); removeFan('不求人'); removeFan('单钓将'); removeFan('门前清'); removeFan('混幺九'); }
+  // =====================================================================
+  if (hasFan('大四喜')) { removeFan('三风刻'); removeFan('碰碰和'); removeFan('幺九刻'); }
+  if (hasFan('大三元')) { removeFan('箭刻'); removeFan('幺九刻'); }
+  if (hasFan('九莲宝灯')) { removeFan('清一色'); removeFan('不求人'); removeFan('门前清'); removeFan('幺九刻'); removeFan('无字'); }
+  if (hasFan('四杠')) { removeFan('三杠'); removeFan('双暗杠'); removeFan('双明杠'); removeFan('明暗杠'); removeFan('暗杠'); removeFan('明杠'); removeFan('碰碰和'); removeFan('单钓将'); }
+  if (hasFan('连七对')) { removeFan('七对'); removeFan('清一色'); removeFan('门前清'); removeFan('不求人'); removeFan('单钓将'); removeFan('无字'); }
+  if (hasFan('七对')) { removeFan('门前清'); removeFan('单钓将'); }
+  if (hasFan('一色双龙会')) { removeFan('清一色'); removeFan('七对'); removeFan('平和'); removeFan('一般高', 2); removeFan('老少副', 2); removeFan('无字'); }
+  if (hasFan('一色四同顺')) { removeFan('一色三同顺'); removeFan('一般高', 6); removeFan('四归一', 4); removeFan('一色三节高'); }
+  if (hasFan('一色四节高')) { removeFan('一色三同顺'); removeFan('一色三节高'); removeFan('碰碰和'); }
+  if (hasFan('一色三同顺')) { removeFan('一色三节高'); removeFan('一般高', 3); }
+  if (hasFan('清一色')) { removeFan('无字'); }
+  if (hasFan('混一色')) { removeFan('无字'); }
+  if (hasFan('全双刻')) { removeFan('碰碰和'); removeFan('断幺'); removeFan('无字'); }
+  if (hasFan('五门齐')) { /* no implicit */ }
+  if (hasFan('字一色')) { removeFan('碰碰和'); removeFan('幺九刻', 4); removeFan('全带幺'); }
+  if (hasFan('碰碰和')) { removeFan('无番和'); }
+  if (hasFan('四暗刻')) { removeFan('三暗刻'); removeFan('双暗刻'); removeFan('不求人'); removeFan('门前清'); removeFan('碰碰和'); }
+  if (hasFan('三暗刻')) { removeFan('双暗刻'); }
+  if (hasFan('双暗杠')) { removeFan('暗杠', 2); removeFan('双暗刻'); }
+  if (hasFan('三杠')) { removeFan('双明杠'); removeFan('双暗杠'); removeFan('明暗杠'); removeFan('暗杠'); removeFan('明杠'); }
+  if (hasFan('清幺九')) { removeFan('碰碰和'); removeFan('同刻'); removeFan('幺九刻', 4); removeFan('无字'); removeFan('全带幺'); }
+  if (hasFan('清龙')) { removeFan('连六', 2); removeFan('老少副'); }
+  if (hasFan('花龙')) { removeFan('喜相逢'); removeFan('老少副'); }
+  if (hasFan('推不到')) { removeFan('缺一门'); }
+  if (hasFan('平和')) { removeFan('无字'); }
+  if (hasFan('断幺')) { removeFan('无字'); }
+  if (hasFan('全带五')) { removeFan('断幺'); removeFan('无字'); }
+  if (hasFan('不求人')) { removeFan('门前清'); removeFan('自摸'); }
+  
   if (combo.isBuKao) {
-    // BuKao excludes: 五门齐, 不求人, 门前清, 单钓将, 混幺九, 全带幺, 断幺, 平和, 无字
-    removeFan('五门齐');
-    removeFan('不求人');
-    removeFan('门前清');
-    removeFan('单钓将');
-    removeFan('混幺九');
-    removeFan('全带幺');
-    removeFan('断幺');
-    removeFan('平和');
-    removeFan('无字');
+    removeFan('五门齐'); removeFan('不求人'); removeFan('门前清'); removeFan('单钓将'); removeFan('混幺九');
+    removeFan('全带幺'); removeFan('断幺'); removeFan('平和'); removeFan('无字'); removeFan('缺一门');
   }
+
 
   if (combo.isZuHeLong) {
     // ZuHeLong can be part of BuKao or standard

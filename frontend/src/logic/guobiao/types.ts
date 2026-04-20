@@ -3,7 +3,7 @@ import { Tile } from './tiles';
 /**
  * Meld (面子) Definitions
  */
-export type MeldType = 'shun' | 'ke' | 'gang' | 'dui' | 'single' | 'knitted';
+export type MeldType = 'shun' | 'ke' | 'gang' | 'dui' | 'single' | 'knitted' | 'zuhelong';
 
 export interface Meld {
   type: MeldType;
@@ -33,6 +33,7 @@ export interface GameOptions {
   quanfeng: number;
   menfeng: number;
   huaCount: number;
+  showTingFans: boolean;
 }
 
 /**
