@@ -715,14 +715,12 @@ const CalculatorPage: React.FC = () => {
 
                 .mobile-back-home { display: none; }
                 @media (max-width: 600px) {
-                    .app-header { display: none !important; }
-                    .mobile-back-home { display: none; }
-                    .compact-header { padding: 4px 0; margin-bottom: 8px; }
-                    .compact-header h2 { font-size: 1.1rem; }
-                    .back-home-link { font-size: 0.8rem; }
-                    
+                    .calculator-page .compact-header { padding: 4px 0; margin-bottom: 8px; }
+                    .calculator-page .compact-header h2 { font-size: 1.1rem; }
+                    .calculator-page .back-home-link { font-size: 0.8rem; }
+
                     .calculator-page { padding: 0; }
-                    .glass-card { border-radius: 0; padding: 10px 8px; border: none; box-shadow: none; }
+                    .calculator-page .glass-card { border-radius: 0; padding: 10px 8px; border: none; box-shadow: none; }
                     .input-control-section { grid-template-columns: 1fr; gap: 8px; }
                     .tile-picker-card { padding: 6px; width: 100%; border: none; background: transparent; }
                     .tile-grid { grid-template-columns: repeat(9, 1fr); width: 100%; gap: 6px; }
@@ -732,7 +730,7 @@ const CalculatorPage: React.FC = () => {
                     .group-hint { width: 45px; font-size: 0.6rem; }
                     .mode-btn { padding: 2px 5px; font-size: 0.65rem; }
                     .btn-reset { font-size: 0.65rem; padding: 2px 8px; }
-                    
+
                     .options-panel-top { padding: 6px; margin-bottom: 6px; }
                     .extra-options-row { gap: 8px; justify-content: space-around; }
                     .mini-option.flowers { margin-left: auto; }
@@ -742,19 +740,22 @@ const CalculatorPage: React.FC = () => {
                     .hand-divider { margin: 0 6px; height: 35px; }
                     .win-tile-area { margin-left: 6px; padding-left: 6px; }
                     .win-label { top: -18px; }
-                    
+
                     .hand-display-area .calc-tile-container { height: 44px; width: 33px; }
                     .ting-display { flex-direction: column; align-items: flex-start; margin-top: 10px; padding-top: 8px; }
                     .ting-tile-item.with-fans { width: 100%; padding: 4px 8px; }
                     .options-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
                     .opt-btn { padding: 6px 4px; border-radius: 8px; font-size: 0.75rem; }
-                    
+
+                    .result-panel { padding: 15px; border-radius: 16px; margin-top: 15px; }
+                    .result-header { gap: 15px; }
                     .score-badge { width: 60px; height: 60px; }
                     .score-num { font-size: 1.4rem; }
                     .hu-status h3 { font-size: 1.2rem; }
                     .rules-grid { grid-template-columns: 1fr; gap: 8px; }
                     .rule-card { padding: 8px 12px; border-radius: 12px; }
                     .rule-name { font-size: 0.85rem; }
+                    .validation-alert { padding: 12px 14px; word-break: break-word; }
                 }
             `}</style>
         </div>
