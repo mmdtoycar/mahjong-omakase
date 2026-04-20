@@ -50,13 +50,13 @@ const modes: Mode[] = [
     canUse: (c, m) => (c.length + m.length * 3) <= 11,
     isDisabled: (c, m, t) => {
         if (t.suit === 'z' || t.rank >= 8) return true;
-        const t1 = new Tile(t.suit, t.rank);
-        const t2 = new Tile(t.suit, t.rank + 1);
-        const t3 = new Tile(t.suit, t.rank + 2);
+        const t1 = new Tile(t.type, t.point);
+        const t2 = new Tile(t.type, (t.point + 1) as any);
+        const t3 = new Tile(t.type, (t.point + 2) as any);
         const all = [...c, ...m.flatMap(x => x.tiles)];
         return all.filter(x => x.equals(t1)).length >= 4 || all.filter(x => x.equals(t2)).length >= 4 || all.filter(x => x.equals(t3)).length >= 4;
     },
-    add: (c, m, t) => ({ concealed: [...c, t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], mings: m }),
+    add: (c, m, t) => ({ concealed: [...c, t, Tile.fromString(`${t.rank + 1}${t.suit}`), Tile.fromString(`${t.rank + 2}${t.suit}`)], mings: m }),
   },
   {
     name: 'an-ke',
@@ -78,9 +78,9 @@ const modes: Mode[] = [
     canUse: (c, m) => (c.length + m.length * 3) <= 11,
     isDisabled: (c, m, t) => {
         if (t.suit === 'z' || t.rank >= 8) return true;
-        return false; // Simplified
+        return false;
     },
-    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'shun', tiles: [t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], isOpen: true }] }),
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'shun', tiles: [t, Tile.fromString(`${t.rank + 1}${t.suit}`), Tile.fromString(`${t.rank + 2}${t.suit}`)], isOpen: true }] }),
   },
   {
     name: 'peng',
@@ -211,7 +211,7 @@ const CalculatorPage: React.FC = () => {
                 const impossibleTings = rawTings.filter(res => {
                     const countInHand = concealedTiles.filter(t => t.equals(res.tile)).length + 
                                        melds.reduce((acc, m) => acc + m.tiles.filter(t => t.equals(res.tile)).length, 0);
-                    return countInHand >= 1; // If I already have 1, winning on the 2nd (pair) makes 5 tiles needed for Juezhang (3 table + 2 hand)
+                    return countInHand >= 1; 
                 });
                 if (impossibleTings.length === rawTings.length) {
                     return `绝张错误：当前为“单调将”或类似听牌（手牌已持有所听之牌），不可能凑齐场面显现 3 张且你和第 4 张（共需 5 张）。`;
@@ -458,284 +458,374 @@ const CalculatorPage: React.FC = () => {
                     </section>
                 )}
             </div>
-
-            <style>{`
-                /* Solaris (Solarized Light) Palette */
-                .solaris-theme {
-                    --solaris-bg: #fdf6e3;
-                    --solaris-bg-alt: #eee8d5;
-                    --solaris-base01: #586e75;
-                    --solaris-base02: #073642;
-                    --solaris-base1: #93a1a1;
-                    --solaris-yellow: #b58900;
-                    --solaris-orange: #cb4b16;
-                    --solaris-red: #dc322f;
-                    --solaris-magenta: #d33682;
-                    --solaris-violet: #6c71c4;
-                    --solaris-blue: #268bd2;
-                    --solaris-cyan: #2aa198;
-                    --solaris-green: #859900;
-                    
-                    background-color: var(--solaris-bg);
-                    color: var(--solaris-base01);
-                    min-height: 100vh;
-                }
-
-                .solaris-theme .glass-card {
-                    background: rgba(238, 232, 213, 0.6);
-                    backdrop-filter: blur(15px);
-                    border: 1px solid rgba(147, 161, 161, 0.2);
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-                }
-
-                .solaris-theme .page-header h2 {
-                    background: linear-gradient(135deg, var(--solaris-base01) 0%, var(--solaris-blue) 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    font-weight: 800;
-                }
-
-                /* Unified Tile Style - Using calc prefix to avoid global index.css conflicts */
-                .calc-tile-container {
-                    width: 42px;
-                    height: 56px;
-                    flex-shrink: 0;
-                    background: #fff;
-                    border-radius: 4px;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    position: relative;
-                    transition: all 0.15s ease;
-                    overflow: hidden;
-                    box-sizing: border-box;
-                    padding: 4px; /* Further increased white margin */
-                    margin: 0;
-                }
-
-                .calc-tile-container.selectable { cursor: pointer; }
-                .calc-tile-container.selectable:hover { transform: translateY(-4px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-                .calc-tile-container.disabled { opacity: 0.15; cursor: not-allowed; pointer-events: none; }
-
-                .calc-tile {
-                    width: 100% !important;
-                    height: 100% !important;
-                    max-width: none !important;
-                    object-fit: contain !important; /* Changed back to contain to honor aspect ratio with padding */
-                    display: block !important;
-                    border: none !important;
-                    background: transparent !important;
-                    box-shadow: none !important;
-                    transform: none !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
-
-                .highlighted-tile {
-                    box-shadow: inset 0 0 0 3px var(--solaris-yellow) !important;
-                    filter: drop-shadow(0 0 8px rgba(181, 137, 0, 0.4));
-                }
-
-                .back-tile-svg { filter: saturate(0.5) brightness(0.9); }
-
-                /* Layout */
-                .calculator-page { max-width: 1100px; margin: 0 auto; padding: 20px; font-family: 'Outfit', sans-serif; }
-                .glass-card { border-radius: 24px; padding: 25px; }
-                .page-header { margin-bottom: 20px; text-align: center; }
-
-                .input-control-section { 
-                    display: grid; 
-                    grid-template-columns: 1fr 260px; 
-                    gap: 20px; 
-                    margin-bottom: 25px; 
-                    align-items: start;
-                }
-                .tile-picker-card { padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.03); width: fit-content; }
-
-                .mode-selector-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-                .mode-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-                .group-hint { font-size: 0.65rem; font-weight: 800; opacity: 0.6; width: 60px; text-align: right; margin-right: 4px; color: var(--solaris-base02); }
-                .mode-btn { padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 500; font-size: 0.75rem; background: var(--solaris-bg); color: var(--solaris-base01); border: 1px solid var(--solaris-base1); }
-                .mode-btn.active { background: var(--solaris-blue); color: white; border-color: var(--solaris-blue); }
-                .mode-btn.btn-reset { margin-left: auto; border-color: var(--solaris-red); color: var(--solaris-red); }
-                .mode-btn.btn-reset:hover { background: var(--solaris-red); color: white; }
-
-                .tile-grid { 
-                    display: grid; 
-                    grid-template-columns: repeat(9, 42px); 
-                    gap: 4px; 
-                    justify-content: start; 
-                }
-
-                .options-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-                .opt-btn { padding: 10px 6px; border-radius: 10px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; font-weight: 700; background: #fff; border: 1px solid var(--solaris-base1); color: var(--solaris-base01); }
-                .opt-btn.active { background: var(--solaris-cyan); color: white; border-color: var(--solaris-cyan); box-shadow: 0 4px 10px rgba(42, 161, 152, 0.3); }
-
-                .winning-options-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed rgba(0,0,0,0.1); }
-                .section-label { display: block; font-size: 0.75rem; font-weight: 800; color: var(--solaris-base1); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-
-                 .extra-options { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding: 12px; background: rgba(0,0,0,0.02); border-radius: 12px; }
-                .option-group { display: flex; align-items: center; gap: 10px; }
-                .opt-label { font-size: 0.75rem; font-weight: 700; color: var(--solaris-base01); min-width: 40px; }
-                .opt-btns-row { display: flex; gap: 4px; }
-                .hua-btns-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; flex: 1; }
-                .mini-opt-btn { padding: 4px 0; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 600; font-size: 0.8rem; background: #fff; border: 1px solid var(--solaris-base1); min-width: 28px; text-align: center; }
-                .mini-opt-btn.active { background: var(--solaris-blue); color: white; border-color: var(--solaris-blue); box-shadow: 0 2px 6px rgba(38, 139, 210, 0.4); }
-                .mini-opt-btn:hover:not(.active) { background: var(--solaris-bg); }
-
-                .hand-display-section { padding: 45px 25px 35px; border-radius: 20px; margin-bottom: 25px; position: relative; background: var(--solaris-bg-alt); box-shadow: inset 0 0 30px rgba(0,0,0,0.06); }
-                .hand-display-area { display: flex; align-items: flex-end; gap: 8px; min-height: 80px; justify-content: center; flex-wrap: wrap; }
-                .hand-group { display: flex; align-items: flex-end; gap: 4px; position: relative; flex-wrap: wrap; justify-content: center; }
-                .hand-group .group-hint { position: absolute; top: -28px; left: 0; margin: 0; width: auto; font-size: 0.7rem; font-weight: 700; color: var(--solaris-blue); opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
-                .meld-box { display: flex; gap: 1px; align-items: flex-end; transition: transform 0.2s; cursor: pointer; flex-shrink: 0; }
-                .meld-box:hover { transform: translateY(-3px); }
-                .tiles-row { display: flex; gap: 1px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
-                .hand-divider { width: 3px; height: 50px; background: var(--solaris-base1); margin: 0 10px; opacity: 0.3; flex-shrink: 0; align-self: flex-end; border-radius: 2px; }
-                .win-tile-area { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-left: 5px; padding-left: 10px; border-left: 2px dashed rgba(0,0,0,0.1); position: relative; flex-shrink: 0; }
-                .win-label { font-size: 0.65rem; font-weight: 800; color: var(--solaris-yellow); position: absolute; top: -22px; width: 100%; text-align: center; }
-                .hand-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.15; font-size: 1.1rem; font-weight: 700; pointer-events: none; }
-
-                .ting-display { margin-top: 15px; padding-top: 12px; border-top: 1px dashed rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; }
-                .ting-title { font-size: 0.8rem; font-weight: 700; color: var(--solaris-base01); white-space: nowrap; }
-                .ting-tiles { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-                 .ting-tile-item { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; transition: transform 0.15s; position: relative; }
-                .ting-tile-item.with-fans { flex-direction: row; align-items: flex-start; gap: 8px; padding: 6px 10px; background: rgba(0,0,0,0.03); border-radius: 12px; }
-                .ting-tile-item:hover { transform: translateY(-3px); }
-                .ting-tile-item .calc-tile-container { width: 30px; height: 42px; flex-shrink: 0; }
-                .ting-info { display: flex; flex-direction: column; gap: 2px; align-items: center; }
-                .ting-tile-item.with-fans .ting-info { align-items: flex-start; }
-                .ting-fan { font-size: 0.85rem; font-weight: 900; color: var(--solaris-blue); display: flex; align-items: center; gap: 6px; }
-                .ting-fan.low-score { color: var(--solaris-base1); }
-                .low-status-tag { 
-                    font-size: 0.6rem; background: var(--solaris-bg); color: var(--solaris-base1); 
-                    padding: 1px 4px; border-radius: 4px; border: 1px solid var(--solaris-base1);
-                    text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;
-                }
-                .ting-fan-labels { display: flex; flex-wrap: wrap; gap: 2px; max-width: 120px; }
-                .mini-fan-name { font-size: 0.6rem; font-weight: 700; background: var(--solaris-bg-alt); padding: 1px 4px; border-radius: 4px; color: var(--solaris-base01); white-space: nowrap; }
-                .no-ting { font-size: 0.85rem; color: var(--solaris-red); font-style: italic; }
-
-                .result-panel { margin-top: 30px; padding: 30px; border-radius: 24px; background: rgba(255,255,255,0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 15px 35px rgba(0,0,0,0.05); }
-                .result-header { display: flex; align-items: center; gap: 30px; margin-bottom: 30px; }
-                
-                .score-badge { 
-                    width: 100px; height: 100px; border-radius: 50%; 
-                    display: flex; flex-direction: column; align-items: center; justify-content: center;
-                    background: linear-gradient(135deg, var(--solaris-yellow), #d4a017);
-                    color: white; box-shadow: 0 10px 25px rgba(181, 137, 0, 0.3);
-                    animation: pulse-yellow 2s infinite;
-                    flex-shrink: 0;
-                }
-                .score-badge.low-score { background: linear-gradient(135deg, var(--solaris-base01), var(--solaris-base02)); box-shadow: none; animation: none; opacity: 0.8; }
-                .score-num { font-size: 2.2rem; font-weight: 900; line-height: 1; }
-                .score-unit { font-size: 0.8rem; font-weight: 700; opacity: 0.9; }
-                
-                @keyframes pulse-yellow {
-                    0% { box-shadow: 0 0 0 0 rgba(181, 137, 0, 0.4); }
-                    70% { box-shadow: 0 0 0 15px rgba(181, 137, 0, 0); }
-                    100% { box-shadow: 0 0 0 0 rgba(181, 137, 0, 0); }
-                }
-
-                .hu-status h3 { font-size: 1.8rem; font-weight: 900; margin: 0; background: linear-gradient(to right, var(--solaris-base01), var(--solaris-base00)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-                
-                .rules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-                .rule-card { 
-                    padding: 14px 20px; border-radius: 16px; 
-                    display: flex; justify-content: space-between; align-items: center; 
-                    background: #fff; border: 1px solid var(--solaris-base2);
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                }
-                .rule-card:hover { transform: scale(1.03) translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.06); border-color: var(--solaris-blue); }
-                .rule-info { display: flex; align-items: center; gap: 6px; }
-                .rule-name { font-weight: 700; font-size: 1rem; color: var(--solaris-base01); }
-                .rule-count { font-size: 0.8rem; font-weight: 800; color: var(--solaris-orange); font-style: italic; opacity: 0.8; }
-                .rule-score { 
-                    background: var(--solaris-bg); padding: 4px 10px; border-radius: 6px;
-                    color: var(--solaris-blue); font-weight: 900; font-size: 0.9rem;
-                    border: 1px solid var(--solaris-base1);
-                }
-
-                .animate-up { animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-                @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-
-                .validation-alert { 
-                    margin-top: 25px; padding: 15px 20px; border-radius: 16px; 
-                    background: #fff5f5; border: 1px solid #feb2b2; color: #c53030;
-                    display: flex; align-items: center; gap: 12px; font-weight: 700;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-                }
-                .alert-icon { font-size: 1.4rem; }
-                .btn-hint { font-size: 0.65rem; opacity: 0.7; display: block; font-weight: 500; font-family: monospace; }
-                .opt-btn.active .btn-hint { color: rgba(255,255,255,0.9); }
-
-                .compact-header { 
-                    display: flex; align-items: center; justify-content: space-between; 
-                    margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 8px;
-                }
-                .compact-header h2 { margin: 0; font-size: 1.2rem; }
-                .back-home-link { 
-                    display: flex; align-items: center; gap: 4px; color: var(--solaris-blue); 
-                    text-decoration: none; font-size: 0.85rem; font-weight: 700;
-                }
-
-                .options-panel-top { margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.03); border-radius: 12px; }
-                .extra-options-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-                .mini-option { display: flex; align-items: center; gap: 4px; }
-                .mini-opt-label { font-size: 0.75rem; font-weight: 700; color: var(--solaris-base01); }
-                .micro-btn { 
-                    padding: 2px 6px; border-radius: 4px; border: 1px solid var(--solaris-base1);
-                    background: #fff; font-size: 0.7rem; font-weight: 700; cursor: pointer;
-                }
-                .micro-btn.active { background: var(--solaris-blue); color: white; border-color: var(--solaris-blue); }
-                .micro-select { padding: 1px 4px; border-radius: 4px; border: 1px solid var(--solaris-base1); font-size: 0.75rem; font-weight: 700; }
-
-                .mobile-back-home { display: none; }
-                @media (max-width: 600px) {
-                    .app-header { display: none !important; }
-                    .mobile-back-home { display: none; }
-                    .compact-header { padding: 4px 0; margin-bottom: 8px; }
-                    .compact-header h2 { font-size: 1.1rem; }
-                    .back-home-link { font-size: 0.8rem; }
-                    
-                    .calculator-page { padding: 0; }
-                    .glass-card { border-radius: 0; padding: 10px 8px; border: none; box-shadow: none; }
-                    .input-control-section { grid-template-columns: 1fr; gap: 8px; }
-                    .tile-picker-card { padding: 6px; width: 100%; border: none; background: transparent; }
-                    .tile-grid { grid-template-columns: repeat(9, 1fr); width: 100%; gap: 2px; }
-                    .calc-tile-container { width: auto; height: 46px; padding: 1px; }
-                    .mode-selector-container { gap: 4px; margin-bottom: 8px; }
-                    .mode-group { gap: 2px; }
-                    .group-hint { width: 45px; font-size: 0.6rem; }
-                    .mode-btn { padding: 2px 5px; font-size: 0.65rem; }
-                    .btn-reset { font-size: 0.65rem; padding: 2px 8px; }
-                    
-                    .options-panel-top { padding: 6px; margin-bottom: 6px; }
-                    .extra-options-row { gap: 8px; justify-content: space-around; }
-                    .mini-option.flowers { margin-left: auto; }
-
-                    .hand-display-section { padding: 30px 8px 15px; margin-bottom: 12px; }
-                    .hand-group .group-hint { top: -22px; font-size: 0.6rem; }
-                    .hand-divider { margin: 0 6px; height: 35px; }
-                    .win-tile-area { margin-left: 6px; padding-left: 6px; }
-                    .win-label { top: -18px; }
-                    
-                    .hand-display-area .calc-tile-container { height: 44px; width: 33px; }
-                    .ting-display { flex-direction: column; align-items: flex-start; margin-top: 10px; padding-top: 8px; }
-                    .ting-tile-item.with-fans { width: 100%; padding: 4px 8px; }
-                    .options-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
-                    .opt-btn { padding: 6px 4px; border-radius: 8px; font-size: 0.75rem; }
-                    
-                    .score-badge { width: 60px; height: 60px; }
-                    .score-num { font-size: 1.4rem; }
-                    .hu-status h3 { font-size: 1.2rem; }
-                    .rules-grid { grid-template-columns: 1fr; gap: 8px; }
-                    .rule-card { padding: 8px 12px; border-radius: 12px; }
-                    .rule-name { font-size: 0.85rem; }
-                }
-            `}</style>
         </div>
     );
 };
 
 export default CalculatorPage;
+
+// --- Styles ---
+// Note: These are kept inside the component file for now to avoid global CSS conflicts.
+const STYLES = `
+    /* Solaris (Solarized Light) Palette */
+    .solaris-theme {
+        --solaris-bg: #fdf6e3;
+        --solaris-bg-alt: #eee8d5;
+        --solaris-base01: #586e75;
+        --solaris-base02: #073642;
+        --solaris-base1: #93a1a1;
+        --solaris-yellow: #b58900;
+        --solaris-orange: #cb4b16;
+        --solaris-red: #dc322f;
+        --solaris-magenta: #d33682;
+        --solaris-violet: #6c71c4;
+        --solaris-blue: #268bd2;
+        --solaris-cyan: #2aa198;
+        --solaris-green: #859900;
+        
+        background-color: var(--solaris-bg);
+        color: var(--solaris-base01);
+        min-height: 100vh;
+        padding: 20px;
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    .solaris-theme .glass-card {
+        background: rgba(238, 232, 213, 0.6);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(147, 161, 161, 0.2);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        border-radius: 16px;
+        padding: 24px;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .solaris-theme .page-header h2 {
+        background: linear-gradient(135deg, var(--solaris-base01) 0%, var(--solaris-blue) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .compact-header {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+
+    .back-home-link {
+        text-decoration: none;
+        color: var(--solaris-blue);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Tile Picker Styles */
+    .tile-picker-card {
+        background: var(--solaris-bg-alt);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+    }
+
+    .mode-selector-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .mode-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(0,0,0,0.03);
+        padding: 4px 12px;
+        border-radius: 20px;
+    }
+
+    .group-hint {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        opacity: 0.6;
+    }
+
+    .mode-btn {
+        border: none;
+        background: transparent;
+        padding: 6px 12px;
+        border-radius: 16px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+        color: var(--solaris-base01);
+    }
+
+    .mode-btn.active {
+        background: var(--solaris-blue);
+        color: white;
+    }
+
+    .btn-reset {
+        background: var(--solaris-red);
+        color: white;
+    }
+
+    .tile-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+        gap: 4px;
+    }
+
+    /* Tile Styles */
+    .calc-tile-container {
+        width: 42px;
+        height: 56px;
+        background: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: default;
+        transition: transform 0.1s;
+    }
+
+    .calc-tile-container.selectable:hover {
+        transform: translateY(-4px);
+        cursor: pointer;
+    }
+
+    .calc-tile-container.disabled {
+        opacity: 0.3;
+        filter: grayscale(1);
+    }
+
+    .calc-tile-container.small {
+        width: 32px;
+        height: 42px;
+    }
+
+    .calc-tile {
+        width: 90%;
+        height: 90%;
+    }
+
+    .highlighted-tile {
+        filter: drop-shadow(0 0 4px var(--solaris-blue));
+    }
+
+    /* Hand Display Area */
+    .hand-display-area {
+        display: flex;
+        align-items: flex-end;
+        gap: 16px;
+        padding: 20px;
+        background: rgba(255,255,255,0.4);
+        border-radius: 12px;
+        min-height: 100px;
+        margin-bottom: 24px;
+        overflow-x: auto;
+    }
+
+    .hand-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .tiles-row {
+        display: flex;
+        gap: 2px;
+    }
+
+    .meld-box {
+        display: flex;
+        gap: 1px;
+        background: rgba(0,0,0,0.05);
+        padding: 2px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .win-tile-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .win-label {
+        font-size: 10px;
+        font-weight: 800;
+        color: var(--solaris-red);
+        background: rgba(220, 50, 47, 0.1);
+        padding: 2px 6px;
+        border-radius: 10px;
+    }
+
+    /* Result Panel */
+    .result-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .result-header {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--solaris-bg-alt);
+        padding-bottom: 16px;
+    }
+
+    .score-badge {
+        background: var(--solaris-blue);
+        color: white;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .score-badge.low-score {
+        background: var(--solaris-base1);
+    }
+
+    .score-num {
+        font-size: 32px;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .score-unit {
+        font-size: 12px;
+        font-weight: 600;
+        opacity: 0.8;
+    }
+
+    .rules-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+    }
+
+    .rule-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 16px;
+        background: var(--solaris-bg-alt);
+        border-radius: 8px;
+    }
+
+    .rule-name {
+        font-weight: 600;
+    }
+
+    .rule-score {
+        color: var(--solaris-orange);
+        font-weight: 700;
+    }
+
+    /* Ting Display */
+    .ting-display {
+        background: rgba(38, 139, 210, 0.05);
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+    }
+
+    .ting-tiles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 8px;
+    }
+
+    .ting-tile-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: white;
+        padding: 6px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .ting-tile-item:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .ting-fan {
+        font-weight: 700;
+        color: var(--solaris-blue);
+    }
+
+    .options-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 10px;
+        margin-top: 8px;
+    }
+
+    .opt-btn {
+        background: white;
+        border: 1px solid var(--solaris-base1);
+        padding: 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: left;
+        color: var(--solaris-base01);
+    }
+
+    .opt-btn.active {
+        background: var(--solaris-cyan);
+        color: white;
+        border-color: var(--solaris-cyan);
+    }
+
+    .btn-hint {
+        font-size: 10px;
+        opacity: 0.7;
+        display: block;
+    }
+
+    .validation-alert {
+        background: rgba(220, 50, 47, 0.1);
+        color: var(--solaris-red);
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        font-weight: 600;
+        display: flex;
+        gap: 10px;
+    }
+
+    .animate-up { animation: slideUp 0.4s ease-out; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+    const styleId = 'calculator-styles';
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = STYLES;
+        document.head.appendChild(style);
+    }
+}

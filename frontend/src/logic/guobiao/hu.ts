@@ -1,11 +1,9 @@
 import { Tile } from './tiles';
-import { Meld, HandCombination, countTiles, sortTiles, removeTilesOnce } from './types';
+import { Meld, HandCombination, countTiles, sortTiles, removeTilesOnce, Tiles, Combination, Dui, Hand, Hu, Ke, QiDui, Shun, Yao13, ZuHeLong, BuKao as BuKaoType, TilePoint, TileNumberTypes } from './types';
+import { calcFan } from './fan';
 
 /**
- * Hand Decomposition Logic — Clean-room implementation
- * 
- * Given concealed tiles and exposed melds, find all valid ways
- * to decompose the concealed tiles into groups (melds + pair).
+ * Hand Decomposition Logic — Clean-room implementation (HEAD)
  */
 
 export function findAllCombinations(concealedTiles: Tile[], exposedMelds: Meld[]): HandCombination[] {
@@ -14,7 +12,6 @@ export function findAllCombinations(concealedTiles: Tile[], exposedMelds: Meld[]
   const numExposed = exposedMelds.length;
 
   // Standard hand: (4 - numExposed) melds + 1 pair from concealed tiles
-  // Total groups needed from concealed = (4 - numExposed) + 1 = 5 - numExposed
   const targetGroups = 5 - numExposed;
 
   // Special hands only possible with no exposed melds and 14 concealed tiles
@@ -44,11 +41,6 @@ export function findAllCombinations(concealedTiles: Tile[], exposedMelds: Meld[]
   return results;
 }
 
-/**
- * Recursive backtracking decomposition.
- * Tries to split `remaining` tiles into exactly `targetGroups` groups,
- * where exactly one group is a pair (dui) and the rest are melds (ke or shun).
- */
 function decomposeHand(remaining: Tile[], current: Meld[], results: Meld[][], targetGroups: number): void {
   if (remaining.length === 0) {
     if (targetGroups === 0) {
@@ -56,8 +48,6 @@ function decomposeHand(remaining: Tile[], current: Meld[], results: Meld[][], ta
     }
     return;
   }
-
-  // Out of groups to find
   if (targetGroups < 0) return;
 
   const first = remaining[0];
@@ -79,7 +69,7 @@ function decomposeHand(remaining: Tile[], current: Meld[], results: Meld[][], ta
     if (zhl) {
       const next = removeTilesOnce(remaining, zhl);
       current.push({ type: 'zuhelong' as any, tiles: zhl, isOpen: false });
-      decomposeHand(next, current, results, targetGroups - 3); // 1 ZHL = 3 melds
+      decomposeHand(next, current, results, targetGroups - 3);
       current.pop();
     }
   }
@@ -92,10 +82,10 @@ function decomposeHand(remaining: Tile[], current: Meld[], results: Meld[][], ta
     current.pop();
   }
 
-  // Try Sequence (shun) — only for numbered tiles, rank <= 7
+  // Try Sequence (shun)
   if (first.isNumber && first.rank <= 7) {
-    const t2 = new Tile(first.suit, first.rank + 1);
-    const t3 = new Tile(first.suit, first.rank + 2);
+    const t2 = new Tile(first.type, (first.point + 1) as TilePoint);
+    const t3 = new Tile(first.type, (first.point + 2) as TilePoint);
     if (counts.has(t2.toString()) && counts.has(t3.toString())) {
       const next = removeTilesOnce(remaining, [first, t2, t3]);
       current.push({ type: 'shun', tiles: [first, t2, t3], isOpen: false });
@@ -125,7 +115,7 @@ function checkSevenPairs(tiles: Tile[]): HandCombination | null {
 function checkThirteenOrphans(tiles: Tile[]): HandCombination | null {
   const unique = new Set(tiles.map(t => t.toString()));
   if (unique.size !== 13) return null;
-  for (const t of Tile.yao) {
+  for (const t of Tile.Yao) {
     if (!unique.has(t.toString())) return null;
   }
   return {
@@ -137,33 +127,20 @@ function checkThirteenOrphans(tiles: Tile[]): HandCombination | null {
 function findZuHeLong(tiles: Tile[]): Tile[] | null {
   if (tiles.length < 9) return null;
   const suits = ['m', 'p', 's'];
-  const patterns = [
-    [1, 4, 7],
-    [2, 5, 8],
-    [3, 6, 9]
-  ];
-
-  // Try all permutations of suits for the 3 patterns
-  const suitPerms = [
-    [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]
-  ];
+  const patterns = [[1, 4, 7], [2, 5, 8], [3, 6, 9]];
+  const suitPerms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
 
   for (const perm of suitPerms) {
     const required: Tile[] = [];
     for (let i = 0; i < 3; i++) {
         const suit = suits[perm[i]] as any;
-        patterns[i].forEach(rank => required.push(new Tile(suit, rank)));
+        patterns[i].forEach(rank => required.push(Tile.fromString(`${rank}${suit}`)));
     }
-
-    // Check if tiles contains all required
     const tempTiles = [...tiles];
     let possible = true;
     for (const req of required) {
         const idx = tempTiles.findIndex(t => t.equals(req));
-        if (idx === -1) {
-            possible = false;
-            break;
-        }
+        if (idx === -1) { possible = false; break; }
         tempTiles.splice(idx, 1);
     }
     if (possible) return required;
@@ -173,36 +150,22 @@ function findZuHeLong(tiles: Tile[]): Tile[] | null {
 
 function checkBuKao(tiles: Tile[]): HandCombination | null {
   if (tiles.length !== 14) return null;
-  
-  // All 14 tiles must be distinct
   const unique = new Set(tiles.map(t => t.toString()));
   if (unique.size !== 14) return null;
-
   const numbers = tiles.filter(t => t.isNumber);
-
-  // Group numbers by suit
   const m = numbers.filter(t => t.suit === 'm').map(t => t.rank).sort((a, b) => a - b);
   const p = numbers.filter(t => t.suit === 'p').map(t => t.rank).sort((a, b) => a - b);
   const s = numbers.filter(t => t.suit === 's').map(t => t.rank).sort((a, b) => a - b);
-
   const groups = [m, p, s];
-  
-  // Basic BuKao Rule: in each suit, ranks must differ by at least 3
   for (const g of groups) {
-    for (let i = 0; i < g.length - 1; i++) {
-        if (g[i+1] - g[i] < 3) return null;
-    }
+    for (let i = 0; i < g.length - 1; i++) { if (g[i+1] - g[i] < 3) return null; }
   }
-
-  // Patterns Rule: 1-4-7, 2-5-8, 3-6-9 must be distributed across different suits
   for (const g of groups) {
     if (g.length > 1) {
         const rem = g[0] % 3;
         if (!g.every(r => r % 3 === rem)) return null;
     }
   }
-
-  // Cross-suit Rule: Each suit must belong to a different sequence (mod 3)
   const mods = groups.filter(g => g.length > 0).map(g => g[0] % 3);
   if (new Set(mods).size !== mods.length) return null;
 
@@ -212,4 +175,146 @@ function checkBuKao(tiles: Tile[]): HandCombination | null {
     isBuKao: true,
     isZuHeLong: !!findZuHeLong(tiles)
   };
+}
+
+/**
+ * XDean Logic (main)
+ */
+
+export function calcHuBest(hand: Hand): Hu | null {
+  const hus = calcHu(hand);
+  if (hus.length === 0) return null;
+  return hus.reduce((a, b) => a.totalScore > b.totalScore ? a : b);
+}
+
+export function calcHu(hand: Hand): Hu[] {
+  if (hand.count !== 14) throw new Error('hand count must be 14');
+  const mingComb = new Combination(hand.mings.map(m => m.toMian()));
+  const result = [];
+  for (const comb of findAllCombinationsMain(hand.tiles)) {
+    const completeComb = mingComb.with(...comb.mians);
+    const fans = calcFan(hand, completeComb);
+    result.push(new Hu(completeComb, fans));
+  }
+  return result;
+}
+
+export function findAllCombinationsMain(tiles: Tiles): Combination[] {
+  if ((tiles.length - 2) % 3 !== 0 || tiles.length > 14) return [];
+  const res = [];
+  if (tiles.length === 14) {
+    const yao = find13Yao(tiles);
+    if (!!yao) return [new Combination([yao])];
+    const bukao = findBuKaoMain(tiles);
+    if (!!bukao) return [new Combination([bukao])];
+    const qidui = findQiDui(tiles);
+    if (!!qidui) res.push(new Combination([qidui]));
+  }
+  const duis = findDui(tiles);
+  for (const [left, dui] of duis) {
+    for (const [l, zhl] of findZuHeLongMain(left)) {
+       const combinations = findShunKeCombinations(l);
+       for (const sub of combinations) res.push(sub.with(zhl).with(dui));
+    }
+    const combinations = findShunKeCombinations(left);
+    for (const comb of combinations) res.push(comb.with(dui));
+  }
+  return res;
+}
+
+function findShunKeCombinations(tiles: Tiles): Combination[] {
+  if (tiles.length === 0) return [new Combination([])];
+  if (tiles.length < 3) return [];
+  const res = [];
+  for (const [left, ke] of findKe(tiles, tiles.last)) {
+    for (const sub of findShunKeCombinations(left)) res.push(sub.with(ke));
+  }
+  for (const [left, shun] of findShun(tiles, tiles.last)) {
+    for (const sub of findShunKeCombinations(left)) res.push(sub.with(shun));
+  }
+  return res;
+}
+
+function findDui(tiles: Tiles): [Tiles, Dui][] {
+  const results: [Tiles, Dui][] = [];
+  for (const t of tiles.filterMoreThan(1).distinct.tiles) {
+    const [left] = tiles.split(t, t);
+    results.push([left, new Dui(t)]);
+  }
+  return results;
+}
+
+function findShun(tiles: Tiles, tile: Tile): [Tiles, Shun][] {
+  if (tile.type === 'z' || tiles.length < 3) return [];
+  return [-2, -1, 0].map(p => p + tile.point)
+    .filter(p => p >= 1 && p <= 7)
+    .map(p => new Shun(new Tile(tile.type, p as TilePoint)))
+    .filter(s => tiles.contains(s.toTiles))
+    .map(s => [tiles.split(...s.toTiles.tiles)[0], s]);
+}
+
+function findKe(tiles: Tiles, tile: Tile): [Tiles, Ke][] {
+  const sames = tiles.filterType(tile.type).filterPoint(tile.point);
+  if (sames.length > 2) {
+    const [left] = tiles.split(tile, tile, tile);
+    return [[left, new Ke(tile)]];
+  } else return [];
+}
+
+function findZuHeLongMain(tiles: Tiles): [Tiles, ZuHeLong][] {
+  if (tiles.length < 9) return [];
+  const distinct = tiles.distinct;
+  const types = [distinct.filterType('w'), distinct.filterType('b'), distinct.filterType('t')];
+  if (types.some(t => t.length < 3)) return [];
+  const groups = types.map(ts => {
+    const points: TilePoint[][] = [[1, 4, 7], [2, 5, 8], [3, 6, 9]];
+    return points.map(ps => ts.filterPoint(...ps)).filter(t => t.length === 3);
+  });
+  if (groups.some(t => t.length === 0)) return [];
+  for (const m of groups[0]) {
+    for (const p of groups[1]) {
+      for (const s of groups[2]) {
+        if (m.minPointTile.point !== p.minPointTile.point && m.minPointTile.point !== s.minPointTile.point && p.minPointTile.point !== s.minPointTile.point) {
+          const [left, used] = tiles.split(...m.tiles, ...p.tiles, ...s.tiles);
+          return [[left, new ZuHeLong(used)]];
+        }
+      }
+    }
+  }
+  return [];
+}
+
+function findQiDui(tiles: Tiles): QiDui | null {
+  const single: Tile[] = [];
+  const pair: Tile[] = [];
+  for (const tile of tiles.tiles) {
+    const index = tile.indexIn(single);
+    if (index === -1) single.push(tile);
+    else { single.splice(index, 1); pair.push(tile); }
+  }
+  return single.length === 0 ? new QiDui(new Tiles(pair)) : null;
+}
+
+function find13Yao(tiles: Tiles): Yao13 | null {
+  if (tiles.allIn(Tile.Yao) && tiles.distinct.length === 13) {
+    const duis = findDui(tiles);
+    return new Yao13(duis[0][1].tile);
+  } else return null;
+}
+
+function findBuKaoMain(tiles: Tiles): BuKaoType | null {
+  if (tiles.distinct.length !== 14) return null;
+  const numbers = tiles.filterType(...TileNumberTypes);
+  if (numbers.mostPoint[1] > 1) return null;
+  if (([[1, 4, 7], [2, 5, 8], [3, 6, 9]] as TilePoint[][]).some(ps => {
+    const ts = numbers.filterPoint(...ps);
+    return ts.length > ts.mostType[1];
+  })) return null;
+  if (TileNumberTypes.map(t => tiles.filterType(t)).every(ts => {
+    for (const pair of ts.pairs()) {
+      if (Math.abs(pair[0].point - pair[1].point) % 3 !== 0) return false;
+    }
+    return true;
+  })) return new BuKaoType(tiles);
+  else return null;
 }
