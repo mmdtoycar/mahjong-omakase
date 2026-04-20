@@ -150,8 +150,19 @@ const CalculatorPage: React.FC = () => {
 
     const currentCount = useMemo(() => concealedTiles.length + melds.length * 3, [concealedTiles, melds]);
 
+    const lastClickRef = React.useRef<{ time: number; tile: string | null }>({ time: 0, tile: null });
+
     const onTileClick = useCallback((t: Tile) => {
+        const now = Date.now();
+        // Simple debounce: prevent clicking the exact same tile within 150ms (common ghost click window)
+        if (now - lastClickRef.current.time < 150 && lastClickRef.current.tile === t.toString()) {
+            return;
+        }
+        lastClickRef.current = { time: now, tile: t.toString() };
+
         if (!mode.canUse(concealedTiles, melds) || mode.isDisabled(concealedTiles, melds, t)) return;
+        
+        // Use a single batch to avoid intermediate inconsistent states
         const result = mode.add(concealedTiles, melds, t);
         setConcealedTiles(result.concealed);
         setMelds(result.mings);
@@ -237,6 +248,12 @@ const CalculatorPage: React.FC = () => {
                 if (countInHand > 1) {
                     return `绝张逻辑错误：你手牌已有 ${countInHand-1} 张 ${getTileName(lastTile)}，场面上不可能已显现 3 张。`;
                 }
+            }
+        }
+        if (options.zimo && options.gangShang) {
+            const hasGang = melds.some(m => m.type === 'gang');
+            if (!hasGang) {
+                return `逻辑错误：当前手牌中没有“杠”牌，无法达成“杠上开花”。`;
             }
         }
         return null;
@@ -328,7 +345,6 @@ const CalculatorPage: React.FC = () => {
                     <div className="hand-display-area">
                         {melds.length > 0 && (
                             <div className="hand-group animate-left">
-                                <span className="group-hint">副露区:</span>
                                 {melds.map((m, i) => (
                                     <div key={i} className="meld-box" onClick={() => onHandMingClick(i)}>
                                         {m.tiles.map((t, ti) => {
@@ -340,11 +356,8 @@ const CalculatorPage: React.FC = () => {
                             </div>
                         )}
                         
-                        {melds.length > 0 && concealedTiles.length > 0 && <div className="hand-divider"></div>}
-                        
                         {concealedTiles.length > 0 && (
                             <div className="hand-group animate-right">
-                                <span className="group-hint">立牌区:</span>
                                 <div className="tiles-row">
                                     {displayConcealed.map((tile, i) => (
                                         <TileComponent 
@@ -357,11 +370,9 @@ const CalculatorPage: React.FC = () => {
                                 </div>
                                 {currentCount === 14 && concealedTiles.length > 0 && (
                                     <div className="win-tile-area">
-                                        <span className="win-label">和</span>
                                         <TileComponent 
                                             tile={concealedTiles[concealedTiles.length - 1]} 
                                             onClick={() => onHandTileClick(concealedTiles[concealedTiles.length - 1])}
-                                            isWinning
                                             isSelectable
                                         />
                                     </div>
@@ -497,8 +508,8 @@ const CalculatorPage: React.FC = () => {
 
                 /* Unified Tile Style - Using calc prefix to avoid global index.css conflicts */
                 .calc-tile-container {
-                    width: 42px;
-                    height: 56px;
+                    width: 38px;
+                    height: 50px;
                     flex-shrink: 0;
                     background: #fff;
                     border-radius: 4px;
@@ -514,8 +525,11 @@ const CalculatorPage: React.FC = () => {
                     margin: 0;
                 }
 
-                .calc-tile-container.selectable { cursor: pointer; }
-                .calc-tile-container.selectable:hover { transform: translateY(-4px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+                .calc-tile-container.selectable { cursor: pointer; touch-action: manipulation; }
+                @media (hover: hover) {
+                    .calc-tile-container.selectable:hover { transform: translateY(-4px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+                }
+                .calc-tile-container.selectable:active { transform: scale(0.95); opacity: 0.8; }
                 .calc-tile-container.disabled { opacity: 0.15; cursor: not-allowed; pointer-events: none; }
 
                 .calc-tile {
@@ -545,11 +559,11 @@ const CalculatorPage: React.FC = () => {
                 .page-header { margin-bottom: 20px; text-align: center; }
 
                 .input-control-section { 
-                    display: grid; 
-                    grid-template-columns: 1fr 260px; 
-                    gap: 20px; 
+                    display: flex;
+                    flex-direction: column;
+                    gap: 15px; 
                     margin-bottom: 25px; 
-                    align-items: start;
+                    align-items: flex-start;
                 }
                 .tile-picker-card { padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.03); width: fit-content; }
 
@@ -563,8 +577,8 @@ const CalculatorPage: React.FC = () => {
 
                 .tile-grid { 
                     display: grid; 
-                    grid-template-columns: repeat(9, 42px); 
-                    gap: 4px; 
+                    grid-template-columns: repeat(9, 38px); 
+                    gap: 8px; 
                     justify-content: start; 
                 }
 
@@ -588,20 +602,29 @@ const CalculatorPage: React.FC = () => {
                 .hand-display-area { display: flex; align-items: flex-end; gap: 8px; min-height: 80px; justify-content: center; flex-wrap: wrap; }
                 .hand-group { display: flex; align-items: flex-end; gap: 4px; position: relative; flex-wrap: wrap; justify-content: center; }
                 .hand-group .group-hint { position: absolute; top: -28px; left: 0; margin: 0; width: auto; font-size: 0.7rem; font-weight: 700; color: var(--solaris-blue); opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
-                .meld-box { display: flex; gap: 1px; align-items: flex-end; transition: transform 0.2s; cursor: pointer; flex-shrink: 0; }
-                .meld-box:hover { transform: translateY(-3px); }
-                .tiles-row { display: flex; gap: 1px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
-                .hand-divider { width: 3px; height: 50px; background: var(--solaris-base1); margin: 0 10px; opacity: 0.3; flex-shrink: 0; align-self: flex-end; border-radius: 2px; }
-                .win-tile-area { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-left: 5px; padding-left: 10px; border-left: 2px dashed rgba(0,0,0,0.1); position: relative; flex-shrink: 0; }
+                .meld-box { 
+                    display: flex; gap: 1px; align-items: flex-end; transition: transform 0.2s; cursor: pointer; flex-shrink: 0; 
+                    padding: 3px; border: 2px solid var(--solaris-cyan); border-radius: 10px; background: rgba(42, 161, 152, 0.05);
+                }
+                .meld-box:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(42, 161, 152, 0.2); }
+                .tiles-row { display: flex; gap: 1px; align-items: flex-end; flex-wrap: wrap; justify-content: center; padding: 5px; }
+                .win-tile-area { 
+                    display: flex; align-items: flex-end; margin-left: 8px; padding: 3px; 
+                    border: 2px solid var(--solaris-yellow); border-radius: 10px; background: rgba(181, 137, 0, 0.05);
+                    position: relative; flex-shrink: 0; 
+                }
                 .win-label { font-size: 0.65rem; font-weight: 800; color: var(--solaris-yellow); position: absolute; top: -22px; width: 100%; text-align: center; }
                 .hand-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.15; font-size: 1.1rem; font-weight: 700; pointer-events: none; }
 
                 .ting-display { margin-top: 15px; padding-top: 12px; border-top: 1px dashed rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; }
                 .ting-title { font-size: 0.8rem; font-weight: 700; color: var(--solaris-base01); white-space: nowrap; }
                 .ting-tiles { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px; }
-                 .ting-tile-item { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; transition: transform 0.15s; position: relative; }
+                 .ting-tile-item { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; transition: transform 0.15s; position: relative; touch-action: manipulation; }
                 .ting-tile-item.with-fans { flex-direction: row; align-items: flex-start; gap: 8px; padding: 6px 10px; background: rgba(0,0,0,0.03); border-radius: 12px; }
-                .ting-tile-item:hover { transform: translateY(-3px); }
+                @media (hover: hover) {
+                    .ting-tile-item:hover { transform: translateY(-3px); }
+                }
+                .ting-tile-item:active { transform: scale(0.98); }
                 .ting-tile-item .calc-tile-container { width: 30px; height: 42px; flex-shrink: 0; }
                 .ting-info { display: flex; flex-direction: column; gap: 2px; align-items: center; }
                 .ting-tile-item.with-fans .ting-info { align-items: flex-start; }
@@ -702,8 +725,8 @@ const CalculatorPage: React.FC = () => {
                     .glass-card { border-radius: 0; padding: 10px 8px; border: none; box-shadow: none; }
                     .input-control-section { grid-template-columns: 1fr; gap: 8px; }
                     .tile-picker-card { padding: 6px; width: 100%; border: none; background: transparent; }
-                    .tile-grid { grid-template-columns: repeat(9, 1fr); width: 100%; gap: 2px; }
-                    .calc-tile-container { width: auto; height: 46px; padding: 1px; }
+                    .tile-grid { grid-template-columns: repeat(9, 1fr); width: 100%; gap: 6px; }
+                    .calc-tile-container { width: auto; height: 42px; padding: 2px; }
                     .mode-selector-container { gap: 4px; margin-bottom: 8px; }
                     .mode-group { gap: 2px; }
                     .group-hint { width: 45px; font-size: 0.6rem; }
