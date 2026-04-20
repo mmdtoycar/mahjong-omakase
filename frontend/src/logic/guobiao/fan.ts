@@ -483,10 +483,6 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
         !hasFan('混幺九') && !hasFan('清幺九') && !hasFan('字一色')) {
       addFan('全带幺', 4);
     }
-    // 不求人 (4)
-    if (options.zimo && allClosed) addFan('不求人', 4);
-    // 和绝张 (4)
-    if (options.juezhang) addFan('和绝张', 4);
     // 双明杠 (4)
     const mingGangCount = gangMelds.filter(m => m.isOpen).length;
     if (mingGangCount >= 2 && !hasFan('三杠') && !hasFan('四杠')) addFan('双明杠', 4);
@@ -505,8 +501,7 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
     // 门风刻 (2)
     if (keMelds.some(m => m.tiles[0].suit === 'z' && m.tiles[0].rank === options.menfeng)) addFan('门风刻', 2);
 
-    // 门前清 (2)
-    if (allClosed && !hasFan('不求人') && !hasFan('四暗刻')) addFan('门前清', 2);
+    // 门前清 (2) - Handled in situational block
 
     // 平和 (2) — 4 shuns + number-tile pair, no honors
     if (shunMelds.length === 4 && !hasHonors) addFan('平和', 2);

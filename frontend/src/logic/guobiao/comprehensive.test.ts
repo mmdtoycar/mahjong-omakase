@@ -143,4 +143,11 @@ describe('Guobiao Logic XDean Compliance', () => {
   test('Case 20: All Five Complex', () => {
     expectFans('s456 p456 m456 s456 p55', ['全带五', '一般高', '三色三同顺', '全中']);
   });
+
+  test('Case 21: Bug Report - Duplicate MenQianQing', () => {
+    // s111 222 333 444 33, win on 3s discard
+    const r = calcHu('s111 s222 s333 s444 s33', { zimo: false });
+    const mqCount = r!.fans.find(f => f.name === '门前清')?.count || 0;
+    expect(mqCount).toBe(1);
+  });
 });

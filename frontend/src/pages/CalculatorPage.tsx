@@ -598,7 +598,7 @@ const CalculatorPage: React.FC = () => {
 
                 .ting-display { margin-top: 15px; padding-top: 12px; border-top: 1px dashed rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; }
                 .ting-title { font-size: 0.8rem; font-weight: 700; color: var(--solaris-base01); white-space: nowrap; }
-                .ting-tiles { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+                .ting-tiles { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px; }
                  .ting-tile-item { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; transition: transform 0.15s; position: relative; }
                 .ting-tile-item.with-fans { flex-direction: row; align-items: flex-start; gap: 8px; padding: 6px 10px; background: rgba(0,0,0,0.03); border-radius: 12px; }
                 .ting-tile-item:hover { transform: translateY(-3px); }
@@ -612,7 +612,7 @@ const CalculatorPage: React.FC = () => {
                     padding: 1px 4px; border-radius: 4px; border: 1px solid var(--solaris-base1);
                     text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;
                 }
-                .ting-fan-labels { display: flex; flex-wrap: wrap; gap: 2px; max-width: 120px; }
+                .ting-fan-labels { display: flex; flex-wrap: wrap; gap: 2px; max-width: 100%; }
                 .mini-fan-name { font-size: 0.6rem; font-weight: 700; background: var(--solaris-bg-alt); padding: 1px 4px; border-radius: 4px; color: var(--solaris-base01); white-space: nowrap; }
                 .no-ting { font-size: 0.85rem; color: var(--solaris-red); font-style: italic; }
 
