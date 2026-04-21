@@ -7,7 +7,12 @@ import { findAllCombinations } from './hu';
  * Complete implementation of all 81 fan types per GB/T 16491—2008.
  */
 
-export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], options: GameOptions, lastTile?: Tile): CalcResult | null {
+export interface CalcAllResults {
+  bestScore: number;
+  results: CalcResult[];
+}
+
+export function calculateAllBestScores(concealedTiles: Tile[], melds: Meld[], options: GameOptions, lastTile?: Tile): CalcAllResults | null {
   const combinations = findAllCombinations(concealedTiles, melds);
   if (combinations.length === 0) return null;
 
@@ -43,7 +48,7 @@ export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], option
         t.combo.melds[t.completedMeldIdx] = { ...t.combo.melds[t.completedMeldIdx], completedByDiscard: true } as any;
       }
       const scored = scoreCombination(t.combo, concealedTiles, options, lastTile, tingCount);
-      
+
       if (scored.totalScore > bestScore) {
         bestScore = scored.totalScore;
         results = [scored];
@@ -58,6 +63,11 @@ export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], option
     }
   }
   return results.length > 0 ? { results, bestScore } : null;
+}
+
+export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], options: GameOptions, lastTile?: Tile): CalcResult | null {
+  const all = calculateAllBestScores(concealedTiles, melds, options, lastTile);
+  return all ? all.results[0] : null;
 }
 
 // --- Helper: get all starting tiles of shun melds ---
@@ -810,7 +820,7 @@ export function getTingTiles(concealedTiles: Tile[], melds: Meld[], options: Gam
     const testHand = [...sortedConcealed, t];
     const best = calculateBestScore(testHand, melds, options, t);
     if (best) {
-      results.push({ tile: t, fans: best.results[0].fans, score: best.bestScore });
+      results.push({ tile: t, fans: best.fans, score: best.totalScore });
     }
   }
   return results;

@@ -12,6 +12,9 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editFirst, setEditFirst] = useState('')
   const [editLast, setEditLast] = useState('')
+  const [bonus, setBonus] = useState(5)
+  const [savedBonus, setSavedBonus] = useState(5)
+  const [savingSettings, setSavingSettings] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,9 +46,50 @@ export default function AdminPage() {
     setLoading(false)
   }
 
+  const loadSettings = async () => {
+    const res = await fetch(`${API}/settings`, {
+      headers: { 'X-Admin-Password': password },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.participation_bonus !== undefined) {
+        const val = parseFloat(data.participation_bonus)
+        if (!isNaN(val)) {
+          setBonus(val)
+          setSavedBonus(val)
+        }
+      }
+    }
+  }
+
   useEffect(() => {
-    if (authenticated) loadPlayers()
+    if (authenticated) {
+      loadPlayers()
+      loadSettings()
+    }
   }, [authenticated])
+
+  const handleSaveSettings = async () => {
+    if (isNaN(bonus) || bonus < 0) {
+      alert('请输入有效的非负数值')
+      return
+    }
+    setSavingSettings(true)
+    const res = await fetch(`${API}/settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Password': password,
+      },
+      body: JSON.stringify({ participation_bonus: String(bonus) }),
+    })
+    if (res.ok) {
+      setSavedBonus(bonus)
+    } else {
+      alert('Failed to save settings')
+    }
+    setSavingSettings(false)
+  }
 
   const handleDelete = async (id: number, userName: string) => {
     if (!confirm(`Delete ${userName}? This cannot be undone. Game scores will be kept but player will be removed from stats.`)) return
@@ -128,6 +172,33 @@ export default function AdminPage() {
         <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>
           Deleting a player removes them from stats and player list. Game round scores are preserved.
         </p>
+      </div>
+
+      <div className="card">
+        <h2>Settings</h2>
+        <div className="form-group">
+          <label>Participation Bonus (RP per game)</label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="number"
+              value={bonus}
+              onChange={e => setBonus(parseFloat(e.target.value) || 0)}
+              step="0.1"
+              min="0"
+              style={{ width: 120 }}
+            />
+            <button
+              className="btn btn-primary btn-small"
+              onClick={handleSaveSettings}
+              disabled={savingSettings || bonus === savedBonus}
+            >
+              {savingSettings ? 'Saving...' : 'Save'}
+            </button>
+            {bonus !== savedBonus && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>unsaved</span>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="card">

@@ -419,6 +419,9 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   font-variant-numeric: tabular-nums;
 }
 
+.score-cell.score-positive { color: var(--success); }
+.score-cell.score-negative { color: var(--danger); }
+
 .score-table .total-row td {
   font-weight: 700;
   background: var(--bg);
@@ -580,6 +583,13 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   text-transform: uppercase;
 }
 
+.player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 .total-score-box {
   display: flex;
   flex-direction: column;
@@ -591,14 +601,6 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   font-weight: 600;
   color: var(--text-light);
   margin-top: 2px;
-}
-
-.score-calc-link {
-  margin-left: 8px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--primary);
-  text-decoration: underline;
 }
 
 .score-calc-btn {
@@ -866,6 +868,13 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   cursor: pointer;
   text-align: center;
   transition: all 0.2s;
+  overflow: hidden;
+}
+
+.player-select-card div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .player-select-card.selected {
@@ -877,6 +886,13 @@ tr:hover td { background: rgba(0,0,0,0.02); }
 .player-select-card.disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.th-subtitle {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 400;
+  opacity: 0.7;
 }
 
 /* ===== Mobile responsive ===== */
@@ -1094,6 +1110,21 @@ tr:hover td { background: rgba(0,0,0,0.02); }
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .th-subtitle {
+    display: none;
+  }
+
+  .fan-item-example {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
+@media (max-width: 480px) {
+  .hide-mobile {
+    display: none;
   }
 }
 

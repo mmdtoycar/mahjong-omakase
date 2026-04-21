@@ -54,9 +54,7 @@ public interface RoundScoreRepository extends JpaRepository<RoundScore, Long> {
   @Query("UPDATE RoundScore rs SET rs.player = null WHERE rs.player.id = :playerId")
   void nullifyPlayerScores(Long playerId);
 
-  @Query(
-      "SELECT rs.player.id, COUNT(rs.id) FROM RoundScore rs "
-          + "GROUP BY rs.player.id")
+  @Query("SELECT rs.player.id, COUNT(rs.id) FROM RoundScore rs " + "GROUP BY rs.player.id")
   List<Object[]> getRoundsPlayedPerPlayer();
 
   @Query(

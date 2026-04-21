@@ -48,6 +48,9 @@ export interface SessionDetail {
   players: PlayerInfo[];
   rounds: RoundInfo[];
   totalScores: Record<number, number>;
+  rpFactor: number;
+  rpOrigin: number;
+  umaDist: number[];
 }
 
 export interface AddRoundData {

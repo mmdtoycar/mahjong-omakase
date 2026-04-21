@@ -13,7 +13,7 @@ public class CreateSessionRequest {
   private String gameMode;
 
   @NotEmpty(message = "At least one player is required")
-  @Size(min = 3, message = "At least 3 players are required to start a game")
+  @Size(min = 3, max = 4, message = "Game requires 3 or 4 players")
   private List<Long> playerIds;
 
   public String getName() {

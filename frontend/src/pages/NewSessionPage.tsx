@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { fetchPlayers, createSession } from '../api'
 import { Player, GameModeKey, GAME_MODES } from '../types'
+import { cardFontSize } from '../utils/fontSize'
+
+const MIN_PLAYERS = 3
+const MAX_PLAYERS = 4
 
 export default function NewSessionPage() {
   const navigate = useNavigate()
@@ -19,7 +23,7 @@ export default function NewSessionPage() {
       if (prev.includes(id)) {
         return prev.filter(i => i !== id)
       } else {
-        if (prev.length < 4) {
+        if (prev.length < MAX_PLAYERS) {
           return [...prev, id]
         }
         return prev
@@ -27,7 +31,7 @@ export default function NewSessionPage() {
     })
   }
 
-  const canStart = selectedIds.length === 4 && gameMode !== ''
+  const canStart = selectedIds.length >= MIN_PLAYERS && selectedIds.length <= MAX_PLAYERS && gameMode !== ''
 
   const filteredPlayers = players.filter(p => {
     const q = search.toLowerCase()
@@ -62,8 +66,8 @@ export default function NewSessionPage() {
       </div>
 
       <div className="form-group">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <label style={{ margin: 0 }}>选择玩家 (已选 {selectedIds.length}/4)</label>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          <label style={{ margin: 0 }}>选择玩家 (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})</label>
         </div>
 
         {players.length > 0 && (
@@ -81,7 +85,7 @@ export default function NewSessionPage() {
           <div className="player-select-grid">
             {filteredPlayers.map(p => {
               const isSelected = selectedIds.includes(p.id)
-              const isDisabled = !isSelected && selectedIds.length >= 4
+              const isDisabled = !isSelected && selectedIds.length >= MAX_PLAYERS
 
               return (
                 <div
@@ -89,14 +93,14 @@ export default function NewSessionPage() {
                   onClick={() => !isDisabled && togglePlayer(p.id)}
                   className={`player-select-card${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}`}
                 >
-                  <div style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: 4 }}>{p.userName}</div>
+                  <div style={{ fontWeight: 600, fontSize: cardFontSize(p.userName), marginBottom: 4 }}>{p.userName}</div>
                   <div style={{ fontSize: '0.85rem', opacity: isSelected ? 0.9 : 0.6 }}>
                     {p.firstName[0]}.{p.lastName}
                   </div>
                 </div>
               )
             })}
-            
+
             {filteredPlayers.length === 0 && (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '20px', color: 'var(--text-light)' }}>
                 没有找到匹配的玩家
@@ -111,18 +115,18 @@ export default function NewSessionPage() {
       </div>
 
       <div style={{ marginTop: 24 }}>
-        {selectedIds.length !== 4 && (
+        {selectedIds.length < MIN_PLAYERS && (
           <p className="warning-text" style={{ marginBottom: 16 }}>
-            需要正好4名玩家才能开始游戏。(还差 {4 - selectedIds.length} 人)
+            至少需要{MIN_PLAYERS}名玩家才能开始游戏。(还差 {MIN_PLAYERS - selectedIds.length} 人)
           </p>
         )}
         <button
           className="btn btn-accent btn-large"
           onClick={handleStart}
           disabled={!canStart}
-          style={{ width: '100%', justifyContent: 'center' }}
+          style={{ justifyContent: 'center' }}
         >
-          开始游戏 ({selectedIds.length}/4)
+          开始游戏 ({selectedIds.length}人)
         </button>
       </div>
     </div>

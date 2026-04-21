@@ -22,7 +22,9 @@ public class GameService {
   private final RoundRepository roundRepo;
   private final RoundScoreRepository roundScoreRepo;
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
+  private final AppSettingRepository appSettingRepo;
   private final Map<GameMode, GameModeHandler> handlers;
+  private double participationBonus;
 
   public GameService(
       PlayerRepository playerRepo,
@@ -30,15 +32,35 @@ public class GameService {
       RoundRepository roundRepo,
       RoundScoreRepository roundScoreRepo,
       GameSessionPlayerRepository gameSessionPlayerRepo,
+      AppSettingRepository appSettingRepo,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
     this.roundRepo = roundRepo;
     this.roundScoreRepo = roundScoreRepo;
     this.gameSessionPlayerRepo = gameSessionPlayerRepo;
+    this.appSettingRepo = appSettingRepo;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
+    this.participationBonus = loadParticipationBonus();
+  }
+
+  public void reloadSettings() {
+    this.participationBonus = loadParticipationBonus();
+  }
+
+  private double loadParticipationBonus() {
+    return appSettingRepo
+        .findById("participation_bonus")
+        .map(s -> {
+          try { return Double.parseDouble(s.getValue()); }
+          catch (NumberFormatException e) {
+            log.warn("Invalid participation_bonus value '{}', using default", s.getValue());
+            return 5.0;
+          }
+        })
+        .orElse(5.0);
   }
 
   public List<Player> getAllPlayers() {
@@ -66,9 +88,7 @@ public class GameService {
 
   public Player updatePlayer(Long id, String firstName, String lastName) {
     Player player =
-        playerRepo
-            .findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Player not found"));
+        playerRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("Player not found"));
     if (firstName != null && !firstName.isBlank()) {
       player.setFirstName(firstName.trim());
     }
@@ -181,6 +201,9 @@ public class GameService {
       }
     }
     resp.setTotalScores(totals);
+    resp.setRpFactor(session.getGameMode().getRpFactor());
+    resp.setRpOrigin(session.getGameMode().getRpOrigin());
+    resp.setUmaDist(session.getGameMode().getUmaDist(session.getPlayerCount()));
 
     return resp;
   }
@@ -297,20 +320,6 @@ public class GameService {
       if (row[0] != null) gamesPlayed.put((Long) row[0], ((Number) row[1]).intValue());
     }
 
-    Map<Long, Integer> roundsPlayed = new HashMap<>();
-    List<Object[]> roundsRows;
-    if (gameMode != null && hasDateRange) {
-      roundsRows =
-          roundScoreRepo.getRoundsPlayedPerPlayerByGameModeAndDateRange(gameMode, start, end);
-    } else if (gameMode != null) {
-      roundsRows = roundScoreRepo.getRoundsPlayedPerPlayerByGameMode(gameMode);
-    } else {
-      roundsRows = roundScoreRepo.getRoundsPlayedPerPlayer();
-    }
-    for (Object[] row : roundsRows) {
-      if (row[0] != null) roundsPlayed.put((Long) row[0], ((Number) row[1]).intValue());
-    }
-
     Map<Long, Integer> wins = new HashMap<>();
     Map<Long, Double> totalRP = new HashMap<>();
     List<GameSession> completedSessions =
@@ -338,25 +347,29 @@ public class GameService {
 
           int groupSize = j - i;
           double totalUma = 0;
-          double[] umaDist = {15.0, 5.0, -5.0, -15.0};
+          double[] umaDist = session.getGameMode().getUmaDist(session.getPlayerCount());
           for (int k = i; k < j; k++) {
             totalUma += (k < umaDist.length ? umaDist[k] : 0);
           }
           double avgUma = totalUma / groupSize;
-          double factor = session.getGameMode() == GameMode.RIICHI ? 1000.0 : 10.0;
+          double factor = session.getGameMode().getRpFactor();
+          double origin = session.getGameMode().getRpOrigin();
 
           for (int k = i; k < j; k++) {
             Long pid = (Long) sorted.get(k)[0];
             if (pid == null) continue;
             int raw = ((Number) sorted.get(k)[1]).intValue();
-            double rp = (raw / factor) + avgUma;
+            double rp = ((raw - origin) / factor) + avgUma;
             totalRP.merge(pid, rp, Double::sum);
           }
           i = j;
         }
 
-        long winnerId = (Long) sorted.get(0)[0];
-        wins.merge(winnerId, 1, Integer::sum);
+        int topScore = ((Number) sorted.get(0)[1]).intValue();
+        for (Object[] row : sorted) {
+          if (((Number) row[1]).intValue() != topScore) break;
+          if (row[0] != null) wins.merge((Long) row[0], 1, Integer::sum);
+        }
       }
     }
 
@@ -369,13 +382,12 @@ public class GameService {
               stat.setDisplayName(p.getDisplayName());
               stat.setGamesPlayed(gamesPlayed.getOrDefault(p.getId(), 0));
               stat.setTotalScore(totalScores.getOrDefault(p.getId(), 0));
-              int rounds = roundsPlayed.getOrDefault(p.getId(), 0);
-              stat.setAvgScore(
-                  rounds > 0 ? (double) totalScores.getOrDefault(p.getId(), 0) / rounds : 0);
               stat.setWins(wins.getOrDefault(p.getId(), 0));
-              // Base RP from session performance + Participation Bonus (0.1 per game)
               double baseRP = totalRP.getOrDefault(p.getId(), 0.0);
-              stat.setTotalRP(baseRP + (stat.getGamesPlayed() * 0.1));
+              double totalRPVal = baseRP + (stat.getGamesPlayed() * participationBonus);
+              stat.setTotalRP(totalRPVal);
+              int games = gamesPlayed.getOrDefault(p.getId(), 0);
+              stat.setAvgScore(games > 0 ? totalRPVal / games : 0);
               return stat;
             })
         .collect(Collectors.toList());

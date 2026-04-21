@@ -30,6 +30,7 @@ export interface GameOptions {
   lastTile: boolean;
   gangShang: boolean;
   juezhang: boolean;
+  qiangGang?: boolean;
   quanfeng: number;
   menfeng: number;
   huaCount: number;

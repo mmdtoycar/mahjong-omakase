@@ -724,7 +724,7 @@ const CalculatorPage: React.FC = () => {
                     .input-control-section { grid-template-columns: 1fr; gap: 8px; }
                     .tile-picker-card { padding: 6px; width: 100%; border: none; background: transparent; }
                     .tile-grid { grid-template-columns: repeat(9, 1fr); width: 100%; gap: 6px; }
-                    .calc-tile-container { width: auto; height: 42px; padding: 2px; }
+                    .calc-tile-container { width: 100%; max-width: 40px; height: 42px; padding: 2px; }
                     .mode-selector-container { gap: 4px; margin-bottom: 8px; }
                     .mode-group { gap: 2px; }
                     .group-hint { width: 45px; font-size: 0.6rem; }

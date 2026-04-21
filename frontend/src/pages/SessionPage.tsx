@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, HAN_OPTIONS, FU_OPTIONS } from '../types'
 import { calculateRanks } from '../logic/ranking'
+import { nameFontSize } from '../utils/fontSize'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -106,7 +107,7 @@ export default function SessionPage() {
 
   const rankings = calculateRanks(
     session.players.map(p => ({ playerId: p.id, score: session.totalScores[p.id] || 0 })),
-    session.gameMode
+    { rpFactor: session.rpFactor, rpOrigin: session.rpOrigin, umaDist: session.umaDist }
   )
   const rankMap = Object.fromEntries(rankings.map(r => [r.playerId, r]))
 
@@ -243,7 +244,7 @@ export default function SessionPage() {
                   <th key={p.id} style={{ textAlign: 'center' }}>
                     <div className="player-header-cell">
                       <span className="player-rank">#{rankMap[p.id]?.rank}</span>
-                      <span className="player-name">{p.userName}</span>
+                      <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>{p.userName}</span>
                     </div>
                   </th>
                 ))}
@@ -257,10 +258,7 @@ export default function SessionPage() {
                   {session.players.map(p => {
                     const val = round.scores[p.id] ?? 0
                     return (
-                      <td key={p.id} className="score-cell" style={{
-                        textAlign: 'center',
-                        color: val > 0 ? 'var(--success)' : val < 0 ? 'var(--danger)' : undefined
-                      }}>
+                      <td key={p.id} className={`score-cell${val > 0 ? ' score-positive' : val < 0 ? ' score-negative' : ''}`} style={{ textAlign: 'center' }}>
                         {val > 0 ? `+${val}` : val}
                       </td>
                     )
@@ -449,7 +447,7 @@ export default function SessionPage() {
                         min={isGuobiao ? "8" : "1"}
                       />
                       {isGuobiao && (
-                        <Link to="/calculator" target="_blank" className="btn btn-accent btn-small calc-trigger-btn" style={{ display: 'flex', alignItems: 'center' }}>
+                        <Link to="/calculator" target="_blank" className="btn btn-accent btn-small calc-trigger-btn">
                           🀄 算番器
                         </Link>
                       )}

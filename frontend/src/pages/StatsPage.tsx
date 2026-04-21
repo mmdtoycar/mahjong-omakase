@@ -8,18 +8,7 @@ type Tab = 'games' | 'players'
 const seasons = getAvailableSeasons()
 const currentSeason = getCurrentSeason()
 
-const statFontSize = (text: string) => {
-  const len = text.length
-  const mobile = window.innerWidth <= 640
-  if (mobile) {
-    if (len <= 6) return '1.4rem'
-    if (len <= 10) return '1.1rem'
-    return '0.9rem'
-  }
-  if (len <= 8) return '2rem'
-  if (len <= 12) return '1.5rem'
-  return '1.2rem'
-}
+import { statFontSize } from '../utils/fontSize'
 
 export default function StatsPage() {
   const navigate = useNavigate()
@@ -153,12 +142,9 @@ export default function StatsPage() {
                     <th>玩家</th>
                     <th style={{ textAlign: 'right' }}>场次</th>
                     <th style={{ textAlign: 'right' }}>胜场</th>
-                    <th style={{ textAlign: 'right' }}>
-                      积分 (RP)
-                      <div style={{ fontSize: '0.6rem', fontWeight: 400, opacity: 0.7 }}>含局数奖励</div>
-                    </th>
-                    <th style={{ textAlign: 'right' }}>总分</th>
-                    <th style={{ textAlign: 'right' }}>均分</th>
+                    <th style={{ textAlign: 'right' }}>积分(RP)</th>
+                    <th style={{ textAlign: 'right' }} className="hide-mobile">总分</th>
+                    <th style={{ textAlign: 'right' }} className="hide-mobile">均分</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -174,8 +160,8 @@ export default function StatsPage() {
                       <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 'bold', color: 'var(--primary)' }}>
                         {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
                       </td>
-                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', opacity: 0.8 }}>{s.totalScore}</td>
-                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', opacity: 0.8 }} className="hide-mobile">{s.totalScore}</td>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} className="hide-mobile">
                         {s.avgScore.toFixed(1)}
                       </td>
                     </tr>
