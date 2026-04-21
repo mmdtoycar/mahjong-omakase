@@ -630,22 +630,22 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
     // 幺九刻 (1)
     let yaoJiuKeCount = keMelds.filter(m => m.tiles[0].isTerminalOrHonor).length;
     if (hasFan('字一色') || hasFan('清幺九') || hasFan('混幺九')) {
-       // already counted or excluded
        yaoJiuKeCount = 0;
     } else {
+       const hasWindGroupFan = hasFan('大四喜') || hasFan('小四喜') || hasFan('三风刻');
        if (hasFan('大四喜')) yaoJiuKeCount -= 4;
        else if (hasFan('小四喜')) yaoJiuKeCount -= 3;
        else if (hasFan('三风刻')) yaoJiuKeCount -= 3;
-       
+
        if (hasFan('大三元')) yaoJiuKeCount -= 3;
        else if (hasFan('小三元')) yaoJiuKeCount -= 2;
-       
-       // Handle individual ones
-       if (hasFan('双箭刻')) yaoJiuKeCount -= 2;
-       else if (hasFan('箭刻')) yaoJiuKeCount -= 1;
-       
-       if (hasFan('圈风刻')) yaoJiuKeCount -= 1;
-       if (hasFan('门风刻')) yaoJiuKeCount -= 1;
+
+       if (!hasWindGroupFan) {
+         if (hasFan('双箭刻')) yaoJiuKeCount -= 2;
+         else if (hasFan('箭刻')) yaoJiuKeCount -= 1;
+         if (hasFan('圈风刻')) yaoJiuKeCount -= 1;
+         if (hasFan('门风刻')) yaoJiuKeCount -= 1;
+       }
     }
     
     if (yaoJiuKeCount > 0) {
@@ -729,7 +729,8 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
   const isQidui = hasFan('七对');
 
   if (options.zimo) {
-    if (allClosed && !isSpecial && !isJiulian && !isSianke) {
+    const buqiuren = (allClosed || isSpecial) && !isJiulian && !isSianke && !isShisanyao && !isLianqidui;
+    if (buqiuren) {
       addFan('不求人', 4);
     } else {
       addFan('自摸', 1);

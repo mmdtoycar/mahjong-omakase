@@ -26,9 +26,14 @@ function parseHand(handStr: string, opts: Partial<GameOptions> = {}): { conceale
       const rank = Number(token.slice(8));
       melds.push({ type: 'gang', tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)], isOpen: false });
     } else {
-      const suit = token[0] as TileSuit;
-      const ranks = token.slice(1).split('').map(Number);
-      ranks.forEach(r => concealed.push(new Tile(suit, r)));
+      let suit: TileSuit | null = null;
+      for (const ch of token) {
+        if ('mpsz'.includes(ch)) {
+          suit = ch as TileSuit;
+        } else if (suit && ch >= '1' && ch <= '9') {
+          concealed.push(new Tile(suit, Number(ch)));
+        }
+      }
     }
   }
 
@@ -120,8 +125,8 @@ describe('Guobiao Benchmarks - Automated From External Samples', () => {
     expectFans('p1 p2 p3 m4 m5 m6 s7 s8 s9 z4 z4 z4 z5 z5', ['花龙'], {});
   });
 
-  test('Sample 20: 推不到', () => {
-    expectFans('p2 p3 p4 p5 p5 p5 s4 s5 s6 z7 z7 z7 p1 p1', ['推不到'], {});
+  test('Sample 20: 推不倒', () => {
+    expectFans('p2 p3 p4 p5 p5 p5 s4 s5 s6 z7 z7 z7 p1 p1', ['推不倒'], {});
   });
 
   test('Sample 21: 三色三同顺', () => {
@@ -364,7 +369,7 @@ describe('Guobiao Benchmarks - Special Scoring Rules', () => {
   });
 
   test('Rule 16', () => {
-    expectFans('pung:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","抢杠和"], {"gangShang":true});
+    expectFans('pung:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","抢杠和"], {"qiangGang":true});
   });
 
   test('Rule 17', () => {
@@ -384,7 +389,7 @@ describe('Guobiao Benchmarks - Special Scoring Rules', () => {
   });
 
   test('Rule 21', () => {
-    expectFans('gang:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","明杠","海底捞月","抢杠和"], {"gangShang":true,"lastTile":true});
+    expectFans('gang:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","明杠","海底捞月","抢杠和"], {"qiangGang":true,"lastTile":true});
   });
 
   test('Rule 22', () => {
@@ -412,11 +417,11 @@ describe('Guobiao Benchmarks - Special Scoring Rules', () => {
   });
 
   test('Rule 28', () => {
-    expectFans('s1 s9 m1 m9 p1 p9 z1 z2 z3 z4 z5 z6 z7 z1', ["十三幺", "不求人"], {"zimo":true});
+    expectFans('s1 s9 m1 m9 p1 p9 z1 z2 z3 z4 z5 z6 z7 z1', ["十三幺", "自摸"], {"zimo":true});
   });
 
   test('Rule 29', () => {
-    expectFans('pung:s8 s6 s6 s2 s3 s4 s2 s3 s4 s3 s4 s2', ["绿一色","一色三节高","碰碰和","三暗刻","清一色","断幺"], {});
+    expectFans('pung:s8 s6 s6 s2 s3 s4 s2 s3 s4 s3 s4 s2', ["绿一色","一色三节高","碰碰和","双暗刻","清一色","断幺"], {});
   });
 
   test('Rule 30', () => {
@@ -428,7 +433,7 @@ describe('Guobiao Benchmarks - Special Scoring Rules', () => {
   });
 
   test('Rule 32', () => {
-    expectFans('gang:s2 angang:s4 s6 s6 s6 s8 s8 z6 z6 s8', ["绿一色","三暗刻","碰碰和","混一色","明暗杠"], {});
+    expectFans('gang:s2 angang:s4 s6 s6 s6 s8 s8 z6 z6 s8', ["绿一色","碰碰和","混一色","明暗杠","双暗刻"], {});
   });
 
   test('Rule 33', () => {

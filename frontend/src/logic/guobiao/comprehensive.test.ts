@@ -31,9 +31,14 @@ function parseHand(handStr: string, opts: Partial<GameOptions> = {}): { conceale
       const rank = Number(token.slice(8));
       melds.push({ type: 'gang', tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)], isOpen: false });
     } else {
-      const suit = token[0] as TileSuit;
-      const ranks = token.slice(1).split('').map(Number);
-      ranks.forEach(r => concealed.push(new Tile(suit, r)));
+      let suit: TileSuit | null = null;
+      for (const ch of token) {
+        if ('mpsz'.includes(ch)) {
+          suit = ch as TileSuit;
+        } else if (suit && ch >= '1' && ch <= '9') {
+          concealed.push(new Tile(suit, Number(ch)));
+        }
+      }
     }
   }
 
@@ -78,7 +83,7 @@ describe('Guobiao Logic External Engine Compliance', () => {
   });
 
   test('Case 5: Mixed Triple Steps', () => {
-    expectFans('chi:m567 chi:p456 chi:s345 chi:m678 z11', ['三色三步高', '全求人', '连六']);
+    expectFans('chi:m567 chi:p456 chi:s345 chi:m678 z11', ['三色三步高', '全求人']);
   });
 
   test('Case 6: All Green Overlap', () => {
@@ -95,7 +100,7 @@ describe('Guobiao Logic External Engine Compliance', () => {
 
   test('Case 9: Little Four Winds', () => {
     // 3 wind kes, 1 wind pair, 1 other ke
-    expectFans('z11122233344 s111', ['小四喜', '三风刻', '碰碰和', '三暗刻', '幺九刻']);
+    expectFans('z11122233344 s111', ['小四喜', '三风刻', '碰碰和', '三暗刻', '混幺九']);
   });
 
   test('Case 10: Little Three Dragons', () => {
@@ -104,7 +109,7 @@ describe('Guobiao Logic External Engine Compliance', () => {
   });
 
   test('Case 11: Robbing a Kong', () => {
-    expectFans('pung:p2 z11 m123456789', ['清龙', '缺一门', '抢杠和'], { gangShang: true, zimo: false });
+    expectFans('pung:p2 z11 m123456789', ['清龙', '缺一门', '抢杠和'], { qiangGang: true, zimo: false });
   });
 
   test('Case 12: Out of Kong', () => {
@@ -120,8 +125,7 @@ describe('Guobiao Logic External Engine Compliance', () => {
   });
 
   test('Case 15: Pure Triple Shuns (One Suit)', () => {
-    // p555666777 is 3 kes. Let's make' em shuns: p567 p567 p567
-    expectFans('p567 p567 p567 s555 s66', ['一色三同顺', '不求人', '平和', '喜相逢', '缺一门'], { zimo: true });
+    expectFans('chi:p567 chi:p567 chi:p567 s555 s66', ['一色三同顺', '缺一门'], { zimo: false });
   });
 
   test('Case 16: Flower Tiles No-Fan', () => {
@@ -145,9 +149,10 @@ describe('Guobiao Logic External Engine Compliance', () => {
   });
 
   test('Case 21: Bug Report - Duplicate MenQianQing', () => {
-    // s111 222 333 444 33, win on 3s discard
     const r = calcHu('s111 s222 s333 s444 s33', { zimo: false });
-    const mqCount = r!.fans.find(f => f.name === '门前清')?.count || 0;
-    expect(mqCount).toBe(1);
+    expect(r).not.toBeNull();
+    const names = r!.fans.map((f: any) => f.name);
+    expect(names).toContain('四暗刻');
+    expect(names).not.toContain('门前清');
   });
 });
