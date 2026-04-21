@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, HAN_OPTIONS, FU_OPTIONS } from '../types'
 import { calculateRanks } from '../logic/ranking'
+import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -19,6 +20,8 @@ export default function SessionPage() {
   const [bimenPlayerIds, setBimenPlayerIds] = useState<number[]>([])
   const [isRyuukyoku, setIsRyuukyoku] = useState(false)
   const [tenpaiPlayerIds, setTenpaiPlayerIds] = useState<number[]>([])
+  const [isCalcOpen, setIsCalcOpen] = useState(false)
+  const [calcResetCount, setCalcResetCount] = useState(0)
 
   const load = () => {
     fetchSessionDetail(Number(id)).then(setSession)
@@ -42,6 +45,7 @@ export default function SessionPage() {
     setDealInPlayerId('')
     setIsRyuukyoku(false)
     setTenpaiPlayerIds([])
+    setCalcResetCount(prev => prev + 1)
   }
 
   const canSubmit = winnerId
@@ -449,11 +453,28 @@ export default function SessionPage() {
                         min={isGuobiao ? "8" : "1"}
                       />
                       {isGuobiao && (
-                        <Link to="/calculator" target="_blank" className="btn btn-accent btn-small calc-trigger-btn" style={{ display: 'flex', alignItems: 'center' }}>
-                          🀄 算番器
-                        </Link>
+                        <button className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`} onClick={() => setIsCalcOpen(!isCalcOpen)}>
+                          🀄 {isCalcOpen ? '收起算番' : '算番器'}
+                        </button>
                       )}
                     </div>
+                    {isGuobiao && (
+                      <div className="inline-calc-wrapper" style={{ display: isCalcOpen ? 'block' : 'none' }}>
+                        <GuobiaoCalculator 
+                          onSelectScore={(s) => {
+                            setScore(String(s));
+                          }}
+                          initialOptions={{
+                            quanfeng: 1,
+                            menfeng: 1
+                          }}
+                          resetTrigger={calcResetCount}
+                          isSelfDraw={isSelfDraw}
+                          onIsSelfDrawChange={setIsSelfDraw}
+                          onClose={() => setIsCalcOpen(false)}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="form-group full-width">
