@@ -2,8 +2,8 @@ FROM eclipse-temurin:17-jdk AS build
 WORKDIR /app
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
-COPY src ./src
-COPY frontend ./frontend
+COPY server/src ./server/src
+COPY ui ./ui
 RUN chmod +x gradlew && ./gradlew build -x test -x spotlessCheck -x spotlessApply
 
 FROM eclipse-temurin:17-jre

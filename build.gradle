@@ -15,6 +15,17 @@ java {
   sourceCompatibility = '17'
 }
 
+sourceSets {
+  main {
+    java.srcDirs = ['server/src/main/java']
+    resources.srcDirs = ['server/src/main/resources']
+  }
+  test {
+    java.srcDirs = ['server/src/test/java']
+    resources.srcDirs = ['server/src/test/resources']
+  }
+}
+
 repositories {
   mavenCentral()
 }
@@ -33,30 +44,30 @@ dependencies {
   annotationProcessor 'org.projectlombok:lombok'
 }
 
-def frontendDir = "${projectDir}/frontend"
+def uiDir = "${projectDir}/ui"
 
 node {
   version = '18.20.4'
   download = true
   workDir = file("${projectDir}/.gradle/nodejs")
   npmWorkDir = file("${projectDir}/.gradle/npm")
-  nodeProjectDir = file(frontendDir)
+  nodeProjectDir = file(uiDir)
 }
 
 tasks.register('npmBuild', NpmTask) {
   dependsOn npmInstall
-  workingDir = file(frontendDir)
+  workingDir = file(uiDir)
   args = ['run', 'build']
-  inputs.dir("${frontendDir}/src")
-  inputs.file("${frontendDir}/index.html")
-  inputs.file("${frontendDir}/vite.config.ts")
-  outputs.dir("${frontendDir}/dist")
+  inputs.dir("${uiDir}/src")
+  inputs.file("${uiDir}/index.html")
+  inputs.file("${uiDir}/vite.config.ts")
+  outputs.dir("${uiDir}/dist")
 }
 
 tasks.register('copyFrontend', Copy) {
   dependsOn npmBuild
-  from "${frontendDir}/dist"
-  into "${projectDir}/src/main/resources/static"
+  from "${uiDir}/dist"
+  into "${projectDir}/server/src/main/resources/static"
 }
 
 processResources.dependsOn copyFrontend
@@ -65,7 +76,7 @@ spotless {
   encoding 'UTF-8'
 
   java {
-    target fileTree('src/main/java') {
+    target fileTree('server/src/main/java') {
       include '**/*.java'
     }
 

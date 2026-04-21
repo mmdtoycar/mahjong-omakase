@@ -5,12 +5,12 @@ data/
 # Gradle
 .gradle/
 
-# Generated static files (built from frontend/)
-src/main/resources/static/
+# Generated static files (built from ui/)
+server/src/main/resources/static/
 
-# Frontend
-frontend/node_modules/
-frontend/dist/
+# UI
+ui/node_modules/
+ui/dist/
 
 # IDE
 .idea/

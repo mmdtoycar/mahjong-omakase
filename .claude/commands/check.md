@@ -1,7 +1,7 @@
 Audit all frontend pages for Chinese localization and mobile responsiveness.
 
 ## Part 1: Chinese Check
-Check every file in frontend/src/pages/ and frontend/src/App.tsx for any user-visible English text that should be Chinese. This includes:
+Check every file in ui/src/pages/ and ui/src/App.tsx for any user-visible English text that should be Chinese. This includes:
 - Labels, headings, button text
 - Placeholder text in inputs
 - Error messages, hints, warnings
@@ -14,7 +14,7 @@ Note: SignUpPage.tsx ("Join Leo's friends' mahjong games!") is intentionally Eng
 Note: AdminPage.tsx is intentionally English — do not flag it.
 
 ## Part 2: Mobile Check
-Read frontend/src/index.css and all files in frontend/src/pages/ to check for potential mobile issues on screens under 640px width. Check for:
+Read ui/src/index.css and all files in ui/src/pages/ to check for potential mobile issues on screens under 640px width. Check for:
 - Tables not wrapped in a scrollable container (overflow-x: auto)
 - Flex layouts that don't wrap on narrow screens
 - Inline styles that override responsive CSS (e.g. width: 'auto' preventing full-width)
