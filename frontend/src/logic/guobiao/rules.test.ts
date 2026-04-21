@@ -8,42 +8,72 @@ import { findAllCombinations } from './hu';
  * Comprehensive test suite for Guobiao Mahjong Logic.
  */
 
+function parseTileString(str: string): Tile[] {
+  const tiles: Tile[] = [];
+  let suit: TileSuit | null = null;
+  for (const ch of str) {
+    if ('mpstwz'.includes(ch)) {
+      suit = (ch === 'w' ? 'm' : ch === 't' ? 's' : ch) as TileSuit;
+    } else if (suit && ch >= '1' && ch <= '9') {
+      tiles.push(new Tile(suit, Number(ch)));
+    }
+  }
+  return tiles;
+}
+
 function parseHand(handStr: string, opts: Partial<GameOptions> = {}): { concealed: Tile[], melds: Meld[], options: GameOptions } {
   const concealed: Tile[] = [];
   const melds: Meld[] = [];
-  
+
+  const mapSuit = (ch: string): TileSuit => (ch === 'w' ? 'm' : ch === 't' ? 's' : ch) as TileSuit;
+  const isMeldPrefix = (tok: string, prefix: string) => tok.startsWith(prefix) && tok.length > prefix.length && 'mpszwt'.includes(tok[prefix.length]);
+
   const tokens = handStr.split(' ');
   for (const token of tokens) {
-    if (token.startsWith('l')) { // Exposed meld (chi/pung)
+    if (isMeldPrefix(token, 'l')) { // Exposed meld (chi/pung)
       const content = token.slice(1);
-      const suit = content[0] as TileSuit;
+      const suit = mapSuit(content[0]);
       const ranks = content.slice(1).split('').map(Number);
       const tiles = ranks.map(r => new Tile(suit, r));
       melds.push({ type: ranks.length === 3 ? (ranks[0] === ranks[1] ? 'ke' : 'shun') : 'dui', tiles, isOpen: true });
-    } else if (token.startsWith('c')) { // Concealed meld (chi/pung)
+    } else if (isMeldPrefix(token, 'c')) { // Concealed meld (chi/pung)
       const content = token.slice(1);
-      const suit = content[0] as TileSuit;
+      const suit = mapSuit(content[0]);
       const ranks = content.slice(1).split('').map(Number);
       melds.push({ type: 'shun', tiles: ranks.map(r => new Tile(suit, r)), isOpen: false });
-    } else if (token.startsWith('p')) { // Exposed Pung
-      const content = token.slice(1);
-      const suit = content[0] as TileSuit;
-      const rank = Number(content.slice(1));
-      melds.push({ type: 'ke', tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)], isOpen: true });
-    } else if (token.startsWith('g')) { // Exposed Gang
-      const content = token.slice(1);
-      const suit = content[0] as TileSuit;
-      const rank = Number(content.slice(1));
-      melds.push({ type: 'gang', tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)], isOpen: true });
-    } else if (token.startsWith('gz')) { // Concealed Gang (暗杠)
+    } else if (isMeldPrefix(token, 'gz')) { // Concealed Gang (暗杠) — check before 'g'
       const content = token.slice(2);
-      const suit = content[0] as TileSuit;
+      const suit = mapSuit(content[0]);
       const rank = Number(content.slice(1));
       melds.push({ type: 'gang', tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)], isOpen: false });
+    } else if (isMeldPrefix(token, 'g')) { // Exposed Gang
+      const content = token.slice(1);
+      const suit = mapSuit(content[0]);
+      const rank = Number(content.slice(1));
+      melds.push({ type: 'gang', tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)], isOpen: true });
+    } else if (isMeldPrefix(token, 'p')) { // Exposed Pung
+      const content = token.slice(1);
+      const suit = mapSuit(content[0]);
+      const rank = Number(content.slice(1));
+      melds.push({ type: 'ke', tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)], isOpen: true });
+    } else if (token.includes('|')) {
+      const [concealedPart, openPart] = token.split('|');
+      const concealedTiles = parseTileString(concealedPart);
+      concealedTiles.forEach(t => concealed.push(t));
+      const inheritedSuit = concealedTiles.length > 0 ? concealedTiles[0].suit : null;
+      let openStr = openPart;
+      if (inheritedSuit && openPart.length > 0 && openPart[0] >= '1' && openPart[0] <= '9') {
+        openStr = inheritedSuit + openPart;
+      }
+      const openTiles = parseTileString(openStr);
+      if (openTiles.length === 3) {
+        const isKe = openTiles[0].equals(openTiles[1]);
+        melds.push({ type: isKe ? 'ke' : 'shun', tiles: openTiles, isOpen: true });
+      } else if (openTiles.length === 4) {
+        melds.push({ type: 'gang', tiles: openTiles, isOpen: true });
+      }
     } else {
-      const suit = token[0] as TileSuit;
-      const ranks = token.slice(1).split('').map(Number);
-      ranks.forEach(r => concealed.push(new Tile(suit, r)));
+      parseTileString(token).forEach(t => concealed.push(t));
     }
   }
 

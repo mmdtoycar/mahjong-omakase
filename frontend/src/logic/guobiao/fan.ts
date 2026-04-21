@@ -7,7 +7,12 @@ import { findAllCombinations } from './hu';
  * Complete implementation of all 81 fan types per GB/T 16491—2008.
  */
 
-export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], options: GameOptions, lastTile?: Tile): CalcResult | null {
+export interface CalcAllResults {
+  bestScore: number;
+  results: CalcResult[];
+}
+
+export function calculateAllBestScores(concealedTiles: Tile[], melds: Meld[], options: GameOptions, lastTile?: Tile): CalcAllResults | null {
   const combinations = findAllCombinations(concealedTiles, melds);
   if (combinations.length === 0) return null;
 
@@ -43,7 +48,7 @@ export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], option
         t.combo.melds[t.completedMeldIdx] = { ...t.combo.melds[t.completedMeldIdx], completedByDiscard: true } as any;
       }
       const scored = scoreCombination(t.combo, concealedTiles, options, lastTile, tingCount);
-      
+
       if (scored.totalScore > bestScore) {
         bestScore = scored.totalScore;
         results = [scored];
@@ -58,6 +63,11 @@ export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], option
     }
   }
   return results.length > 0 ? { results, bestScore } : null;
+}
+
+export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], options: GameOptions, lastTile?: Tile): CalcResult | null {
+  const all = calculateAllBestScores(concealedTiles, melds, options, lastTile);
+  return all ? all.results[0] : null;
 }
 
 // --- Helper: get all starting tiles of shun melds ---
@@ -620,22 +630,22 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
     // 幺九刻 (1)
     let yaoJiuKeCount = keMelds.filter(m => m.tiles[0].isTerminalOrHonor).length;
     if (hasFan('字一色') || hasFan('清幺九') || hasFan('混幺九')) {
-       // already counted or excluded
        yaoJiuKeCount = 0;
     } else {
+       const hasWindGroupFan = hasFan('大四喜') || hasFan('小四喜') || hasFan('三风刻');
        if (hasFan('大四喜')) yaoJiuKeCount -= 4;
        else if (hasFan('小四喜')) yaoJiuKeCount -= 3;
        else if (hasFan('三风刻')) yaoJiuKeCount -= 3;
-       
+
        if (hasFan('大三元')) yaoJiuKeCount -= 3;
        else if (hasFan('小三元')) yaoJiuKeCount -= 2;
-       
-       // Handle individual ones
-       if (hasFan('双箭刻')) yaoJiuKeCount -= 2;
-       else if (hasFan('箭刻')) yaoJiuKeCount -= 1;
-       
-       if (hasFan('圈风刻')) yaoJiuKeCount -= 1;
-       if (hasFan('门风刻')) yaoJiuKeCount -= 1;
+
+       if (!hasWindGroupFan) {
+         if (hasFan('双箭刻')) yaoJiuKeCount -= 2;
+         else if (hasFan('箭刻')) yaoJiuKeCount -= 1;
+         if (hasFan('圈风刻')) yaoJiuKeCount -= 1;
+         if (hasFan('门风刻')) yaoJiuKeCount -= 1;
+       }
     }
     
     if (yaoJiuKeCount > 0) {
@@ -719,7 +729,8 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
   const isQidui = hasFan('七对');
 
   if (options.zimo) {
-    if (allClosed && !isSpecial && !isJiulian && !isSianke) {
+    const buqiuren = (allClosed || isSpecial) && !isJiulian && !isSianke && !isShisanyao && !isLianqidui;
+    if (buqiuren) {
       addFan('不求人', 4);
     } else {
       addFan('自摸', 1);
@@ -810,7 +821,7 @@ export function getTingTiles(concealedTiles: Tile[], melds: Meld[], options: Gam
     const testHand = [...sortedConcealed, t];
     const best = calculateBestScore(testHand, melds, options, t);
     if (best) {
-      results.push({ tile: t, fans: best.results[0].fans, score: best.bestScore });
+      results.push({ tile: t, fans: best.fans, score: best.totalScore });
     }
   }
   return results;

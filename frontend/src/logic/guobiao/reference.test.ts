@@ -1,7 +1,7 @@
 import { test, expect, describe } from 'vitest';
 import { Tile, TileSuit } from './tiles';
-import { Meld, GameOptions, CalcResult } from './types';
-import { calculateBestScore, getTingTiles } from './fan';
+import { Meld, GameOptions } from './types';
+import { calculateBestScore, calculateAllBestScores, getTingTiles } from './fan';
 
 /**
  * Hand String Format Parser based on GB-Mahjong (zheng-fan)
@@ -160,7 +160,7 @@ const FAN_NAME_MAP: Record<string, string> = {
 function runTest(handStr: string, expectedFans: string[], altFans: string[] | null = null) {
     const { concealed, melds, options } = parseHand(handStr);
     const lastTile = concealed.length > 0 ? concealed[concealed.length - 1] : undefined;
-    const resultObj = calculateBestScore(concealed, melds, options, lastTile) as any;
+    const resultObj = calculateAllBestScores(concealed, melds, options, lastTile);
 
     expect(resultObj, `Hand failed to Hu: ${handStr}`).not.toBeNull();
     const allResults = resultObj!.results;

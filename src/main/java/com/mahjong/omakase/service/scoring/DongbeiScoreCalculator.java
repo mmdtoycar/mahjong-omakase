@@ -9,7 +9,7 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 
 /**
- * 抗日麻将 score calculator.
+ * 东北麻将 score calculator.
  *
  * <p>Per opponent payment formula: payment = 2^(min(fan + 庄家flag + 点炮flag + 闭门flag + 三家闭门flag, 6))
  * × payGate

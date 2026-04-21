@@ -15,6 +15,9 @@ public class SessionDetailResponse {
   private List<PlayerInfo> players;
   private List<RoundInfo> rounds;
   private Map<Long, Integer> totalScores;
+  private double rpFactor;
+  private double rpOrigin;
+  private double[] umaDist;
 
   public static class PlayerInfo {
     private Long id;
@@ -146,5 +149,29 @@ public class SessionDetailResponse {
 
   public void setTotalScores(Map<Long, Integer> totalScores) {
     this.totalScores = totalScores;
+  }
+
+  public double getRpFactor() {
+    return rpFactor;
+  }
+
+  public void setRpFactor(double rpFactor) {
+    this.rpFactor = rpFactor;
+  }
+
+  public double getRpOrigin() {
+    return rpOrigin;
+  }
+
+  public void setRpOrigin(double rpOrigin) {
+    this.rpOrigin = rpOrigin;
+  }
+
+  public double[] getUmaDist() {
+    return umaDist;
+  }
+
+  public void setUmaDist(double[] umaDist) {
+    this.umaDist = umaDist;
   }
 }

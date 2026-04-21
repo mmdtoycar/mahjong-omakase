@@ -1,9 +1,12 @@
 package com.mahjong.omakase.controller;
 
+import com.mahjong.omakase.model.AppSetting;
 import com.mahjong.omakase.model.Player;
+import com.mahjong.omakase.repository.AppSettingRepository;
 import com.mahjong.omakase.service.GameService;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -19,9 +22,11 @@ public class AdminController {
   private String adminPassword;
 
   private final GameService gameService;
+  private final AppSettingRepository appSettingRepo;
 
-  public AdminController(GameService gameService) {
+  public AdminController(GameService gameService, AppSettingRepository appSettingRepo) {
     this.gameService = gameService;
+    this.appSettingRepo = appSettingRepo;
   }
 
   private void checkPassword(String password) {
@@ -63,5 +68,44 @@ public class AdminController {
     Player updated = gameService.updatePlayer(id, body.get("firstName"), body.get("lastName"));
     log.info("Admin updated player id={}", id);
     return updated;
+  }
+
+  @GetMapping("/settings")
+  public Map<String, String> getSettings(@RequestHeader("X-Admin-Password") String password) {
+    checkPassword(password);
+    return appSettingRepo.findAll().stream()
+        .collect(Collectors.toMap(AppSetting::getKey, AppSetting::getValue));
+  }
+
+  private static final Map<String, java.util.function.Predicate<String>> SETTING_VALIDATORS =
+      Map.of(
+          "participation_bonus",
+          v -> {
+            try {
+              double d = Double.parseDouble(v);
+              return d >= 0;
+            } catch (NumberFormatException e) {
+              return false;
+            }
+          });
+
+  @PutMapping("/settings")
+  public Map<String, String> updateSettings(
+      @RequestHeader("X-Admin-Password") String password, @RequestBody Map<String, String> body) {
+    checkPassword(password);
+    body.forEach(
+        (key, value) -> {
+          var validator = SETTING_VALIDATORS.get(key);
+          if (validator != null && !validator.test(value)) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "Invalid value for setting: " + key);
+          }
+          AppSetting setting = appSettingRepo.findById(key).orElse(new AppSetting(key, value));
+          setting.setValue(value);
+          appSettingRepo.save(setting);
+        });
+    log.info("Admin updated settings: {}", body.keySet());
+    gameService.reloadSettings();
+    return body;
   }
 }
