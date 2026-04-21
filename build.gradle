@@ -66,13 +66,13 @@ tasks.register('npmBuild', NpmTask) {
   outputs.dir("${uiDir}/dist")
 }
 
-tasks.register('copyFrontend', Copy) {
+tasks.register('copyUI', Copy) {
   dependsOn npmBuild
   from "${uiDir}/dist"
   into "${projectDir}/server/src/main/resources/static"
 }
 
-processResources.dependsOn copyFrontend
+processResources.dependsOn copyUI
 
 spotless {
   encoding 'UTF-8'
