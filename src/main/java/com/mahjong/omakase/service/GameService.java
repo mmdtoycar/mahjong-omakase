@@ -312,6 +312,7 @@ public class GameService {
     }
 
     Map<Long, Integer> wins = new HashMap<>();
+    Map<Long, Double> totalRP = new HashMap<>();
     List<GameSession> completedSessions =
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
@@ -324,13 +325,38 @@ public class GameService {
     for (GameSession session : completedSessions) {
       List<Object[]> sessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
       if (!sessionScores.isEmpty()) {
-        long winnerId =
-            sessionScores.stream()
-                .filter(r -> r[0] != null)
-                .max(Comparator.comparingInt(r -> ((Number) r[1]).intValue()))
-                .map(r -> (Long) r[0])
-                .orElse(-1L);
-        if (winnerId != -1L) wins.merge(winnerId, 1, Integer::sum);
+        List<Object[]> sorted = new ArrayList<>(sessionScores);
+        sorted.sort((a, b) -> ((Number) b[1]).intValue() - ((Number) a[1]).intValue());
+
+        int i = 0;
+        while (i < sorted.size()) {
+          int j = i;
+          int scoreAtI = ((Number) sorted.get(i)[1]).intValue();
+          while (j < sorted.size() && ((Number) sorted.get(j)[1]).intValue() == scoreAtI) {
+            j++;
+          }
+
+          int groupSize = j - i;
+          double totalUma = 0;
+          double[] umaDist = {15.0, 5.0, -5.0, -15.0};
+          for (int k = i; k < j; k++) {
+            totalUma += (k < umaDist.length ? umaDist[k] : 0);
+          }
+          double avgUma = totalUma / groupSize;
+          double factor = session.getGameMode() == GameMode.RIICHI ? 1000.0 : 10.0;
+
+          for (int k = i; k < j; k++) {
+            Long pid = (Long) sorted.get(k)[0];
+            if (pid == null) continue;
+            int raw = ((Number) sorted.get(k)[1]).intValue();
+            double rp = (raw / factor) + avgUma;
+            totalRP.merge(pid, rp, Double::sum);
+          }
+          i = j;
+        }
+
+        long winnerId = (Long) sorted.get(0)[0];
+        wins.merge(winnerId, 1, Integer::sum);
       }
     }
 
@@ -347,6 +373,9 @@ public class GameService {
               stat.setAvgScore(
                   rounds > 0 ? (double) totalScores.getOrDefault(p.getId(), 0) / rounds : 0);
               stat.setWins(wins.getOrDefault(p.getId(), 0));
+              // Base RP from session performance + Participation Bonus (0.1 per game)
+              double baseRP = totalRP.getOrDefault(p.getId(), 0.0);
+              stat.setTotalRP(baseRP + (stat.getGamesPlayed() * 0.1));
               return stat;
             })
         .collect(Collectors.toList());

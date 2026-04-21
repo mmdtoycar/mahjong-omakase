@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, HAN_OPTIONS, FU_OPTIONS } from '../types'
+import { calculateRanks } from '../logic/ranking'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -102,6 +103,12 @@ export default function SessionPage() {
   const sortedPlayers = [...session.players].sort(
     (a, b) => (session.totalScores[b.id] || 0) - (session.totalScores[a.id] || 0)
   )
+
+  const rankings = calculateRanks(
+    session.players.map(p => ({ playerId: p.id, score: session.totalScores[p.id] || 0 })),
+    session.gameMode
+  )
+  const rankMap = Object.fromEntries(rankings.map(r => [r.playerId, r]))
 
   const otherPlayers = session.players.filter(p => p.id !== Number(winnerId))
   const winnerIsDealer = winnerId && dealerId && winnerId === dealerId
@@ -233,7 +240,12 @@ export default function SessionPage() {
               <tr>
                 <th>局</th>
                 {session.players.map(p => (
-                  <th key={p.id} style={{ textAlign: 'center' }}>{p.userName}</th>
+                  <th key={p.id} style={{ textAlign: 'center' }}>
+                    <div className="player-header-cell">
+                      <span className="player-rank">#{rankMap[p.id]?.rank}</span>
+                      <span className="player-name">{p.userName}</span>
+                    </div>
+                  </th>
                 ))}
                 {session.status === 'IN_PROGRESS' && <th></th>}
               </tr>
@@ -271,7 +283,10 @@ export default function SessionPage() {
                       textAlign: 'center',
                       color: val > 0 ? 'var(--success)' : val < 0 ? 'var(--danger)' : undefined
                     }}>
-                      {val > 0 ? `+${val}` : val}
+                      <div className="total-score-box">
+                        <div className="total-val">{val > 0 ? `+${val}` : val}</div>
+                        <div className="rp-val">{rankMap[p.id]?.rp > 0 ? `+${rankMap[p.id]?.rp.toFixed(1)}` : rankMap[p.id]?.rp.toFixed(1)} RP</div>
+                      </div>
                     </td>
                   )
                 })}
@@ -424,50 +439,75 @@ export default function SessionPage() {
                   <div className="form-group">
                     <label>
                       分数
-                      {isGuobiao && (
-                        <Link to="/calculator" target="_blank" className="score-calc-link">计算器</Link>
-                      )}
                     </label>
-                    <input
-                      type="number"
-                      value={score}
-                      onChange={e => setScore(e.target.value)}
-                      placeholder="输入分数"
-                      min={isGuobiao ? "8" : "1"}
-                    />
+                    <div className="score-input-row">
+                      <input
+                        type="number"
+                        value={score}
+                        onChange={e => setScore(e.target.value)}
+                        placeholder="输入分数"
+                        min={isGuobiao ? "8" : "1"}
+                      />
+                      {isGuobiao && (
+                        <Link to="/calculator" target="_blank" className="btn btn-accent btn-small calc-trigger-btn" style={{ display: 'flex', alignItems: 'center' }}>
+                          🀄 算番器
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 )}
-                <div className="form-group">
+                <div className="form-group full-width">
                   <label>赢家</label>
-                  <select value={winnerId} onChange={e => { setWinnerId(e.target.value); setDealInPlayerId('') }}>
-                    <option value=""></option>
+                  <div className="player-chip-grid">
                     {session.players.map(p => (
-                      <option key={p.id} value={p.id}>{p.userName}</option>
+                      <button
+                        key={p.id}
+                        className={`player-chip-btn ${winnerId === String(p.id) ? 'active' : ''}`}
+                        onClick={() => { setWinnerId(String(p.id)); setDealInPlayerId('') }}
+                      >
+                        {p.userName}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 </div>
               </div>
               </>
             )}
 
             <div className="form-group">
-              <label>点炮/自摸</label>
-              <select value={isSelfDraw ? 'zimo' : dealInPlayerId} onChange={e => {
-                if (e.target.value === 'zimo') {
-                  setIsSelfDraw(true)
-                  setDealInPlayerId('')
-                } else {
-                  setIsSelfDraw(false)
-                  setDealInPlayerId(e.target.value)
-                }
-              }}>
-                <option value=""></option>
-                <option value="zimo">自摸</option>
-                {otherPlayers.map(p => (
-                  <option key={p.id} value={p.id}>{p.userName}</option>
-                ))}
-              </select>
+              <label>和牌方式</label>
+              <div className="win-type-selector">
+                <button 
+                  className={`type-btn ${isSelfDraw ? 'active' : ''}`}
+                  onClick={() => { setIsSelfDraw(true); setDealInPlayerId('') }}
+                >
+                  自摸
+                </button>
+                <button 
+                  className={`type-btn ${!isSelfDraw ? 'active' : ''}`}
+                  onClick={() => setIsSelfDraw(false)}
+                >
+                  点炮
+                </button>
+              </div>
             </div>
+
+            {!isSelfDraw && (
+              <div className="form-group full-width">
+                <label>点炮家</label>
+                <div className="player-chip-grid">
+                  {otherPlayers.map(p => (
+                    <button
+                      key={p.id}
+                      className={`player-chip-btn ${dealInPlayerId === String(p.id) ? 'active' : ''}`}
+                      onClick={() => setDealInPlayerId(String(p.id))}
+                    >
+                      {p.userName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {isDongbei && winnerId && (
               <div className="form-group">
