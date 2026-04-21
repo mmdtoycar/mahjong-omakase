@@ -1,0 +1,16 @@
+language: "en"
+reviews:
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!dist/**"
+    - "!**/*.lock"
+    - "!data/**"
+  tools:
+    biome:
+      enabled: true
+    shellcheck:
+      enabled: true
+chat:
+  auto_reply: true

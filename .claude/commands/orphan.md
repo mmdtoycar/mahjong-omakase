@@ -1,13 +1,13 @@
 Search for unused/orphan code across both backend and frontend.
 
-## Backend (src/main/java/)
+## Backend (server/src/main/java/)
 - Java classes/enums/interfaces never imported or referenced anywhere
 - Unused imports in any Java file
 - DTO fields never read by any controller or service
 - Repository methods never called by any service
 - Service methods never called by any controller
 
-## Frontend (frontend/src/)
+## Frontend (ui/src/)
 - CSS classes in index.css not used by any .tsx component (grep each class name against all .tsx files)
 - Exported functions in api/index.ts not imported by any page
 - Exported types/interfaces/constants in types/index.ts not imported by any file
