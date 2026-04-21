@@ -11,8 +11,7 @@ export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], option
   const combinations = findAllCombinations(concealedTiles, melds);
   if (combinations.length === 0) return null;
 
-  // Determine ting count: remove lastTile from concealed, check how many tiles complete the hand
-  let tingCount = -1; // -1 = unknown
+  let tingCount = -1;
   if (lastTile) {
     const withoutLast = removeTilesOnce(concealedTiles, [lastTile]);
     tingCount = 0;
@@ -22,31 +21,43 @@ export function calculateBestScore(concealedTiles: Tile[], melds: Meld[], option
     }
   }
 
-  let best: CalcResult | null = null;
+  let bestScore = -1;
+  let results: CalcResult[] = [];
+
   for (const combo of combinations) {
-    let tries = [ { combo, completedMeldIdx: -1 } ];
+    let tries: { combo: HandCombination; completedMeldIdx: number }[] = [];
+    if (options.zimo || combo.isSpecial) {
+      tries.push({ combo, completedMeldIdx: -1 });
+    }
     if (!options.zimo && lastTile && !combo.isSpecial) {
-       combo.melds.forEach((m, idx) => {
-         if (!m.isOpen && m.tiles.some(t => t.equals(lastTile))) {
-           tries.push({ combo, completedMeldIdx: idx });
-         }
-       });
+      combo.melds.forEach((m, idx) => {
+        if (!m.isOpen && m.tiles.some(t => t.equals(lastTile))) {
+          tries.push({ combo, completedMeldIdx: idx });
+        }
+      });
+      if (tries.length === 0) tries.push({ combo, completedMeldIdx: -1 });
     }
 
     for (const t of tries) {
       if (t.completedMeldIdx !== -1) {
-         t.combo.melds[t.completedMeldIdx] = { ...t.combo.melds[t.completedMeldIdx], completedByDiscard: true } as any;
+        t.combo.melds[t.completedMeldIdx] = { ...t.combo.melds[t.completedMeldIdx], completedByDiscard: true } as any;
       }
       const scored = scoreCombination(t.combo, concealedTiles, options, lastTile, tingCount);
-      if (!best || scored.totalScore > best.totalScore) {
-        best = scored;
+      
+      if (scored.totalScore > bestScore) {
+        bestScore = scored.totalScore;
+        results = [scored];
+      } else if (scored.totalScore === bestScore) {
+        results.push(scored);
       }
+
       if (t.completedMeldIdx !== -1) {
-         delete (t.combo.melds[t.completedMeldIdx] as any).completedByDiscard;
+        t.combo.melds[t.completedMeldIdx] = { ...t.combo.melds[t.completedMeldIdx], completedByDiscard: false } as any;
+        delete (t.combo.melds[t.completedMeldIdx] as any).completedByDiscard;
       }
     }
   }
-  return best;
+  return results.length > 0 ? { results, bestScore } : null;
 }
 
 // --- Helper: get all starting tiles of shun melds ---
@@ -80,7 +91,7 @@ function triples<T>(arr: T[]): [T, T, T][] {
   return res;
 }
 
-// 推不到 tiles: tiles whose face is vertically symmetric
+// 推不倒 tiles: tiles whose face is vertically symmetric
 const TUI_BU_DAO_TILES = new Set([
   '1p','2p','3p','4p','5p','8p','9p',
   '2s','4s','5s','6s','8s','9s',
@@ -143,9 +154,6 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
     return existing ? (existing.count || 1) : 0;
   };
 
-  // =====================================================================
-  // 88 番 (5+2=7种)
-  // =====================================================================
   if (isSpecial) {
     // 十三幺 (88) — Check if it's actually thirteen orphans (13 unique yao tiles + 1 duplicate)
     if (melds.length === 14 && melds.every(m => m.type === 'single')) {
@@ -429,8 +437,8 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
         break;
       }
     }
-    // 推不到 (8)
-    if (allTiles.every(t => TUI_BU_DAO_TILES.has(t.toString()))) addFan('推不到', 8);
+    // 推不倒 (8)
+    if (allTiles.every(t => TUI_BU_DAO_TILES.has(t.toString()))) addFan('推不倒', 8);
     // 双暗杠 (8)
     if (gangMelds.filter(m => !m.isOpen).length === 2) addFan('双暗杠', 8);
     // 无番和 — added at end
@@ -504,7 +512,13 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
     // 门前清 (2) - Handled in situational block
 
     // 平和 (2) — 4 shuns + number-tile pair, no honors
-    if (shunMelds.length === 4 && !hasHonors) addFan('平和', 2);
+    const effectiveShunCount = shunMelds.length + (combo.isZuHeLong ? 3 : 0);
+    if (!isSpecial && !hasHonors && effectiveShunCount === 4 && !melds.some(m => (m.type === 'ke' || m.type === 'gang'))) {
+      const pair = melds.find(m => m.type === 'dui')?.tiles[0];
+      if (pair && !pair.isHonor) {
+        addFan('平和', 2);
+      }
+    }
 
     // 四归一 (2)
     const tileCounts = new Map<string, number>();
@@ -605,12 +619,26 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
 
     // 幺九刻 (1)
     let yaoJiuKeCount = keMelds.filter(m => m.tiles[0].isTerminalOrHonor).length;
-    if (hasFan('圈风刻')) yaoJiuKeCount--;
-    if (hasFan('门风刻')) yaoJiuKeCount--;
-    if (hasFan('箭刻')) yaoJiuKeCount--;
-    if (hasFan('双箭刻')) yaoJiuKeCount -= 2;
-    if (yaoJiuKeCount > 0 && !hasFan('混幺九') && !hasFan('清幺九') && !hasFan('字一色') &&
-        !hasFan('大四喜') && !hasFan('小四喜') && !hasFan('大三元')) {
+    if (hasFan('字一色') || hasFan('清幺九') || hasFan('混幺九')) {
+       // already counted or excluded
+       yaoJiuKeCount = 0;
+    } else {
+       if (hasFan('大四喜')) yaoJiuKeCount -= 4;
+       else if (hasFan('小四喜')) yaoJiuKeCount -= 3;
+       else if (hasFan('三风刻')) yaoJiuKeCount -= 3;
+       
+       if (hasFan('大三元')) yaoJiuKeCount -= 3;
+       else if (hasFan('小三元')) yaoJiuKeCount -= 2;
+       
+       // Handle individual ones
+       if (hasFan('双箭刻')) yaoJiuKeCount -= 2;
+       else if (hasFan('箭刻')) yaoJiuKeCount -= 1;
+       
+       if (hasFan('圈风刻')) yaoJiuKeCount -= 1;
+       if (hasFan('门风刻')) yaoJiuKeCount -= 1;
+    }
+    
+    if (yaoJiuKeCount > 0) {
       addFan('幺九刻', 1, yaoJiuKeCount);
     }
 
@@ -620,7 +648,7 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
 
     // 缺一门 (1)
     const numSuitCount = ['m', 'p', 's'].filter(s => allTiles.some(t => t.suit === s)).length;
-    if (numSuitCount === 2 && !hasFan('清一色') && !hasFan('混一色') && !hasFan('推不到')) {
+    if (numSuitCount === 2 && !hasFan('清一色') && !hasFan('混一色') && !hasFan('推不倒')) {
       addFan('缺一门', 1);
     }
 
@@ -674,10 +702,7 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
   // --- Situational Fans (和牌方式) ---
   const hasGang = gangMelds.length > 0;
   if (options.zimo && options.gangShang && hasGang) addFan('杠上开花', 8);
-  if (!options.zimo && options.gangShang) {
-    // 抢杠和 doesn't require a gang in YOUR hand. You rob someone else's gang.
-    // However, Guobiao requires the winning tile to be a single tile wait or at least impossible to be a gang if you have 2. 
-    // Specifically, if you have 2+ of the winning tile, someone else couldn't possibly be konging it.
+  if (options.qiangGang) {
     if (lastTile && tileCount(allTiles, lastTile) <= 2) {
       addFan('抢杠和', 8);
     }
@@ -685,9 +710,26 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
   if (options.zimo && options.lastTile) addFan('妙手回春', 8);
   if (!options.zimo && options.lastTile) addFan('海底捞月', 8);
   if (options.juezhang) addFan('和绝张', 4);
-  if (options.zimo && allClosed) addFan('不求人', 4);
-  if (!options.zimo && allClosed && !isSpecial) addFan('门前清', 2);
-  if (options.zimo && !hasFan('不求人') && !hasFan('妙手回春') && !hasFan('杠上开花')) addFan('自摸', 1);
+
+  // Zimo / Menqianqing / Buqiuren logic
+  const isJiulian = hasFan('九莲宝灯');
+  const isSianke = hasFan('四暗刻');
+  const isLianqidui = hasFan('连七对');
+  const isShisanyao = hasFan('十三幺');
+  const isQidui = hasFan('七对');
+
+  if (options.zimo) {
+    if (allClosed && !isSpecial && !isJiulian && !isSianke) {
+      addFan('不求人', 4);
+    } else {
+      addFan('自摸', 1);
+    }
+  } else if (allClosed && !isSpecial) {
+    if (!isJiulian && !isSianke && !isLianqidui && !isQidui) {
+      addFan('门前清', 2);
+    }
+  }
+
   if (options.huaCount > 0) addFan('花牌', 1, options.huaCount);
 
   if (isSpecial) { }
@@ -696,9 +738,9 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
   // EXCLUSIONS (不计)
   if (hasFan('十三幺')) { removeFan('五门齐'); removeFan('不求人'); removeFan('单钓将'); removeFan('门前清'); removeFan('混幺九'); }
   // =====================================================================
-  if (hasFan('大四喜')) { removeFan('三风刻'); removeFan('碰碰和'); removeFan('幺九刻'); }
-  if (hasFan('大三元')) { removeFan('箭刻'); removeFan('幺九刻'); }
-  if (hasFan('九莲宝灯')) { removeFan('清一色'); removeFan('不求人'); removeFan('门前清'); removeFan('幺九刻'); removeFan('无字'); }
+  if (hasFan('大四喜')) { removeFan('三风刻'); removeFan('碰碰和'); }
+  if (hasFan('大三元')) { removeFan('箭刻'); }
+  if (hasFan('九莲宝灯')) { removeFan('清一色'); removeFan('门前清'); removeFan('无字'); }
   if (hasFan('四杠')) { removeFan('三杠'); removeFan('双暗杠'); removeFan('双明杠'); removeFan('明暗杠'); removeFan('暗杠'); removeFan('明杠'); removeFan('碰碰和'); removeFan('单钓将'); }
   if (hasFan('连七对')) { removeFan('七对'); removeFan('清一色'); removeFan('门前清'); removeFan('不求人'); removeFan('单钓将'); removeFan('无字'); }
   if (hasFan('七对')) { removeFan('门前清'); removeFan('单钓将'); }
@@ -710,20 +752,20 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
   if (hasFan('混一色')) { removeFan('无字'); }
   if (hasFan('全双刻')) { removeFan('碰碰和'); removeFan('断幺'); removeFan('无字'); }
   if (hasFan('五门齐')) { /* no implicit */ }
-  if (hasFan('字一色')) { removeFan('碰碰和'); removeFan('幺九刻', 4); removeFan('全带幺'); }
+  if (hasFan('字一色')) { removeFan('碰碰和'); removeFan('全带幺'); }
   if (hasFan('碰碰和')) { removeFan('无番和'); }
   if (hasFan('四暗刻')) { removeFan('三暗刻'); removeFan('双暗刻'); removeFan('不求人'); removeFan('门前清'); removeFan('碰碰和'); }
   if (hasFan('三暗刻')) { removeFan('双暗刻'); }
   if (hasFan('双暗杠')) { removeFan('暗杠', 2); removeFan('双暗刻'); }
   if (hasFan('三杠')) { removeFan('双明杠'); removeFan('双暗杠'); removeFan('明暗杠'); removeFan('暗杠'); removeFan('明杠'); }
-  if (hasFan('清幺九')) { removeFan('碰碰和'); removeFan('同刻'); removeFan('幺九刻', 4); removeFan('无字'); removeFan('全带幺'); }
+  if (hasFan('清幺九')) { removeFan('碰碰和'); removeFan('同刻'); removeFan('无字'); removeFan('全带幺'); }
   if (hasFan('清龙')) { removeFan('连六', 2); removeFan('老少副'); }
   if (hasFan('花龙')) { removeFan('喜相逢'); removeFan('老少副'); }
-  if (hasFan('推不到')) { removeFan('缺一门'); }
+  if (hasFan('推不倒')) { removeFan('缺一门'); }
   if (hasFan('平和')) { removeFan('无字'); }
   if (hasFan('断幺')) { removeFan('无字'); }
   if (hasFan('全带五')) { removeFan('断幺'); removeFan('无字'); }
-  if (hasFan('不求人')) { removeFan('门前清'); removeFan('自摸'); }
+  // 不求人 and 门前清 are already handled by logic above to avoid over-exclusion.
   
   if (combo.isBuKao) {
     removeFan('五门齐'); removeFan('不求人'); removeFan('门前清'); removeFan('单钓将'); removeFan('混幺九');
@@ -749,4 +791,27 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
     fans,
     combination: combo
   };
+}
+
+export function getTingTiles(concealedTiles: Tile[], melds: Meld[], options: GameOptions): { tile: Tile, fans: FanResult[], score: number }[] {
+  const results: { tile: Tile, fans: FanResult[], score: number }[] = [];
+  const sortedConcealed = [...concealedTiles].sort((a, b) => a.compareTo(b));
+  
+  const allUsed = [...concealedTiles, ...melds.flatMap(m => m.tiles)];
+  const usedCounts = new Map<string, number>();
+  allUsed.forEach(t => {
+    const k = t.toString();
+    usedCounts.set(k, (usedCounts.get(k) || 0) + 1);
+  });
+
+  for (const t of Tile.all) {
+    if ((usedCounts.get(t.toString()) || 0) >= 4) continue;
+    
+    const testHand = [...sortedConcealed, t];
+    const best = calculateBestScore(testHand, melds, options, t);
+    if (best) {
+      results.push({ tile: t, fans: best.results[0].fans, score: best.bestScore });
+    }
+  }
+  return results;
 }

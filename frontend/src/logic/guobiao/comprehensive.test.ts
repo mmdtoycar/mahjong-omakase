@@ -3,6 +3,7 @@ import { Tile, TileSuit } from './tiles';
 import { Meld, GameOptions, CalcResult } from './types';
 import { calculateBestScore } from './fan';
 
+/**
  * Comprehensive Test Suite for Guobiao Mahjong Logic.
  * References from external engine validation.
  */
