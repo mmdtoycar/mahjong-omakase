@@ -8,6 +8,7 @@ public class PlayerStatsResponse {
   private int totalScore;
   private double avgScore;
   private int wins;
+  private double totalRP;
 
   public Long getPlayerId() {
     return playerId;
@@ -63,5 +64,13 @@ public class PlayerStatsResponse {
 
   public void setWins(int wins) {
     this.wins = wins;
+  }
+
+  public double getTotalRP() {
+    return totalRP;
+  }
+
+  public void setTotalRP(double totalRP) {
+    this.totalRP = totalRP;
   }
 }

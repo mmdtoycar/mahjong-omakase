@@ -73,6 +73,7 @@ export interface PlayerStats {
   displayName: string;
   gamesPlayed: number;
   totalScore: number;
+  totalRP: number;
   avgScore: number;
   wins: number;
 }

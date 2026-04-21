@@ -42,7 +42,7 @@ export default function StatsPage() {
       quarter = q
     }
     fetchStats(mode, year, quarter).then(s => {
-      setStats(s.sort((a, b) => b.totalScore - a.totalScore))
+      setStats(s.sort((a, b) => b.totalRP - a.totalRP || b.totalScore - a.totalScore))
       setLoading(false)
     })
   }
@@ -127,7 +127,7 @@ export default function StatsPage() {
             </div>
             <div className="stat-card">
               <div className="stat-value" style={{ fontSize: statFontSize(topScorer?.userName || '-') }}>{topScorer?.userName || '-'}</div>
-              <div className="stat-label">🏆 赛季冠军</div>
+              <div className="stat-label">🏆 积分冠军</div>
             </div>
             <div className="stat-card">
               <div className="stat-value" style={{ fontSize: statFontSize(topWinner?.userName || '-') }}>{topWinner?.userName || '-'}</div>
@@ -153,6 +153,10 @@ export default function StatsPage() {
                     <th>玩家</th>
                     <th style={{ textAlign: 'right' }}>场次</th>
                     <th style={{ textAlign: 'right' }}>胜场</th>
+                    <th style={{ textAlign: 'right' }}>
+                      积分 (RP)
+                      <div style={{ fontSize: '0.6rem', fontWeight: 400, opacity: 0.7 }}>含局数奖励</div>
+                    </th>
                     <th style={{ textAlign: 'right' }}>总分</th>
                     <th style={{ textAlign: 'right' }}>均分</th>
                   </tr>
@@ -167,7 +171,10 @@ export default function StatsPage() {
                       </td>
                       <td style={{ textAlign: 'right' }}>{s.gamesPlayed}</td>
                       <td style={{ textAlign: 'right' }}>{s.wins}</td>
-                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{s.totalScore}</td>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 'bold', color: 'var(--primary)' }}>
+                        {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
+                      </td>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', opacity: 0.8 }}>{s.totalScore}</td>
                       <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                         {s.avgScore.toFixed(1)}
                       </td>
