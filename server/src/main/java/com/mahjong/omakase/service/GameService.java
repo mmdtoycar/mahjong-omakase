@@ -62,7 +62,7 @@ public class GameService {
                 return 5.0;
               }
             })
-        .orElse(0.1);
+        .orElse(5.0);
   }
 
   public List<Player> getAllPlayers() {
