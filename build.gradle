@@ -61,6 +61,8 @@ tasks.register('npmBuild', NpmTask) {
   inputs.dir("${uiDir}/src")
   inputs.file("${uiDir}/index.html")
   inputs.file("${uiDir}/vite.config.ts")
+  inputs.file("${uiDir}/package.json")
+  inputs.file("${uiDir}/package-lock.json")
   outputs.dir("${uiDir}/dist")
 }
 
