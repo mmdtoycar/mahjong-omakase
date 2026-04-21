@@ -53,13 +53,15 @@ public class GameService {
   private double loadParticipationBonus() {
     return appSettingRepo
         .findById("participation_bonus")
-        .map(s -> {
-          try { return Double.parseDouble(s.getValue()); }
-          catch (NumberFormatException e) {
-            log.warn("Invalid participation_bonus value '{}', using default", s.getValue());
-            return 5.0;
-          }
-        })
+        .map(
+            s -> {
+              try {
+                return Double.parseDouble(s.getValue());
+              } catch (NumberFormatException e) {
+                log.warn("Invalid participation_bonus value '{}', using default", s.getValue());
+                return 5.0;
+              }
+            })
         .orElse(5.0);
   }
 

@@ -78,10 +78,16 @@ public class AdminController {
   }
 
   private static final Map<String, java.util.function.Predicate<String>> SETTING_VALIDATORS =
-      Map.of("participation_bonus", v -> {
-        try { double d = Double.parseDouble(v); return d >= 0; }
-        catch (NumberFormatException e) { return false; }
-      });
+      Map.of(
+          "participation_bonus",
+          v -> {
+            try {
+              double d = Double.parseDouble(v);
+              return d >= 0;
+            } catch (NumberFormatException e) {
+              return false;
+            }
+          });
 
   @PutMapping("/settings")
   public Map<String, String> updateSettings(
@@ -91,8 +97,8 @@ public class AdminController {
         (key, value) -> {
           var validator = SETTING_VALIDATORS.get(key);
           if (validator != null && !validator.test(value)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Invalid value for setting: " + key);
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "Invalid value for setting: " + key);
           }
           AppSetting setting = appSettingRepo.findById(key).orElse(new AppSetting(key, value));
           setting.setValue(value);

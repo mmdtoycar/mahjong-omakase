@@ -10,7 +10,7 @@ export type GameModeKey = 'DONGBEI' | 'RIICHI' | 'GUOBIAO';
 
 export const GAME_MODES: { key: GameModeKey; label: string }[] = [
   { key: 'GUOBIAO', label: '国标麻将' },
-  { key: 'DONGBEI', label: '抗日麻将' },
+  { key: 'DONGBEI', label: '东北麻将' },
   { key: 'RIICHI', label: '立直麻将' },
 ];
 

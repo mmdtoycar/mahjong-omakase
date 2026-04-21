@@ -7,7 +7,7 @@ A mahjong score tracker for friends.
 ### Game Modes
 Three mahjong variants with auto-calculated scoring:
 - **国标麻将** — Standard 8-point base scoring
-- **东北麻将 (抗日麻将)** — 番-based scoring with 庄家 and 闭门 multipliers
+- **东北麻将** — 番-based scoring with 庄家 and 闭门 multipliers
 - **立直麻将** — 番/符 point lookup with 本场, 供托, and 流局 (听牌/未听) support
 
 ### Home

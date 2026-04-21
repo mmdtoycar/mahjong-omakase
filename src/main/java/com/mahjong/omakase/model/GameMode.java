@@ -1,7 +1,7 @@
 package com.mahjong.omakase.model;
 
 public enum GameMode {
-  DONGBEI("抗日麻将", 10.0, 0.0),
+  DONGBEI("东北麻将", 10.0, 0.0),
   RIICHI("立直麻将", 2000.0, 25000.0),
   GUOBIAO("国标麻将", 10.0, 0.0);
 
