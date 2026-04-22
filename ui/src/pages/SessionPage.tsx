@@ -542,7 +542,7 @@ export default function SessionPage() {
                       />
                       {isGuobiao && (
                         <button className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`} onClick={() => setIsCalcOpen(prev => !prev)}>
-                          🀄 {isCalcOpen ? '收起算番' : '算番器'}
+                          {isCalcOpen ? '收起算番' : '算番器'}
                         </button>
                       )}
                     </div>
@@ -572,14 +572,12 @@ export default function SessionPage() {
                         className={`player-chip-btn ${winnerId === String(p.id) ? 'active' : ''}`}
                         onClick={() => { setWinnerId(String(p.id)); setDealInPlayerId('') }}
                       >
-                        <div className="chip-player-main">
-                          <span className="chip-player-name">{p.userName}</span>
-                          {isGuobiao && (
-                            <div className="wind-badge small">
-                              {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, idx)) - 1]}
-                            </div>
-                          )}
-                        </div>
+                        {p.userName}
+                        {isGuobiao && (
+                          <div className="wind-badge small">
+                            {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, idx)) - 1]}
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -617,6 +615,11 @@ export default function SessionPage() {
                       onClick={() => setDealInPlayerId(String(p.id))}
                     >
                       {p.userName}
+                      {isGuobiao && (
+                        <div className="wind-badge small">
+                          {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, session.players.indexOf(p))) - 1]}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>

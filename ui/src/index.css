@@ -641,6 +641,8 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   cursor: pointer;
   transition: all 0.2s;
   color: var(--text);
+  position: relative;
+  overflow: visible; /* Allow badge to overlap corner */
 }
 
 .player-chip-btn:hover {
@@ -663,8 +665,8 @@ tr:hover td { background: rgba(0,0,0,0.02); }
 }
 
 .chip-player-name {
-  flex: 1;
-  text-align: left;
+  width: 100%;
+  text-align: center;
 }
 
 .gb-wind-info {
@@ -1007,12 +1009,18 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   font-weight: 800;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   border: none;
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
 }
 
 .wind-badge.small {
-  width: 20px;
-  height: 20px;
-  font-size: 0.65rem;
+  width: 18px;
+  height: 18px;
+  font-size: 0.6rem;
+  top: -6px;
+  right: -6px;
 }
 
 .player-select-card.disabled {
