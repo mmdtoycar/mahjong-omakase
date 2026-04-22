@@ -241,7 +241,7 @@ export default function SessionPage() {
       <div className="card">
         <div className="flex-between">
           <div>
-            <h2>{session.name || `游戏 #${session.id}`}</h2>
+            <h2>{session.name || `Game #${session.id}`}</h2>
             <span className="session-meta">
               {session.gameModeDisplayName} &middot; {session.playerCount}玩家 &middot; {new Date(session.createdAt).toLocaleDateString()}
               &nbsp;
@@ -422,20 +422,25 @@ export default function SessionPage() {
                     placeholder="0"
                   />
                 </div>
-                <div className="form-group">
+                <div className="form-group full-width">
                   <label>赢家</label>
-                  <select value={winnerId} onChange={e => { setWinnerId(e.target.value); setDealInPlayerId('') }}>
-                    <option value=""></option>
+                  <div className="player-chip-grid">
                     {session.players.map(p => (
-                      <option key={p.id} value={p.id}>{p.userName}</option>
+                      <button
+                        key={p.id}
+                        className={`player-chip-btn ${winnerId === String(p.id) ? 'active' : ''}`}
+                        onClick={() => { setWinnerId(String(p.id)); setDealInPlayerId('') }}
+                      >
+                        {p.userName}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 </div>
               </div>
             ) : (
               <>
               {isDongbei && (
-                <div className="round-form-grid">
+                <div className="round-form-row">
                   <div className="form-group">
                     <label>庄家</label>
                     <select value={dealerId} onChange={e => setDealerId(e.target.value)}>
@@ -445,10 +450,6 @@ export default function SessionPage() {
                       ))}
                     </select>
                   </div>
-                </div>
-              )}
-              <div className="round-form-grid">
-                {isDongbei ? (
                   <div className="form-group">
                     <label>番</label>
                     <input
@@ -459,7 +460,10 @@ export default function SessionPage() {
                       min="1"
                     />
                   </div>
-                ) : (
+                </div>
+              )}
+              <div className="round-form-grid">
+                {!isDongbei && (isGuobiao ? (
                   <div className="form-group">
                     <label>
                       分数
@@ -479,7 +483,7 @@ export default function SessionPage() {
                       )}
                     </div>
                   </div>
-                )}
+                ) : null)}
                 <div className="form-group full-width">
                   <label>赢家</label>
                   <div className="player-chip-grid">

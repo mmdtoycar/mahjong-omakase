@@ -44,7 +44,7 @@ export function calculateRanks(
 
     for (let k = i; k < j; k++) {
       const current = sorted[k];
-      const baseRP = (current.score - origin) / factor;
+      const baseRP = current.score / factor;
       results.push({
         ...current,
         rank,

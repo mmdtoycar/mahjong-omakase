@@ -48,7 +48,7 @@ export default function NewSessionPage() {
     setError('')
     try {
       const now = new Date()
-      const defaultName = `游戏 ${now.toLocaleDateString()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`
+      const defaultName = `Game ${now.toLocaleDateString()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`
       const session = await createSession(defaultName, gameMode, selectedIds)
       navigate(`/session/${session.id}`)
     } catch (e: any) {

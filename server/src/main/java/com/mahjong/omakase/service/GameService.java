@@ -360,13 +360,12 @@ public class GameService {
           }
           double avgUma = totalUma / groupSize;
           double factor = session.getGameMode().getRpFactor();
-          double origin = session.getGameMode().getRpOrigin();
 
           for (int k = i; k < j; k++) {
             Long pid = (Long) sorted.get(k)[0];
             if (pid == null) continue;
             int raw = ((Number) sorted.get(k)[1]).intValue();
-            double rp = ((raw - origin) / factor) + avgUma;
+            double rp = (raw / factor) + avgUma;
             totalRP.merge(pid, rp, Double::sum);
           }
           i = j;
