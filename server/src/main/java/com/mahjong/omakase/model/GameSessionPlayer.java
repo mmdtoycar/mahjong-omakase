@@ -19,6 +19,9 @@ public class GameSessionPlayer {
   @JoinColumn(name = "player_id")
   private Player player;
 
+  @Column(name = "seat")
+  private Integer seat;
+
   public Long getId() {
     return id;
   }
@@ -41,5 +44,13 @@ public class GameSessionPlayer {
 
   public void setPlayer(Player player) {
     this.player = player;
+  }
+
+  public Integer getSeat() {
+    return seat;
+  }
+
+  public void setSeat(Integer seat) {
+    this.seat = seat;
   }
 }

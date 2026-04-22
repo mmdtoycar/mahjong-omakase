@@ -24,12 +24,14 @@ public class SessionDetailResponse {
     private String userName;
     private String firstName;
     private String lastName;
+    private Integer seat;
 
-    public PlayerInfo(Long id, String userName, String firstName, String lastName) {
+    public PlayerInfo(Long id, String userName, String firstName, String lastName, Integer seat) {
       this.id = id;
       this.userName = userName;
       this.firstName = firstName;
       this.lastName = lastName;
+      this.seat = seat;
     }
 
     public Long getId() {
@@ -50,6 +52,10 @@ public class SessionDetailResponse {
 
     public String getDisplayName() {
       return firstName + " " + lastName;
+    }
+
+    public Integer getSeat() {
+      return seat;
     }
   }
 

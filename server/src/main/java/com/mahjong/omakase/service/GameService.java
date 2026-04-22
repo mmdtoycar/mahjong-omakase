@@ -129,25 +129,26 @@ public class GameService {
   }
 
   public GameSession createSession(CreateSessionRequest request) {
-    List<Player> players = playerRepo.findAllById(request.getPlayerIds());
-    if (players.size() != request.getPlayerIds().size()) {
-      log.warn(
-          "Failed to create session: some player IDs are invalid, requested={}, found={}",
-          request.getPlayerIds(),
-          players.size());
+    Map<Long, Player> playerMap = playerRepo.findAllById(request.getPlayerIds()).stream()
+        .collect(Collectors.toMap(Player::getId, Function.identity()));
+    
+    if (playerMap.size() != request.getPlayerIds().size()) {
       throw new IllegalArgumentException("Some player IDs are invalid");
     }
 
     GameSession session = new GameSession();
     session.setName(request.getName());
     session.setGameMode(GameMode.valueOf(request.getGameMode()));
-    session.setPlayerCount(players.size());
+    session.setPlayerCount(request.getPlayerIds().size());
     session = sessionRepo.save(session);
 
-    for (Player player : players) {
+    int seat = 1;
+    for (Long playerId : request.getPlayerIds()) {
+      Player player = playerMap.get(playerId);
       GameSessionPlayer gsp = new GameSessionPlayer();
       gsp.setGameSession(session);
       gsp.setPlayer(player);
+      gsp.setSeat(seat++);
       session.getPlayers().add(gsp);
     }
     session = sessionRepo.save(session);
@@ -155,7 +156,7 @@ public class GameService {
         "Created session id={} '{}' with {} players",
         session.getId(),
         session.getName(),
-        players.size());
+        session.getPlayerCount());
     return session;
   }
 
@@ -183,7 +184,8 @@ public class GameService {
                         gsp.getPlayer().getId(),
                         gsp.getPlayer().getUserName(),
                         gsp.getPlayer().getFirstName(),
-                        gsp.getPlayer().getLastName()))
+                        gsp.getPlayer().getLastName(),
+                        gsp.getSeat()))
             .collect(Collectors.toList()));
 
     resp.setRounds(

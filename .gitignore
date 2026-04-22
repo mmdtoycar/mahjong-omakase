@@ -1,5 +1,6 @@
 # Build output
 build/
+build-ui/
 data/
 
 # Gradle
@@ -7,10 +8,13 @@ data/
 
 # Generated static files (built from ui/)
 server/src/main/resources/static/
+src/main/resources/static/
 
 # UI
 ui/node_modules/
 ui/dist/
+frontend/node_modules/
+frontend/dist/
 
 # IDE
 .idea/

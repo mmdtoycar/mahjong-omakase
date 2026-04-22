@@ -140,6 +140,18 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
         setMelds([]);
     }
 
+    // Sync options when initialOptions prop changes (e.g. from SessionPage)
+    useEffect(() => {
+        if (initialOptions) {
+            setOptions(prev => ({
+                ...prev,
+                quanfeng: initialOptions.quanfeng ?? prev.quanfeng,
+                menfeng: initialOptions.menfeng ?? prev.menfeng,
+                huaCount: initialOptions.huaCount ?? prev.huaCount,
+            }));
+        }
+    }, [initialOptions?.quanfeng, initialOptions?.menfeng, initialOptions?.huaCount]);
+
     const currentCount = concealedTiles.length + melds.length * 3;
 
     const onTileClick = (t: Tile) => {
@@ -200,22 +212,33 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
     return (
         <div className="guobiao-inline-calculator">
             <div className="calc-top-row">
-                <div className="mini-option">
-                    <span className="mini-opt-label">圈:</span>
-                    {[1,2,3,4].map(v => (
-                        <button key={v} className={`micro-btn ${options.quanfeng === v ? 'active' : ''}`} onClick={() => setOptions({...options, quanfeng: v})}>
-                            {['东','南','西','北'][v-1]}
-                        </button>
-                    ))}
-                </div>
-                <div className="mini-option">
-                    <span className="mini-opt-label">门:</span>
-                    {[1,2,3,4].map(v => (
-                        <button key={v} className={`micro-btn ${options.menfeng === v ? 'active' : ''}`} onClick={() => setOptions({...options, menfeng: v})}>
-                            {['东','南','西','北'][v-1]}
-                        </button>
-                    ))}
-                </div>
+                {initialOptions ? (
+                    <div className="mini-option">
+                        <span className="mini-opt-label">场况:</span>
+                        <span className="mini-opt-val">
+                            {['东','南','西','北'][options.quanfeng-1]}圈 · {['东','南','西','北'][options.menfeng-1]}风
+                        </span>
+                    </div>
+                ) : (
+                    <>
+                        <div className="mini-option">
+                            <span className="mini-opt-label">圈:</span>
+                            {[1,2,3,4].map(v => (
+                                <button key={v} className={`micro-btn ${options.quanfeng === v ? 'active' : ''}`} onClick={() => setOptions({...options, quanfeng: v})}>
+                                    {['东','南','西','北'][v-1]}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="mini-option">
+                            <span className="mini-opt-label">门:</span>
+                            {[1,2,3,4].map(v => (
+                                <button key={v} className={`micro-btn ${options.menfeng === v ? 'active' : ''}`} onClick={() => setOptions({...options, menfeng: v})}>
+                                    {['东','南','西','北'][v-1]}
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                )}
                 <div className="mini-option">
                   <span className="mini-opt-label">花:</span>
                   <input 
@@ -342,7 +365,8 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
                 }
                 .calc-top-row { display: flex; gap: 12px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; flex-wrap: wrap; }
                 .mini-option { display: flex; align-items: center; gap: 4px; }
-                .mini-opt-label { font-size: 0.8rem; font-weight: 700; color: var(--text-light); }
+                .mini-opt-label { font-size: 0.75rem; color: var(--text-light); margin-right: 2px; font-weight: 600; }
+                .mini-opt-val { font-size: 0.75rem; color: var(--primary); font-weight: 800; background: var(--bg); padding: 1px 6px; border-radius: 4px; }
                 .hua-input { width: 45px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
                 
                 .tile-grid-compact { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin-bottom: 12px; }

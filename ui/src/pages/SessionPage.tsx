@@ -147,6 +147,35 @@ export default function SessionPage() {
   )
   const rankMap = Object.fromEntries(rankings.map(r => [r.playerId, r]))
 
+  // Guobiao Auto Wind Logic
+  const getGuobiaoWinds = () => {
+    if (!isGuobiao) return null;
+    const handIdx = session.rounds.length + 1;
+    const qf = Math.floor((handIdx - 1) / 4) % 4 + 1;
+    const dealerSeat = ((handIdx - 1) % 4) + 1;
+    return { quanfeng: qf, dealerSeat, handIdx };
+  }
+  const gbWinds = getGuobiaoWinds();
+
+  const getPlayerSeat = (p: typeof session.players[0], idx?: number) => p.seat ?? ((idx ?? 0) + 1);
+
+  const getPlayerMenfeng = (playerSeat: number) => {
+    if (!gbWinds) return 1;
+    return (playerSeat - gbWinds.dealerSeat + 4) % 4 + 1;
+  }
+
+  const getWindName = (w: number) => ['东', '南', '西', '北'][w - 1] + '风';
+
+  const winnerIndex = session.players.findIndex(p => String(p.id) === winnerId);
+  const winnerMenfeng = winnerIndex !== -1 ? getPlayerMenfeng(getPlayerSeat(session.players[winnerIndex], winnerIndex)) : 1;
+
+  const getRoundWind = (roundNum: number) => {
+    if (!isGuobiao) return null;
+    const qf = Math.floor((roundNum - 1) / 4) % 4 + 1;
+    const hand = ((roundNum - 1) % 4) + 1;
+    return { qf, hand, name: `${['东', '南', '西', '北'][qf - 1]}${hand}` };
+  }
+
   const playerColPct = `${Math.floor(90 / session.players.length)}%`
   const playerColStyle = { textAlign: 'center' as const, width: playerColPct, minWidth: 80 }
 
@@ -291,9 +320,16 @@ export default function SessionPage() {
               </tr>
             </thead>
             <tbody>
-              {session.rounds.map(round => (
-                <tr key={round.roundNumber}>
-                  <td>R{round.roundNumber}</td>
+              {session.rounds.map(round => {
+                const rw = getRoundWind(round.roundNumber);
+                return (
+                  <tr key={round.roundNumber}>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>R{round.roundNumber}</span>
+                        {rw && <span className="round-wind-tag">{rw.name}</span>}
+                      </div>
+                    </td>
                   {session.players.map(p => {
                     const val = round.scores[p.id] ?? 0
                     return (
@@ -310,7 +346,7 @@ export default function SessionPage() {
                     </td>
                   )}
                 </tr>
-              ))}
+              )})}
               <tr className="total-row">
                 <td style={{ whiteSpace: 'nowrap' }}><strong>合计</strong></td>
                 {session.players.map(p => {
@@ -481,7 +517,12 @@ export default function SessionPage() {
                 {!isDongbei && (isGuobiao ? (
                   <div className="form-group">
                     <label>
-                      分数
+                      分数 
+                      {gbWinds && (
+                        <span className="gb-wind-info">
+                          ({getWindName(gbWinds.quanfeng)} 第{((gbWinds.handIdx - 1) % 4) + 1}局)
+                        </span>
+                      )}
                     </label>
                     <div className="score-input-row">
                       <input
@@ -504,8 +545,8 @@ export default function SessionPage() {
                             setScore(String(s));
                           }}
                           initialOptions={{
-                            quanfeng: 1,
-                            menfeng: 1
+                            quanfeng: gbWinds?.quanfeng || 1,
+                            menfeng: winnerMenfeng
                           }}
                           resetTrigger={calcResetCount}
                           isSelfDraw={isSelfDraw}
@@ -519,13 +560,20 @@ export default function SessionPage() {
                 <div className="form-group full-width">
                   <label>赢家</label>
                   <div className="player-chip-grid">
-                    {session.players.map(p => (
+                    {session.players.map((p, idx) => (
                       <button
                         key={p.id}
                         className={`player-chip-btn ${winnerId === String(p.id) ? 'active' : ''}`}
                         onClick={() => { setWinnerId(String(p.id)); setDealInPlayerId('') }}
                       >
-                        {p.userName}
+                        <div className="chip-player-main">
+                          <span className="chip-player-name">{p.userName}</span>
+                          {isGuobiao && (
+                            <div className="wind-badge small">
+                              {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, idx)) - 1]}
+                            </div>
+                          )}
+                        </div>
                       </button>
                     ))}
                   </div>
