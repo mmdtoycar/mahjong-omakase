@@ -252,14 +252,22 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
                 )}
                 <div className="mini-option">
                   <span className="mini-opt-label">花:</span>
-                  <input 
-                    type="number" 
-                    className="hua-input" 
-                    value={options.huaCount} 
-                    onChange={e => setOptions({...options, huaCount: Number(e.target.value)})} 
-                    min="0" max="8" 
-                  />
-                  <button className="micro-btn" style={{ marginLeft: '4px' }} onClick={() => { setConcealedTiles([]); setMelds([]); }}>重置</button>
+                  <div className="hua-stepper">
+                    <button 
+                      className="micro-btn" 
+                      onClick={() => setOptions(prev => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) }))}
+                    >
+                      -
+                    </button>
+                    <span className="hua-count">{options.huaCount}</span>
+                    <button 
+                      className="micro-btn" 
+                      onClick={() => setOptions(prev => ({ ...prev, huaCount: Math.min(8, prev.huaCount + 1) }))}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <button className="micro-btn" style={{ marginLeft: '8px' }} onClick={() => { setConcealedTiles([]); setMelds([]); }}>重置</button>
                 </div>
             </div>
 
