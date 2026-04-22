@@ -492,7 +492,7 @@ export default function SessionPage() {
                         min={isGuobiao ? "8" : "1"}
                       />
                       {isGuobiao && (
-                        <button className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`} onClick={() => setIsCalcOpen(!isCalcOpen)}>
+                        <button className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`} onClick={() => setIsCalcOpen(prev => !prev)}>
                           🀄 {isCalcOpen ? '收起算番' : '算番器'}
                         </button>
                       )}

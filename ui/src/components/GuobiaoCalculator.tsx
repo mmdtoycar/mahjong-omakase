@@ -133,6 +133,9 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
         setOptions(prev => ({ ...prev, isSelfDraw }));
     }, [isSelfDraw]);
 
+    // Adjusting state during render pattern - resets tiles when parent triggers reset
+    // This is more efficient than useEffect as it avoids an extra render pass.
+    // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
     const [prevResetTrigger, setPrevResetTrigger] = useState(resetTrigger);
     if (resetTrigger !== prevResetTrigger) {
         setPrevResetTrigger(resetTrigger);
@@ -284,7 +287,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
                         {tingResults.length === 0 && <span className="no-ting-text">未听牌</span>}
                     </div>
                     <div className="ting-list">
-                        {tingResults.map((r: { tile: Tile; score: number; fans: { name: string; score: number; count?: number }[] }, i: number) => (
+                        {tingResults.map((r, i) => (
                             <div key={i} className={`ting-row-item ${r.score < 8 ? 'invalid' : ''}`} onClick={() => addTingedTile(r.tile)}>
                                 <div className="ting-row-left">
                                     <div className="ting-tile-wrap">
