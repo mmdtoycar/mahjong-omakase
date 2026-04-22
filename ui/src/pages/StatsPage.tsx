@@ -151,8 +151,6 @@ export default function StatsPage() {
                       积分(RP)
                       <div style={{ fontSize: '0.6rem', fontWeight: 400, opacity: 0.7 }}>含局数奖励</div>
                     </th>
-                    <th style={{ textAlign: 'right' }} className="hide-mobile">总分</th>
-                    <th style={{ textAlign: 'right' }} className="hide-mobile">均分</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -167,10 +165,6 @@ export default function StatsPage() {
                       <td style={{ textAlign: 'right' }}>{s.wins}</td>
                       <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 'bold', color: 'var(--primary)' }}>
                         {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
-                      </td>
-                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', opacity: 0.8 }}>{s.totalScore}</td>
-                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                        {s.avgScore.toFixed(1)}
                       </td>
                     </tr>
                   ))}

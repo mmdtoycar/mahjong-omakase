@@ -50,6 +50,8 @@ export default function SessionPage() {
     setDealInPlayerId('')
     setIsRyuukyoku(false)
     setTenpaiPlayerIds([])
+    setHonba('0')
+    setKyoutaku('0')
     setCalcResetCount(prev => prev + 1)
   }
 
@@ -613,11 +615,13 @@ export default function SessionPage() {
                 <th>名次</th>
                 <th>玩家</th>
                 <th style={{ textAlign: 'right' }}>分数</th>
+                <th style={{ textAlign: 'right' }}>积分(RP)</th>
               </tr>
             </thead>
             <tbody>
               {sortedPlayers.map((p, i) => {
                 const val = session.totalScores[p.id] || 0
+                const rp = rankMap[p.id]?.rp ?? 0
                 return (
                   <tr key={p.id}>
                     <td className={i < 3 ? `rank-${i + 1}` : ''}>
@@ -630,6 +634,14 @@ export default function SessionPage() {
                       color: val > 0 ? 'var(--success)' : val < 0 ? 'var(--danger)' : undefined
                     }}>
                       {val > 0 ? `+${val}` : val}
+                    </td>
+                    <td style={{
+                      textAlign: 'right',
+                      fontVariantNumeric: 'tabular-nums',
+                      fontWeight: 'bold',
+                      color: 'var(--primary)'
+                    }}>
+                      {rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)}
                     </td>
                   </tr>
                 )

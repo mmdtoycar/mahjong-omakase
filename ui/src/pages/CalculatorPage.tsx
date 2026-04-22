@@ -219,7 +219,7 @@ const CalculatorPage: React.FC = () => {
         if (currentCount === 13 && options.juezhang) {
             const rawTings = checkTing(concealedTiles, melds, { ...options, juezhang: false });
             if (rawTings.length > 0) {
-                const impossibleTings = rawTings.filter(res => {
+                const impossibleTings = rawTings.filter((res: { tile: Tile; score: number }) => {
                     const countInHand = concealedTiles.filter(t => t.equals(res.tile)).length + 
                                        melds.reduce((acc, m) => acc + m.tiles.filter(t => t.equals(res.tile)).length, 0);
                     return countInHand >= 1; // If I already have 1, winning on the 2nd (pair) makes 5 tiles needed for Juezhang (3 table + 2 hand)
@@ -389,7 +389,7 @@ const CalculatorPage: React.FC = () => {
                             <span className="ting-title">听牌 ({tingResults.length} 张):</span>
                             <div className="ting-tiles">
                                 {tingResults.length > 0 ? (
-                                    tingResults.sort((a, b) => b.score - a.score).map((res, i) => (
+                                    tingResults.sort((a: { score: number }, b: { score: number }) => b.score - a.score).map((res: { tile: Tile; score: number; fans: { name: string; score: number; count?: number }[] }, i: number) => (
                                         <div key={i} className="ting-tile-item with-fans" onClick={() => addTingedTile(res.tile)}>
                                             <TileComponent tile={res.tile} isSelectable />
                                             <div className="ting-info">

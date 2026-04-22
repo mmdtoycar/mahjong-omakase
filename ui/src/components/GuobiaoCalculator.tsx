@@ -123,23 +123,22 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
     const [melds, setMelds] = useState<Meld[]>([]);
     const [mode, setMode] = useState(modes[0]);
     const [options, setOptions] = useState<GameOptions>({
-        zimo: isSelfDraw, lastTile: false, gangShang: false, juezhang: false,
+        isSelfDraw: isSelfDraw, lastTile: false, gangShang: false, juezhang: false,
         quanfeng: 1, menfeng: 1, huaCount: 0, showTingFans: true,
         ...initialOptions
     });
 
     // Sync from parent
     useEffect(() => {
-        setOptions(prev => ({ ...prev, zimo: isSelfDraw }));
+        setOptions(prev => ({ ...prev, isSelfDraw }));
     }, [isSelfDraw]);
 
-    // Handle Reset
-    useEffect(() => {
-        if (resetTrigger) {
-            setConcealedTiles([]);
-            setMelds([]);
-        }
-    }, [resetTrigger]);
+    const [prevResetTrigger, setPrevResetTrigger] = useState(resetTrigger);
+    if (resetTrigger !== prevResetTrigger) {
+        setPrevResetTrigger(resetTrigger);
+        setConcealedTiles([]);
+        setMelds([]);
+    }
 
     const currentCount = concealedTiles.length + melds.length * 3;
 
@@ -162,16 +161,25 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
         });
     };
 
+    const addTingedTile = (t: Tile) => {
+        if (currentCount === 13) {
+            setConcealedTiles(prev => [...prev, t]);
+        }
+    };
+
     const huResult: CalcResult | null = useMemo(() => {
         if (currentCount !== 14) return null;
         const lastTile = concealedTiles.length > 0 ? concealedTiles[concealedTiles.length - 1] : undefined;
         const res = calculateBestScore(concealedTiles, melds, options, lastTile);
-        // Auto-push score to parent if 8+
-        if (res && res.totalScore >= 8) {
-            onSelectScore(res.totalScore);
-        }
         return res;
-    }, [concealedTiles, melds, options, currentCount, onSelectScore]);
+    }, [concealedTiles, melds, options, currentCount]);
+
+    // Push score to parent when valid
+    useEffect(() => {
+        if (currentCount === 14 && huResult && huResult.totalScore >= 8) {
+            onSelectScore(huResult.totalScore);
+        }
+    }, [huResult, onSelectScore, currentCount]);
 
     const tingResults = useMemo(() => {
         if (currentCount !== 13) return [];
@@ -262,7 +270,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
 
             <div className="winning-options-section">
                 <div className="options-grid compact">
-                    <button className={`opt-btn ${options.zimo ? 'active' : ''}`} onClick={() => onIsSelfDrawChange(!options.zimo)}>自摸</button>
+                    <button className={`opt-btn ${options.isSelfDraw ? 'active' : ''}`} onClick={() => onIsSelfDrawChange(!options.isSelfDraw)}>自摸</button>
                     <button className={`opt-btn ${options.juezhang ? 'active' : ''}`} onClick={() => setOptions({...options, juezhang: !options.juezhang})}>绝张</button>
                     <button className={`opt-btn ${options.gangShang ? 'active' : ''}`} onClick={() => setOptions({...options, gangShang: !options.gangShang})}>{isSelfDraw ? '杠开' : '抢杠'}</button>
                     <button className={`opt-btn ${options.lastTile ? 'active' : ''}`} onClick={() => setOptions({...options, lastTile: !options.lastTile})}>{isSelfDraw ? '妙手' : '海底'}</button>
@@ -271,22 +279,32 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
 
             {currentCount === 13 && (
                 <div className="ting-display-area">
-                    <span className="ting-label">听牌提示:</span>
-                    <div className="ting-tiles">
-                        {tingResults.length === 0 ? (
-                            <span className="no-ting-text">未听牌</span>
-                        ) : (
-                            tingResults.map((r: { tile: Tile; score: number; fans: { name: string }[] }, i: number) => (
-                                <div key={i} className={`ting-tile-item ${r.score < 8 ? 'invalid' : ''}`} onClick={() => onTileClick(r.tile)}>
-                                    <TileComponent tile={r.tile} size="small" />
-                                    <div className="ting-info-stack">
-                                        <span className={`ting-score ${r.score < 8 ? 'text-error' : ''}`}>{r.score}</span>
-                                        <span className="ting-fan-preview">{r.fans.map((f: { name: string }) => f.name).join(',')}</span>
+                    <div className="ting-header">
+                        <span className="ting-label">听牌提示:</span>
+                        {tingResults.length === 0 && <span className="no-ting-text">未听牌</span>}
+                    </div>
+                    <div className="ting-list">
+                        {tingResults.map((r: { tile: Tile; score: number; fans: { name: string; score: number; count?: number }[] }, i: number) => (
+                            <div key={i} className={`ting-row-item ${r.score < 8 ? 'invalid' : ''}`} onClick={() => addTingedTile(r.tile)}>
+                                <div className="ting-row-left">
+                                    <div className="ting-tile-wrap">
+                                        <TileComponent tile={r.tile} />
                                     </div>
-                                    {r.score < 8 && <div className="ting-invalid-badge">!</div>}
+                                    <div className={`score-badge small ${r.score < 8 ? 'badge-error' : ''}`}>
+                                        <span className="score-num">{r.score}</span>
+                                        <span className="score-unit">番</span>
+                                    </div>
                                 </div>
-                            ))
-                        )}
+                                <div className="fan-list-mini">
+                                    {r.fans.map((f, fi) => (
+                                        <span key={fi} className="mini-fan-tag">
+                                            {f.name}{f.count && f.count > 1 ? ` x${f.count}` : ''} +{f.score}
+                                        </span>
+                                    ))}
+                                </div>
+                                {r.score < 8 && <div className="ting-row-status">起和不足</div>}
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
@@ -299,7 +317,11 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
                             <span className="score-unit">番</span>
                         </div>
                         <div className="fan-list-mini">
-                            {huResult.fans.map((f, i) => <span key={i} className="mini-fan-tag">{f.name} +{f.score}</span>)}
+                            {huResult.fans.map((f, i) => (
+                                <span key={i} className="mini-fan-tag">
+                                    {f.name}{f.count && f.count > 1 ? ` x${f.count}` : ''} +{f.score}
+                                </span>
+                            ))}
                         </div>
                     </div>
                     {huResult.totalScore < 8 ? (
@@ -339,24 +361,25 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
                 .result-preview-mini.error { background: rgba(192, 57, 43, 0.05); border-top-color: rgba(192, 57, 43, 0.2); }
                 .result-main-row { display: flex; align-items: center; gap: 12px; }
                 .fan-list-mini { display: flex; flex-wrap: wrap; gap: 4px; }
-                .mini-fan-tag { font-size: 0.75rem; font-weight: 600; background: white; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; color: var(--primary); }
+                .ting-row-item .fan-list-mini { max-width: 200px; }
+                .mini-fan-tag { font-size: 0.65rem; font-weight: 600; background: white; border: 1px solid var(--border); padding: 1px 5px; border-radius: 4px; color: var(--primary); white-space: nowrap; }
                 .use-score-btn { flex: 1; padding: 10px; font-size: 0.95rem; font-weight: 700; }
                 
                 .score-badge.small.badge-error { background: var(--danger); }
                 .score-warning-text { color: var(--danger); font-size: 0.85rem; font-weight: 600; text-align: center; padding: 4px; }
 
-                .ting-display-area { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(212, 160, 23, 0.05); border-radius: 8px; border: 1px solid rgba(212, 160, 23, 0.2); margin-top: 12px; }
-                .ting-label { font-size: 0.85rem; font-weight: 700; color: var(--accent); }
-                .ting-tiles { display: flex; flex-wrap: wrap; gap: 8px; }
-                .ting-tile-item { position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s; background: white; padding: 4px; border-radius: 4px; border: 1px solid rgba(212, 160, 23, 0.2); }
-                .ting-tile-item.invalid { border-color: rgba(192, 57, 43, 0.2); background: rgba(192, 57, 43, 0.02); }
-                .ting-tile-item:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 2px 6px rgba(212, 160, 23, 0.2); }
-                .ting-tile-item.invalid:hover { border-color: var(--danger); box-shadow: 0 2px 6px rgba(192, 57, 43, 0.2); }
-                .ting-info-stack { display: flex; flex-direction: column; align-items: center; margin-top: 4px; padding: 0 4px; }
-                .ting-score { font-size: 0.85rem; font-weight: 800; color: var(--accent); line-height: 1.2; }
-                .ting-score.text-error { color: var(--danger); }
-                .ting-fan-preview { font-size: 0.7rem; color: var(--text-light); text-align: center; word-break: break-all; margin-top: 2px; line-height: 1.2; }
-                .ting-invalid-badge { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; font-size: 0.55rem; width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+                .ting-display-area { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: rgba(212, 160, 23, 0.05); border-radius: 10px; border: 1px solid rgba(212, 160, 23, 0.2); margin-top: 12px; }
+                .ting-header { display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px dashed rgba(212, 160, 23, 0.2); padding-bottom: 6px; }
+                .ting-label { font-size: 0.85rem; font-weight: 800; color: var(--accent); }
+                .ting-list { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+                .ting-row-item { display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s; background: #fff; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); position: relative; }
+                .ting-row-item.invalid { border-color: rgba(192, 57, 43, 0.2); background: rgba(192, 57, 43, 0.02); }
+                .ting-row-item:hover { transform: translateX(4px); border-color: var(--accent); box-shadow: 2px 2px 8px rgba(212, 160, 23, 0.15); }
+                .ting-row-item.invalid:hover { border-color: var(--danger); }
+                .ting-row-left { display: flex; align-items: center; gap: 8px; }
+                .ting-tile-wrap { width: 32px; flex-shrink: 0; }
+                .ting-tile-wrap .calc-tile-container { width: 100%; height: auto; padding: 2px; }
+                .ting-row-status { margin-left: auto; font-size: 0.7rem; font-weight: 700; color: var(--danger); background: rgba(192, 57, 43, 0.1); padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
                 .no-ting-text { font-size: 0.8rem; color: var(--text-light); font-style: italic; }
                 
                 .options-grid.compact { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
