@@ -110,7 +110,7 @@ const TileComponent: React.FC<{
 };
 
 interface GuobiaoCalculatorProps {
-    onSelectScore: (score: number) => void;
+    onSelectScore: (score: number | null) => void;
     initialOptions?: Partial<GameOptions>;
     resetTrigger?: number;
     isSelfDraw: boolean;
@@ -133,11 +133,21 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
         setOptions(prev => ({ ...prev, isSelfDraw }));
     }, [isSelfDraw]);
 
+    // Adjusting state during render pattern - resets tiles when parent triggers reset
+    // This is more efficient than useEffect as it avoids an extra render pass.
+    // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
     const [prevResetTrigger, setPrevResetTrigger] = useState(resetTrigger);
     if (resetTrigger !== prevResetTrigger) {
         setPrevResetTrigger(resetTrigger);
         setConcealedTiles([]);
         setMelds([]);
+        setOptions(prev => ({
+            ...prev,
+            huaCount: 0,
+            juezhang: false,
+            gangShang: false,
+            lastTile: false
+        }));
     }
 
     // Sync options when initialOptions prop changes (e.g. from SessionPage)
@@ -186,10 +196,11 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
         return res;
     }, [concealedTiles, melds, options, currentCount]);
 
-    // Push score to parent when valid
     useEffect(() => {
         if (currentCount === 14 && huResult && huResult.totalScore >= 8) {
             onSelectScore(huResult.totalScore);
+        } else {
+            onSelectScore(null);
         }
     }, [huResult, onSelectScore, currentCount]);
 
@@ -307,7 +318,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
                         {tingResults.length === 0 && <span className="no-ting-text">未听牌</span>}
                     </div>
                     <div className="ting-list">
-                        {tingResults.map((r: { tile: Tile; score: number; fans: { name: string; score: number; count?: number }[] }, i: number) => (
+                        {tingResults.map((r, i) => (
                             <div key={i} className={`ting-row-item ${r.score < 8 ? 'invalid' : ''}`} onClick={() => addTingedTile(r.tile)}>
                                 <div className="ting-row-left">
                                     <div className="ting-tile-wrap">

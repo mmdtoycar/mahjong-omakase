@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, FAN_OPTIONS, FU_OPTIONS } from '../types'
@@ -25,6 +25,14 @@ export default function SessionPage() {
   const [calcResetCount, setCalcResetCount] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+ 
+  const handleCalcScoreSelect = useCallback((s: number | null) => {
+    if (s !== null) {
+      setScore(String(s));
+    } else {
+      setScore('');
+    }
+  }, []);
 
   const load = async () => {
     const detail = await fetchSessionDetail(Number(id))
@@ -533,7 +541,7 @@ export default function SessionPage() {
                         min={isGuobiao ? "8" : "1"}
                       />
                       {isGuobiao && (
-                        <button className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`} onClick={() => setIsCalcOpen(!isCalcOpen)}>
+                        <button className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`} onClick={() => setIsCalcOpen(prev => !prev)}>
                           🀄 {isCalcOpen ? '收起算番' : '算番器'}
                         </button>
                       )}
@@ -541,9 +549,7 @@ export default function SessionPage() {
                     {isGuobiao && (
                       <div className="inline-calc-wrapper" style={{ display: isCalcOpen ? 'block' : 'none' }}>
                         <GuobiaoCalculator 
-                          onSelectScore={(s) => {
-                            setScore(String(s));
-                          }}
+                          onSelectScore={handleCalcScoreSelect}
                           initialOptions={{
                             quanfeng: gbWinds?.quanfeng || 1,
                             menfeng: winnerMenfeng
