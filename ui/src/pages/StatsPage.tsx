@@ -23,6 +23,7 @@ export default function StatsPage() {
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.quarter}`)
 
   const loadStats = (mode: GameModeKey, sKey: string) => {
+    setError('')
     setLoading(true)
     let year: number | undefined
     let quarter: number | undefined
@@ -40,6 +41,7 @@ export default function StatsPage() {
   }
 
   const loadPlayers = () => {
+    setError('')
     setLoading(true)
     fetchPlayers()
       .then(p => { setPlayers(p); setLoading(false) })

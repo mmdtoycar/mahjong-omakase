@@ -10,20 +10,24 @@ export default function SignUpPage() {
   const [userNameAvailable, setUserNameAvailable] = useState<boolean | null>(null)
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState('')
+  const [checkError, setCheckError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (!userName.trim()) {
       setUserNameAvailable(null)
+      setCheckError('')
       return
     }
     setChecking(true)
+    setCheckError('')
     const timer = setTimeout(async () => {
       try {
         const available = await checkUserName(userName.trim())
         setUserNameAvailable(available)
       } catch {
         setUserNameAvailable(null)
+        setCheckError('用户名检查失败，请重试')
       }
       setChecking(false)
     }, 400)
@@ -68,6 +72,7 @@ export default function SignUpPage() {
                 {checking ? '检查中...' : userNameAvailable === true ? '可用' : userNameAvailable === false ? '已被占用' : ''}
               </span>
             )}
+            {checkError && <span className="field-hint hint-error">{checkError}</span>}
           </div>
 
           <div className="form-row">

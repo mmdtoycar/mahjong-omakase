@@ -15,9 +15,12 @@ export default function NewSessionPage() {
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    fetchPlayers().then(setPlayers).catch(() => setError('加载玩家失败'))
+    fetchPlayers()
+      .then(p => { setPlayers(p); setLoaded(true) })
+      .catch(() => setError('加载玩家失败'))
   }, [])
 
   const togglePlayer = (id: number) => {
@@ -90,7 +93,11 @@ export default function NewSessionPage() {
           </div>
         )}
 
-        {players.length > 0 ? (
+        {error ? (
+          <p style={{ color: 'var(--danger)', fontSize: '0.9rem', marginTop: 8 }}>{error}</p>
+        ) : !loaded ? (
+          <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: 8 }}>加载中...</p>
+        ) : players.length > 0 ? (
           <div className="player-select-grid">
             {filteredPlayers.map(p => {
               const isSelected = selectedIds.includes(p.id)

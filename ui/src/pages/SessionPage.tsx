@@ -23,13 +23,13 @@ export default function SessionPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  const load = () => {
-    fetchSessionDetail(Number(id))
-      .then(setSession)
-      .catch(e => setError(e.message))
+  const load = async () => {
+    const detail = await fetchSessionDetail(Number(id))
+    setSession(detail)
+    setError('')
   }
 
-  useEffect(load, [id])
+  useEffect(() => { load().catch(e => setError(e.message)) }, [id])
 
   if (!session) return <div className="empty-state"><p>{error || '加载中...'}</p></div>
 
@@ -65,7 +65,7 @@ export default function SessionPage() {
           tenpaiPlayerIds,
         })
         resetForm()
-        load()
+        await load()
         return
       }
       if (!canSubmit) return
@@ -95,7 +95,7 @@ export default function SessionPage() {
       })
     }
     resetForm()
-    load()
+    await load()
     } catch (e: any) {
       setError(e.message || '操作失败')
     } finally {
@@ -104,22 +104,30 @@ export default function SessionPage() {
   }
 
   const handleDeleteRound = async (roundNumber: number) => {
+    if (submitting) return
     setError('')
+    setSubmitting(true)
     try {
       await deleteRound(session.id, roundNumber)
-      load()
+      await load()
     } catch (e: any) {
       setError(e.message || '删除失败')
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const handleComplete = async () => {
+    if (submitting) return
     setError('')
+    setSubmitting(true)
     try {
       await completeSession(session.id)
-      load()
+      await load()
     } catch (e: any) {
       setError(e.message || '操作失败')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -251,7 +259,7 @@ export default function SessionPage() {
             </span>
           </div>
           {session.status === 'IN_PROGRESS' && (
-            <button className="btn btn-danger btn-small" onClick={handleComplete}>
+            <button className="btn btn-danger btn-small" onClick={handleComplete} disabled={submitting}>
               结束游戏
             </button>
           )}
@@ -290,7 +298,7 @@ export default function SessionPage() {
                   })}
                   {session.status === 'IN_PROGRESS' && (
                     <td>
-                      <button className="delete-btn" onClick={() => handleDeleteRound(round.roundNumber)}>
+                      <button className="delete-btn" onClick={() => handleDeleteRound(round.roundNumber)} disabled={submitting}>
                         &times;
                       </button>
                     </td>
@@ -440,7 +448,7 @@ export default function SessionPage() {
             ) : (
               <>
               {isDongbei && (
-                <div className="round-form-row">
+                <div className="round-form-grid">
                   <div className="form-group">
                     <label>庄家</label>
                     <select value={dealerId} onChange={e => setDealerId(e.target.value)}>
@@ -457,7 +465,7 @@ export default function SessionPage() {
                       value={fan}
                       onChange={e => setFan(e.target.value)}
                       placeholder="输入番"
-                      min="1"
+                      min="0"
                     />
                   </div>
                 </div>

@@ -713,9 +713,7 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
   const hasGang = gangMelds.length > 0;
   if (options.isSelfDraw && options.gangShang && hasGang) addFan('杠上开花', 8);
   if (!options.isSelfDraw && options.gangShang) {
-    if (lastTile && tileCount(allTiles, lastTile) <= 2) {
-      addFan('抢杠和', 8);
-    }
+    addFan('抢杠和', 8);
   }
   if (options.isSelfDraw && options.lastTile) addFan('妙手回春', 8);
   if (!options.isSelfDraw && options.lastTile) addFan('海底捞月', 8);

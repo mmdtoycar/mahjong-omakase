@@ -13,7 +13,7 @@ public class AddRoundRequest {
   @Positive(message = "Score must be positive")
   private Integer score;
 
-  @Min(value = 1, message = "Fan must be at least 1")
+  @Min(value = 0, message = "Fan must be non-negative")
   private Integer fan;
 
   @Min(value = 20, message = "Fu must be at least 20")

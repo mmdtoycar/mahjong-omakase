@@ -11,6 +11,9 @@ export default function PlayerDetailPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    setPlayer(null)
+    setError('')
+    setLoading(true)
     fetchPlayerDetail(Number(id))
       .then(p => { setPlayer(p); setLoading(false) })
       .catch(e => { setError(e.message); setLoading(false) })

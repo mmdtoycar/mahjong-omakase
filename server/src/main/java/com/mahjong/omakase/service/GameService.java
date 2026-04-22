@@ -288,7 +288,7 @@ public class GameService {
   public void completeSession(Long sessionId) {
     GameSession session =
         sessionRepo
-            .findById(sessionId)
+            .findByIdForUpdate(sessionId)
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
     session.setStatus(SessionStatus.COMPLETED);
     sessionRepo.save(session);
