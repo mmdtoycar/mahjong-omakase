@@ -80,8 +80,13 @@ public class GameService {
         request.getUserName(),
         request.getFirstName(),
         request.getLastName());
-    return playerRepo.save(
-        new Player(request.getUserName(), request.getFirstName(), request.getLastName()));
+    try {
+      return playerRepo.save(
+          new Player(request.getUserName(), request.getFirstName(), request.getLastName()));
+    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+      throw new IllegalArgumentException(
+          "Username '" + request.getUserName() + "' is already taken");
+    }
   }
 
   public boolean isUserNameTaken(String userName) {
@@ -213,7 +218,7 @@ public class GameService {
   public void addRound(Long sessionId, AddRoundRequest request) {
     GameSession session =
         sessionRepo
-            .findById(sessionId)
+            .findByIdForUpdate(sessionId)
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
 
     if (session.getStatus() == SessionStatus.COMPLETED) {
@@ -261,7 +266,7 @@ public class GameService {
     log.info("Deleting round {} from session id={}", roundNumber, sessionId);
     GameSession session =
         sessionRepo
-            .findById(sessionId)
+            .findByIdForUpdate(sessionId)
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
 
     Round round =
@@ -283,7 +288,7 @@ public class GameService {
   public void completeSession(Long sessionId) {
     GameSession session =
         sessionRepo
-            .findById(sessionId)
+            .findByIdForUpdate(sessionId)
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
     session.setStatus(SessionStatus.COMPLETED);
     sessionRepo.save(session);
@@ -355,13 +360,12 @@ public class GameService {
           }
           double avgUma = totalUma / groupSize;
           double factor = session.getGameMode().getRpFactor();
-          double origin = session.getGameMode().getRpOrigin();
 
           for (int k = i; k < j; k++) {
             Long pid = (Long) sorted.get(k)[0];
             if (pid == null) continue;
             int raw = ((Number) sorted.get(k)[1]).intValue();
-            double rp = ((raw - origin) / factor) + avgUma;
+            double rp = (raw / factor) + avgUma;
             totalRP.merge(pid, rp, Double::sum);
           }
           i = j;

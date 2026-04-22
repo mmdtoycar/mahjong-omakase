@@ -43,7 +43,7 @@ function parseHand(handStr: string, opts: Partial<GameOptions> = {}): { conceale
   }
 
   const options: GameOptions = {
-    zimo: false, lastTile: false, gangShang: false, juezhang: false,
+    isSelfDraw: false, lastTile: false, gangShang: false, juezhang: false,
     quanfeng: 1, menfeng: 1, huaCount: 0, showTingFans: false, ...opts
   };
 
@@ -91,11 +91,11 @@ describe('Guobiao Logic External Engine Compliance', () => {
   });
 
   test('Case 7: Seven Pairs Pure', () => {
-    expectFans('p11223344556688', ['七对', '清一色', '不求人'], { zimo: true });
+    expectFans('p11223344556688', ['七对', '清一色', '不求人'], { isSelfDraw: true });
   });
 
   test('Case 8: Thirteen Orphans Zimo', () => {
-    expectFans('s19m19p19z1234567 s1', ['十三幺', '自摸'], { zimo: true });
+    expectFans('s19m19p19z1234567 s1', ['十三幺', '自摸'], { isSelfDraw: true });
   });
 
   test('Case 9: Little Four Winds', () => {
@@ -109,23 +109,23 @@ describe('Guobiao Logic External Engine Compliance', () => {
   });
 
   test('Case 11: Robbing a Kong', () => {
-    expectFans('pung:p2 z11 m123456789', ['清龙', '缺一门', '抢杠和'], { qiangGang: true, zimo: false });
+    expectFans('pung:p2 z11 m123456789', ['清龙', '缺一门', '抢杠和'], { gangShang: true, isSelfDraw: false });
   });
 
   test('Case 12: Out of Kong', () => {
-    expectFans('gang:s2 z11 m123456789', ['清龙', '缺一门', '杠上开花', '明杠'], { gangShang: true, zimo: true });
+    expectFans('gang:s2 z11 m123456789', ['清龙', '缺一门', '杠上开花', '明杠'], { gangShang: true, isSelfDraw: true });
   });
 
   test('Case 13: Last Tile Self-Draw', () => {
-    expectFans('gang:s2 z11 m123456789', ['清龙', '缺一门', '明杠', '妙手回春'], { lastTile: true, zimo: true });
+    expectFans('gang:s2 z11 m123456789', ['清龙', '缺一门', '明杠', '妙手回春'], { lastTile: true, isSelfDraw: true });
   });
 
   test('Case 14: Last Tile Discard', () => {
-    expectFans('gang:s2 z11 m123456789', ['清龙', '缺一门', '明杠', '海底捞月'], { lastTile: true, zimo: false });
+    expectFans('gang:s2 z11 m123456789', ['清龙', '缺一门', '明杠', '海底捞月'], { lastTile: true, isSelfDraw: false });
   });
 
   test('Case 15: Pure Triple Shuns (One Suit)', () => {
-    expectFans('chi:p567 chi:p567 chi:p567 s555 s66', ['一色三同顺', '缺一门'], { zimo: false });
+    expectFans('chi:p567 chi:p567 chi:p567 s555 s66', ['一色三同顺', '缺一门'], { isSelfDraw: false });
   });
 
   test('Case 16: Flower Tiles No-Fan', () => {
@@ -149,7 +149,7 @@ describe('Guobiao Logic External Engine Compliance', () => {
   });
 
   test('Case 21: Bug Report - Duplicate MenQianQing', () => {
-    const r = calcHu('s111 s222 s333 s444 s33', { zimo: false });
+    const r = calcHu('s111 s222 s333 s444 s33', { isSelfDraw: false });
     expect(r).not.toBeNull();
     const names = r!.fans.map((f: any) => f.name);
     expect(names).toContain('四暗刻');

@@ -6,15 +6,16 @@ import { GameSession } from '../types'
 export default function DashboardPage() {
   const [sessions, setSessions] = useState<GameSession[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchSessions().then(s => {
-      setSessions(s)
-      setLoading(false)
-    })
+    fetchSessions()
+      .then(s => { setSessions(s); setLoading(false) })
+      .catch(e => { setError(e.message); setLoading(false) })
   }, [])
 
   if (loading) return <div className="empty-state"><p>加载中...</p></div>
+  if (error) return <div className="empty-state"><p>加载失败：{error}</p></div>
 
   return (
     <div className="card">
@@ -31,7 +32,7 @@ export default function DashboardPage() {
           <Link to={`/session/${s.id}`} key={s.id} style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="session-list-item">
               <div className="session-info">
-                <h3>{s.name || `游戏 #${s.id}`}</h3>
+                <h3>{s.name || `Game #${s.id}`}</h3>
                 <span className="session-meta">
                   {s.gameModeDisplayName} &middot; {s.playerCount}玩家 &middot; {new Date(s.createdAt).toLocaleDateString()}
                 </span>

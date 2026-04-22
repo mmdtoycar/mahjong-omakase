@@ -326,7 +326,6 @@ th {
   font-weight: 600;
   color: var(--text-light);
   font-size: 0.85rem;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
@@ -947,6 +946,11 @@ tr:hover td { background: rgba(0,0,0,0.02); }
     min-width: 0;
   }
 
+  select.select-inline {
+    width: 100%;
+    min-width: 0;
+  }
+
   .tab-bar {
     align-self: stretch;
   }
@@ -1086,11 +1090,6 @@ tr:hover td { background: rgba(0,0,0,0.02); }
     letter-spacing: 2px;
   }
 
-  th {
-    text-transform: none;
-    letter-spacing: 0;
-  }
-
   .landing-features {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -1117,14 +1116,7 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   }
 
   .fan-item-example {
-    flex-wrap: wrap;
-    overflow-x: visible;
-  }
-}
-
-@media (max-width: 480px) {
-  .hide-mobile {
-    display: none;
+    overflow-x: auto;
   }
 }
 

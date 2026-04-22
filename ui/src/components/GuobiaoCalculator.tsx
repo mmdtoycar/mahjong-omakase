@@ -118,7 +118,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
     const [melds, setMelds] = useState<Meld[]>([]);
     const [mode, setMode] = useState(modes[0]);
     const [options, setOptions] = useState<GameOptions>({
-        zimo: false, lastTile: false, gangShang: false, juezhang: false,
+        isSelfDraw: false, lastTile: false, gangShang: false, juezhang: false,
         quanfeng: 1, menfeng: 1, huaCount: 0, showTingFans: true,
         ...initialOptions
     });
@@ -233,10 +233,10 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
 
             <div className="winning-options-section">
                 <div className="options-grid compact">
-                    <button className={`opt-btn ${options.zimo ? 'active' : ''}`} onClick={() => setOptions({...options, zimo: !options.zimo})}>自摸</button>
+                    <button className={`opt-btn ${options.isSelfDraw ? 'active' : ''}`} onClick={() => setOptions({...options, isSelfDraw: !options.isSelfDraw})}>自摸</button>
                     <button className={`opt-btn ${options.juezhang ? 'active' : ''}`} onClick={() => setOptions({...options, juezhang: !options.juezhang})}>绝张</button>
-                    <button className={`opt-btn ${options.gangShang ? 'active' : ''}`} onClick={() => setOptions({...options, gangShang: !options.gangShang})}>{options.zimo ? '杠开' : '抢杠'}</button>
-                    <button className={`opt-btn ${options.lastTile ? 'active' : ''}`} onClick={() => setOptions({...options, lastTile: !options.lastTile})}>{options.zimo ? '妙手' : '海底'}</button>
+                    <button className={`opt-btn ${options.gangShang ? 'active' : ''}`} onClick={() => setOptions({...options, gangShang: !options.gangShang})}>{options.isSelfDraw ? '杠开' : '抢杠'}</button>
+                    <button className={`opt-btn ${options.lastTile ? 'active' : ''}`} onClick={() => setOptions({...options, lastTile: !options.lastTile})}>{options.isSelfDraw ? '妙手' : '海底'}</button>
                 </div>
             </div>
 

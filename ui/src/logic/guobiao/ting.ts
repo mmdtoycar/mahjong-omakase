@@ -20,7 +20,7 @@ export function checkTing(concealedTiles: Tile[], melds: Meld[], options: GameOp
 
     // Validation Check (based on user request)
     if (options.juezhang && existingCount > 0) return;
-    if (options.gangShang && !options.zimo && existingCount > 0) return;
+    if (options.gangShang && !options.isSelfDraw && existingCount > 0) return;
 
     const totalCount = concealedTiles.length + 1 + melds.length * 3;
     if (totalCount === 14) {

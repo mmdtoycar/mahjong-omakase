@@ -13,9 +13,14 @@ export default function NewSessionPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [gameMode, setGameMode] = useState<GameModeKey | ''>('')
   const [search, setSearch] = useState('')
+  const [error, setError] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    fetchPlayers().then(setPlayers)
+    fetchPlayers()
+      .then(p => { setPlayers(p); setLoaded(true) })
+      .catch(() => setError('加载玩家失败'))
   }, [])
 
   const togglePlayer = (id: number) => {
@@ -42,10 +47,17 @@ export default function NewSessionPage() {
 
   const handleStart = async () => {
     if (!canStart) return
-    const now = new Date()
-    const defaultName = `游戏 ${now.toLocaleDateString()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`
-    const session = await createSession(defaultName, gameMode, selectedIds)
-    navigate(`/session/${session.id}`)
+    setCreating(true)
+    setError('')
+    try {
+      const now = new Date()
+      const defaultName = `Game ${now.toLocaleDateString()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`
+      const session = await createSession(defaultName, gameMode, selectedIds)
+      navigate(`/session/${session.id}`)
+    } catch (e: any) {
+      setError(e.message || '创建游戏失败')
+      setCreating(false)
+    }
   }
 
   return (
@@ -81,7 +93,11 @@ export default function NewSessionPage() {
           </div>
         )}
 
-        {players.length > 0 ? (
+        {error ? (
+          <p style={{ color: 'var(--danger)', fontSize: '0.9rem', marginTop: 8 }}>{error}</p>
+        ) : !loaded ? (
+          <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: 8 }}>加载中...</p>
+        ) : players.length > 0 ? (
           <div className="player-select-grid">
             {filteredPlayers.map(p => {
               const isSelected = selectedIds.includes(p.id)
@@ -120,13 +136,16 @@ export default function NewSessionPage() {
             至少需要{MIN_PLAYERS}名玩家才能开始游戏。(还差 {MIN_PLAYERS - selectedIds.length} 人)
           </p>
         )}
+        {error && (
+          <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 16 }}>{error}</p>
+        )}
         <button
           className="btn btn-accent btn-large"
           onClick={handleStart}
-          disabled={!canStart}
+          disabled={!canStart || creating}
           style={{ justifyContent: 'center' }}
         >
-          开始游戏 ({selectedIds.length}人)
+          {creating ? '创建中...' : `开始游戏 (${selectedIds.length}人)`}
         </button>
       </div>
     </div>

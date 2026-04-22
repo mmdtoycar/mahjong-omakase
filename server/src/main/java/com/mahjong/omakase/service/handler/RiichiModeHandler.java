@@ -32,8 +32,14 @@ public class RiichiModeHandler implements GameModeHandler {
   }
 
   private Map<Long, Integer> calculateWin(AddRoundRequest request, List<Long> sessionPlayerIds) {
-    if (request.getHan() == null || request.getFu() == null) {
-      throw new IllegalArgumentException("Han and Fu are required for Riichi mode");
+    if (request.getFan() == null || request.getFu() == null) {
+      throw new IllegalArgumentException("Fan and Fu are required for Riichi mode");
+    }
+    if (request.getFan() < 1) {
+      throw new IllegalArgumentException("Fan must be at least 1");
+    }
+    if (request.getFu() < 20) {
+      throw new IllegalArgumentException("Fu must be at least 20");
     }
     if (request.getDealerId() == null) {
       throw new IllegalArgumentException("Dealer (親) is required for Riichi mode");
@@ -43,7 +49,7 @@ public class RiichiModeHandler implements GameModeHandler {
     }
 
     Map<String, Object> params = new HashMap<>();
-    params.put("han", request.getHan());
+    params.put("fan", request.getFan());
     params.put("fu", request.getFu());
     params.put("dealerId", request.getDealerId());
     params.put("honba", request.getHonba() != null ? request.getHonba() : 0);
@@ -74,7 +80,7 @@ public class RiichiModeHandler implements GameModeHandler {
         scores.put(id, 0);
       }
     } else {
-      int totalPool = 3000;
+      int totalPool = (sessionPlayerIds.size() - 1) * 1000;
       int eachNotenPays = totalPool / notenCount;
       int eachTenpaiGets = totalPool / tenpaiCount;
       for (Long id : sessionPlayerIds) {

@@ -39,9 +39,4 @@ public class PlayerController {
   public PlayerDetailResponse detail(@PathVariable Long id) {
     return gameService.getPlayerDetail(id);
   }
-
-  @DeleteMapping("/{id}")
-  public void delete(@PathVariable Long id) {
-    gameService.deletePlayer(id);
-  }
 }

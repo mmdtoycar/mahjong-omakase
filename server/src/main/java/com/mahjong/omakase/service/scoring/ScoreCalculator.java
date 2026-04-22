@@ -10,7 +10,8 @@ public interface ScoreCalculator {
    * @param playerIds all player IDs in the session
    * @param winnerId the winning player
    * @param dealInPlayerId the player who dealt in (null for self-draw / 自摸)
-   * @param params mode-specific parameters (e.g. han, fu, isDealer for Riichi; score for others)
+   * @param params mode-specific parameters (Riichi: fan, fu, dealerId, honba, kyoutaku; Dongbei:
+   *     fan, dealerId, bimenPlayerIds; Guobiao: score)
    * @return map of playerId → score change for this round
    */
   Map<Long, Integer> calculate(

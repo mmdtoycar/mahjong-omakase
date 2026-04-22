@@ -18,10 +18,12 @@ export default function StatsPage() {
   const [stats, setStats] = useState<PlayerStats[]>([])
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.quarter}`)
 
   const loadStats = (mode: GameModeKey, sKey: string) => {
+    setError('')
     setLoading(true)
     let year: number | undefined
     let quarter: number | undefined
@@ -30,18 +32,20 @@ export default function StatsPage() {
       year = y
       quarter = q
     }
-    fetchStats(mode, year, quarter).then(s => {
-      setStats(s.sort((a, b) => b.totalRP - a.totalRP || b.totalScore - a.totalScore))
-      setLoading(false)
-    })
+    fetchStats(mode, year, quarter)
+      .then(s => {
+        setStats(s.sort((a, b) => b.totalRP - a.totalRP || b.totalScore - a.totalScore))
+        setLoading(false)
+      })
+      .catch(e => { setError(e.message); setLoading(false) })
   }
 
   const loadPlayers = () => {
+    setError('')
     setLoading(true)
-    fetchPlayers().then(p => {
-      setPlayers(p)
-      setLoading(false)
-    })
+    fetchPlayers()
+      .then(p => { setPlayers(p); setLoading(false) })
+      .catch(e => { setError(e.message); setLoading(false) })
   }
 
   useEffect(() => {
@@ -55,6 +59,7 @@ export default function StatsPage() {
   const selectedSeason = seasons.find(s => `${s.year}-${s.quarter}` === seasonKey)
 
   if (loading) return <div className="empty-state"><p>加载中...</p></div>
+  if (error) return <div className="empty-state"><p>加载失败：{error}</p></div>
 
   const totalGames = activeStats.length > 0 ? Math.max(...activeStats.map(s => s.gamesPlayed)) : 0
   const topScorer = activeStats[0]
@@ -143,8 +148,8 @@ export default function StatsPage() {
                     <th style={{ textAlign: 'right' }}>场次</th>
                     <th style={{ textAlign: 'right' }}>胜场</th>
                     <th style={{ textAlign: 'right' }}>积分(RP)</th>
-                    <th style={{ textAlign: 'right' }} className="hide-mobile">总分</th>
-                    <th style={{ textAlign: 'right' }} className="hide-mobile">均分</th>
+                    <th style={{ textAlign: 'right' }}>总分</th>
+                    <th style={{ textAlign: 'right' }}>均分</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -160,8 +165,8 @@ export default function StatsPage() {
                       <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 'bold', color: 'var(--primary)' }}>
                         {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
                       </td>
-                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', opacity: 0.8 }} className="hide-mobile">{s.totalScore}</td>
-                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} className="hide-mobile">
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', opacity: 0.8 }}>{s.totalScore}</td>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                         {s.avgScore.toFixed(1)}
                       </td>
                     </tr>

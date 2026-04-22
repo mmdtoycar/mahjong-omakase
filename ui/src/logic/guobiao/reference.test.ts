@@ -13,7 +13,7 @@ function parseHand(s_ori: string): { concealed: Tile[], melds: Meld[], options: 
     const melds: Meld[] = [];
     let quanfeng = 1;
     let menfeng = 1;
-    let zimo = false;
+    let isSelfDraw = false;
     let juezhang = false;
     let haidi = false;
     let gang = false;
@@ -97,7 +97,7 @@ function parseHand(s_ori: string): { concealed: Tile[], melds: Meld[], options: 
         const zMap: Record<string, number> = { 'E':1,'S':2,'W':3,'N':4 };
         quanfeng = zMap[contextPart[0]] || 1;
         menfeng = zMap[contextPart[1]] || 1;
-        zimo = contextPart[2] === '1';
+        isSelfDraw = contextPart[2] === '1';
         juezhang = contextPart[3] === '1';
         haidi = contextPart[4] === '1';
         gang = contextPart[5] === '1';
@@ -114,11 +114,10 @@ function parseHand(s_ori: string): { concealed: Tile[], melds: Meld[], options: 
     const options: GameOptions = {
         quanfeng,
         menfeng,
-        zimo,
+        isSelfDraw,
         juezhang,
         lastTile: haidi,
-        gangShang: gang && zimo,
-        qiangGang: gang && !zimo,
+        gangShang: gang,
         huaCount,
         showTingFans: false
     };

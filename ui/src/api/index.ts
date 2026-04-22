@@ -2,9 +2,17 @@ import { Player, GameSession, SessionDetail, PlayerStats, PlayerDetail, AddRound
 
 const API = '/api';
 
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: '请求失败' }));
+    throw new Error(error.message || `请求失败 (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function fetchPlayers(): Promise<Player[]> {
   const res = await fetch(`${API}/players`);
-  return res.json();
+  return handleResponse(res);
 }
 
 export async function createPlayer(userName: string, firstName: string, lastName: string): Promise<Player> {
@@ -13,22 +21,18 @@ export async function createPlayer(userName: string, firstName: string, lastName
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userName, firstName, lastName }),
   });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: 'Registration failed' }));
-    throw new Error(error.message || 'Registration failed');
-  }
-  return res.json();
+  return handleResponse(res);
 }
 
 export async function checkUserName(userName: string): Promise<boolean> {
   const res = await fetch(`${API}/players/check-username?userName=${encodeURIComponent(userName)}`);
-  const data = await res.json();
+  const data = await handleResponse<{ available: boolean }>(res);
   return data.available;
 }
 
 export async function fetchSessions(): Promise<GameSession[]> {
   const res = await fetch(`${API}/sessions`);
-  return res.json();
+  return handleResponse(res);
 }
 
 export async function createSession(name: string, gameMode: string, playerIds: number[]): Promise<GameSession> {
@@ -37,28 +41,40 @@ export async function createSession(name: string, gameMode: string, playerIds: n
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, gameMode, playerIds }),
   });
-  return res.json();
+  return handleResponse(res);
 }
 
 export async function fetchSessionDetail(id: number): Promise<SessionDetail> {
   const res = await fetch(`${API}/sessions/${id}`);
-  return res.json();
+  return handleResponse(res);
 }
 
 export async function addRound(sessionId: number, data: AddRoundData): Promise<void> {
-  await fetch(`${API}/sessions/${sessionId}/rounds`, {
+  const res = await fetch(`${API}/sessions/${sessionId}/rounds`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: '添加失败' }));
+    throw new Error(error.message || '添加失败');
+  }
 }
 
 export async function deleteRound(sessionId: number, roundNumber: number): Promise<void> {
-  await fetch(`${API}/sessions/${sessionId}/rounds/${roundNumber}`, { method: 'DELETE' });
+  const res = await fetch(`${API}/sessions/${sessionId}/rounds/${roundNumber}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: '删除失败' }));
+    throw new Error(error.message || '删除失败');
+  }
 }
 
 export async function completeSession(id: number): Promise<void> {
-  await fetch(`${API}/sessions/${id}/complete`, { method: 'PUT' });
+  const res = await fetch(`${API}/sessions/${id}/complete`, { method: 'PUT' });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: '操作失败' }));
+    throw new Error(error.message || '操作失败');
+  }
 }
 
 export async function fetchStats(gameMode?: string, year?: number, quarter?: number): Promise<PlayerStats[]> {
@@ -70,10 +86,10 @@ export async function fetchStats(gameMode?: string, year?: number, quarter?: num
   }
   const qs = params.toString();
   const res = await fetch(`${API}/stats${qs ? `?${qs}` : ''}`);
-  return res.json();
+  return handleResponse(res);
 }
 
 export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {
   const res = await fetch(`${API}/players/${id}/detail`);
-  return res.json();
+  return handleResponse(res);
 }
