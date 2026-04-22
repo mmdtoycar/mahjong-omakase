@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, FAN_OPTIONS, FU_OPTIONS } from '../types'
@@ -25,6 +25,14 @@ export default function SessionPage() {
   const [calcResetCount, setCalcResetCount] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+ 
+  const handleCalcScoreSelect = useCallback((s: number | null) => {
+    if (s !== null) {
+      setScore(String(s));
+    } else {
+      setScore('');
+    }
+  }, []);
 
   const load = async () => {
     const detail = await fetchSessionDetail(Number(id))
@@ -497,23 +505,21 @@ export default function SessionPage() {
                         </button>
                       )}
                     </div>
-                    {isGuobiao && (
-                      <div className="inline-calc-wrapper" style={{ display: isCalcOpen ? 'block' : 'none' }}>
-                        <GuobiaoCalculator 
-                          onSelectScore={(s) => {
-                            setScore(String(s));
-                          }}
-                          initialOptions={{
-                            quanfeng: 1,
-                            menfeng: 1
-                          }}
-                          resetTrigger={calcResetCount}
-                          isSelfDraw={isSelfDraw}
-                          onIsSelfDrawChange={setIsSelfDraw}
-                          onClose={() => setIsCalcOpen(false)}
-                        />
-                      </div>
-                    )}
+                      {isGuobiao && (
+                        <div className="inline-calc-wrapper" style={{ display: isCalcOpen ? 'block' : 'none' }}>
+                          <GuobiaoCalculator 
+                            onSelectScore={handleCalcScoreSelect}
+                            initialOptions={{
+                              quanfeng: 1,
+                              menfeng: 1
+                            }}
+                            resetTrigger={calcResetCount}
+                            isSelfDraw={isSelfDraw}
+                            onIsSelfDrawChange={setIsSelfDraw}
+                            onClose={() => setIsCalcOpen(false)}
+                          />
+                        </div>
+                      )}
                   </div>
                 ) : null)}
                 <div className="form-group full-width">

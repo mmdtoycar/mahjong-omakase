@@ -110,7 +110,7 @@ const TileComponent: React.FC<{
 };
 
 interface GuobiaoCalculatorProps {
-    onSelectScore: (score: number) => void;
+    onSelectScore: (score: number | null) => void;
     initialOptions?: Partial<GameOptions>;
     resetTrigger?: number;
     isSelfDraw: boolean;
@@ -141,6 +141,13 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
         setPrevResetTrigger(resetTrigger);
         setConcealedTiles([]);
         setMelds([]);
+        setOptions(prev => ({
+            ...prev,
+            huaCount: 0,
+            juezhang: false,
+            gangShang: false,
+            lastTile: false
+        }));
     }
 
     const currentCount = concealedTiles.length + melds.length * 3;
@@ -177,10 +184,11 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
         return res;
     }, [concealedTiles, melds, options, currentCount]);
 
-    // Push score to parent when valid
     useEffect(() => {
         if (currentCount === 14 && huResult && huResult.totalScore >= 8) {
             onSelectScore(huResult.totalScore);
+        } else {
+            onSelectScore(null);
         }
     }, [huResult, onSelectScore, currentCount]);
 
