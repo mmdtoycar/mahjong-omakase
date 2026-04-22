@@ -315,9 +315,10 @@ export default function SessionPage() {
                     <td key={p.id} className={`score-cell${delta > 0 ? ' score-positive' : delta < 0 ? ' score-negative' : ''}`} style={{ textAlign: 'center' }}>
                       <div className="total-score-box">
                         <div className="total-val">{displayVal}</div>
-                        {session.rounds.length > 0 && (
-                          <div className="rp-val">{rankMap[p.id]?.rp > 0 ? `+${rankMap[p.id]?.rp.toFixed(1)}` : rankMap[p.id]?.rp.toFixed(1)} RP</div>
-                        )}
+                        {session.rounds.length > 0 && (() => {
+                          const rp = rankMap[p.id]?.rp ?? 0
+                          return <div className="rp-val">{rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)} RP</div>
+                        })()}
                       </div>
                     </td>
                   )
