@@ -339,7 +339,7 @@ export default function SessionPage() {
                   <input
                     type="checkbox"
                     checked={isRyuukyoku}
-                    onChange={e => { setIsRyuukyoku(e.target.checked); resetForm(); if (e.target.checked) setIsRyuukyoku(true) }}
+                    onChange={e => { resetForm(); setIsRyuukyoku(e.target.checked) }}
                   />
                   <span>流局</span>
                 </label>
@@ -406,8 +406,8 @@ export default function SessionPage() {
                   </label>
                   <select value={fan} onChange={e => setFan(e.target.value)}>
                     <option value=""></option>
-                    {FAN_OPTIONS.map(h => (
-                      <option key={h} value={h}>{h}{h >= 5 ? (h >= 13 ? ' (役満)' : h >= 11 ? ' (三倍満)' : h >= 8 ? ' (倍満)' : h >= 6 ? ' (跳満)' : ' (満貫)') : ''}</option>
+                    {FAN_OPTIONS.map(f => (
+                      <option key={f} value={f}>{f}{f >= 5 ? (f >= 13 ? ' (役満)' : f >= 11 ? ' (三倍満)' : f >= 8 ? ' (倍満)' : f >= 6 ? ' (跳満)' : ' (満貫)') : ''}</option>
                     ))}
                   </select>
                 </div>
