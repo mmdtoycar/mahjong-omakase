@@ -37,6 +37,7 @@ public class DongbeiScoreCalculator implements ScoreCalculator {
   public Map<Long, Integer> calculate(
       List<Long> playerIds, Long winnerId, Long dealInPlayerId, Map<String, Object> params) {
     int fan = ((Number) params.get("fan")).intValue();
+    if (fan < 0) throw new IllegalArgumentException("Fan must be non-negative");
     Long dealerId =
         params.get("dealerId") != null ? ((Number) params.get("dealerId")).longValue() : null;
     List<Long> bimenList =

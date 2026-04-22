@@ -8,15 +8,16 @@ export default function PlayerDetailPage() {
   const navigate = useNavigate()
   const [player, setPlayer] = useState<PlayerDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchPlayerDetail(Number(id)).then(p => {
-      setPlayer(p)
-      setLoading(false)
-    })
+    fetchPlayerDetail(Number(id))
+      .then(p => { setPlayer(p); setLoading(false) })
+      .catch(e => { setError(e.message); setLoading(false) })
   }, [id])
 
-  if (loading || !player) return <div className="empty-state"><p>加载中...</p></div>
+  if (loading) return <div className="empty-state"><p>加载中...</p></div>
+  if (error || !player) return <div className="empty-state"><p>{error || '玩家不存在'}</p></div>
 
   return (
     <>

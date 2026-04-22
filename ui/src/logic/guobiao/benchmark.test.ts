@@ -38,7 +38,7 @@ function parseHand(handStr: string, opts: Partial<GameOptions> = {}): { conceale
   }
 
   const options: GameOptions = {
-    zimo: false, lastTile: false, gangShang: false, juezhang: false,
+    isSelfDraw: false, lastTile: false, gangShang: false, juezhang: false,
     quanfeng: 1, menfeng: 1, huaCount: 0, showTingFans: false, ...opts
   };
 
@@ -86,7 +86,7 @@ describe('Guobiao Benchmarks - Automated From External Samples', () => {
     expectFans('m5 m5 m5 s5 s5 s5 s1 s2 s3 s4 s5 s6 z3 z3', ['双暗刻'], {});
   });
   test('Sample 10: 不求人', () => {
-    expectFans('angang:p2 m1 m2 m3 m6 m6 m6 m7 m8 m9 s5 s5', ['不求人'], {"zimo":true});
+    expectFans('angang:p2 m1 m2 m3 m6 m6 m6 m7 m8 m9 s5 s5', ['不求人'], {"isSelfDraw":true});
   });
 
   test('Sample 11: 双明杠', () => {
@@ -142,7 +142,7 @@ describe('Guobiao Benchmarks - Automated From External Samples', () => {
   });
 
   test('Sample 24: 妙手回春', () => {
-    expectFans('angang:p7 angang:m8 s1 s1 s1 z4 z4 z4 p4 p4', ['妙手回春'], { lastTile: true, zimo: true });
+    expectFans('angang:p7 angang:m8 s1 s1 s1 z4 z4 z4 p4 p4', ['妙手回春'], { lastTile: true, isSelfDraw: true });
   });
 
   test('Sample 25: 全不靠', () => {
@@ -337,7 +337,7 @@ describe('Guobiao Benchmarks - Special Scoring Rules', () => {
   });
 
   test('Rule 8', () => {
-    expectFans('p5 p5 p5 p6 p6 p6 p7 p7 p7 s5 s5 s5 s6 s7', ["一色三同顺","全带五","不求人","平和","喜相逢","缺一门"], {"zimo":true});
+    expectFans('p5 p5 p5 p6 p6 p6 p7 p7 p7 s5 s5 s5 s6 s7', ["一色三同顺","全带五","不求人","平和","喜相逢","缺一门"], {"isSelfDraw":true});
   });
 
   test('Rule 9', () => {
@@ -349,7 +349,7 @@ describe('Guobiao Benchmarks - Special Scoring Rules', () => {
   });
 
   test('Rule 11', () => {
-    expectFans('p1 p1 p2 p2 p3 p3 p4 p4 p5 p5 p6 p6 p8 p8', ["七对","清一色","不求人"], {"zimo":true});
+    expectFans('p1 p1 p2 p2 p3 p3 p4 p4 p5 p5 p6 p6 p8 p8', ["七对","清一色","不求人"], {"isSelfDraw":true});
   });
 
   test('Rule 12', () => {
@@ -365,19 +365,19 @@ describe('Guobiao Benchmarks - Special Scoring Rules', () => {
   });
 
   test('Rule 15', () => {
-    expectFans('pung:s2 p1 p2 p3 p4 p5 p6 p7 p8 p9 z1 z1', ["清龙","单钓将","缺一门","自摸"], {"zimo":true,"gangShang":true});
+    expectFans('pung:s2 p1 p2 p3 p4 p5 p6 p7 p8 p9 z1 z1', ["清龙","单钓将","缺一门","自摸"], {"isSelfDraw":true,"gangShang":true});
   });
 
   test('Rule 16', () => {
-    expectFans('pung:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","抢杠和"], {"qiangGang":true});
+    expectFans('pung:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","抢杠和"], {"gangShang":true});
   });
 
   test('Rule 17', () => {
-    expectFans('gang:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","杠上开花","明杠"], {"zimo":true,"gangShang":true});
+    expectFans('gang:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","杠上开花","明杠"], {"isSelfDraw":true,"gangShang":true});
   });
 
   test('Rule 18', () => {
-    expectFans('gang:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","明杠","妙手回春"], {"zimo":true,"lastTile":true});
+    expectFans('gang:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","明杠","妙手回春"], {"isSelfDraw":true,"lastTile":true});
   });
 
   test('Rule 19', () => {
@@ -385,11 +385,11 @@ describe('Guobiao Benchmarks - Special Scoring Rules', () => {
   });
 
   test('Rule 20', () => {
-    expectFans('gang:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","明杠","妙手回春","杠上开花"], {"zimo":true,"gangShang":true,"lastTile":true});
+    expectFans('gang:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","明杠","妙手回春","杠上开花"], {"isSelfDraw":true,"gangShang":true,"lastTile":true});
   });
 
   test('Rule 21', () => {
-    expectFans('gang:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","明杠","海底捞月","抢杠和"], {"qiangGang":true,"lastTile":true});
+    expectFans('gang:s2 z1 z1 p1 p2 p3 p4 p5 p6 p7 p8 p9', ["清龙","缺一门","明杠","海底捞月","抢杠和"], {"gangShang":true,"lastTile":true});
   });
 
   test('Rule 22', () => {
@@ -417,7 +417,7 @@ describe('Guobiao Benchmarks - Special Scoring Rules', () => {
   });
 
   test('Rule 28', () => {
-    expectFans('s1 s9 m1 m9 p1 p9 z1 z2 z3 z4 z5 z6 z7 z1', ["十三幺", "自摸"], {"zimo":true});
+    expectFans('s1 s9 m1 m9 p1 p9 z1 z2 z3 z4 z5 z6 z7 z1', ["十三幺", "自摸"], {"isSelfDraw":true});
   });
 
   test('Rule 29', () => {

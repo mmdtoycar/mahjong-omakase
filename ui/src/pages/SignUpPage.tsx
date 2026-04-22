@@ -19,8 +19,12 @@ export default function SignUpPage() {
     }
     setChecking(true)
     const timer = setTimeout(async () => {
-      const available = await checkUserName(userName.trim())
-      setUserNameAvailable(available)
+      try {
+        const available = await checkUserName(userName.trim())
+        setUserNameAvailable(available)
+      } catch {
+        setUserNameAvailable(null)
+      }
       setChecking(false)
     }, 400)
     return () => clearTimeout(timer)

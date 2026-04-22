@@ -12,7 +12,7 @@ public enum GameMode {
   private final double rpFactor;
   private final double rpOrigin;
 
-  GameMode(String displayName, double rpFactor, double rpOrigin) {
+  GameMode(String displayName, double rpFacto double rpOrigin) {
     this.displayName = displayName;
     this.rpFactor = rpFactor;
     this.rpOrigin = rpOrigin;

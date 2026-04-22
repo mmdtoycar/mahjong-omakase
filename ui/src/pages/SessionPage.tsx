@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
-import { SessionDetail, HAN_OPTIONS, FU_OPTIONS } from '../types'
+import { SessionDetail, FAN_OPTIONS, FU_OPTIONS } from '../types'
 import { calculateRanks } from '../logic/ranking'
 import { nameFontSize } from '../utils/fontSize'
 
@@ -10,7 +10,7 @@ export default function SessionPage() {
   const [session, setSession] = useState<SessionDetail | null>(null)
   const [winnerId, setWinnerId] = useState<string>('')
   const [score, setScore] = useState('')
-  const [han, setHan] = useState<string>('')
+  const [fan, setFan] = useState<string>('')
   const [fu, setFu] = useState<string>('')
   const [dealerId, setDealerId] = useState<string>('')
   const [honba, setHonba] = useState<string>('0')
@@ -20,14 +20,18 @@ export default function SessionPage() {
   const [bimenPlayerIds, setBimenPlayerIds] = useState<number[]>([])
   const [isRyuukyoku, setIsRyuukyoku] = useState(false)
   const [tenpaiPlayerIds, setTenpaiPlayerIds] = useState<number[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const load = () => {
-    fetchSessionDetail(Number(id)).then(setSession)
+    fetchSessionDetail(Number(id))
+      .then(setSession)
+      .catch(e => setError(e.message))
   }
 
   useEffect(load, [id])
 
-  if (!session) return <div className="empty-state"><p>加载中...</p></div>
+  if (!session) return <div className="empty-state"><p>{error || '加载中...'}</p></div>
 
   const isRiichi = session.gameMode === 'RIICHI'
   const isDongbei = session.gameMode === 'DONGBEI'
@@ -36,7 +40,7 @@ export default function SessionPage() {
   const resetForm = () => {
     setWinnerId('')
     setScore('')
-    setHan('')
+    setFan('')
     setFu('')
     setBimenPlayerIds([])
     setIsSelfDraw(false)
@@ -46,36 +50,39 @@ export default function SessionPage() {
   }
 
   const canSubmit = winnerId
-    && (isRiichi ? (han && fu && dealerId)
-      : isDongbei ? (han && dealerId)
+    && (isRiichi ? (fan && fu && dealerId)
+      : isDongbei ? (fan && dealerId)
       : (score && parseInt(score) >= (isGuobiao ? 8 : 1)))
     && (isSelfDraw || dealInPlayerId)
 
   const handleAddRound = async () => {
-    if (isRyuukyoku) {
-      await addRound(session.id, {
-        roundType: 'DRAWN_GAME',
-        tenpaiPlayerIds,
-      })
-      resetForm()
-      load()
-      return
-    }
-    if (!canSubmit) return
-    if (isRiichi) {
-      await addRound(session.id, {
-        winnerId: Number(winnerId),
-        han: parseInt(han),
-        fu: parseInt(fu),
-        dealerId: Number(dealerId),
-        honba: parseInt(honba) || 0,
-        kyoutaku: parseInt(kyoutaku) || 0,
-        dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
-      })
+    setError('')
+    setSubmitting(true)
+    try {
+      if (isRyuukyoku) {
+        await addRound(session.id, {
+          roundType: 'DRAWN_GAME',
+          tenpaiPlayerIds,
+        })
+        resetForm()
+        load()
+        return
+      }
+      if (!canSubmit) return
+      if (isRiichi) {
+        await addRound(session.id, {
+          winnerId: Number(winnerId),
+          fan: parseInt(fan),
+          fu: parseInt(fu),
+          dealerId: Number(dealerId),
+          honba: parseInt(honba) || 0,
+          kyoutaku: parseInt(kyoutaku) || 0,
+          dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
+        })
     } else if (isDongbei) {
       await addRound(session.id, {
         winnerId: Number(winnerId),
-        han: parseInt(han),
+        fan: parseInt(fan),
         dealerId: Number(dealerId),
         bimenPlayerIds,
         dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
@@ -89,16 +96,31 @@ export default function SessionPage() {
     }
     resetForm()
     load()
+    } catch (e: any) {
+      setError(e.message || '操作失败')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleDeleteRound = async (roundNumber: number) => {
-    await deleteRound(session.id, roundNumber)
-    load()
+    setError('')
+    try {
+      await deleteRound(session.id, roundNumber)
+      load()
+    } catch (e: any) {
+      setError(e.message || '删除失败')
+    }
   }
 
   const handleComplete = async () => {
-    await completeSession(session.id)
-    load()
+    setError('')
+    try {
+      await completeSession(session.id)
+      load()
+    } catch (e: any) {
+      setError(e.message || '操作失败')
+    }
   }
 
   const sortedPlayers = [...session.players].sort(
@@ -111,14 +133,17 @@ export default function SessionPage() {
   )
   const rankMap = Object.fromEntries(rankings.map(r => [r.playerId, r]))
 
+  const playerColPct = `${Math.floor(90 / session.players.length)}%`
+  const playerColStyle = { textAlign: 'center' as const, width: playerColPct, minWidth: 80 }
+
   const otherPlayers = session.players.filter(p => p.id !== Number(winnerId))
   const winnerIsDealer = winnerId && dealerId && winnerId === dealerId
 
   // Score preview
   const getScorePreview = (): string | null => {
     if (isRiichi) {
-      if (!han || !fu || !dealerId) return null
-      const h = parseInt(han), f = parseInt(fu)
+      if (!fan || !fu || !dealerId) return null
+      const h = parseInt(fan), f = parseInt(fu)
       let basic: number
       if (h >= 13) basic = 8000
       else if (h >= 11) basic = 6000
@@ -153,8 +178,8 @@ export default function SessionPage() {
     }
 
     if (isDongbei) {
-      if (!han || !dealerId || !winnerId) return null
-      const fan = parseInt(han)
+      if (!fan || !dealerId || !winnerId) return null
+      const fanNum = parseInt(fan)
       const bimenSet = new Set(bimenPlayerIds)
       const opponents = session.players.filter(p => p.id !== Number(winnerId))
       const allBimen = opponents.length > 0 && opponents.every(p => bimenSet.has(p.id))
@@ -172,7 +197,7 @@ export default function SessionPage() {
         const dianpaoFlag = (isDealIn || isSelfDraw) ? 1 : 0
         const bimenFlag = isBimen ? 1 : 0
         const sanjiaBimenFlag = allBimen ? 1 : 0
-        const exponent = Math.min(fan + zhuangjiaFlag + dianpaoFlag + bimenFlag + sanjiaBimenFlag, 6)
+        const exponent = Math.min(fanNum + zhuangjiaFlag + dianpaoFlag + bimenFlag + sanjiaBimenFlag, 6)
         const payment = Math.pow(2, exponent)
 
         const flags: string[] = []
@@ -241,7 +266,7 @@ export default function SessionPage() {
               <tr>
                 <th>局</th>
                 {session.players.map(p => (
-                  <th key={p.id} style={{ textAlign: 'center' }}>
+                  <th key={p.id} style={playerColStyle}>
                     <div className="player-header-cell">
                       <span className="player-rank">#{rankMap[p.id]?.rank}</span>
                       <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>{p.userName}</span>
@@ -273,17 +298,18 @@ export default function SessionPage() {
                 </tr>
               ))}
               <tr className="total-row">
-                <td><strong>合计</strong></td>
+                <td style={{ whiteSpace: 'nowrap' }}><strong>合计</strong></td>
                 {session.players.map(p => {
-                  const val = session.totalScores[p.id] || 0
+                  const delta = session.totalScores[p.id] || 0
+                  const total = session.rpOrigin + delta
+                  const displayVal = session.rpOrigin ? total : delta
                   return (
-                    <td key={p.id} className="score-cell" style={{
-                      textAlign: 'center',
-                      color: val > 0 ? 'var(--success)' : val < 0 ? 'var(--danger)' : undefined
-                    }}>
+                    <td key={p.id} className={`score-cell${delta > 0 ? ' score-positive' : delta < 0 ? ' score-negative' : ''}`} style={{ textAlign: 'center' }}>
                       <div className="total-score-box">
-                        <div className="total-val">{val > 0 ? `+${val}` : val}</div>
-                        <div className="rp-val">{rankMap[p.id]?.rp > 0 ? `+${rankMap[p.id]?.rp.toFixed(1)}` : rankMap[p.id]?.rp.toFixed(1)} RP</div>
+                        <div className="total-val">{displayVal}</div>
+                        {session.rounds.length > 0 && (
+                          <div className="rp-val">{rankMap[p.id]?.rp > 0 ? `+${rankMap[p.id]?.rp.toFixed(1)}` : rankMap[p.id]?.rp.toFixed(1)} RP</div>
+                        )}
                       </div>
                     </td>
                   )
@@ -336,8 +362,8 @@ export default function SessionPage() {
                       : `${tenpaiPlayerIds.length}人听牌, ${session.players.length - tenpaiPlayerIds.length}人未听 → 未听各付${3000 / (session.players.length - tenpaiPlayerIds.length)}, 听牌各得${3000 / tenpaiPlayerIds.length}`}
                   </span>
                 </div>
-                <button className="btn btn-primary" onClick={handleAddRound}>
-                  添加流局
+                <button className="btn btn-primary" onClick={handleAddRound} disabled={submitting}>
+                  {submitting ? '提交中...' : '添加流局'}
                 </button>
               </>
             ) : (
@@ -369,9 +395,9 @@ export default function SessionPage() {
                     番
                     <a href="https://linlexiao.com/maj/#/calculator" target="_blank" rel="noopener noreferrer" className="score-calc-link">计算器</a>
                   </label>
-                  <select value={han} onChange={e => setHan(e.target.value)}>
+                  <select value={fan} onChange={e => setFan(e.target.value)}>
                     <option value=""></option>
-                    {HAN_OPTIONS.map(h => (
+                    {FAN_OPTIONS.map(h => (
                       <option key={h} value={h}>{h}{h >= 5 ? (h >= 13 ? ' (役満)' : h >= 11 ? ' (三倍満)' : h >= 8 ? ' (倍満)' : h >= 6 ? ' (跳満)' : ' (満貫)') : ''}</option>
                     ))}
                   </select>
@@ -427,8 +453,8 @@ export default function SessionPage() {
                     <label>番</label>
                     <input
                       type="number"
-                      value={han}
-                      onChange={e => setHan(e.target.value)}
+                      value={fan}
+                      onChange={e => setFan(e.target.value)}
                       placeholder="输入番"
                       min="1"
                     />
@@ -532,8 +558,10 @@ export default function SessionPage() {
               <div className="score-preview">{preview}</div>
             )}
 
-            <button className="btn btn-primary" onClick={handleAddRound} disabled={!canSubmit}>
-              添加
+            {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', margin: '8px 0' }}>{error}</p>}
+
+            <button className="btn btn-primary" onClick={handleAddRound} disabled={!canSubmit || submitting}>
+              {submitting ? '提交中...' : '添加'}
             </button>
             </>
             )}

@@ -1,6 +1,7 @@
 package com.mahjong.omakase.dto;
 
 import com.mahjong.omakase.model.RoundType;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
 
@@ -12,10 +13,18 @@ public class AddRoundRequest {
   @Positive(message = "Score must be positive")
   private Integer score;
 
-  private Integer han;
+  @Min(value = 1, message = "Fan must be at least 1")
+  private Integer fan;
+
+  @Min(value = 20, message = "Fu must be at least 20")
   private Integer fu;
+
   private Long dealerId;
+
+  @Min(value = 0, message = "Honba must be non-negative")
   private Integer honba;
+
+  @Min(value = 0, message = "Kyoutaku must be non-negative")
   private Integer kyoutaku;
 
   private Long dealInPlayerId;
@@ -56,12 +65,12 @@ public class AddRoundRequest {
     this.score = score;
   }
 
-  public Integer getHan() {
-    return han;
+  public Integer getFan() {
+    return fan;
   }
 
-  public void setHan(Integer han) {
-    this.han = han;
+  public void setFan(Integer fan) {
+    this.fan = fan;
   }
 
   public Integer getFu() {

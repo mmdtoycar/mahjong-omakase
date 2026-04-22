@@ -31,10 +31,10 @@ export function calculateAllBestScores(concealedTiles: Tile[], melds: Meld[], op
 
   for (const combo of combinations) {
     let tries: { combo: HandCombination; completedMeldIdx: number }[] = [];
-    if (options.zimo || combo.isSpecial) {
+    if (options.isSelfDraw || combo.isSpecial) {
       tries.push({ combo, completedMeldIdx: -1 });
     }
-    if (!options.zimo && lastTile && !combo.isSpecial) {
+    if (!options.isSelfDraw && lastTile && !combo.isSpecial) {
       combo.melds.forEach((m, idx) => {
         if (!m.isOpen && m.tiles.some(t => t.equals(lastTile))) {
           tries.push({ combo, completedMeldIdx: idx });
@@ -468,7 +468,7 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
     const hasDragonTile = allTiles.some(t => t.isDragon);
     if (suitSet.has('m') && suitSet.has('p') && suitSet.has('s') && hasWindTile && hasDragonTile) addFan('五门齐', 6);
     // 全求人 (6)
-    if (!options.zimo && openMelds.length === 4) addFan('全求人', 6);
+    if (!options.isSelfDraw && openMelds.length === 4) addFan('全求人', 6);
     // 双箭刻 (6)
     if (keMelds.filter(m => m.tiles[0].isDragon).length === 2 && !hasFan('大三元')) addFan('双箭刻', 6);
     // 明暗杠 (6)
@@ -711,14 +711,14 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
 
   // --- Situational Fans (和牌方式) ---
   const hasGang = gangMelds.length > 0;
-  if (options.zimo && options.gangShang && hasGang) addFan('杠上开花', 8);
-  if (options.qiangGang) {
+  if (options.isSelfDraw && options.gangShang && hasGang) addFan('杠上开花', 8);
+  if (!options.isSelfDraw && options.gangShang) {
     if (lastTile && tileCount(allTiles, lastTile) <= 2) {
       addFan('抢杠和', 8);
     }
   }
-  if (options.zimo && options.lastTile) addFan('妙手回春', 8);
-  if (!options.zimo && options.lastTile) addFan('海底捞月', 8);
+  if (options.isSelfDraw && options.lastTile) addFan('妙手回春', 8);
+  if (!options.isSelfDraw && options.lastTile) addFan('海底捞月', 8);
   if (options.juezhang) addFan('和绝张', 4);
 
   // Zimo / Menqianqing / Buqiuren logic
@@ -728,7 +728,7 @@ export function scoreCombination(combo: HandCombination, concealedTiles: Tile[],
   const isShisanyao = hasFan('十三幺');
   const isQidui = hasFan('七对');
 
-  if (options.zimo) {
+  if (options.isSelfDraw) {
     const buqiuren = (allClosed || isSpecial) && !isJiulian && !isSianke && !isShisanyao && !isLianqidui;
     if (buqiuren) {
       addFan('不求人', 4);

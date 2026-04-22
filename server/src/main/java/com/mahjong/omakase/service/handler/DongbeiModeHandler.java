@@ -30,8 +30,11 @@ public class DongbeiModeHandler implements GameModeHandler {
       throw new UnsupportedOperationException("Drawn game is not supported for 东北麻将");
     }
 
-    if (request.getHan() == null) {
+    if (request.getFan() == null) {
       throw new IllegalArgumentException("Fan (番) is required for Dongbei mode");
+    }
+    if (request.getFan() < 0) {
+      throw new IllegalArgumentException("Fan (番) must be non-negative");
     }
     if (request.getDealerId() == null) {
       throw new IllegalArgumentException("Dealer (庄家) is required for Dongbei mode");
@@ -41,7 +44,7 @@ public class DongbeiModeHandler implements GameModeHandler {
     }
 
     Map<String, Object> params = new HashMap<>();
-    params.put("fan", request.getHan());
+    params.put("fan", request.getFan());
     params.put("dealerId", request.getDealerId());
     params.put(
         "bimenPlayerIds",

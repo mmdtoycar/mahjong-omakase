@@ -26,11 +26,10 @@ export interface HandCombination {
  * Game Context/Options
  */
 export interface GameOptions {
-  zimo: boolean;
+  isSelfDraw: boolean;
   lastTile: boolean;
   gangShang: boolean;
   juezhang: boolean;
-  qiangGang?: boolean;
   quanfeng: number;
   menfeng: number;
   huaCount: number;

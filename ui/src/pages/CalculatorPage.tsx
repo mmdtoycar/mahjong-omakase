@@ -133,7 +133,7 @@ const TileComponent: React.FC<{
 
 const CalculatorPage: React.FC = () => {
     const initialOptions: GameOptions = {
-        zimo: false,
+        isSelfDraw: false,
         lastTile: false,
         gangShang: false,
         juezhang: false,
@@ -230,7 +230,7 @@ const CalculatorPage: React.FC = () => {
             }
         }
 
-        if (currentCount === 14 && options.gangShang && !options.zimo) {
+        if (currentCount === 14 && options.gangShang && !options.isSelfDraw) {
             const lastTile = concealedTiles[concealedTiles.length - 1];
             if (lastTile) {
                 const countInHand = concealedTiles.filter(t => t.equals(lastTile)).length + 
@@ -250,7 +250,7 @@ const CalculatorPage: React.FC = () => {
                 }
             }
         }
-        if (options.zimo && options.gangShang) {
+        if (options.isSelfDraw && options.gangShang) {
             const hasGang = melds.some(m => m.type === 'gang');
             if (!hasGang) {
                 return `逻辑错误：当前手牌中没有“杠”牌，无法达成“杠上开花”。`;
@@ -419,17 +419,17 @@ const CalculatorPage: React.FC = () => {
                         <div className="winning-options-section animate-up">
                             <span className="section-label">和牌状态:</span>
                             <div className="options-grid">
-                                <button className={`opt-btn ${options.zimo ? 'active' : ''}`} onClick={() => setOptions({...options, zimo: !options.zimo})}>
-                                    自摸 <span className="btn-hint">+{options.zimo && melds.filter(m=>m.isOpen).length===0 ? '4 (不求人)' : '1'}</span>
+                                <button className={`opt-btn ${options.isSelfDraw ? 'active' : ''}`} onClick={() => setOptions({...options, isSelfDraw: !options.isSelfDraw})}>
+                                    自摸 <span className="btn-hint">+{options.isSelfDraw && melds.filter(m=>m.isOpen).length===0 ? '4 (不求人)' : '1'}</span>
                                 </button>
                                 <button className={`opt-btn ${options.juezhang ? 'active' : ''}`} onClick={() => setOptions({...options, juezhang: !options.juezhang})}>
                                     和绝张 <span className="btn-hint">+4</span>
                                 </button>
                                 <button className={`opt-btn ${options.gangShang ? 'active' : ''}`} onClick={() => setOptions({...options, gangShang: !options.gangShang})}>
-                                    {options.zimo ? '杠上开花' : '抢杠和'} <span className="btn-hint">+8</span>
+                                    {options.isSelfDraw ? '杠上开花' : '抢杠和'} <span className="btn-hint">+8</span>
                                 </button>
                                 <button className={`opt-btn ${options.lastTile ? 'active' : ''}`} onClick={() => setOptions({...options, lastTile: !options.lastTile})}>
-                                    {options.zimo ? '妙手回春' : '海底捞月'} <span className="btn-hint">+8</span>
+                                    {options.isSelfDraw ? '妙手回春' : '海底捞月'} <span className="btn-hint">+8</span>
                                 </button>
                             </div>
                         </div>
