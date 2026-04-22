@@ -25,6 +25,7 @@ export default function SignUpPage() {
       try {
         const available = await checkUserName(userName.trim())
         setUserNameAvailable(available)
+        setCheckError('')
       } catch {
         setUserNameAvailable(null)
         setCheckError('用户名检查失败，请重试')
