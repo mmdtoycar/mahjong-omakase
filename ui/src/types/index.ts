@@ -57,7 +57,7 @@ export interface AddRoundData {
   roundType?: 'WIN' | 'DRAWN_GAME'; // default WIN
   winnerId?: number;
   score?: number;             // for Guobiao
-  han?: number;               // for Riichi (han) / Dongbei (fan)
+  fan?: number;               // for Riichi / Dongbei (番)
   fu?: number;                // for Riichi
   dealerId?: number;          // for Riichi/Dongbei: table dealer
   honba?: number;             // for Riichi: 本場 count
@@ -67,7 +67,7 @@ export interface AddRoundData {
   tenpaiPlayerIds?: number[]; // for drawn games
 }
 
-export const HAN_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+export const FAN_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 export const FU_OPTIONS = [20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 110];
 
 export interface PlayerStats {

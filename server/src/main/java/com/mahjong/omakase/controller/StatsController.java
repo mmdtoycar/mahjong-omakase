@@ -6,10 +6,12 @@ import com.mahjong.omakase.service.GameService;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @RestController
@@ -28,7 +30,11 @@ public class StatsController {
       @RequestParam(required = false) Integer quarter) {
     GameMode mode = null;
     if (gameMode != null && !gameMode.isEmpty()) {
-      mode = GameMode.valueOf(gameMode);
+      try {
+        mode = GameMode.valueOf(gameMode);
+      } catch (IllegalArgumentException e) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid game mode: " + gameMode);
+      }
     }
 
     LocalDateTime start = null;

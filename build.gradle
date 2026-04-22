@@ -89,14 +89,4 @@ spotless {
     trimTrailingWhitespace()
     endWithNewline()
   }
-
-  groovyGradle {
-    target 'build.gradle', 'settings.gradle'
-
-    toggleOffOn()
-    trimTrailingWhitespace()
-    greclipse()
-    leadingTabsToSpaces(2)
-    endWithNewline()
-  }
 }

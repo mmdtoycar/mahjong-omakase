@@ -10,20 +10,38 @@ export default function SignUpPage() {
   const [userNameAvailable, setUserNameAvailable] = useState<boolean | null>(null)
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState('')
+  const [checkError, setCheckError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (!userName.trim()) {
+    const trimmed = userName.trim()
+    if (!trimmed) {
       setUserNameAvailable(null)
+      setCheckError('')
+      setChecking(false)
       return
     }
+    let cancelled = false
     setChecking(true)
+    setCheckError('')
     const timer = setTimeout(async () => {
-      const available = await checkUserName(userName.trim())
-      setUserNameAvailable(available)
-      setChecking(false)
+      try {
+        const available = await checkUserName(trimmed)
+        if (cancelled) return
+        setUserNameAvailable(available)
+        setCheckError('')
+      } catch {
+        if (cancelled) return
+        setUserNameAvailable(null)
+        setCheckError('用户名检查失败，请重试')
+      } finally {
+        if (!cancelled) setChecking(false)
+      }
     }, 400)
-    return () => clearTimeout(timer)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [userName])
 
   const canSubmit = userName.trim() && firstName.trim() && lastName.trim() && userNameAvailable === true && !submitting
@@ -64,6 +82,7 @@ export default function SignUpPage() {
                 {checking ? '检查中...' : userNameAvailable === true ? '可用' : userNameAvailable === false ? '已被占用' : ''}
               </span>
             )}
+            {checkError && <span className="field-hint hint-error">{checkError}</span>}
           </div>
 
           <div className="form-row">

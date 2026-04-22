@@ -40,6 +40,7 @@ function App() {
           <Route path="/calculator" element={<CalculatorPage />} />
           <Route path="/player/:id" element={<PlayerDetailPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="*" element={<div className="empty-state"><p>页面不存在</p></div>} />
         </Routes>
       </main>
     </div>

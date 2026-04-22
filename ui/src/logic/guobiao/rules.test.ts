@@ -78,7 +78,7 @@ function parseHand(handStr: string, opts: Partial<GameOptions> = {}): { conceale
   }
 
   const options: GameOptions = {
-    zimo: false, lastTile: false, gangShang: false, juezhang: false,
+    isSelfDraw: false, lastTile: false, gangShang: false, juezhang: false,
     quanfeng: 1, menfeng: 1, huaCount: 0, showTingFans: false, ...opts
   };
 
@@ -123,7 +123,7 @@ describe('Guobiao 81 Fans Coverage', () => {
 
   describe('Low Value & Exclusions', () => {
     test('User Hand (88+)', () => {
-      const r = calcHu('t11112222333344', { zimo: true });
+      const r = calcHu('t11112222333344', { isSelfDraw: true });
       expect(r!.totalScore).toBeGreaterThanOrEqual(81);
     });
   });

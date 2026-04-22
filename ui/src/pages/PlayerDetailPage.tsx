@@ -8,15 +8,19 @@ export default function PlayerDetailPage() {
   const navigate = useNavigate()
   const [player, setPlayer] = useState<PlayerDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchPlayerDetail(Number(id)).then(p => {
-      setPlayer(p)
-      setLoading(false)
-    })
+    setPlayer(null)
+    setError('')
+    setLoading(true)
+    fetchPlayerDetail(Number(id))
+      .then(p => { setPlayer(p); setLoading(false) })
+      .catch(e => { setError(e.message); setLoading(false) })
   }, [id])
 
-  if (loading || !player) return <div className="empty-state"><p>加载中...</p></div>
+  if (loading) return <div className="empty-state"><p>加载中...</p></div>
+  if (error || !player) return <div className="empty-state"><p>{error || '玩家不存在'}</p></div>
 
   return (
     <>
@@ -50,7 +54,7 @@ export default function PlayerDetailPage() {
                     onClick={() => navigate(`/session/${g.sessionId}`)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <td>{g.sessionName || `游戏 #${g.sessionId}`}</td>
+                    <td>{g.sessionName || `Game #${g.sessionId}`}</td>
                     <td>{g.gameModeDisplayName}</td>
                     <td>{new Date(g.createdAt).toLocaleDateString()}</td>
                     <td>
