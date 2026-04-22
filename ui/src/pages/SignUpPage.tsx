@@ -14,25 +14,34 @@ export default function SignUpPage() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (!userName.trim()) {
+    const trimmed = userName.trim()
+    if (!trimmed) {
       setUserNameAvailable(null)
       setCheckError('')
+      setChecking(false)
       return
     }
+    let cancelled = false
     setChecking(true)
     setCheckError('')
     const timer = setTimeout(async () => {
       try {
-        const available = await checkUserName(userName.trim())
+        const available = await checkUserName(trimmed)
+        if (cancelled) return
         setUserNameAvailable(available)
         setCheckError('')
       } catch {
+        if (cancelled) return
         setUserNameAvailable(null)
         setCheckError('用户名检查失败，请重试')
+      } finally {
+        if (!cancelled) setChecking(false)
       }
-      setChecking(false)
     }, 400)
-    return () => clearTimeout(timer)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [userName])
 
   const canSubmit = userName.trim() && firstName.trim() && lastName.trim() && userNameAvailable === true && !submitting
