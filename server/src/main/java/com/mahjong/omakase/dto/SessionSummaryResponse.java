@@ -11,7 +11,7 @@ public class SessionSummaryResponse {
   private int playerCount;
   private String status;
   private LocalDateTime createdAt;
-  private double participationBonus;
+  private Double participationBonus;
 
   public static SessionSummaryResponse from(GameSession session) {
     SessionSummaryResponse r = new SessionSummaryResponse();
@@ -22,8 +22,7 @@ public class SessionSummaryResponse {
     r.playerCount = session.getPlayerCount();
     r.status = session.getStatus().name();
     r.createdAt = session.getCreatedAt();
-    r.participationBonus =
-        session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
+    r.participationBonus = session.getParticipationBonus();
     return r;
   }
 
@@ -55,7 +54,7 @@ public class SessionSummaryResponse {
     return createdAt;
   }
 
-  public double getParticipationBonus() {
+  public Double getParticipationBonus() {
     return participationBonus;
   }
 }

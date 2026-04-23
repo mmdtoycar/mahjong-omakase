@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { fetchPlayers, createSession } from '../api'
 import { Player, GameModeKey, GAME_MODES } from '../types'
 import { cardFontSize } from '../utils/fontSize'
+import { abbrName } from '../utils/format'
 
 const MIN_PLAYERS = 3
 const MAX_PLAYERS = 4
@@ -79,7 +80,7 @@ export default function NewSessionPage() {
 
       <div className="form-group">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-          <label style={{ margin: 0 }}>选择玩家 (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})</label>
+          <label style={{ margin: 0 }}>选择玩家 <span style={{fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal'}}>(请按照东南西北顺序点击玩家)</span> (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})</label>
         </div>
 
         {players.length > 0 && (
@@ -111,8 +112,13 @@ export default function NewSessionPage() {
                 >
                   <div style={{ fontWeight: 600, fontSize: cardFontSize(p.userName), marginBottom: 4 }}>{p.userName}</div>
                   <div style={{ fontSize: '0.85rem', opacity: isSelected ? 0.9 : 0.6 }}>
-                    {p.firstName[0]}.{p.lastName}
+                    {abbrName(p.firstName + ' ' + p.lastName)}
                   </div>
+                  {isSelected && (
+                    <div className="player-card-wind">
+                      {['东', '南', '西', '北'][selectedIds.indexOf(p.id)]}
+                    </div>
+                  )}
                 </div>
               )
             })}

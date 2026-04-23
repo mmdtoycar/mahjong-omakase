@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "game_session_players")
+@Table(
+    name = "game_session_players",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"game_session_id", "seat"}))
 public class GameSessionPlayer {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,6 +20,9 @@ public class GameSessionPlayer {
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "player_id")
   private Player player;
+
+  @Column(name = "seat", nullable = false)
+  private Integer seat;
 
   public Long getId() {
     return id;
@@ -41,5 +46,13 @@ public class GameSessionPlayer {
 
   public void setPlayer(Player player) {
     this.player = player;
+  }
+
+  public Integer getSeat() {
+    return seat;
+  }
+
+  public void setSeat(Integer seat) {
+    this.seat = seat;
   }
 }

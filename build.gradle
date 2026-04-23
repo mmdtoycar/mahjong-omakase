@@ -66,6 +66,12 @@ tasks.register('npmBuild', NpmTask) {
   outputs.dir("${uiDir}/dist")
 }
 
+tasks.register('npmTest', NpmTask) {
+  dependsOn npmInstall
+  workingDir = file(uiDir)
+  args = ['run', 'test:run']
+}
+
 tasks.register('copyUI', Copy) {
   dependsOn npmBuild
   from "${uiDir}/dist"
@@ -84,7 +90,7 @@ spotless {
 
     toggleOffOn()
     removeUnusedImports()
-    googleJavaFormat('1.15.0')
+    googleJavaFormat('1.17.0')
     leadingTabsToSpaces(2)
     trimTrailingWhitespace()
     endWithNewline()
