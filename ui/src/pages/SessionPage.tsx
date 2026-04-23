@@ -621,10 +621,7 @@ export default function SessionPage() {
                 <th>名次</th>
                 <th>玩家</th>
                 <th style={{ textAlign: 'right' }}>分数</th>
-                <th style={{ textAlign: 'right' }}>
-                  积分(RP)
-                  <div className="th-subtitle">含局数奖励</div>
-                </th>
+                <th style={{ textAlign: 'right' }}>积分(RP)</th>
               </tr>
             </thead>
             <tbody>
