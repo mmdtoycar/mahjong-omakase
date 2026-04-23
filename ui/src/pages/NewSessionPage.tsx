@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { fetchPlayers, createSession } from '../api'
 import { Player, GameModeKey, GAME_MODES } from '../types'
 import { cardFontSize } from '../utils/fontSize'
+import { abbrName } from '../utils/format'
 
 const MIN_PLAYERS = 3
 const MAX_PLAYERS = 4
@@ -111,7 +112,7 @@ export default function NewSessionPage() {
                 >
                   <div style={{ fontWeight: 600, fontSize: cardFontSize(p.userName), marginBottom: 4 }}>{p.userName}</div>
                   <div style={{ fontSize: '0.85rem', opacity: isSelected ? 0.9 : 0.6 }}>
-                    {p.firstName[0]}.{p.lastName}
+                    {abbrName(p.firstName + ' ' + p.lastName)}
                   </div>
                 </div>
               )

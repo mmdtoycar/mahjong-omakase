@@ -10,6 +10,12 @@
   --danger: #c0392b;
   --success: #27ae60;
   --radius: 12px;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -26,9 +32,13 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 12px 24px;
-  background: var(--primary);
+  background: rgba(26, 71, 42, 0.95);
   color: white;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .logo-link {
@@ -214,11 +224,16 @@ main {
 
 .card {
   background: var(--card);
-  border-radius: var(--radius);
   padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
   border: 1px solid var(--border);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
 }
 
 .card h2 {
@@ -230,6 +245,7 @@ main {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 10px 20px;
   border: none;
@@ -237,8 +253,18 @@ main {
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
+  box-shadow: var(--shadow);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn:active {
+  transform: translateY(0);
 }
 
 .btn-primary {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPlayerDetail } from '../api'
 import { PlayerDetail } from '../types'
+import { abbrName } from '../utils/format'
 
 export default function PlayerDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -26,7 +27,7 @@ export default function PlayerDetailPage() {
     <>
       <div className="card">
         <h2>{player.userName}</h2>
-        <span className="session-meta">{player.firstName[0]}.{player.lastName}</span>
+        <span className="session-meta">{abbrName(player.firstName + ' ' + player.lastName)}</span>
       </div>
 
       <div className="card">
