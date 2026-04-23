@@ -34,6 +34,14 @@ const getTileName = (tile: Tile): string => {
     return '未知';
 };
 
+const isSequenceDisabled = (c: Tile[], m: Meld[], t: Tile): boolean => {
+    if (t.suit === 'z' || t.rank >= 8) return true;
+    const all = [...c, ...m.flatMap(x => x.tiles)];
+    return [0, 1, 2].some(offset => 
+        all.filter(x => x.equals(new Tile(t.suit, t.rank + offset))).length >= 4
+    );
+};
+
 const modes: Mode[] = [
   {
     name: 'normal', label: '单张',
@@ -44,14 +52,7 @@ const modes: Mode[] = [
   {
     name: 'an-shun', label: '暗顺',
     canUse: (c, m) => (c.length + m.length * 3) <= 11,
-    isDisabled: (c, m, t) => {
-        if (t.suit === 'z' || t.rank >= 8) return true;
-        const t1 = new Tile(t.suit, t.rank);
-        const t2 = new Tile(t.suit, t.rank + 1);
-        const t3 = new Tile(t.suit, t.rank + 2);
-        const all = [...c, ...m.flatMap(x => x.tiles)];
-        return all.filter(x => x.equals(t1)).length >= 4 || all.filter(x => x.equals(t2)).length >= 4 || all.filter(x => x.equals(t3)).length >= 4;
-    },
+    isDisabled: isSequenceDisabled,
     add: (c, m, t) => ({ concealed: [...c, t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], mings: m }),
   },
   {
@@ -63,13 +64,7 @@ const modes: Mode[] = [
   {
     name: 'chi', label: '吃',
     canUse: (c, m) => (c.length + m.length * 3) <= 11,
-    isDisabled: (c, m, t) => {
-        if (t.suit === 'z' || t.rank >= 8) return true;
-        const all = [...c, ...m.flatMap(x => x.tiles)];
-        return all.filter(x => x.equals(new Tile(t.suit, t.rank))).length >= 4 ||
-               all.filter(x => x.equals(new Tile(t.suit, t.rank + 1))).length >= 4 ||
-               all.filter(x => x.equals(new Tile(t.suit, t.rank + 2))).length >= 4;
-    },
+    isDisabled: isSequenceDisabled,
     add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'shun', tiles: [t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], isOpen: true }] }),
   },
   {
