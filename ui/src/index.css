@@ -134,8 +134,6 @@ main {
   font-weight: 600;
 }
 
-
-
 .landing-actions {
   display: flex;
   gap: 16px;
@@ -163,10 +161,7 @@ main {
   left: -75%;
   width: 50%;
   height: 200%;
-  background: linear-gradient(90deg,
-      transparent,
-      rgba(255, 255, 255, 0.3),
-      transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
   transform: skewX(-20deg);
   animation: heroShine 4s ease-in-out infinite;
 }
@@ -191,7 +186,6 @@ main {
 }
 
 @keyframes heroShine {
-
   0%,
   100% {
     left: -75%;
@@ -522,7 +516,7 @@ tr:hover td {
   color: var(--text) !important;
 }
 
-.zimo-toggle input[type="checkbox"] {
+.zimo-toggle input[type='checkbox'] {
   width: 18px;
   height: 18px;
   accent-color: var(--primary);
@@ -681,7 +675,6 @@ tr:hover td {
   margin-top: 2px;
 }
 
-
 .score-calc-btn {
   margin-left: 8px;
   font-size: 0.75rem;
@@ -788,7 +781,7 @@ tr:hover td {
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .seat-wind-badge {
@@ -840,7 +833,7 @@ tr:hover td {
 .seat-btn.disabled {
   opacity: 0.2;
   cursor: not-allowed;
-  background: rgba(0,0,0,0.05);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .type-btn {
@@ -1085,7 +1078,8 @@ tr:hover td {
   color: white;
 }
 
-.player-card-wind, .wind-badge {
+.player-card-wind,
+.wind-badge {
   background: linear-gradient(135deg, var(--accent), #e67e22);
   color: white;
   width: 24px;
@@ -1096,7 +1090,7 @@ tr:hover td {
   justify-content: center;
   font-size: 0.75rem;
   font-weight: 800;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   border: none;
   position: absolute;
   top: -8px;
@@ -1503,10 +1497,24 @@ tr:hover td {
 
 /* Guobiao Inline Calculator Styles */
 .guobiao-inline-calculator {
-    background: #fff; border: 2px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 10px;
-    box-sizing: border-box; width: 100%; max-width: 100%; overflow: hidden;
+  background: #fff;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
-.calc-top-row { display: flex; gap: 12px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; flex-wrap: wrap; }
+.calc-top-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+}
 .mini-option {
   display: flex;
   align-items: center;
@@ -1940,4 +1948,4 @@ tr:hover td {
     min-width: 60px;
     padding: 10px 4px;
   }
-}
+}

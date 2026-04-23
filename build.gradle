@@ -95,4 +95,11 @@ spotless {
     trimTrailingWhitespace()
     endWithNewline()
   }
+
+  format 'frontend', {
+    target fileTree('ui/src') { include '**/*.ts', '**/*.tsx', '**/*.css' }
+    prettier().config(['singleQuote': true, 'semi': false, 'printWidth': 120])
+    trimTrailingWhitespace()
+    endWithNewline()
+  }
 }

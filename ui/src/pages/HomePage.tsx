@@ -8,7 +8,9 @@ export default function HomePage() {
         <h1 className="landing-title">Mahjong Omakase</h1>
         <p className="landing-subtitle">Let's NB!</p>
         <div className="landing-actions">
-          <Link to="/game" className="btn btn-accent btn-large btn-hero-shine">麻将，启动!</Link>
+          <Link to="/game" className="btn btn-accent btn-large btn-hero-shine">
+            麻将，启动!
+          </Link>
         </div>
       </div>
 

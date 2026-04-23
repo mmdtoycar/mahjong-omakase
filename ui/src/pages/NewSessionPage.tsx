@@ -20,14 +20,17 @@ export default function NewSessionPage() {
 
   useEffect(() => {
     fetchPlayers()
-      .then(p => { setPlayers(p); setLoaded(true) })
+      .then((p) => {
+        setPlayers(p)
+        setLoaded(true)
+      })
       .catch(() => setError('加载玩家失败'))
   }, [])
 
   const togglePlayer = (id: number) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       if (prev.includes(id)) {
-        return prev.filter(i => i !== id)
+        return prev.filter((i) => i !== id)
       } else {
         if (prev.length < MAX_PLAYERS) {
           return [...prev, id]
@@ -39,11 +42,13 @@ export default function NewSessionPage() {
 
   const canStart = selectedIds.length >= MIN_PLAYERS && selectedIds.length <= MAX_PLAYERS && gameMode !== ''
 
-  const filteredPlayers = players.filter(p => {
+  const filteredPlayers = players.filter((p) => {
     const q = search.toLowerCase()
-    return p.firstName.toLowerCase().includes(q)
-      || p.lastName.toLowerCase().includes(q)
-      || p.userName.toLowerCase().includes(q)
+    return (
+      p.firstName.toLowerCase().includes(q) ||
+      p.lastName.toLowerCase().includes(q) ||
+      p.userName.toLowerCase().includes(q)
+    )
   })
 
   const handleStart = async () => {
@@ -52,7 +57,10 @@ export default function NewSessionPage() {
     setError('')
     try {
       const now = new Date()
-      const defaultName = `Game ${now.toLocaleDateString()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`
+      const defaultName = `Game ${now.toLocaleDateString()} ${now.getHours()}:${String(now.getMinutes()).padStart(
+        2,
+        '0'
+      )}`
       const session = await createSession(defaultName, gameMode, selectedIds)
       navigate(`/session/${session.id}`)
     } catch (e: any) {
@@ -67,30 +75,39 @@ export default function NewSessionPage() {
 
       <div className="form-group">
         <label>游戏模式</label>
-        <select
-          value={gameMode}
-          onChange={e => setGameMode(e.target.value as GameModeKey)}
-        >
+        <select value={gameMode} onChange={(e) => setGameMode(e.target.value as GameModeKey)}>
           <option value="">-- 选择游戏模式 --</option>
-          {GAME_MODES.map(m => (
-            <option key={m.key} value={m.key}>{m.label}</option>
+          {GAME_MODES.map((m) => (
+            <option key={m.key} value={m.key}>
+              {m.label}
+            </option>
           ))}
         </select>
       </div>
 
       <div className="form-group">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-          <label style={{ margin: 0 }}>选择玩家 <span style={{fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal'}}>(请按照东南西北顺序点击玩家)</span> (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})</label>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginBottom: 12,
+          }}
+        >
+          <label style={{ margin: 0 }}>
+            选择玩家{' '}
+            <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal' }}>
+              (请按照东南西北顺序点击玩家)
+            </span>{' '}
+            (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
+          </label>
         </div>
 
         {players.length > 0 && (
           <div style={{ marginBottom: 16 }}>
-            <input
-              type="text"
-              placeholder="搜索玩家..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+            <input type="text" placeholder="搜索玩家..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         )}
 
@@ -100,7 +117,7 @@ export default function NewSessionPage() {
           <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: 8 }}>加载中...</p>
         ) : players.length > 0 ? (
           <div className="player-select-grid">
-            {filteredPlayers.map(p => {
+            {filteredPlayers.map((p) => {
               const isSelected = selectedIds.includes(p.id)
               const isDisabled = !isSelected && selectedIds.length >= MAX_PLAYERS
 
@@ -110,14 +127,14 @@ export default function NewSessionPage() {
                   onClick={() => !isDisabled && togglePlayer(p.id)}
                   className={`player-select-card${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}`}
                 >
-                  <div style={{ fontWeight: 600, fontSize: cardFontSize(p.userName), marginBottom: 4 }}>{p.userName}</div>
+                  <div style={{ fontWeight: 600, fontSize: cardFontSize(p.userName), marginBottom: 4 }}>
+                    {p.userName}
+                  </div>
                   <div style={{ fontSize: '0.85rem', opacity: isSelected ? 0.9 : 0.6 }}>
                     {abbrName(p.firstName + ' ' + p.lastName)}
                   </div>
                   {isSelected && (
-                    <div className="player-card-wind">
-                      {['东', '南', '西', '北'][selectedIds.indexOf(p.id)]}
-                    </div>
+                    <div className="player-card-wind">{['东', '南', '西', '北'][selectedIds.indexOf(p.id)]}</div>
                   )}
                 </div>
               )
@@ -142,9 +159,7 @@ export default function NewSessionPage() {
             至少需要{MIN_PLAYERS}名玩家才能开始游戏。(还差 {MIN_PLAYERS - selectedIds.length} 人)
           </p>
         )}
-        {error && (
-          <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 16 }}>{error}</p>
-        )}
+        {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 16 }}>{error}</p>}
         <button
           className="btn btn-accent btn-large"
           onClick={handleStart}
