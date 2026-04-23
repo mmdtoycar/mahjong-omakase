@@ -178,7 +178,6 @@ public class GameService {
     resp.setPlayers(
         session.getPlayers().stream()
             .filter(gsp -> gsp.getPlayer() != null)
-            .sorted(Comparator.comparing(GameSessionPlayer::getSeat, Comparator.nullsLast(Comparator.naturalOrder())))
             .map(
                 gsp ->
                     new SessionDetailResponse.PlayerInfo(

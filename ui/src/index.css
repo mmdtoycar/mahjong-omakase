@@ -1070,7 +1070,7 @@ tr:hover td {
   cursor: pointer;
   text-align: center;
   transition: all 0.2s;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .player-select-card div {

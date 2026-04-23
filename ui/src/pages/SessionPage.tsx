@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, FAN_OPTIONS, FU_OPTIONS } from '../types'
@@ -191,22 +191,20 @@ export default function SessionPage() {
   }
   const gbWinds = getGuobiaoWinds();
 
-  const gbInitialOptions = useMemo(() => ({
-    quanfeng: gbWinds?.quanfeng || 1,
-    menfeng: winnerMenfeng
-  }), [gbWinds?.quanfeng, winnerMenfeng]);
+  const winnerIndex = session.players.findIndex(p => String(p.id) === winnerId);
+  
+  function getPlayerSeat(p: typeof session.players[0], idx?: number) {
+    return p.seat ?? ((idx ?? 0) + 1);
+  }
 
-  const getPlayerSeat = (p: typeof session.players[0], idx?: number) => p.seat ?? ((idx ?? 0) + 1);
-
-  const getPlayerMenfeng = (playerSeat: number) => {
+  function getPlayerMenfeng(playerSeat: number) {
     if (!gbWinds) return 1;
     return (playerSeat - gbWinds.dealerSeat + 4) % 4 + 1;
   }
 
-  const getWindName = (w: number) => ['东', '南', '西', '北'][w - 1] + '风';
-
-  const winnerIndex = session.players.findIndex(p => String(p.id) === winnerId);
   const winnerMenfeng = winnerIndex !== -1 ? getPlayerMenfeng(getPlayerSeat(session.players[winnerIndex], winnerIndex)) : 1;
+
+  const getWindName = (w: number) => ['东', '南', '西', '北'][w - 1] + '风';
 
   const getRoundWind = (roundNum: number) => {
     if (!isGuobiao) return null;
@@ -564,7 +562,10 @@ export default function SessionPage() {
                   <div className="inline-calc-wrapper">
                     <GuobiaoCalculator 
                       onSelectScore={handleCalcScoreSelect}
-                      initialOptions={gbInitialOptions}
+                      initialOptions={{
+                        quanfeng: gbWinds?.quanfeng || 1,
+                        menfeng: winnerMenfeng
+                      }}
                       resetTrigger={calcResetCount}
                       isSelfDraw={isSelfDraw}
                       onIsSelfDrawChange={setIsSelfDraw}
