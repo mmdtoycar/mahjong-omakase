@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "game_session_players")
+@Table(
+    name = "game_session_players",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"game_session_id", "seat"}))
 public class GameSessionPlayer {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,7 +21,7 @@ public class GameSessionPlayer {
   @JoinColumn(name = "player_id")
   private Player player;
 
-  @Column(name = "seat")
+  @Column(name = "seat", nullable = false)
   private Integer seat;
 
   public Long getId() {
