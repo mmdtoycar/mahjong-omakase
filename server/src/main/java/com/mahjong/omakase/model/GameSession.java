@@ -29,7 +29,6 @@ public class GameSession {
   @Column(nullable = false)
   private LocalDateTime createdAt = LocalDateTime.now();
 
-  @Column(nullable = false)
   private double participationBonus;
 
   @JsonIgnore
