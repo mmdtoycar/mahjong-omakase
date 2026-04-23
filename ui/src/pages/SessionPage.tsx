@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
-import { SessionDetail, FAN_OPTIONS, FU_OPTIONS } from '../types'
+import { SessionDetail, PlayerInfo, FAN_OPTIONS, FU_OPTIONS } from '../types'
 import { calculateRanks } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { nameFontSize } from '../utils/fontSize'
@@ -193,7 +193,7 @@ export default function SessionPage() {
 
   const winnerIndex = session.players.findIndex(p => String(p.id) === winnerId);
   
-  function getPlayerSeat(p: typeof session.players[0], idx?: number) {
+  function getPlayerSeat(p: PlayerInfo, idx?: number) {
     return p.seat ?? ((idx ?? 0) + 1);
   }
 
