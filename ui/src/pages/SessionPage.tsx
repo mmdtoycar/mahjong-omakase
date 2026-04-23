@@ -5,6 +5,7 @@ import { SessionDetail, FAN_OPTIONS, FU_OPTIONS } from '../types'
 import { calculateRanks } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { nameFontSize } from '../utils/fontSize'
+import { abbrName } from '../utils/format'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()

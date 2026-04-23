@@ -9,6 +9,7 @@ const seasons = getAvailableSeasons()
 const currentSeason = getCurrentSeason()
 
 import { statFontSize } from '../utils/fontSize'
+import { abbrName } from '../utils/format'
 
 export default function StatsPage() {
   const navigate = useNavigate()
@@ -53,7 +54,7 @@ export default function StatsPage() {
     else loadPlayers()
   }, [gameMode, seasonKey, tab])
 
-  const abbr = (s: PlayerStats) => `${s.displayName.split(' ')[0][0]}.${s.displayName.split(' ').slice(1).join(' ')}`
+  const abbr = (s: PlayerStats) => abbrName(s.displayName)
 
   const activeStats = stats.filter(s => s.gamesPlayed > 0)
   const selectedSeason = seasons.find(s => `${s.year}-${s.quarter}` === seasonKey)
@@ -194,8 +195,8 @@ export default function StatsPage() {
                 {players.map((p, i) => (
                   <tr key={p.id} onClick={() => navigate(`/player/${p.id}?from=players`)} style={{ cursor: 'pointer' }}>
                     <td>{i + 1}</td>
-                    <td>{p.userName}</td>
-                    <td>{p.firstName[0]}.{p.lastName}</td>
+                    <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{p.userName}</td>
+                    <td>{abbrName(p.firstName + ' ' + p.lastName)}</td>
                     <td>{new Date(p.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
