@@ -1,130 +1,158 @@
-import { test, expect, describe } from 'vitest';
-import { Tile, TileSuit } from './tiles';
-import { Meld, GameOptions, CalcResult } from './types';
-import { calculateBestScore } from './fan';
-import { findAllCombinations } from './hu';
+import { test, expect, describe } from 'vitest'
+import { Tile, TileSuit } from './tiles'
+import { Meld, GameOptions, CalcResult } from './types'
+import { calculateBestScore } from './fan'
+import { findAllCombinations } from './hu'
 
 /**
  * Comprehensive test suite for Guobiao Mahjong Logic.
  */
 
 function parseTileString(str: string): Tile[] {
-  const tiles: Tile[] = [];
-  let suit: TileSuit | null = null;
+  const tiles: Tile[] = []
+  let suit: TileSuit | null = null
   for (const ch of str) {
     if ('mpstwz'.includes(ch)) {
-      suit = (ch === 'w' ? 'm' : ch === 't' ? 's' : ch) as TileSuit;
+      suit = (ch === 'w' ? 'm' : ch === 't' ? 's' : ch) as TileSuit
     } else if (suit && ch >= '1' && ch <= '9') {
-      tiles.push(new Tile(suit, Number(ch)));
+      tiles.push(new Tile(suit, Number(ch)))
     }
   }
-  return tiles;
+  return tiles
 }
 
-function parseHand(handStr: string, opts: Partial<GameOptions> = {}): { concealed: Tile[], melds: Meld[], options: GameOptions } {
-  const concealed: Tile[] = [];
-  const melds: Meld[] = [];
+function parseHand(
+  handStr: string,
+  opts: Partial<GameOptions> = {}
+): { concealed: Tile[]; melds: Meld[]; options: GameOptions } {
+  const concealed: Tile[] = []
+  const melds: Meld[] = []
 
-  const mapSuit = (ch: string): TileSuit => (ch === 'w' ? 'm' : ch === 't' ? 's' : ch) as TileSuit;
-  const isMeldPrefix = (tok: string, prefix: string) => tok.startsWith(prefix) && tok.length > prefix.length && 'mpszwt'.includes(tok[prefix.length]);
+  const mapSuit = (ch: string): TileSuit => (ch === 'w' ? 'm' : ch === 't' ? 's' : ch) as TileSuit
+  const isMeldPrefix = (tok: string, prefix: string) =>
+    tok.startsWith(prefix) && tok.length > prefix.length && 'mpszwt'.includes(tok[prefix.length])
 
-  const tokens = handStr.split(' ');
+  const tokens = handStr.split(' ')
   for (const token of tokens) {
-    if (isMeldPrefix(token, 'l')) { // Exposed meld (chi/pung)
-      const content = token.slice(1);
-      const suit = mapSuit(content[0]);
-      const ranks = content.slice(1).split('').map(Number);
-      const tiles = ranks.map(r => new Tile(suit, r));
-      melds.push({ type: ranks.length === 3 ? (ranks[0] === ranks[1] ? 'ke' : 'shun') : 'dui', tiles, isOpen: true });
-    } else if (isMeldPrefix(token, 'c')) { // Concealed meld (chi/pung)
-      const content = token.slice(1);
-      const suit = mapSuit(content[0]);
-      const ranks = content.slice(1).split('').map(Number);
-      melds.push({ type: 'shun', tiles: ranks.map(r => new Tile(suit, r)), isOpen: false });
-    } else if (isMeldPrefix(token, 'gz')) { // Concealed Gang (暗杠) — check before 'g'
-      const content = token.slice(2);
-      const suit = mapSuit(content[0]);
-      const rank = Number(content.slice(1));
-      melds.push({ type: 'gang', tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)], isOpen: false });
-    } else if (isMeldPrefix(token, 'g')) { // Exposed Gang
-      const content = token.slice(1);
-      const suit = mapSuit(content[0]);
-      const rank = Number(content.slice(1));
-      melds.push({ type: 'gang', tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)], isOpen: true });
-    } else if (isMeldPrefix(token, 'p')) { // Exposed Pung
-      const content = token.slice(1);
-      const suit = mapSuit(content[0]);
-      const rank = Number(content.slice(1));
-      melds.push({ type: 'ke', tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)], isOpen: true });
+    if (isMeldPrefix(token, 'l')) {
+      // Exposed meld (chi/pung)
+      const content = token.slice(1)
+      const suit = mapSuit(content[0])
+      const ranks = content.slice(1).split('').map(Number)
+      const tiles = ranks.map((r) => new Tile(suit, r))
+      melds.push({ type: ranks.length === 3 ? (ranks[0] === ranks[1] ? 'ke' : 'shun') : 'dui', tiles, isOpen: true })
+    } else if (isMeldPrefix(token, 'c')) {
+      // Concealed meld (chi/pung)
+      const content = token.slice(1)
+      const suit = mapSuit(content[0])
+      const ranks = content.slice(1).split('').map(Number)
+      melds.push({ type: 'shun', tiles: ranks.map((r) => new Tile(suit, r)), isOpen: false })
+    } else if (isMeldPrefix(token, 'gz')) {
+      // Concealed Gang (暗杠) — check before 'g'
+      const content = token.slice(2)
+      const suit = mapSuit(content[0])
+      const rank = Number(content.slice(1))
+      melds.push({
+        type: 'gang',
+        tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)],
+        isOpen: false,
+      })
+    } else if (isMeldPrefix(token, 'g')) {
+      // Exposed Gang
+      const content = token.slice(1)
+      const suit = mapSuit(content[0])
+      const rank = Number(content.slice(1))
+      melds.push({
+        type: 'gang',
+        tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)],
+        isOpen: true,
+      })
+    } else if (isMeldPrefix(token, 'p')) {
+      // Exposed Pung
+      const content = token.slice(1)
+      const suit = mapSuit(content[0])
+      const rank = Number(content.slice(1))
+      melds.push({
+        type: 'ke',
+        tiles: [new Tile(suit, rank), new Tile(suit, rank), new Tile(suit, rank)],
+        isOpen: true,
+      })
     } else if (token.includes('|')) {
-      const [concealedPart, openPart] = token.split('|');
-      const concealedTiles = parseTileString(concealedPart);
-      concealedTiles.forEach(t => concealed.push(t));
-      const inheritedSuit = concealedTiles.length > 0 ? concealedTiles[0].suit : null;
-      let openStr = openPart;
+      const [concealedPart, openPart] = token.split('|')
+      const concealedTiles = parseTileString(concealedPart)
+      concealedTiles.forEach((t) => concealed.push(t))
+      const inheritedSuit = concealedTiles.length > 0 ? concealedTiles[0].suit : null
+      let openStr = openPart
       if (inheritedSuit && openPart.length > 0 && openPart[0] >= '1' && openPart[0] <= '9') {
-        openStr = inheritedSuit + openPart;
+        openStr = inheritedSuit + openPart
       }
-      const openTiles = parseTileString(openStr);
+      const openTiles = parseTileString(openStr)
       if (openTiles.length === 3) {
-        const isKe = openTiles[0].equals(openTiles[1]);
-        melds.push({ type: isKe ? 'ke' : 'shun', tiles: openTiles, isOpen: true });
+        const isKe = openTiles[0].equals(openTiles[1])
+        melds.push({ type: isKe ? 'ke' : 'shun', tiles: openTiles, isOpen: true })
       } else if (openTiles.length === 4) {
-        melds.push({ type: 'gang', tiles: openTiles, isOpen: true });
+        melds.push({ type: 'gang', tiles: openTiles, isOpen: true })
       }
     } else {
-      parseTileString(token).forEach(t => concealed.push(t));
+      parseTileString(token).forEach((t) => concealed.push(t))
     }
   }
 
   const options: GameOptions = {
-    isSelfDraw: false, lastTile: false, gangShang: false, juezhang: false,
-    quanfeng: 1, menfeng: 1, huaCount: 0, showTingFans: false, ...opts
-  };
+    isSelfDraw: false,
+    lastTile: false,
+    gangShang: false,
+    juezhang: false,
+    quanfeng: 1,
+    menfeng: 1,
+    huaCount: 0,
+    showTingFans: false,
+    ...opts,
+  }
 
-  return { concealed, melds, options };
+  return { concealed, melds, options }
 }
 
 function calcHu(handStr: string, opts: Partial<GameOptions> = {}): CalcResult | null {
-  const { concealed, melds, options } = parseHand(handStr, opts);
-  const lastTile = concealed.length > 0 ? concealed[concealed.length - 1] : undefined;
-  return calculateBestScore(concealed, melds, options, lastTile);
+  const { concealed, melds, options } = parseHand(handStr, opts)
+  const lastTile = concealed.length > 0 ? concealed[concealed.length - 1] : undefined
+  return calculateBestScore(concealed, melds, options, lastTile)
 }
 
 function expectFans(handStr: string, expectedFanNames: string[], opts: Partial<GameOptions> = {}) {
-  const result = calcHu(handStr, opts);
-  expect(result, `Hand failed to Hu: ${handStr}`).not.toBeNull();
-  const names = result!.fans.map((f: any) => f.name);
+  const result = calcHu(handStr, opts)
+  expect(result, `Hand failed to Hu: ${handStr}`).not.toBeNull()
+  const names = result!.fans.map((f: any) => f.name)
   for (const expected of expectedFanNames) {
-    expect(names, `Missing fan: ${expected} in [${names.join(', ')}] for hand: ${handStr}`).toContain(expected);
+    expect(names, `Missing fan: ${expected} in [${names.join(', ')}] for hand: ${handStr}`).toContain(expected)
   }
 }
 
 describe('Guobiao 81 Fans Coverage', () => {
   describe('88 Point Fans', () => {
-    test('Big Four Winds', () => expectFans('z11122233344411', ['大四喜']));
-    test('Big Three Dragons', () => expectFans('z555666777 w123 w55', ['大三元']));
-    test('All Green', () => expectFans('t234234666|888 z66', ['绿一色']));
-    test('Nine Gates', () => expectFans('w1112345678999 w5', ['九莲宝灯']));
-    test('Four Kongs', () => expectFans('gw1 gp2 gs3 gz4 t55', ['四杠']));
-    test('Seven Consecutive Pairs', () => expectFans('w11223344556677', ['连七对']));
-    test('Thirteen Orphans', () => expectFans('w19 p19 t19 z1234567 z7', ['十三幺']));
-  });
+    test('Big Four Winds', () => expectFans('z11122233344411', ['大四喜']))
+    test('Big Three Dragons', () => expectFans('z555666777 w123 w55', ['大三元']))
+    test('All Green', () => expectFans('t234234666|888 z66', ['绿一色']))
+    test('Nine Gates', () => expectFans('w1112345678999 w5', ['九莲宝灯']))
+    test('Four Kongs', () => expectFans('gw1 gp2 gs3 gz4 t55', ['四杠']))
+    test('Seven Consecutive Pairs', () => expectFans('w11223344556677', ['连七对']))
+    test('Thirteen Orphans', () => expectFans('w19 p19 t19 z1234567 z7', ['十三幺']))
+  })
 
   describe('64/48 Point Fans', () => {
-    test('All Terminals', () => expectFans('w111p111t111w999p99', ['清幺九']));
+    test('All Terminals', () => expectFans('w111p111t111w999p99', ['清幺九']))
     test('Pure Quad Sequence', () => {
-      const r = calcHu('t11112222333344');
-      expect(r!.fans.map(f => f.name)).toContain('一色四同顺');
-      expect(r!.fans.map(f => f.name)).not.toContain('一色三同顺');
-    });
-    test('Pure Double Dragon', () => expectFans('w11223377889955', ['一色双龙会']));
-  });
+      const r = calcHu('t11112222333344')
+      expect(r!.fans.map((f) => f.name)).toContain('一色四同顺')
+      expect(r!.fans.map((f) => f.name)).not.toContain('一色三同顺')
+    })
+    test('Pure Double Dragon', () => expectFans('w11223377889955', ['一色双龙会']))
+  })
 
   describe('Low Value & Exclusions', () => {
     test('User Hand (88+)', () => {
-      const r = calcHu('t11112222333344', { isSelfDraw: true });
-      expect(r!.totalScore).toBeGreaterThanOrEqual(81);
-    });
-  });
-});
+      const r = calcHu('t11112222333344', { isSelfDraw: true })
+      expect(r!.totalScore).toBeGreaterThanOrEqual(81)
+    })
+  })
+})
