@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, FAN_OPTIONS, FU_OPTIONS } from '../types'
@@ -190,6 +190,11 @@ export default function SessionPage() {
     return { quanfeng: qf, dealerSeat, handIdx };
   }
   const gbWinds = getGuobiaoWinds();
+
+  const gbInitialOptions = useMemo(() => ({
+    quanfeng: gbWinds?.quanfeng || 1,
+    menfeng: winnerMenfeng
+  }), [gbWinds?.quanfeng, winnerMenfeng]);
 
   const getPlayerSeat = (p: typeof session.players[0], idx?: number) => p.seat ?? ((idx ?? 0) + 1);
 
@@ -559,10 +564,7 @@ export default function SessionPage() {
                   <div className="inline-calc-wrapper">
                     <GuobiaoCalculator 
                       onSelectScore={handleCalcScoreSelect}
-                      initialOptions={{
-                        quanfeng: gbWinds?.quanfeng || 1,
-                        menfeng: winnerMenfeng
-                      }}
+                      initialOptions={gbInitialOptions}
                       resetTrigger={calcResetCount}
                       isSelfDraw={isSelfDraw}
                       onIsSelfDrawChange={setIsSelfDraw}

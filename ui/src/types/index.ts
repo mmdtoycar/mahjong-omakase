@@ -30,7 +30,7 @@ export interface PlayerInfo {
   firstName: string;
   lastName: string;
   displayName: string;
-  seat: number;
+  seat?: number | null;
 }
 
 export interface RoundInfo {
