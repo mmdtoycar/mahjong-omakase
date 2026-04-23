@@ -16,7 +16,7 @@ export default function SessionPage() {
   const [dealerId, setDealerId] = useState<string>('')
   const [honba, setHonba] = useState<string>('0')
   const [kyoutaku, setKyoutaku] = useState<string>('0')
-  const [isSelfDraw, setIsSelfDraw] = useState(false)
+  const [isSelfDraw, setIsSelfDraw] = useState(true)
   const [dealInPlayerId, setDealInPlayerId] = useState<string>('')
   const [bimenPlayerIds, setBimenPlayerIds] = useState<number[]>([])
   const [isRyuukyoku, setIsRyuukyoku] = useState(false)
