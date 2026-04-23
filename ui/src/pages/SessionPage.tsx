@@ -55,13 +55,39 @@ export default function SessionPage() {
     setFan('')
     setFu('')
     setBimenPlayerIds([])
-    setIsSelfDraw(false)
+    setIsSelfDraw(true)
     setDealInPlayerId('')
     setIsRyuukyoku(false)
     setTenpaiPlayerIds([])
     setHonba('0')
     setKyoutaku('0')
     setCalcResetCount(prev => prev + 1)
+  }
+
+  const handlePlayerClick = (pid: string) => {
+    if (winnerId === pid) {
+      setWinnerId('')
+      setDealInPlayerId('')
+      setIsSelfDraw(true)
+    } else if (dealInPlayerId === pid) {
+      setDealInPlayerId('')
+      setIsSelfDraw(true)
+    } else if (!winnerId) {
+      setWinnerId(pid)
+      setIsSelfDraw(true)
+    } else {
+      setDealInPlayerId(pid)
+      setIsSelfDraw(false)
+    }
+  }
+
+  const handleWinTypeToggle = () => {
+    if (isSelfDraw) {
+      setIsSelfDraw(false)
+    } else {
+      setIsSelfDraw(true)
+      setDealInPlayerId('')
+    }
   }
 
   const canSubmit = winnerId
@@ -156,7 +182,6 @@ export default function SessionPage() {
   )
   const rankMap = Object.fromEntries(rankings.map(r => [r.playerId, r]))
 
-  // Guobiao Auto Wind Logic
   const getGuobiaoWinds = () => {
     if (!isGuobiao) return null;
     const handIdx = session.rounds.length + 1;
@@ -191,7 +216,6 @@ export default function SessionPage() {
   const otherPlayers = session.players.filter(p => p.id !== Number(winnerId))
   const winnerIsDealer = winnerId && dealerId && winnerId === dealerId
 
-  // Score preview
   const getScorePreview = (): string | null => {
     if (isRiichi) {
       if (!fan || !fu || !dealerId) return null
@@ -201,7 +225,7 @@ export default function SessionPage() {
       else if (h >= 11) basic = 6000
       else if (h >= 8) basic = 4000
       else if (h >= 6) basic = 3000
-      else if (h >= 5 || (h === 4 && f >= 30) || (h === 3 && f >= 60)) basic = 2000 // 切上満貫
+      else if (h >= 5 || (h === 4 && f >= 30) || (h === 3 && f >= 60)) basic = 2000
       else basic = Math.min(f * Math.pow(2, 2 + h), 2000)
 
       const r100 = (v: number) => Math.ceil(v / 100) * 100
@@ -482,150 +506,107 @@ export default function SessionPage() {
                     placeholder="0"
                   />
                 </div>
-                <div className="form-group full-width">
-                  <label>赢家</label>
-                  <div className="player-chip-grid">
+              </div>
+            ) : null}
+            
+            {isDongbei && (
+              <div className="round-form-grid">
+                <div className="form-group">
+                  <label>庄家</label>
+                  <select value={dealerId} onChange={e => setDealerId(e.target.value)}>
+                    <option value=""></option>
                     {session.players.map(p => (
-                      <button
-                        key={p.id}
-                        className={`player-chip-btn ${winnerId === String(p.id) ? 'active' : ''}`}
-                        onClick={() => { setWinnerId(String(p.id)); setDealInPlayerId('') }}
-                      >
-                        {p.userName}
-                      </button>
+                      <option key={p.id} value={p.id}>{p.userName}</option>
                     ))}
-                  </div>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>番</label>
+                  <input
+                    type="number"
+                    value={fan}
+                    onChange={e => setFan(e.target.value)}
+                    placeholder="输入番"
+                    min="0"
+                  />
                 </div>
               </div>
-            ) : (
-              <>
-              {isDongbei && (
-                <div className="round-form-grid">
-                  <div className="form-group">
-                    <label>庄家</label>
-                    <select value={dealerId} onChange={e => setDealerId(e.target.value)}>
-                      <option value=""></option>
-                      {session.players.map(p => (
-                        <option key={p.id} value={p.id}>{p.userName}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>番</label>
-                    <input
-                      type="number"
-                      value={fan}
-                      onChange={e => setFan(e.target.value)}
-                      placeholder="输入番"
-                      min="0"
+            )}
+            
+            {!isRiichi && isGuobiao && (
+              <div className="form-group">
+                <label>
+                  分数 
+                  {gbWinds && (
+                    <span className="gb-wind-info">
+                      ({getWindName(gbWinds.quanfeng)} 第{((gbWinds.handIdx - 1) % 4) + 1}局)
+                    </span>
+                  )}
+                </label>
+                <div className="score-input-row">
+                  <input
+                    type="number"
+                    value={score}
+                    onChange={e => setScore(e.target.value)}
+                    placeholder="输入分数"
+                    min="8"
+                  />
+                  <button className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`} onClick={() => setIsCalcOpen(prev => !prev)}>
+                    {isCalcOpen ? '收起算番' : '算番器'}
+                  </button>
+                </div>
+                {isCalcOpen && (
+                  <div className="inline-calc-wrapper">
+                    <GuobiaoCalculator 
+                      onSelectScore={handleCalcScoreSelect}
+                      initialOptions={{
+                        quanfeng: gbWinds?.quanfeng || 1,
+                        menfeng: winnerMenfeng
+                      }}
+                      resetTrigger={calcResetCount}
+                      isSelfDraw={isSelfDraw}
+                      onIsSelfDrawChange={setIsSelfDraw}
+                      onClose={() => setIsCalcOpen(false)}
                     />
                   </div>
-                </div>
-              )}
-              <div className="round-form-grid">
-                {!isDongbei && (isGuobiao ? (
-                  <div className="form-group">
-                    <label>
-                      分数 
-                      {gbWinds && (
-                        <span className="gb-wind-info">
-                          ({getWindName(gbWinds.quanfeng)} 第{((gbWinds.handIdx - 1) % 4) + 1}局)
-                        </span>
-                      )}
-                    </label>
-                    <div className="score-input-row">
-                      <input
-                        type="number"
-                        value={score}
-                        onChange={e => setScore(e.target.value)}
-                        placeholder="输入分数"
-                        min={isGuobiao ? "8" : "1"}
-                      />
-                      {isGuobiao && (
-                        <button className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`} onClick={() => setIsCalcOpen(prev => !prev)}>
-                          {isCalcOpen ? '收起算番' : '算番器'}
-                        </button>
-                      )}
-                    </div>
-                    {isGuobiao && isCalcOpen && (
-                      <div className="inline-calc-wrapper">
-                        <GuobiaoCalculator 
-                          onSelectScore={handleCalcScoreSelect}
-                          initialOptions={{
-                            quanfeng: gbWinds?.quanfeng || 1,
-                            menfeng: winnerMenfeng
-                          }}
-                          resetTrigger={calcResetCount}
-                          isSelfDraw={isSelfDraw}
-                          onIsSelfDrawChange={setIsSelfDraw}
-                          onClose={() => setIsCalcOpen(false)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                ) : null)}
-                <div className="form-group full-width">
-                  <label>赢家</label>
-                  <div className="player-chip-grid">
-                    {session.players.map((p, idx) => (
-                      <button
-                        key={p.id}
-                        className={`player-chip-btn ${winnerId === String(p.id) ? 'active' : ''}`}
-                        onClick={() => { setWinnerId(String(p.id)); setDealInPlayerId('') }}
-                      >
-                        {p.userName}
-                        {isGuobiao && (
-                          <div className="wind-badge small">
-                            {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, idx)) - 1]}
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
-              </>
             )}
 
-            <div className="form-group">
-              <label>和牌方式</label>
-              <div className="win-type-selector">
-                <button 
-                  className={`type-btn ${isSelfDraw ? 'active' : ''}`}
-                  onClick={() => { setIsSelfDraw(true); setDealInPlayerId('') }}
-                >
-                  自摸
-                </button>
-                <button 
-                  className={`type-btn ${!isSelfDraw ? 'active' : ''}`}
-                  onClick={() => setIsSelfDraw(false)}
-                >
-                  点炮
-                </button>
-              </div>
-            </div>
-
-            {!isSelfDraw && (
-              <div className="form-group full-width">
-                <label>点炮家</label>
-                <div className="player-chip-grid">
-                  {otherPlayers.map(p => (
+            <div className="form-group full-width">
+              <label>胜负选择</label>
+              <div className="quick-win-row">
+                {session.players.map((p, idx) => {
+                  const isWinner = winnerId === String(p.id)
+                  const isLoser = dealInPlayerId === String(p.id)
+                  let btnClass = 'quick-player-btn'
+                  if (isWinner) btnClass += ' winner'
+                  if (isLoser) btnClass += ' loser'
+                  
+                  return (
                     <button
                       key={p.id}
-                      className={`player-chip-btn ${dealInPlayerId === String(p.id) ? 'active' : ''}`}
-                      onClick={() => setDealInPlayerId(String(p.id))}
+                      className={btnClass}
+                      onClick={() => handlePlayerClick(String(p.id))}
                     >
-                      {p.userName}
+                      <div className="btn-name">{p.userName}</div>
                       {isGuobiao && (
-                        <div className="wind-badge small">
-                          {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, session.players.indexOf(p))) - 1]}
+                        <div className="btn-wind">
+                          {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, idx)) - 1]}
                         </div>
                       )}
                     </button>
-                  ))}
-                </div>
+                  )
+                })}
+                <button 
+                  className={`quick-player-btn win-type-btn ${isSelfDraw ? 'zimo' : 'dianpao'}`}
+                  onClick={handleWinTypeToggle}
+                  disabled={!isSelfDraw && !dealInPlayerId}
+                >
+                  {isSelfDraw ? '自摸' : '点炮'}
+                </button>
               </div>
-            )}
+            </div>
 
             {isDongbei && winnerId && (
               <div className="form-group">

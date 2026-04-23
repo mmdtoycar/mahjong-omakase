@@ -129,9 +129,9 @@ public class GameService {
   }
 
   public GameSession createSession(CreateSessionRequest request) {
-    Map<Long, Player> playerMap = playerRepo.findAllById(request.getPlayerIds()).stream()
-        .collect(Collectors.toMap(Player::getId, Function.identity()));
-    
+    Map<Long, Player> playerMap =
+        playerRepo.findAllById(request.getPlayerIds()).stream()
+            .collect(Collectors.toMap(Player::getId, Function.identity()));
     if (playerMap.size() != request.getPlayerIds().size()) {
       throw new IllegalArgumentException("Some player IDs are invalid");
     }
