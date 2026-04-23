@@ -13,7 +13,7 @@ Check every file in ui/src/pages/ and ui/src/App.tsx for any user-visible Englis
 Note: SignUpPage.tsx ("Join Leo's friends' mahjong games!") is intentionally English — do not flag it.
 Note: AdminPage.tsx is intentionally English — do not flag it.
 Note: Game session default names ("Game #1", "Game 4/21/2026 17:19") are intentionally English — do not flag it.
-Note: `alt` attributes on `<img>` tags are not user-visible (only for screen readers / broken images) — do not flag these.
+Note: Only flag text that is visually rendered to users. Do not flag non-visible text such as `alt` attributes, `title` attributes, HTML comments, console logs, variable names, etc.
 
 ## Part 2: Mobile Check
 Read ui/src/index.css and all files in ui/src/pages/ to check for potential mobile issues on screens under 640px width. Check for:
