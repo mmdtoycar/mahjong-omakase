@@ -29,8 +29,6 @@ public class GameSession {
   @Column(nullable = false)
   private LocalDateTime createdAt = LocalDateTime.now();
 
-  private Double participationBonus;
-
   @JsonIgnore
   @OneToMany(mappedBy = "gameSession", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<GameSessionPlayer> players = new ArrayList<>();
@@ -102,13 +100,5 @@ public class GameSession {
 
   public void setRounds(List<Round> rounds) {
     this.rounds = rounds;
-  }
-
-  public Double getParticipationBonus() {
-    return participationBonus;
-  }
-
-  public void setParticipationBonus(Double participationBonus) {
-    this.participationBonus = participationBonus;
   }
 }

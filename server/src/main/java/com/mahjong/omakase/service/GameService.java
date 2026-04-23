@@ -24,7 +24,7 @@ public class GameService {
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
   private final AppSettingRepository appSettingRepo;
   private final Map<GameMode, GameModeHandler> handlers;
-  private volatile double participationBonus;
+  private double participationBonus;
 
   public GameService(
       PlayerRepository playerRepo,
@@ -129,26 +129,27 @@ public class GameService {
   }
 
   public GameSession createSession(CreateSessionRequest request) {
-    List<Player> players = playerRepo.findAllById(request.getPlayerIds());
-    if (players.size() != request.getPlayerIds().size()) {
-      log.warn(
-          "Failed to create session: some player IDs are invalid, requested={}, found={}",
-          request.getPlayerIds(),
-          players.size());
+    Map<Long, Player> playerMap = new HashMap<>();
+    for (Player p : playerRepo.findAllById(request.getPlayerIds())) {
+      playerMap.put(p.getId(), p);
+    }
+    if (playerMap.size() != request.getPlayerIds().size()) {
       throw new IllegalArgumentException("Some player IDs are invalid");
     }
 
     GameSession session = new GameSession();
     session.setName(request.getName());
     session.setGameMode(GameMode.valueOf(request.getGameMode()));
-    session.setPlayerCount(players.size());
-    session.setParticipationBonus(this.participationBonus);
+    session.setPlayerCount(request.getPlayerIds().size());
     session = sessionRepo.save(session);
 
-    for (Player player : players) {
+    int seat = 1;
+    for (Long playerId : request.getPlayerIds()) {
+      Player player = playerMap.get(playerId);
       GameSessionPlayer gsp = new GameSessionPlayer();
       gsp.setGameSession(session);
       gsp.setPlayer(player);
+      gsp.setSeat(seat++);
       session.getPlayers().add(gsp);
     }
     session = sessionRepo.save(session);
@@ -156,7 +157,7 @@ public class GameService {
         "Created session id={} '{}' with {} players",
         session.getId(),
         session.getName(),
-        players.size());
+        session.getPlayerCount());
     return session;
   }
 
@@ -184,7 +185,8 @@ public class GameService {
                         gsp.getPlayer().getId(),
                         gsp.getPlayer().getUserName(),
                         gsp.getPlayer().getFirstName(),
-                        gsp.getPlayer().getLastName()))
+                        gsp.getPlayer().getLastName(),
+                        gsp.getSeat()))
             .collect(Collectors.toList()));
 
     resp.setRounds(
@@ -212,8 +214,6 @@ public class GameService {
     resp.setRpFactor(session.getGameMode().getRpFactor());
     resp.setRpOrigin(session.getGameMode().getRpOrigin());
     resp.setUmaDist(session.getGameMode().getUmaDist(session.getPlayerCount()));
-    resp.setParticipationBonus(
-        session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0);
 
     return resp;
   }
@@ -332,7 +332,6 @@ public class GameService {
 
     Map<Long, Integer> wins = new HashMap<>();
     Map<Long, Double> totalRP = new HashMap<>();
-    Map<Long, Double> totalBonusPerPlayer = new HashMap<>();
     List<GameSession> completedSessions =
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
@@ -345,13 +344,6 @@ public class GameService {
     for (GameSession session : completedSessions) {
       List<Object[]> sessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
       if (!sessionScores.isEmpty()) {
-        for (Object[] row : sessionScores) {
-          if (row[0] != null) {
-            double bonus =
-                session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
-            totalBonusPerPlayer.merge((Long) row[0], bonus, Double::sum);
-          }
-        }
         List<Object[]> sorted = new ArrayList<>(sessionScores);
         sorted.sort((a, b) -> ((Number) b[1]).intValue() - ((Number) a[1]).intValue());
 
@@ -401,8 +393,7 @@ public class GameService {
               stat.setTotalScore(totalScores.getOrDefault(p.getId(), 0));
               stat.setWins(wins.getOrDefault(p.getId(), 0));
               double baseRP = totalRP.getOrDefault(p.getId(), 0.0);
-              double bonusRP = totalBonusPerPlayer.getOrDefault(p.getId(), 0.0);
-              double totalRPVal = baseRP + bonusRP;
+              double totalRPVal = baseRP + (stat.getGamesPlayed() * participationBonus);
               stat.setTotalRP(totalRPVal);
               int games = gamesPlayed.getOrDefault(p.getId(), 0);
               stat.setAvgScore(games > 0 ? totalRPVal / games : 0);

@@ -34,6 +34,14 @@ const getTileName = (tile: Tile): string => {
     return '未知';
 };
 
+const isSequenceDisabled = (c: Tile[], m: Meld[], t: Tile): boolean => {
+    if (t.suit === 'z' || t.rank >= 8) return true;
+    const all = [...c, ...m.flatMap(x => x.tiles)];
+    return [0, 1, 2].some(offset => 
+        all.filter(x => x.equals(new Tile(t.suit, t.rank + offset))).length >= 4
+    );
+};
+
 const modes: Mode[] = [
   {
     name: 'normal', label: '单张',
@@ -44,14 +52,7 @@ const modes: Mode[] = [
   {
     name: 'an-shun', label: '暗顺',
     canUse: (c, m) => (c.length + m.length * 3) <= 11,
-    isDisabled: (c, m, t) => {
-        if (t.suit === 'z' || t.rank >= 8) return true;
-        const t1 = new Tile(t.suit, t.rank);
-        const t2 = new Tile(t.suit, t.rank + 1);
-        const t3 = new Tile(t.suit, t.rank + 2);
-        const all = [...c, ...m.flatMap(x => x.tiles)];
-        return all.filter(x => x.equals(t1)).length >= 4 || all.filter(x => x.equals(t2)).length >= 4 || all.filter(x => x.equals(t3)).length >= 4;
-    },
+    isDisabled: isSequenceDisabled,
     add: (c, m, t) => ({ concealed: [...c, t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], mings: m }),
   },
   {
@@ -63,13 +64,7 @@ const modes: Mode[] = [
   {
     name: 'chi', label: '吃',
     canUse: (c, m) => (c.length + m.length * 3) <= 11,
-    isDisabled: (c, m, t) => {
-        if (t.suit === 'z' || t.rank >= 8) return true;
-        const all = [...c, ...m.flatMap(x => x.tiles)];
-        return all.filter(x => x.equals(new Tile(t.suit, t.rank))).length >= 4 ||
-               all.filter(x => x.equals(new Tile(t.suit, t.rank + 1))).length >= 4 ||
-               all.filter(x => x.equals(new Tile(t.suit, t.rank + 2))).length >= 4;
-    },
+    isDisabled: isSequenceDisabled,
     add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'shun', tiles: [t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], isOpen: true }] }),
   },
   {
@@ -161,6 +156,18 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
         resetHandState();
     }
 
+    // Sync options when initialOptions prop changes (e.g. from SessionPage)
+    useEffect(() => {
+        if (initialOptions) {
+            setOptions(prev => ({
+                ...prev,
+                quanfeng: initialOptions.quanfeng ?? prev.quanfeng,
+                menfeng: initialOptions.menfeng ?? prev.menfeng,
+                huaCount: initialOptions.huaCount ?? prev.huaCount,
+            }));
+        }
+    }, [JSON.stringify(initialOptions)]);
+
     const currentCount = concealedTiles.length + melds.length * 3;
 
     const onTileClick = (t: Tile) => {
@@ -222,32 +229,51 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
     return (
         <div className="guobiao-inline-calculator">
             <div className="calc-top-row">
-                <div className="mini-option">
-                    <span className="mini-opt-label">圈:</span>
-                    {[1,2,3,4].map(v => (
-                        <button key={v} className={`micro-btn ${options.quanfeng === v ? 'active' : ''}`} onClick={() => setOptions({...options, quanfeng: v})}>
-                            {['东','南','西','北'][v-1]}
-                        </button>
-                    ))}
-                </div>
-                <div className="mini-option">
-                    <span className="mini-opt-label">门:</span>
-                    {[1,2,3,4].map(v => (
-                        <button key={v} className={`micro-btn ${options.menfeng === v ? 'active' : ''}`} onClick={() => setOptions({...options, menfeng: v})}>
-                            {['东','南','西','北'][v-1]}
-                        </button>
-                    ))}
-                </div>
+                {initialOptions ? (
+                    <div className="mini-option">
+                        <span className="mini-opt-label">场况:</span>
+                        <span className="mini-opt-val">
+                            {['东','南','西','北'][options.quanfeng-1]}圈 · {['东','南','西','北'][options.menfeng-1]}风
+                        </span>
+                    </div>
+                ) : (
+                    <>
+                        <div className="mini-option">
+                            <span className="mini-opt-label">圈:</span>
+                            {[1,2,3,4].map(v => (
+                                <button key={v} className={`micro-btn ${options.quanfeng === v ? 'active' : ''}`} onClick={() => setOptions({...options, quanfeng: v})}>
+                                    {['东','南','西','北'][v-1]}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="mini-option">
+                            <span className="mini-opt-label">门:</span>
+                            {[1,2,3,4].map(v => (
+                                <button key={v} className={`micro-btn ${options.menfeng === v ? 'active' : ''}`} onClick={() => setOptions({...options, menfeng: v})}>
+                                    {['东','南','西','北'][v-1]}
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                )}
                 <div className="mini-option">
                   <span className="mini-opt-label">花:</span>
-                  <input 
-                    type="number" 
-                    className="hua-input" 
-                    value={options.huaCount} 
-                    onChange={e => setOptions({...options, huaCount: Number(e.target.value)})} 
-                    min="0" max="8" 
-                  />
-                  <button className="micro-btn" style={{ marginLeft: '4px' }} onClick={resetHandState}>重置</button>
+                  <div className="hua-stepper">
+                    <button 
+                      className="micro-btn" 
+                      onClick={() => setOptions(prev => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) }))}
+                    >
+                      -
+                    </button>
+                    <span className="hua-count">{options.huaCount}</span>
+                    <button 
+                      className="micro-btn" 
+                      onClick={() => setOptions(prev => ({ ...prev, huaCount: Math.min(8, prev.huaCount + 1) }))}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <button className="micro-btn" style={{ marginLeft: '8px' }} onClick={resetHandState}>重置</button>
                 </div>
             </div>
 
@@ -292,7 +318,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
 
             <div className="winning-options-section">
                 <div className="options-grid compact">
-                    <button className={`opt-btn ${options.isSelfDraw ? 'active' : ''}`} onClick={() => onIsSelfDrawChange(!options.isSelfDraw)}>自摸</button>
+                    <button className={`opt-btn ${isSelfDraw ? 'active' : ''}`} onClick={() => onIsSelfDrawChange(!isSelfDraw)}>自摸</button>
                     <button className={`opt-btn ${options.juezhang ? 'active' : ''}`} onClick={() => setOptions({...options, juezhang: !options.juezhang})}>绝张</button>
                     <button className={`opt-btn ${options.gangShang ? 'active' : ''}`} onClick={() => setOptions({...options, gangShang: !options.gangShang})}>{isSelfDraw ? '杠开' : '抢杠'}</button>
                     <button className={`opt-btn ${options.lastTile ? 'active' : ''}`} onClick={() => setOptions({...options, lastTile: !options.lastTile})}>{isSelfDraw ? '妙手' : '海底'}</button>
@@ -357,69 +383,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
                     )}
                 </div>
             )}
-            <style>{`
-                .guobiao-inline-calculator {
-                    background: #fff; border: 2px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 10px;
-                    box-sizing: border-box; width: 100%; max-width: 100%; overflow: hidden;
-                }
-                .calc-top-row { display: flex; gap: 12px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; flex-wrap: wrap; }
-                .mini-option { display: flex; align-items: center; gap: 4px; }
-                .mini-opt-label { font-size: 0.8rem; font-weight: 700; color: var(--text-light); }
-                .hua-input { width: 45px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
-                
-                .tile-grid-compact { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin-bottom: 12px; }
-                .tile-grid-compact .calc-tile-container { height: auto; width: 100%; padding: 2px; border-radius: 4px; background: white; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-                .calc-tile-container.small { width: 22px; padding: 2px; border-radius: 3px; background: white; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-                .calc-tile { width: 100%; height: auto; display: block; }
-                .calc-tile-container.disabled { opacity: 0.3; filter: grayscale(1); pointer-events: none; }
-                .calc-tile-container.selectable:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
-                
-                .hand-display-area.compact { background: var(--bg); padding: 8px; border-radius: 8px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 48px; border: 1px solid var(--border); }
-                .tiles-row { display: flex; flex-wrap: wrap; gap: 2px; }
-                .meld-box { display: flex; gap: 1px; border: 1px solid var(--border); padding: 1px; border-radius: 4px; background: rgba(0,0,0,0.03); }
-                .win-tile-area { border-left: 2px solid var(--accent); padding-left: 6px; margin-left: 4px; display: flex; align-items: center; }
-                
-                .result-preview-mini { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding: 12px; border-top: 1px solid var(--border); background: rgba(26, 71, 42, 0.03); border-radius: 8px; }
-                .result-preview-mini.error { background: rgba(192, 57, 43, 0.05); border-top-color: rgba(192, 57, 43, 0.2); }
-                .result-main-row { display: flex; align-items: center; gap: 12px; }
-                .fan-list-mini { display: flex; flex-wrap: wrap; gap: 4px; }
-                .ting-row-item .fan-list-mini { max-width: 200px; }
-                .mini-fan-tag { font-size: 0.65rem; font-weight: 600; background: white; border: 1px solid var(--border); padding: 1px 5px; border-radius: 4px; color: var(--primary); white-space: nowrap; }
-                .use-score-btn { flex: 1; padding: 10px; font-size: 0.95rem; font-weight: 700; }
-                
-                .score-badge.small.badge-error { background: var(--danger); }
-                .score-warning-text { color: var(--danger); font-size: 0.85rem; font-weight: 600; text-align: center; padding: 4px; }
 
-                .ting-display-area { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: rgba(212, 160, 23, 0.05); border-radius: 10px; border: 1px solid rgba(212, 160, 23, 0.2); margin-top: 12px; }
-                .ting-header { display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px dashed rgba(212, 160, 23, 0.2); padding-bottom: 6px; }
-                .ting-label { font-size: 0.85rem; font-weight: 800; color: var(--accent); }
-                .ting-list { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-                .ting-row-item { display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s; background: #fff; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); position: relative; }
-                .ting-row-item.invalid { border-color: rgba(192, 57, 43, 0.2); background: rgba(192, 57, 43, 0.02); }
-                .ting-row-item:hover { transform: translateX(4px); border-color: var(--accent); box-shadow: 2px 2px 8px rgba(212, 160, 23, 0.15); }
-                .ting-row-item.invalid:hover { border-color: var(--danger); }
-                .ting-row-left { display: flex; align-items: center; gap: 8px; }
-                .ting-tile-wrap { width: 32px; flex-shrink: 0; }
-                .ting-tile-wrap .calc-tile-container { width: 100%; height: auto; padding: 2px; }
-                .ting-row-status { margin-left: auto; font-size: 0.7rem; font-weight: 700; color: var(--danger); background: rgba(192, 57, 43, 0.1); padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
-                .no-ting-text { font-size: 0.8rem; color: var(--text-light); font-style: italic; }
-                
-                .options-grid.compact { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-                .options-grid.compact .opt-btn { padding: 6px 0; font-size: 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; }
-                .options-grid.compact .opt-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-                
-                .score-badge.small { background: var(--primary); color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
-                .score-badge.small .score-num { font-size: 1.1rem; font-weight: 800; line-height: 1; }
-                .score-badge.small .score-unit { font-size: 0.5rem; }
-                
-                .mode-selector-container { margin-bottom: 10px; }
-                .mode-group { display: flex; flex-wrap: wrap; gap: 3px; }
-                .mode-btn { padding: 4px 8px; font-size: 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; }
-                .mode-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-                
-                .micro-btn { padding: 2px 6px; font-size: 0.7rem; border: 1px solid var(--border); border-radius: 3px; background: #fff; cursor: pointer; }
-                .micro-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-            `}</style>
         </div>
     );
 };
