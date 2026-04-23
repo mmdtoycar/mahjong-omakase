@@ -389,7 +389,7 @@ const CalculatorPage: React.FC = () => {
                             <span className="ting-title">听牌 ({tingResults.length} 张):</span>
                             <div className="ting-tiles">
                                 {tingResults.length > 0 ? (
-                                    tingResults.sort((a: { score: number }, b: { score: number }) => b.score - a.score).map((res: { tile: Tile; score: number; fans: { name: string; score: number; count?: number }[] }, i: number) => (
+                                    [...tingResults].sort((a: { score: number }, b: { score: number }) => b.score - a.score).map((res: { tile: Tile; score: number; fans: { name: string; score: number; count?: number }[] }, i: number) => (
                                         <div key={i} className="ting-tile-item with-fans" onClick={() => addTingedTile(res.tile)}>
                                             <TileComponent tile={res.tile} isSelectable />
                                             <div className="ting-info">

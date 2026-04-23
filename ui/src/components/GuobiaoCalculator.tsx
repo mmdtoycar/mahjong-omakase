@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Tile } from '../logic/guobiao/tiles';
 import { Meld, GameOptions, CalcResult } from '../logic/guobiao/types';
 import { calculateBestScore } from '../logic/guobiao/fan';
@@ -63,7 +63,13 @@ const modes: Mode[] = [
   {
     name: 'chi', label: '吃',
     canUse: (c, m) => (c.length + m.length * 3) <= 11,
-    isDisabled: (c, m, t) => (t.suit === 'z' || t.rank >= 8),
+    isDisabled: (c, m, t) => {
+        if (t.suit === 'z' || t.rank >= 8) return true;
+        const all = [...c, ...m.flatMap(x => x.tiles)];
+        return all.filter(x => x.equals(new Tile(t.suit, t.rank))).length >= 4 ||
+               all.filter(x => x.equals(new Tile(t.suit, t.rank + 1))).length >= 4 ||
+               all.filter(x => x.equals(new Tile(t.suit, t.rank + 2))).length >= 4;
+    },
     add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'shun', tiles: [t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], isOpen: true }] }),
   },
   {
@@ -133,12 +139,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
         setOptions(prev => ({ ...prev, isSelfDraw }));
     }, [isSelfDraw]);
 
-    // Adjusting state during render pattern - resets tiles when parent triggers reset
-    // This is more efficient than useEffect as it avoids an extra render pass.
-    // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-    const [prevResetTrigger, setPrevResetTrigger] = useState(resetTrigger);
-    if (resetTrigger !== prevResetTrigger) {
-        setPrevResetTrigger(resetTrigger);
+    const resetHandState = useCallback(() => {
         setConcealedTiles([]);
         setMelds([]);
         setOptions(prev => ({
@@ -148,6 +149,16 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
             gangShang: false,
             lastTile: false
         }));
+        setMode(modes[0]);
+    }, []);
+
+    // Adjusting state during render pattern - resets tiles when parent triggers reset
+    // This is more efficient than useEffect as it avoids an extra render pass.
+    // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+    const [prevResetTrigger, setPrevResetTrigger] = useState(resetTrigger);
+    if (resetTrigger !== prevResetTrigger) {
+        setPrevResetTrigger(resetTrigger);
+        resetHandState();
     }
 
     const currentCount = concealedTiles.length + melds.length * 3;
@@ -236,7 +247,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
                     onChange={e => setOptions({...options, huaCount: Number(e.target.value)})} 
                     min="0" max="8" 
                   />
-                  <button className="micro-btn" style={{ marginLeft: '4px' }} onClick={() => { setConcealedTiles([]); setMelds([]); }}>重置</button>
+                  <button className="micro-btn" style={{ marginLeft: '4px' }} onClick={resetHandState}>重置</button>
                 </div>
             </div>
 

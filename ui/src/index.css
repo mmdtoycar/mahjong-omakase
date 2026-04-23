@@ -601,13 +601,7 @@ tr:hover td { background: rgba(0,0,0,0.02); }
   margin-top: 2px;
 }
 
-.score-calc-link {
-  margin-left: 8px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--primary);
-  text-decoration: underline;
-}
+
 .score-calc-btn {
   margin-left: 8px;
   font-size: 0.75rem;
