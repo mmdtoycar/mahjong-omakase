@@ -546,8 +546,8 @@ export default function SessionPage() {
                         </button>
                       )}
                     </div>
-                    {isGuobiao && (
-                      <div className="inline-calc-wrapper" style={{ display: isCalcOpen ? 'block' : 'none' }}>
+                    {isGuobiao && isCalcOpen && (
+                      <div className="inline-calc-wrapper">
                         <GuobiaoCalculator 
                           onSelectScore={handleCalcScoreSelect}
                           initialOptions={{
@@ -672,7 +672,10 @@ export default function SessionPage() {
                 <th>名次</th>
                 <th>玩家</th>
                 <th style={{ textAlign: 'right' }}>分数</th>
-                <th style={{ textAlign: 'right' }}>积分(RP)</th>
+                <th style={{ textAlign: 'right' }}>
+                  积分(RP)
+                  <div className="th-subtitle">含局数奖励</div>
+                </th>
               </tr>
             </thead>
             <tbody>

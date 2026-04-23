@@ -149,7 +149,7 @@ export default function StatsPage() {
                     <th style={{ textAlign: 'right' }}>胜场</th>
                     <th style={{ textAlign: 'right' }}>
                       积分(RP)
-                      <div style={{ fontSize: '0.6rem', fontWeight: 400, opacity: 0.7 }}>含局数奖励</div>
+                      <div className="th-subtitle">含局数奖励</div>
                     </th>
                   </tr>
                 </thead>
