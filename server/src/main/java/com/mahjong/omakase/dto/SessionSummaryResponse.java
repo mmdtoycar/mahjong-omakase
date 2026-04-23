@@ -22,7 +22,8 @@ public class SessionSummaryResponse {
     r.playerCount = session.getPlayerCount();
     r.status = session.getStatus().name();
     r.createdAt = session.getCreatedAt();
-    r.participationBonus = session.getParticipationBonus();
+    r.participationBonus =
+        session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
     return r;
   }
 

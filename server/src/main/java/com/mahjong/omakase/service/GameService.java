@@ -212,7 +212,8 @@ public class GameService {
     resp.setRpFactor(session.getGameMode().getRpFactor());
     resp.setRpOrigin(session.getGameMode().getRpOrigin());
     resp.setUmaDist(session.getGameMode().getUmaDist(session.getPlayerCount()));
-    resp.setParticipationBonus(session.getParticipationBonus());
+    resp.setParticipationBonus(
+        session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0);
 
     return resp;
   }
@@ -346,7 +347,9 @@ public class GameService {
       if (!sessionScores.isEmpty()) {
         for (Object[] row : sessionScores) {
           if (row[0] != null) {
-            totalBonusPerPlayer.merge((Long) row[0], session.getParticipationBonus(), Double::sum);
+            double bonus =
+                session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
+            totalBonusPerPlayer.merge((Long) row[0], bonus, Double::sum);
           }
         }
         List<Object[]> sorted = new ArrayList<>(sessionScores);
