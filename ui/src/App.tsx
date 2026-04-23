@@ -24,7 +24,9 @@ function App() {
           <Link to="/stats">统计</Link>
           <Link to="/fan-table">番表</Link>
           <Link to="/calculator">算番器</Link>
-          <Link to="/signup" className="btn-signup">注册</Link>
+          <Link to="/signup" className="btn-signup">
+            注册
+          </Link>
         </nav>
       </header>
       <main>
@@ -40,7 +42,14 @@ function App() {
           <Route path="/calculator" element={<CalculatorPage />} />
           <Route path="/player/:id" element={<PlayerDetailPage />} />
           <Route path="/admin" element={<AdminPage />} />
-          <Route path="*" element={<div className="empty-state"><p>页面不存在</p></div>} />
+          <Route
+            path="*"
+            element={
+              <div className="empty-state">
+                <p>页面不存在</p>
+              </div>
+            }
+          />
         </Routes>
       </main>
     </div>

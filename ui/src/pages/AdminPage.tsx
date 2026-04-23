@@ -92,13 +92,18 @@ export default function AdminPage() {
   }
 
   const handleDelete = async (id: number, userName: string) => {
-    if (!confirm(`Delete ${userName}? This cannot be undone. Game scores will be kept but player will be removed from stats.`)) return
+    if (
+      !confirm(
+        `Delete ${userName}? This cannot be undone. Game scores will be kept but player will be removed from stats.`
+      )
+    )
+      return
     const res = await fetch(`${API}/players/${id}`, {
       method: 'DELETE',
       headers: { 'X-Admin-Password': password },
     })
     if (res.ok) {
-      setPlayers(players.filter(p => p.id !== id))
+      setPlayers(players.filter((p) => p.id !== id))
     } else {
       const data = await res.json().catch(() => ({ message: 'Delete failed' }))
       alert(data.message || 'Delete failed')
@@ -129,7 +134,7 @@ export default function AdminPage() {
     })
     if (res.ok) {
       const updated = await res.json()
-      setPlayers(players.map(p => p.id === id ? updated : p))
+      setPlayers(players.map((p) => (p.id === id ? updated : p)))
       cancelEdit()
     } else {
       const data = await res.json().catch(() => ({ message: 'Update failed' }))
@@ -149,7 +154,7 @@ export default function AdminPage() {
               <input
                 type="password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter admin password"
                 autoFocus
               />
@@ -163,7 +168,12 @@ export default function AdminPage() {
     )
   }
 
-  if (loading) return <div className="empty-state"><p>Loading...</p></div>
+  if (loading)
+    return (
+      <div className="empty-state">
+        <p>Loading...</p>
+      </div>
+    )
 
   return (
     <>
@@ -182,7 +192,7 @@ export default function AdminPage() {
             <input
               type="number"
               value={bonus}
-              onChange={e => setBonus(parseFloat(e.target.value) || 0)}
+              onChange={(e) => setBonus(parseFloat(e.target.value) || 0)}
               step="0.1"
               min="0"
               style={{ width: 120 }}
@@ -194,9 +204,7 @@ export default function AdminPage() {
             >
               {savingSettings ? 'Saving...' : 'Save'}
             </button>
-            {bonus !== savedBonus && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>unsaved</span>
-            )}
+            {bonus !== savedBonus && <span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>unsaved</span>}
           </div>
         </div>
       </div>
@@ -215,7 +223,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {players.map(p => (
+              {players.map((p) => (
                 <tr key={p.id}>
                   <td>{p.id}</td>
                   <td>{p.userName}</td>
@@ -224,21 +232,23 @@ export default function AdminPage() {
                       <div style={{ display: 'flex', gap: 6 }}>
                         <input
                           value={editFirst}
-                          onChange={e => setEditFirst(e.target.value)}
+                          onChange={(e) => setEditFirst(e.target.value)}
                           style={{ width: 80 }}
                           placeholder="First"
                           autoFocus
                         />
                         <input
                           value={editLast}
-                          onChange={e => setEditLast(e.target.value)}
+                          onChange={(e) => setEditLast(e.target.value)}
                           style={{ width: 80 }}
                           placeholder="Last"
-                          onKeyDown={e => e.key === 'Enter' && handleSave(p.id)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSave(p.id)}
                         />
                       </div>
                     ) : (
-                      <>{p.firstName} {p.lastName}</>
+                      <>
+                        {p.firstName} {p.lastName}
+                      </>
                     )}
                   </td>
                   <td>{new Date(p.createdAt).toLocaleDateString()}</td>
@@ -257,10 +267,7 @@ export default function AdminPage() {
                         <button className="btn btn-small btn-outline" onClick={() => startEdit(p)}>
                           Edit
                         </button>
-                        <button
-                          className="btn btn-danger btn-small"
-                          onClick={() => handleDelete(p.id, p.userName)}
-                        >
+                        <button className="btn btn-danger btn-small" onClick={() => handleDelete(p.id, p.userName)}>
                           Delete
                         </button>
                       </div>

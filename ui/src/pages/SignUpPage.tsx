@@ -72,14 +72,24 @@ export default function SignUpPage() {
             <label>用户名</label>
             <input
               value={userName}
-              onChange={e => setUserName(e.target.value)}
+              onChange={(e) => setUserName(e.target.value)}
               placeholder="选择一个唯一的用户名"
               maxLength={16}
               autoFocus
             />
             {userName.trim() && (
-              <span className={`field-hint ${userNameAvailable === true ? 'hint-success' : userNameAvailable === false ? 'hint-error' : ''}`}>
-                {checking ? '检查中...' : userNameAvailable === true ? '可用' : userNameAvailable === false ? '已被占用' : ''}
+              <span
+                className={`field-hint ${
+                  userNameAvailable === true ? 'hint-success' : userNameAvailable === false ? 'hint-error' : ''
+                }`}
+              >
+                {checking
+                  ? '检查中...'
+                  : userNameAvailable === true
+                  ? '可用'
+                  : userNameAvailable === false
+                  ? '已被占用'
+                  : ''}
               </span>
             )}
             {checkError && <span className="field-hint hint-error">{checkError}</span>}
@@ -88,27 +98,15 @@ export default function SignUpPage() {
           <div className="form-row">
             <div className="form-group">
               <label>名</label>
-              <input
-                value={firstName}
-                onChange={e => setFirstName(e.target.value)}
-                placeholder="名"
-              />
+              <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="名" />
             </div>
             <div className="form-group">
               <label>姓</label>
-              <input
-                value={lastName}
-                onChange={e => setLastName(e.target.value)}
-                placeholder="姓"
-              />
+              <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="姓" />
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary signup-btn"
-            disabled={!canSubmit}
-          >
+          <button type="submit" className="btn btn-primary signup-btn" disabled={!canSubmit}>
             {submitting ? '注册中...' : '注册'}
           </button>
         </form>

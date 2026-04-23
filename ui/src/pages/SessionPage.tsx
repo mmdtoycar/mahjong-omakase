@@ -25,14 +25,14 @@ export default function SessionPage() {
   const [calcResetCount, setCalcResetCount] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
- 
+
   const handleCalcScoreSelect = useCallback((s: number | null) => {
     if (s !== null) {
-      setScore(String(s));
+      setScore(String(s))
     } else {
-      setScore('');
+      setScore('')
     }
-  }, []);
+  }, [])
 
   const load = async () => {
     const detail = await fetchSessionDetail(Number(id))
@@ -40,9 +40,16 @@ export default function SessionPage() {
     setError('')
   }
 
-  useEffect(() => { load().catch(e => setError(e.message)) }, [id])
+  useEffect(() => {
+    load().catch((e) => setError(e.message))
+  }, [id])
 
-  if (!session) return <div className="empty-state"><p>{error || '加载中...'}</p></div>
+  if (!session)
+    return (
+      <div className="empty-state">
+        <p>{error || '加载中...'}</p>
+      </div>
+    )
 
   const isRiichi = session.gameMode === 'RIICHI'
   const isDongbei = session.gameMode === 'DONGBEI'
@@ -60,7 +67,7 @@ export default function SessionPage() {
     setTenpaiPlayerIds([])
     setHonba('0')
     setKyoutaku('0')
-    setCalcResetCount(prev => prev + 1)
+    setCalcResetCount((prev) => prev + 1)
   }
 
   const handlePlayerClick = (pid: string) => {
@@ -89,11 +96,14 @@ export default function SessionPage() {
     }
   }
 
-  const canSubmit = winnerId
-    && (isRiichi ? (fan && fu && dealerId)
-      : isDongbei ? (fan && dealerId)
-      : (score && parseInt(score) >= (isGuobiao ? 8 : 1)))
-    && (isSelfDraw || dealInPlayerId)
+  const canSubmit =
+    winnerId &&
+    (isRiichi
+      ? fan && fu && dealerId
+      : isDongbei
+      ? fan && dealerId
+      : score && parseInt(score) >= (isGuobiao ? 8 : 1)) &&
+    (isSelfDraw || dealInPlayerId)
 
   const handleAddRound = async () => {
     setError('')
@@ -119,23 +129,23 @@ export default function SessionPage() {
           kyoutaku: parseInt(kyoutaku) || 0,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
         })
-    } else if (isDongbei) {
-      await addRound(session.id, {
-        winnerId: Number(winnerId),
-        fan: parseInt(fan),
-        dealerId: Number(dealerId),
-        bimenPlayerIds,
-        dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
-      })
-    } else {
-      await addRound(session.id, {
-        winnerId: Number(winnerId),
-        score: parseInt(score),
-        dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
-      })
-    }
-    resetForm()
-    await load()
+      } else if (isDongbei) {
+        await addRound(session.id, {
+          winnerId: Number(winnerId),
+          fan: parseInt(fan),
+          dealerId: Number(dealerId),
+          bimenPlayerIds,
+          dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
+        })
+      } else {
+        await addRound(session.id, {
+          winnerId: Number(winnerId),
+          score: parseInt(score),
+          dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
+        })
+      }
+      resetForm()
+      await load()
     } catch (e: any) {
       setError(e.message || '操作失败')
     } finally {
@@ -176,52 +186,54 @@ export default function SessionPage() {
   )
 
   const rankings = calculateRanks(
-    session.players.map(p => ({ playerId: p.id, score: session.totalScores[p.id] || 0 })),
+    session.players.map((p) => ({ playerId: p.id, score: session.totalScores[p.id] || 0 })),
     { rpFactor: session.rpFactor, rpOrigin: session.rpOrigin, umaDist: session.umaDist }
   )
-  const rankMap = Object.fromEntries(rankings.map(r => [r.playerId, r]))
+  const rankMap = Object.fromEntries(rankings.map((r) => [r.playerId, r]))
 
   const getGuobiaoWinds = () => {
-    if (!isGuobiao) return null;
-    const handIdx = session.rounds.length + 1;
-    const qf = Math.floor((handIdx - 1) / 4) % 4 + 1;
-    const dealerSeat = ((handIdx - 1) % 4) + 1;
-    return { quanfeng: qf, dealerSeat, handIdx };
+    if (!isGuobiao) return null
+    const handIdx = session.rounds.length + 1
+    const qf = (Math.floor((handIdx - 1) / 4) % 4) + 1
+    const dealerSeat = ((handIdx - 1) % 4) + 1
+    return { quanfeng: qf, dealerSeat, handIdx }
   }
-  const gbWinds = getGuobiaoWinds();
+  const gbWinds = getGuobiaoWinds()
 
-  const winnerIndex = session.players.findIndex(p => String(p.id) === winnerId);
-  
+  const winnerIndex = session.players.findIndex((p) => String(p.id) === winnerId)
+
   function getPlayerSeat(p: PlayerInfo, idx?: number) {
-    return p.seat ?? ((idx ?? 0) + 1);
+    return p.seat ?? (idx ?? 0) + 1
   }
 
   function getPlayerMenfeng(playerSeat: number) {
-    if (!gbWinds) return 1;
-    return (playerSeat - gbWinds.dealerSeat + 4) % 4 + 1;
+    if (!gbWinds) return 1
+    return ((playerSeat - gbWinds.dealerSeat + 4) % 4) + 1
   }
 
-  const winnerMenfeng = winnerIndex !== -1 ? getPlayerMenfeng(getPlayerSeat(session.players[winnerIndex], winnerIndex)) : 1;
+  const winnerMenfeng =
+    winnerIndex !== -1 ? getPlayerMenfeng(getPlayerSeat(session.players[winnerIndex], winnerIndex)) : 1
 
-  const getWindName = (w: number) => ['东', '南', '西', '北'][w - 1] + '风';
+  const getWindName = (w: number) => ['东', '南', '西', '北'][w - 1] + '风'
 
   const getRoundWind = (roundNum: number) => {
-    if (!isGuobiao) return null;
-    const qf = Math.floor((roundNum - 1) / 4) % 4 + 1;
-    const hand = ((roundNum - 1) % 4) + 1;
-    return { qf, hand, name: `${['东', '南', '西', '北'][qf - 1]}${hand}` };
+    if (!isGuobiao) return null
+    const qf = (Math.floor((roundNum - 1) / 4) % 4) + 1
+    const hand = ((roundNum - 1) % 4) + 1
+    return { qf, hand, name: `${['东', '南', '西', '北'][qf - 1]}${hand}` }
   }
 
   const playerColPct = `${Math.floor(90 / session.players.length)}%`
   const playerColStyle = { textAlign: 'center' as const, width: playerColPct, minWidth: 80 }
 
-  const otherPlayers = session.players.filter(p => p.id !== Number(winnerId))
+  const otherPlayers = session.players.filter((p) => p.id !== Number(winnerId))
   const winnerIsDealer = winnerId && dealerId && winnerId === dealerId
 
   const getScorePreview = (): string | null => {
     if (isRiichi) {
       if (!fan || !fu || !dealerId) return null
-      const h = parseInt(fan), f = parseInt(fu)
+      const h = parseInt(fan),
+        f = parseInt(fu)
       let basic: number
       if (h >= 13) basic = 8000
       else if (h >= 11) basic = 6000
@@ -240,18 +252,24 @@ export default function SessionPage() {
           const each = r100(basic * 2) + honbaBonus
           const numOthers = session.playerCount - 1
           const winnerTotal = each * numOthers + kyoutakuNum
-          return `自摸 (亲家): ${numOthers}人各付${each}${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${kyoutakuNum > 0 ? ` +供托${kyoutakuNum}` : ''} → 共+${winnerTotal}`
+          return `自摸 (亲家): ${numOthers}人各付${each}${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
+            kyoutakuNum > 0 ? ` +供托${kyoutakuNum}` : ''
+          } → 共+${winnerTotal}`
         } else {
           const dealerPays = r100(basic * 2) + honbaBonus
           const otherPays = r100(basic) + honbaBonus
           const numNonDealers = session.playerCount - 2
           const total = dealerPays + numNonDealers * otherPays + kyoutakuNum
-          return `自摸: 亲家付${dealerPays}, ${numNonDealers > 0 ? `其他各付${otherPays}, ` : ''}${honbaNum > 0 ? `(含${honbaNum}本场) ` : ''}${kyoutakuNum > 0 ? `+供托${kyoutakuNum} ` : ''}共+${total}`
+          return `自摸: 亲家付${dealerPays}, ${numNonDealers > 0 ? `其他各付${otherPays}, ` : ''}${
+            honbaNum > 0 ? `(含${honbaNum}本场) ` : ''
+          }${kyoutakuNum > 0 ? `+供托${kyoutakuNum} ` : ''}共+${total}`
         }
       } else {
         const base = (winnerIsDealer ? r100(basic * 6) : r100(basic * 4)) + 300 * honbaNum
         const total = base + kyoutakuNum
-        return `荣和${winnerIsDealer ? ' (亲家)' : ''}: ${base}点${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${kyoutakuNum > 0 ? ` +供托${kyoutakuNum}` : ''} → 共+${total}`
+        return `荣和${winnerIsDealer ? ' (亲家)' : ''}: ${base}点${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
+          kyoutakuNum > 0 ? ` +供托${kyoutakuNum}` : ''
+        } → 共+${total}`
       }
     }
 
@@ -259,8 +277,8 @@ export default function SessionPage() {
       if (!fan || !dealerId || !winnerId) return null
       const fanNum = parseInt(fan)
       const bimenSet = new Set(bimenPlayerIds)
-      const opponents = session.players.filter(p => p.id !== Number(winnerId))
-      const allBimen = opponents.length > 0 && opponents.every(p => bimenSet.has(p.id))
+      const opponents = session.players.filter((p) => p.id !== Number(winnerId))
+      const allBimen = opponents.length > 0 && opponents.every((p) => bimenSet.has(p.id))
 
       const parts: string[] = []
       let total = 0
@@ -271,8 +289,8 @@ export default function SessionPage() {
         const pays = isDealIn || isSelfDraw || isBimen
         if (!pays) continue
 
-        const zhuangjiaFlag = (winnerIsDealer || isOpponentDealer) ? 1 : 0
-        const dianpaoFlag = (isDealIn || isSelfDraw) ? 1 : 0
+        const zhuangjiaFlag = winnerIsDealer || isOpponentDealer ? 1 : 0
+        const dianpaoFlag = isDealIn || isSelfDraw ? 1 : 0
         const bimenFlag = isBimen ? 1 : 0
         const sanjiaBimenFlag = allBimen ? 1 : 0
         const exponent = Math.min(fanNum + zhuangjiaFlag + dianpaoFlag + bimenFlag + sanjiaBimenFlag, 6)
@@ -300,7 +318,7 @@ export default function SessionPage() {
         return `自摸: ${numOthers}人各付${s + 8} → 共+${(s + 8) * numOthers}`
       } else {
         if (!dealInPlayerId) return null
-        const dealInName = session.players.find(p => p.id === Number(dealInPlayerId))?.userName
+        const dealInName = session.players.find((p) => p.id === Number(dealInPlayerId))?.userName
         const numOthers = session.playerCount - 2
         const dealInPays = s + 8
         const otherPay = 8
@@ -321,7 +339,8 @@ export default function SessionPage() {
           <div>
             <h2>{session.name || `Game #${session.id}`}</h2>
             <span className="session-meta">
-              {session.gameModeDisplayName} &middot; {session.playerCount}玩家 &middot; {new Date(session.createdAt).toLocaleDateString()}
+              {session.gameModeDisplayName} &middot; {session.playerCount}玩家 &middot;{' '}
+              {new Date(session.createdAt).toLocaleDateString()}
               &nbsp;
               <span className={`badge ${session.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
                 {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
@@ -343,11 +362,13 @@ export default function SessionPage() {
             <thead>
               <tr>
                 <th>局</th>
-                {session.players.map(p => (
+                {session.players.map((p) => (
                   <th key={p.id} style={playerColStyle}>
                     <div className="player-header-cell">
                       <span className="player-rank">#{rankMap[p.id]?.rank}</span>
-                      <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>{p.userName}</span>
+                      <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
+                        {p.userName}
+                      </span>
                     </div>
                   </th>
                 ))}
@@ -355,8 +376,8 @@ export default function SessionPage() {
               </tr>
             </thead>
             <tbody>
-              {session.rounds.map(round => {
-                const rw = getRoundWind(round.roundNumber);
+              {session.rounds.map((round) => {
+                const rw = getRoundWind(round.roundNumber)
                 return (
                   <tr key={round.roundNumber}>
                     <td>
@@ -365,37 +386,53 @@ export default function SessionPage() {
                         {rw && <span className="round-wind-tag">{rw.name}</span>}
                       </div>
                     </td>
-                  {session.players.map(p => {
-                    const val = round.scores[p.id] ?? 0
-                    return (
-                      <td key={p.id} className={`score-cell${val > 0 ? ' score-positive' : val < 0 ? ' score-negative' : ''}`} style={{ textAlign: 'center' }}>
-                        {val > 0 ? `+${val}` : val}
+                    {session.players.map((p) => {
+                      const val = round.scores[p.id] ?? 0
+                      return (
+                        <td
+                          key={p.id}
+                          className={`score-cell${val > 0 ? ' score-positive' : val < 0 ? ' score-negative' : ''}`}
+                          style={{ textAlign: 'center' }}
+                        >
+                          {val > 0 ? `+${val}` : val}
+                        </td>
+                      )
+                    })}
+                    {session.status === 'IN_PROGRESS' && (
+                      <td>
+                        <button
+                          className="delete-btn"
+                          onClick={() => handleDeleteRound(round.roundNumber)}
+                          disabled={submitting}
+                        >
+                          &times;
+                        </button>
                       </td>
-                    )
-                  })}
-                  {session.status === 'IN_PROGRESS' && (
-                    <td>
-                      <button className="delete-btn" onClick={() => handleDeleteRound(round.roundNumber)} disabled={submitting}>
-                        &times;
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              )})}
+                    )}
+                  </tr>
+                )
+              })}
               <tr className="total-row">
-                <td style={{ whiteSpace: 'nowrap' }}><strong>合计</strong></td>
-                {session.players.map(p => {
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <strong>合计</strong>
+                </td>
+                {session.players.map((p) => {
                   const delta = session.totalScores[p.id] || 0
                   const total = session.rpOrigin + delta
                   const displayVal = session.rpOrigin ? total : delta
                   return (
-                    <td key={p.id} className={`score-cell${delta > 0 ? ' score-positive' : delta < 0 ? ' score-negative' : ''}`} style={{ textAlign: 'center' }}>
+                    <td
+                      key={p.id}
+                      className={`score-cell${delta > 0 ? ' score-positive' : delta < 0 ? ' score-negative' : ''}`}
+                      style={{ textAlign: 'center' }}
+                    >
                       <div className="total-score-box">
                         <div className="total-val">{displayVal}</div>
-                        {session.rounds.length > 0 && (() => {
-                          const rp = rankMap[p.id]?.rp ?? 0
-                          return <div className="rp-val">{rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)} RP</div>
-                        })()}
+                        {session.rounds.length > 0 &&
+                          (() => {
+                            const rp = rankMap[p.id]?.rp ?? 0
+                            return <div className="rp-val">{rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)} RP</div>
+                          })()}
                       </div>
                     </td>
                   )
@@ -416,7 +453,10 @@ export default function SessionPage() {
                   <input
                     type="checkbox"
                     checked={isRyuukyoku}
-                    onChange={e => { resetForm(); setIsRyuukyoku(e.target.checked) }}
+                    onChange={(e) => {
+                      resetForm()
+                      setIsRyuukyoku(e.target.checked)
+                    }}
                   />
                   <span>流局</span>
                 </label>
@@ -428,13 +468,15 @@ export default function SessionPage() {
                 <div className="form-group">
                   <label>选择听牌玩家</label>
                   <div className="player-chips">
-                    {session.players.map(p => (
+                    {session.players.map((p) => (
                       <span
                         key={p.id}
                         className={`chip ${tenpaiPlayerIds.includes(p.id) ? 'selected' : ''}`}
-                        onClick={() => setTenpaiPlayerIds(prev =>
-                          prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
-                        )}
+                        onClick={() =>
+                          setTenpaiPlayerIds((prev) =>
+                            prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
+                          )
+                        }
                         style={{ cursor: 'pointer' }}
                       >
                         {p.userName}
@@ -445,7 +487,11 @@ export default function SessionPage() {
                   <span className="field-hint">
                     {tenpaiPlayerIds.length === 0 || tenpaiPlayerIds.length === session.players.length
                       ? '全员听牌或全员未听 → 无点数变动'
-                      : `${tenpaiPlayerIds.length}人听牌, ${session.players.length - tenpaiPlayerIds.length}人未听 → 未听各付${3000 / (session.players.length - tenpaiPlayerIds.length)}, 听牌各得${3000 / tenpaiPlayerIds.length}`}
+                      : `${tenpaiPlayerIds.length}人听牌, ${
+                          session.players.length - tenpaiPlayerIds.length
+                        }人未听 → 未听各付${3000 / (session.players.length - tenpaiPlayerIds.length)}, 听牌各得${
+                          3000 / tenpaiPlayerIds.length
+                        }`}
                   </span>
                 </div>
                 <button className="btn btn-primary" onClick={handleAddRound} disabled={submitting}>
@@ -453,194 +499,218 @@ export default function SessionPage() {
                 </button>
               </>
             ) : (
-            <>
+              <>
+                {isRiichi ? (
+                  <div className="round-form-grid">
+                    <div className="form-group">
+                      <label>亲家</label>
+                      <select value={dealerId} onChange={(e) => setDealerId(e.target.value)}>
+                        <option value=""></option>
+                        {session.players.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.userName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>本场</label>
+                      <input
+                        type="number"
+                        value={honba}
+                        onChange={(e) => setHonba(e.target.value)}
+                        min="0"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>
+                        番
+                        <a
+                          href="https://linlexiao.com/maj/#/calculator"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="score-calc-link"
+                        >
+                          计算器
+                        </a>
+                      </label>
+                      <select value={fan} onChange={(e) => setFan(e.target.value)}>
+                        <option value=""></option>
+                        {FAN_OPTIONS.map((f) => (
+                          <option key={f} value={f}>
+                            {f}
+                            {f >= 5
+                              ? f >= 13
+                                ? ' (役満)'
+                                : f >= 11
+                                ? ' (三倍満)'
+                                : f >= 8
+                                ? ' (倍満)'
+                                : f >= 6
+                                ? ' (跳満)'
+                                : ' (満貫)'
+                              : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>符数</label>
+                      <select value={fu} onChange={(e) => setFu(e.target.value)}>
+                        <option value=""></option>
+                        {FU_OPTIONS.map((f) => (
+                          <option key={f} value={f}>
+                            {f}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>供托</label>
+                      <input
+                        type="number"
+                        value={kyoutaku}
+                        onChange={(e) => setKyoutaku(e.target.value)}
+                        min="0"
+                        step="1000"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                ) : null}
 
-            {isRiichi ? (
-              <div className="round-form-grid">
-                <div className="form-group">
-                  <label>亲家</label>
-                  <select value={dealerId} onChange={e => setDealerId(e.target.value)}>
-                    <option value=""></option>
-                    {session.players.map(p => (
-                      <option key={p.id} value={p.id}>{p.userName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>本场</label>
-                  <input
-                    type="number"
-                    value={honba}
-                    onChange={e => setHonba(e.target.value)}
-                    min="0"
-                    placeholder="0"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>
-                    番
-                    <a href="https://linlexiao.com/maj/#/calculator" target="_blank" rel="noopener noreferrer" className="score-calc-link">计算器</a>
-                  </label>
-                  <select value={fan} onChange={e => setFan(e.target.value)}>
-                    <option value=""></option>
-                    {FAN_OPTIONS.map(f => (
-                      <option key={f} value={f}>{f}{f >= 5 ? (f >= 13 ? ' (役満)' : f >= 11 ? ' (三倍満)' : f >= 8 ? ' (倍満)' : f >= 6 ? ' (跳満)' : ' (満貫)') : ''}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>符数</label>
-                  <select value={fu} onChange={e => setFu(e.target.value)}>
-                    <option value=""></option>
-                    {FU_OPTIONS.map(f => (
-                      <option key={f} value={f}>{f}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>供托</label>
-                  <input
-                    type="number"
-                    value={kyoutaku}
-                    onChange={e => setKyoutaku(e.target.value)}
-                    min="0"
-                    step="1000"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-            ) : null}
-            
-            {isDongbei && (
-              <div className="round-form-grid">
-                <div className="form-group">
-                  <label>庄家</label>
-                  <select value={dealerId} onChange={e => setDealerId(e.target.value)}>
-                    <option value=""></option>
-                    {session.players.map(p => (
-                      <option key={p.id} value={p.id}>{p.userName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>番</label>
-                  <input
-                    type="number"
-                    value={fan}
-                    onChange={e => setFan(e.target.value)}
-                    placeholder="输入番"
-                    min="0"
-                  />
-                </div>
-              </div>
-            )}
-            
-            {!isRiichi && isGuobiao && (
-              <div className="form-group">
-                <label>
-                  分数 
-                  {gbWinds && (
-                    <span className="gb-wind-info">
-                      ({getWindName(gbWinds.quanfeng)} 第{((gbWinds.handIdx - 1) % 4) + 1}局)
-                    </span>
-                  )}
-                </label>
-                <div className="score-input-row">
-                  <input
-                    type="number"
-                    value={score}
-                    onChange={e => setScore(e.target.value)}
-                    placeholder="输入分数"
-                    min="8"
-                  />
-                  <button className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`} onClick={() => setIsCalcOpen(prev => !prev)}>
-                    {isCalcOpen ? '收起算番' : '算番器'}
-                  </button>
-                </div>
-                {isCalcOpen && (
-                  <div className="inline-calc-wrapper">
-                    <GuobiaoCalculator 
-                      onSelectScore={handleCalcScoreSelect}
-                      initialOptions={{
-                        quanfeng: gbWinds?.quanfeng || 1,
-                        menfeng: winnerMenfeng
-                      }}
-                      resetTrigger={calcResetCount}
-                      isSelfDraw={isSelfDraw}
-                      onIsSelfDrawChange={setIsSelfDraw}
-                      onClose={() => setIsCalcOpen(false)}
-                    />
+                {isDongbei && (
+                  <div className="round-form-grid">
+                    <div className="form-group">
+                      <label>庄家</label>
+                      <select value={dealerId} onChange={(e) => setDealerId(e.target.value)}>
+                        <option value=""></option>
+                        {session.players.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.userName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>番</label>
+                      <input
+                        type="number"
+                        value={fan}
+                        onChange={(e) => setFan(e.target.value)}
+                        placeholder="输入番"
+                        min="0"
+                      />
+                    </div>
                   </div>
                 )}
-              </div>
-            )}
 
-            <div className="form-group full-width">
-              <label>胜负选择</label>
-              <div className="quick-win-row">
-                {session.players.map((p, idx) => {
-                  const isWinner = winnerId === String(p.id)
-                  const isLoser = dealInPlayerId === String(p.id)
-                  let btnClass = 'quick-player-btn'
-                  if (isWinner) btnClass += ' winner'
-                  if (isLoser) btnClass += ' loser'
-                  
-                  return (
+                {!isRiichi && isGuobiao && (
+                  <div className="form-group">
+                    <label>
+                      分数
+                      {gbWinds && (
+                        <span className="gb-wind-info">
+                          ({getWindName(gbWinds.quanfeng)} 第{((gbWinds.handIdx - 1) % 4) + 1}局)
+                        </span>
+                      )}
+                    </label>
+                    <div className="score-input-row">
+                      <input
+                        type="number"
+                        value={score}
+                        onChange={(e) => setScore(e.target.value)}
+                        placeholder="输入分数"
+                        min="8"
+                      />
+                      <button
+                        className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`}
+                        onClick={() => setIsCalcOpen((prev) => !prev)}
+                      >
+                        {isCalcOpen ? '收起算番' : '算番器'}
+                      </button>
+                    </div>
+                    {isCalcOpen && (
+                      <div className="inline-calc-wrapper">
+                        <GuobiaoCalculator
+                          onSelectScore={handleCalcScoreSelect}
+                          initialOptions={{
+                            quanfeng: gbWinds?.quanfeng || 1,
+                            menfeng: winnerMenfeng,
+                          }}
+                          resetTrigger={calcResetCount}
+                          isSelfDraw={isSelfDraw}
+                          onIsSelfDrawChange={setIsSelfDraw}
+                          onClose={() => setIsCalcOpen(false)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="form-group full-width">
+                  <label>胜负选择</label>
+                  <div className="quick-win-row">
+                    {session.players.map((p, idx) => {
+                      const isWinner = winnerId === String(p.id)
+                      const isLoser = dealInPlayerId === String(p.id)
+                      let btnClass = 'quick-player-btn'
+                      if (isWinner) btnClass += ' winner'
+                      if (isLoser) btnClass += ' loser'
+
+                      return (
+                        <button key={p.id} className={btnClass} onClick={() => handlePlayerClick(String(p.id))}>
+                          <div className="btn-name">{p.userName}</div>
+                          {isGuobiao && (
+                            <div className="btn-wind">
+                              {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, idx)) - 1]}
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
                     <button
-                      key={p.id}
-                      className={btnClass}
-                      onClick={() => handlePlayerClick(String(p.id))}
+                      className={`quick-player-btn win-type-btn ${isSelfDraw ? 'zimo' : 'dianpao'}`}
+                      onClick={handleWinTypeToggle}
+                      disabled={!winnerId}
                     >
-                      <div className="btn-name">{p.userName}</div>
-                      {isGuobiao && (
-                        <div className="btn-wind">
-                          {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, idx)) - 1]}
-                        </div>
-                      )}
+                      {isSelfDraw ? '自摸' : '点炮'}
                     </button>
-                  )
-                })}
-                <button
-                  className={`quick-player-btn win-type-btn ${isSelfDraw ? 'zimo' : 'dianpao'}`}
-                  onClick={handleWinTypeToggle}
-                  disabled={!winnerId}
-                >
-                  {isSelfDraw ? '自摸' : '点炮'}
-                </button>
-              </div>
-            </div>
-
-            {isDongbei && winnerId && (
-              <div className="form-group">
-                <label>闭门</label>
-                <div className="player-chips">
-                  {otherPlayers.map(p => (
-                    <span
-                      key={p.id}
-                      className={`chip ${bimenPlayerIds.includes(p.id) ? 'selected' : ''}`}
-                      onClick={() => setBimenPlayerIds(prev =>
-                        prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
-                      )}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {p.userName}
-                      {bimenPlayerIds.includes(p.id) && ' ✓'}
-                    </span>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {preview && (
-              <div className="score-preview">{preview}</div>
-            )}
+                {isDongbei && winnerId && (
+                  <div className="form-group">
+                    <label>闭门</label>
+                    <div className="player-chips">
+                      {otherPlayers.map((p) => (
+                        <span
+                          key={p.id}
+                          className={`chip ${bimenPlayerIds.includes(p.id) ? 'selected' : ''}`}
+                          onClick={() =>
+                            setBimenPlayerIds((prev) =>
+                              prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
+                            )
+                          }
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {p.userName}
+                          {bimenPlayerIds.includes(p.id) && ' ✓'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', margin: '8px 0' }}>{error}</p>}
+                {preview && <div className="score-preview">{preview}</div>}
 
-            <button className="btn btn-primary" onClick={handleAddRound} disabled={!canSubmit || submitting}>
-              {submitting ? '提交中...' : '添加'}
-            </button>
-            </>
+                {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', margin: '8px 0' }}>{error}</p>}
+
+                <button className="btn btn-primary" onClick={handleAddRound} disabled={!canSubmit || submitting}>
+                  {submitting ? '提交中...' : '添加'}
+                </button>
+              </>
             )}
           </div>
         )}
@@ -650,48 +720,50 @@ export default function SessionPage() {
         <div className="card">
           <h2>排名</h2>
           <div className="score-table">
-          <table>
-            <thead>
-              <tr>
-                <th>名次</th>
-                <th>玩家</th>
-                <th style={{ textAlign: 'right' }}>分数</th>
-                <th style={{ textAlign: 'right' }}>
-                  积分(RP)
-                  <div className="th-subtitle">含局数奖励</div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedPlayers.map((p, i) => {
-                const val = session.totalScores[p.id] || 0
-                const rp = rankMap[p.id]?.rp ?? 0
-                return (
-                  <tr key={p.id}>
-                    <td className={i < 3 ? `rank-${i + 1}` : ''}>
-                      #{i + 1}
-                    </td>
-                    <td>{p.userName}</td>
-                    <td style={{
-                      textAlign: 'right',
-                      fontVariantNumeric: 'tabular-nums',
-                      color: val > 0 ? 'var(--success)' : val < 0 ? 'var(--danger)' : undefined
-                    }}>
-                      {val > 0 ? `+${val}` : val}
-                    </td>
-                    <td style={{
-                      textAlign: 'right',
-                      fontVariantNumeric: 'tabular-nums',
-                      fontWeight: 'bold',
-                      color: 'var(--primary)'
-                    }}>
-                      {rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+            <table>
+              <thead>
+                <tr>
+                  <th>名次</th>
+                  <th>玩家</th>
+                  <th style={{ textAlign: 'right' }}>分数</th>
+                  <th style={{ textAlign: 'right' }}>
+                    积分(RP)
+                    <div className="th-subtitle">含局数奖励</div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedPlayers.map((p, i) => {
+                  const val = session.totalScores[p.id] || 0
+                  const rp = rankMap[p.id]?.rp ?? 0
+                  return (
+                    <tr key={p.id}>
+                      <td className={i < 3 ? `rank-${i + 1}` : ''}>#{i + 1}</td>
+                      <td>{p.userName}</td>
+                      <td
+                        style={{
+                          textAlign: 'right',
+                          fontVariantNumeric: 'tabular-nums',
+                          color: val > 0 ? 'var(--success)' : val < 0 ? 'var(--danger)' : undefined,
+                        }}
+                      >
+                        {val > 0 ? `+${val}` : val}
+                      </td>
+                      <td
+                        style={{
+                          textAlign: 'right',
+                          fontVariantNumeric: 'tabular-nums',
+                          fontWeight: 'bold',
+                          color: 'var(--primary)',
+                        }}
+                      >
+                        {rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

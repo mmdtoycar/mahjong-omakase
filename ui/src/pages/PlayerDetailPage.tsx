@@ -16,12 +16,28 @@ export default function PlayerDetailPage() {
     setError('')
     setLoading(true)
     fetchPlayerDetail(Number(id))
-      .then(p => { setPlayer(p); setLoading(false) })
-      .catch(e => { setError(e.message); setLoading(false) })
+      .then((p) => {
+        setPlayer(p)
+        setLoading(false)
+      })
+      .catch((e) => {
+        setError(e.message)
+        setLoading(false)
+      })
   }, [id])
 
-  if (loading) return <div className="empty-state"><p>加载中...</p></div>
-  if (error || !player) return <div className="empty-state"><p>{error || '玩家不存在'}</p></div>
+  if (loading)
+    return (
+      <div className="empty-state">
+        <p>加载中...</p>
+      </div>
+    )
+  if (error || !player)
+    return (
+      <div className="empty-state">
+        <p>{error || '玩家不存在'}</p>
+      </div>
+    )
 
   return (
     <>
@@ -49,7 +65,7 @@ export default function PlayerDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {player.games.map(g => (
+                {player.games.map((g) => (
                   <tr
                     key={g.sessionId}
                     onClick={() => navigate(`/session/${g.sessionId}`)}
@@ -63,11 +79,13 @@ export default function PlayerDetailPage() {
                         {g.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
                       </span>
                     </td>
-                    <td style={{
-                      textAlign: 'right',
-                      fontVariantNumeric: 'tabular-nums',
-                      color: g.totalScore > 0 ? 'var(--success)' : g.totalScore < 0 ? 'var(--danger)' : undefined
-                    }}>
+                    <td
+                      style={{
+                        textAlign: 'right',
+                        fontVariantNumeric: 'tabular-nums',
+                        color: g.totalScore > 0 ? 'var(--success)' : g.totalScore < 0 ? 'var(--danger)' : undefined,
+                      }}
+                    >
                       {g.totalScore > 0 ? `+${g.totalScore}` : g.totalScore}
                     </td>
                   </tr>
