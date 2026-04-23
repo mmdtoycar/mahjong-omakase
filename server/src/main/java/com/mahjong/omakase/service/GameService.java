@@ -346,8 +346,7 @@ public class GameService {
       if (!sessionScores.isEmpty()) {
         for (Object[] row : sessionScores) {
           if (row[0] != null) {
-            totalBonusPerPlayer.merge(
-                (Long) row[0], session.getParticipationBonus(), Double::sum);
+            totalBonusPerPlayer.merge((Long) row[0], session.getParticipationBonus(), Double::sum);
           }
         }
         List<Object[]> sorted = new ArrayList<>(sessionScores);
