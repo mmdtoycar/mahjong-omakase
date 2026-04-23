@@ -142,6 +142,7 @@ public class GameService {
     session.setName(request.getName());
     session.setGameMode(GameMode.valueOf(request.getGameMode()));
     session.setPlayerCount(players.size());
+    session.setParticipationBonus(this.participationBonus);
     session = sessionRepo.save(session);
 
     for (Player player : players) {
@@ -211,6 +212,7 @@ public class GameService {
     resp.setRpFactor(session.getGameMode().getRpFactor());
     resp.setRpOrigin(session.getGameMode().getRpOrigin());
     resp.setUmaDist(session.getGameMode().getUmaDist(session.getPlayerCount()));
+    resp.setParticipationBonus(session.getParticipationBonus());
 
     return resp;
   }
@@ -329,6 +331,7 @@ public class GameService {
 
     Map<Long, Integer> wins = new HashMap<>();
     Map<Long, Double> totalRP = new HashMap<>();
+    Map<Long, Double> totalBonusPerPlayer = new HashMap<>();
     List<GameSession> completedSessions =
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
@@ -341,6 +344,12 @@ public class GameService {
     for (GameSession session : completedSessions) {
       List<Object[]> sessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
       if (!sessionScores.isEmpty()) {
+        for (Object[] row : sessionScores) {
+          if (row[0] != null) {
+            totalBonusPerPlayer.merge(
+                (Long) row[0], session.getParticipationBonus(), Double::sum);
+          }
+        }
         List<Object[]> sorted = new ArrayList<>(sessionScores);
         sorted.sort((a, b) -> ((Number) b[1]).intValue() - ((Number) a[1]).intValue());
 
@@ -390,7 +399,8 @@ public class GameService {
               stat.setTotalScore(totalScores.getOrDefault(p.getId(), 0));
               stat.setWins(wins.getOrDefault(p.getId(), 0));
               double baseRP = totalRP.getOrDefault(p.getId(), 0.0);
-              double totalRPVal = baseRP + (stat.getGamesPlayed() * participationBonus);
+              double bonusRP = totalBonusPerPlayer.getOrDefault(p.getId(), 0.0);
+              double totalRPVal = baseRP + bonusRP;
               stat.setTotalRP(totalRPVal);
               int games = gamesPlayed.getOrDefault(p.getId(), 0);
               stat.setAvgScore(games > 0 ? totalRPVal / games : 0);

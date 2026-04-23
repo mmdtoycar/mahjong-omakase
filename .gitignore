@@ -25,4 +25,3 @@ ui/dist/
 .DS_Store
 .gemini/
 bin/
-frontend/
