@@ -68,13 +68,11 @@ jobs:
             docker run --rm \
               --entrypoint sh \
               -v mahjong-data:/app/data \
-              -e DB_USER="${{ secrets.DB_USERNAME }}" \
-              -e DB_PASS="${{ secrets.DB_PASSWORD }}" \
               "$IMAGE:latest" \
               -c 'java -cp /app/app.jar \
                 -Dloader.main=org.h2.tools.Shell \
                 org.springframework.boot.loader.launch.PropertiesLauncher \
-                -url "jdbc:h2:file:/app/data/mahjong-omakase" -user "$DB_USER" -password "$DB_PASS" \
+                -url "jdbc:h2:file:/app/data/mahjong-omakase" -user sa -password "" \
                 -sql "ALTER TABLE GAME_SESSIONS ALTER COLUMN PARTICIPATION_BONUS SET DEFAULT 0; ALTER TABLE GAME_SESSIONS ALTER COLUMN PARTICIPATION_BONUS SET NULL; UPDATE GAME_SESSIONS SET PARTICIPATION_BONUS = 5.0 WHERE PARTICIPATION_BONUS = 0 OR PARTICIPATION_BONUS IS NULL;"'
 
             docker run -d \
