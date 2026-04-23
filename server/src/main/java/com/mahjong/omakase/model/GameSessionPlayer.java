@@ -21,7 +21,7 @@ public class GameSessionPlayer {
   @JoinColumn(name = "player_id")
   private Player player;
 
-  @Column(name = "seat", nullable = false)
+  @Column(name = "seat")
   private Integer seat;
 
   public Long getId() {
