@@ -24,7 +24,7 @@ public class GameService {
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
   private final AppSettingRepository appSettingRepo;
   private final Map<GameMode, GameModeHandler> handlers;
-  private double participationBonus;
+  private volatile double participationBonus;
 
   public GameService(
       PlayerRepository playerRepo,
