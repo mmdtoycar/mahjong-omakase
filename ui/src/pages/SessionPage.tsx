@@ -601,10 +601,10 @@ export default function SessionPage() {
                     </button>
                   )
                 })}
-                <button 
+                <button
                   className={`quick-player-btn win-type-btn ${isSelfDraw ? 'zimo' : 'dianpao'}`}
                   onClick={handleWinTypeToggle}
-                  disabled={!isSelfDraw && !dealInPlayerId}
+                  disabled={isSelfDraw && !dealInPlayerId}
                 >
                   {isSelfDraw ? '自摸' : '点炮'}
                 </button>
