@@ -64,7 +64,7 @@ jobs:
             docker stop mahjong 2>/dev/null || true
             docker rm mahjong 2>/dev/null || true
 
-            # One-time backfill: set participationBonus for existing sessions
+            # One-time fix: repair NOT NULL constraint and backfill participationBonus
             docker run --rm \
               -v mahjong-data:/app/data \
               -e DB_USER="${{ secrets.DB_USERNAME }}" \
@@ -74,7 +74,7 @@ jobs:
                 -Dloader.main=org.h2.tools.Shell \
                 org.springframework.boot.loader.launch.PropertiesLauncher \
                 -url "jdbc:h2:file:/app/data/mahjong-omakase" -user "$DB_USER" -password "$DB_PASS" \
-                -sql "UPDATE GAME_SESSIONS SET PARTICIPATION_BONUS = 5.0 WHERE PARTICIPATION_BONUS = 0;"'
+                -sql "ALTER TABLE GAME_SESSIONS ALTER COLUMN PARTICIPATION_BONUS SET DEFAULT 0; ALTER TABLE GAME_SESSIONS ALTER COLUMN PARTICIPATION_BONUS SET NULL; UPDATE GAME_SESSIONS SET PARTICIPATION_BONUS = 5.0 WHERE PARTICIPATION_BONUS = 0 OR PARTICIPATION_BONUS IS NULL;"'
 
             docker run -d \
               --name mahjong \
