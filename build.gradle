@@ -66,6 +66,12 @@ tasks.register('npmBuild', NpmTask) {
   outputs.dir("${uiDir}/dist")
 }
 
+tasks.register('npmTest', NpmTask) {
+  dependsOn npmInstall
+  workingDir = file(uiDir)
+  args = ['run', 'test:run']
+}
+
 tasks.register('copyUI', Copy) {
   dependsOn npmBuild
   from "${uiDir}/dist"

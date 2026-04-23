@@ -18,6 +18,7 @@ public class SessionDetailResponse {
   private double rpFactor;
   private double rpOrigin;
   private double[] umaDist;
+  private Double participationBonus;
 
   public static class PlayerInfo {
     private Long id;
@@ -179,5 +180,13 @@ public class SessionDetailResponse {
 
   public void setUmaDist(double[] umaDist) {
     this.umaDist = umaDist;
+  }
+
+  public Double getParticipationBonus() {
+    return participationBonus;
+  }
+
+  public void setParticipationBonus(Double participationBonus) {
+    this.participationBonus = participationBonus;
   }
 }
