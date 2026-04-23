@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, FAN_OPTIONS, FU_OPTIONS } from '../types'
 import { calculateRanks } from '../logic/ranking'
+import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { nameFontSize } from '../utils/fontSize'
 
 export default function SessionPage() {
@@ -20,8 +21,18 @@ export default function SessionPage() {
   const [bimenPlayerIds, setBimenPlayerIds] = useState<number[]>([])
   const [isRyuukyoku, setIsRyuukyoku] = useState(false)
   const [tenpaiPlayerIds, setTenpaiPlayerIds] = useState<number[]>([])
+  const [isCalcOpen, setIsCalcOpen] = useState(false)
+  const [calcResetCount, setCalcResetCount] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+ 
+  const handleCalcScoreSelect = useCallback((s: number | null) => {
+    if (s !== null) {
+      setScore(String(s));
+    } else {
+      setScore('');
+    }
+  }, []);
 
   const load = async () => {
     const detail = await fetchSessionDetail(Number(id))
@@ -47,6 +58,9 @@ export default function SessionPage() {
     setDealInPlayerId('')
     setIsRyuukyoku(false)
     setTenpaiPlayerIds([])
+    setHonba('0')
+    setKyoutaku('0')
+    setCalcResetCount(prev => prev + 1)
   }
 
   const canSubmit = winnerId
@@ -486,11 +500,26 @@ export default function SessionPage() {
                         min={isGuobiao ? "8" : "1"}
                       />
                       {isGuobiao && (
-                        <Link to="/calculator" target="_blank" className="btn btn-accent btn-small calc-trigger-btn">
-                          🀄 算番器
-                        </Link>
+                        <button className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`} onClick={() => setIsCalcOpen(prev => !prev)}>
+                          🀄 {isCalcOpen ? '收起算番' : '算番器'}
+                        </button>
                       )}
                     </div>
+                      {isGuobiao && isCalcOpen && (
+                        <div className="inline-calc-wrapper">
+                          <GuobiaoCalculator 
+                            onSelectScore={handleCalcScoreSelect}
+                            initialOptions={{
+                              quanfeng: 1,
+                              menfeng: 1
+                            }}
+                            resetTrigger={calcResetCount}
+                            isSelfDraw={isSelfDraw}
+                            onIsSelfDrawChange={setIsSelfDraw}
+                            onClose={() => setIsCalcOpen(false)}
+                          />
+                        </div>
+                      )}
                   </div>
                 ) : null)}
                 <div className="form-group full-width">
@@ -592,11 +621,16 @@ export default function SessionPage() {
                 <th>名次</th>
                 <th>玩家</th>
                 <th style={{ textAlign: 'right' }}>分数</th>
+                <th style={{ textAlign: 'right' }}>
+                  积分(RP)
+                  <div className="th-subtitle">含局数奖励</div>
+                </th>
               </tr>
             </thead>
             <tbody>
               {sortedPlayers.map((p, i) => {
                 const val = session.totalScores[p.id] || 0
+                const rp = rankMap[p.id]?.rp ?? 0
                 return (
                   <tr key={p.id}>
                     <td className={i < 3 ? `rank-${i + 1}` : ''}>
@@ -609,6 +643,14 @@ export default function SessionPage() {
                       color: val > 0 ? 'var(--success)' : val < 0 ? 'var(--danger)' : undefined
                     }}>
                       {val > 0 ? `+${val}` : val}
+                    </td>
+                    <td style={{
+                      textAlign: 'right',
+                      fontVariantNumeric: 'tabular-nums',
+                      fontWeight: 'bold',
+                      color: 'var(--primary)'
+                    }}>
+                      {rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)}
                     </td>
                   </tr>
                 )

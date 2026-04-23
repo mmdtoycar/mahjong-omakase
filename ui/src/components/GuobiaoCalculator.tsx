@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Tile } from '../logic/guobiao/tiles';
 import { Meld, GameOptions, CalcResult } from '../logic/guobiao/types';
 import { calculateBestScore } from '../logic/guobiao/fan';
+import { checkTing } from '../logic/guobiao/ting';
 
 type Mode = {
   name: string;
@@ -35,13 +36,13 @@ const getTileName = (tile: Tile): string => {
 
 const modes: Mode[] = [
   {
-    name: 'normal', label: '单立',
+    name: 'normal', label: '单张',
     canUse: (c, m) => (c.length + m.length * 3) < 14,
     isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 4,
     add: (c, m, t) => ({ concealed: [...c, t], mings: m }),
   },
   {
-    name: 'an-shun', label: '顺',
+    name: 'an-shun', label: '暗顺',
     canUse: (c, m) => (c.length + m.length * 3) <= 11,
     isDisabled: (c, m, t) => {
         if (t.suit === 'z' || t.rank >= 8) return true;
@@ -54,7 +55,7 @@ const modes: Mode[] = [
     add: (c, m, t) => ({ concealed: [...c, t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], mings: m }),
   },
   {
-    name: 'an-ke', label: '刻',
+    name: 'an-ke', label: '暗刻',
     canUse: (c, m) => (c.length + m.length * 3) <= 11,
     isDisabled: (c, m, t) => [...c, ...m.flatMap(x => x.tiles)].filter(x => x.equals(t)).length >= 2,
     add: (c, m, t) => ({ concealed: [...c, t, t, t], mings: m }),
@@ -62,7 +63,13 @@ const modes: Mode[] = [
   {
     name: 'chi', label: '吃',
     canUse: (c, m) => (c.length + m.length * 3) <= 11,
-    isDisabled: (c, m, t) => (t.suit === 'z' || t.rank >= 8),
+    isDisabled: (c, m, t) => {
+        if (t.suit === 'z' || t.rank >= 8) return true;
+        const all = [...c, ...m.flatMap(x => x.tiles)];
+        return all.filter(x => x.equals(new Tile(t.suit, t.rank))).length >= 4 ||
+               all.filter(x => x.equals(new Tile(t.suit, t.rank + 1))).length >= 4 ||
+               all.filter(x => x.equals(new Tile(t.suit, t.rank + 2))).length >= 4;
+    },
     add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'shun', tiles: [t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], isOpen: true }] }),
   },
   {
@@ -109,19 +116,50 @@ const TileComponent: React.FC<{
 };
 
 interface GuobiaoCalculatorProps {
-    onSelectScore: (score: number) => void;
+    onSelectScore: (score: number | null) => void;
     initialOptions?: Partial<GameOptions>;
+    resetTrigger?: number;
+    isSelfDraw: boolean;
+    onIsSelfDrawChange: (val: boolean) => void;
+    onClose: () => void;
 }
 
-export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectScore, initialOptions }) => {
+export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectScore, initialOptions, resetTrigger, isSelfDraw, onIsSelfDrawChange, onClose }) => {
     const [concealedTiles, setConcealedTiles] = useState<Tile[]>([]);
     const [melds, setMelds] = useState<Meld[]>([]);
     const [mode, setMode] = useState(modes[0]);
     const [options, setOptions] = useState<GameOptions>({
-        isSelfDraw: false, lastTile: false, gangShang: false, juezhang: false,
+        isSelfDraw: isSelfDraw, lastTile: false, gangShang: false, juezhang: false,
         quanfeng: 1, menfeng: 1, huaCount: 0, showTingFans: true,
         ...initialOptions
     });
+
+    // Sync from parent
+    useEffect(() => {
+        setOptions(prev => ({ ...prev, isSelfDraw }));
+    }, [isSelfDraw]);
+
+    const resetHandState = useCallback(() => {
+        setConcealedTiles([]);
+        setMelds([]);
+        setOptions(prev => ({
+            ...prev,
+            huaCount: 0,
+            juezhang: false,
+            gangShang: false,
+            lastTile: false
+        }));
+        setMode(modes[0]);
+    }, []);
+
+    // Adjusting state during render pattern - resets tiles when parent triggers reset
+    // This is more efficient than useEffect as it avoids an extra render pass.
+    // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+    const [prevResetTrigger, setPrevResetTrigger] = useState(resetTrigger);
+    if (resetTrigger !== prevResetTrigger) {
+        setPrevResetTrigger(resetTrigger);
+        resetHandState();
+    }
 
     const currentCount = concealedTiles.length + melds.length * 3;
 
@@ -144,10 +182,30 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
         });
     };
 
+    const addTingedTile = (t: Tile) => {
+        if (currentCount === 13) {
+            setConcealedTiles(prev => [...prev, t]);
+        }
+    };
+
     const huResult: CalcResult | null = useMemo(() => {
         if (currentCount !== 14) return null;
         const lastTile = concealedTiles.length > 0 ? concealedTiles[concealedTiles.length - 1] : undefined;
-        return calculateBestScore(concealedTiles, melds, options, lastTile);
+        const res = calculateBestScore(concealedTiles, melds, options, lastTile);
+        return res;
+    }, [concealedTiles, melds, options, currentCount]);
+
+    useEffect(() => {
+        if (currentCount === 14 && huResult && huResult.totalScore >= 8) {
+            onSelectScore(huResult.totalScore);
+        } else {
+            onSelectScore(null);
+        }
+    }, [huResult, onSelectScore, currentCount]);
+
+    const tingResults = useMemo(() => {
+        if (currentCount !== 13) return [];
+        return checkTing(concealedTiles, melds, options);
     }, [concealedTiles, melds, options, currentCount]);
 
     const displayConcealed = useMemo(() => {
@@ -189,6 +247,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
                     onChange={e => setOptions({...options, huaCount: Number(e.target.value)})} 
                     min="0" max="8" 
                   />
+                  <button className="micro-btn" style={{ marginLeft: '4px' }} onClick={resetHandState}>重置</button>
                 </div>
             </div>
 
@@ -233,44 +292,117 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({ onSelectSc
 
             <div className="winning-options-section">
                 <div className="options-grid compact">
-                    <button className={`opt-btn ${options.isSelfDraw ? 'active' : ''}`} onClick={() => setOptions({...options, isSelfDraw: !options.isSelfDraw})}>自摸</button>
+                    <button className={`opt-btn ${options.isSelfDraw ? 'active' : ''}`} onClick={() => onIsSelfDrawChange(!options.isSelfDraw)}>自摸</button>
                     <button className={`opt-btn ${options.juezhang ? 'active' : ''}`} onClick={() => setOptions({...options, juezhang: !options.juezhang})}>绝张</button>
-                    <button className={`opt-btn ${options.gangShang ? 'active' : ''}`} onClick={() => setOptions({...options, gangShang: !options.gangShang})}>{options.isSelfDraw ? '杠开' : '抢杠'}</button>
-                    <button className={`opt-btn ${options.lastTile ? 'active' : ''}`} onClick={() => setOptions({...options, lastTile: !options.lastTile})}>{options.isSelfDraw ? '妙手' : '海底'}</button>
+                    <button className={`opt-btn ${options.gangShang ? 'active' : ''}`} onClick={() => setOptions({...options, gangShang: !options.gangShang})}>{isSelfDraw ? '杠开' : '抢杠'}</button>
+                    <button className={`opt-btn ${options.lastTile ? 'active' : ''}`} onClick={() => setOptions({...options, lastTile: !options.lastTile})}>{isSelfDraw ? '妙手' : '海底'}</button>
                 </div>
             </div>
 
+            {currentCount === 13 && (
+                <div className="ting-display-area">
+                    <div className="ting-header">
+                        <span className="ting-label">听牌提示:</span>
+                        {tingResults.length === 0 && <span className="no-ting-text">未听牌</span>}
+                    </div>
+                    <div className="ting-list">
+                        {tingResults.map((r, i) => (
+                            <div key={i} className={`ting-row-item ${r.score < 8 ? 'invalid' : ''}`} onClick={() => addTingedTile(r.tile)}>
+                                <div className="ting-row-left">
+                                    <div className="ting-tile-wrap">
+                                        <TileComponent tile={r.tile} />
+                                    </div>
+                                    <div className={`score-badge small ${r.score < 8 ? 'badge-error' : ''}`}>
+                                        <span className="score-num">{r.score}</span>
+                                        <span className="score-unit">番</span>
+                                    </div>
+                                </div>
+                                <div className="fan-list-mini">
+                                    {r.fans.map((f, fi) => (
+                                        <span key={fi} className="mini-fan-tag">
+                                            {f.name}{f.count && f.count > 1 ? ` x${f.count}` : ''} +{f.score}
+                                        </span>
+                                    ))}
+                                </div>
+                                {r.score < 8 && <div className="ting-row-status">起和不足</div>}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {huResult && (
-                <div className="result-preview-mini">
-                    <div className="score-badge small">
-                        <span className="score-num">{huResult.totalScore}</span>
-                        <span className="score-unit">番</span>
+                <div className={`result-preview-mini ${huResult.totalScore < 8 ? 'error' : ''}`}>
+                    <div className="result-main-row">
+                        <div className={`score-badge small ${huResult.totalScore < 8 ? 'badge-error' : ''}`}>
+                            <span className="score-num">{huResult.totalScore}</span>
+                            <span className="score-unit">番</span>
+                        </div>
+                        <div className="fan-list-mini">
+                            {huResult.fans.map((f, i) => (
+                                <span key={i} className="mini-fan-tag">
+                                    {f.name}{f.count && f.count > 1 ? ` x${f.count}` : ''} +{f.score}
+                                </span>
+                            ))}
+                        </div>
                     </div>
-                    <div className="fan-list-mini">
-                        {huResult.fans.map((f, i) => <span key={i} className="mini-fan-tag">{f.name}({f.score})</span>)}
-                    </div>
-                    <button className="btn btn-primary use-score-btn" disabled={huResult.totalScore < 8} onClick={() => onSelectScore(huResult.totalScore)}>
-                        使用 ({huResult.totalScore})
-                    </button>
+                    {huResult.totalScore < 8 ? (
+                        <div className="score-warning-text">
+                            ⚠️ 状态无效：当前组合仅 {huResult.totalScore} 番，不足 8 番起和。
+                        </div>
+                    ) : (
+                        <button className="btn btn-primary use-score-btn" onClick={onClose}>
+                            收起算番器 (当前 {huResult.totalScore} 番)
+                        </button>
+                    )}
                 </div>
             )}
             <style>{`
                 .guobiao-inline-calculator {
-                    background: #fff; border: 2px solid var(--border); border-radius: 12px; padding: 12px; margin-top: 10px;
+                    background: #fff; border: 2px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 10px;
+                    box-sizing: border-box; width: 100%; max-width: 100%; overflow: hidden;
                 }
                 .calc-top-row { display: flex; gap: 12px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; flex-wrap: wrap; }
                 .mini-option { display: flex; align-items: center; gap: 4px; }
                 .mini-opt-label { font-size: 0.8rem; font-weight: 700; color: var(--text-light); }
                 .hua-input { width: 45px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
                 
-                .tile-grid-compact { display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; margin-bottom: 12px; }
-                .tile-grid-compact .calc-tile-container { height: 32px; padding: 1px; }
+                .tile-grid-compact { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin-bottom: 12px; }
+                .tile-grid-compact .calc-tile-container { height: auto; width: 100%; padding: 2px; border-radius: 4px; background: white; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+                .calc-tile-container.small { width: 22px; padding: 2px; border-radius: 3px; background: white; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+                .calc-tile { width: 100%; height: auto; display: block; }
+                .calc-tile-container.disabled { opacity: 0.3; filter: grayscale(1); pointer-events: none; }
+                .calc-tile-container.selectable:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
                 
-                .hand-display-area.compact { background: var(--bg); padding: 8px; border-radius: 8px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; min-height: 40px; }
-                .result-preview-mini { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
-                .fan-list-mini { flex: 1; display: flex; flex-wrap: wrap; gap: 3px; max-height: 50px; overflow-y: auto; }
-                .mini-fan-tag { font-size: 0.65rem; background: var(--bg); padding: 1px 4px; border-radius: 3px; }
-                .use-score-btn { padding: 6px 10px; font-size: 0.85rem; white-space: nowrap; }
+                .hand-display-area.compact { background: var(--bg); padding: 8px; border-radius: 8px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 48px; border: 1px solid var(--border); }
+                .tiles-row { display: flex; flex-wrap: wrap; gap: 2px; }
+                .meld-box { display: flex; gap: 1px; border: 1px solid var(--border); padding: 1px; border-radius: 4px; background: rgba(0,0,0,0.03); }
+                .win-tile-area { border-left: 2px solid var(--accent); padding-left: 6px; margin-left: 4px; display: flex; align-items: center; }
+                
+                .result-preview-mini { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding: 12px; border-top: 1px solid var(--border); background: rgba(26, 71, 42, 0.03); border-radius: 8px; }
+                .result-preview-mini.error { background: rgba(192, 57, 43, 0.05); border-top-color: rgba(192, 57, 43, 0.2); }
+                .result-main-row { display: flex; align-items: center; gap: 12px; }
+                .fan-list-mini { display: flex; flex-wrap: wrap; gap: 4px; }
+                .ting-row-item .fan-list-mini { max-width: 200px; }
+                .mini-fan-tag { font-size: 0.65rem; font-weight: 600; background: white; border: 1px solid var(--border); padding: 1px 5px; border-radius: 4px; color: var(--primary); white-space: nowrap; }
+                .use-score-btn { flex: 1; padding: 10px; font-size: 0.95rem; font-weight: 700; }
+                
+                .score-badge.small.badge-error { background: var(--danger); }
+                .score-warning-text { color: var(--danger); font-size: 0.85rem; font-weight: 600; text-align: center; padding: 4px; }
+
+                .ting-display-area { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: rgba(212, 160, 23, 0.05); border-radius: 10px; border: 1px solid rgba(212, 160, 23, 0.2); margin-top: 12px; }
+                .ting-header { display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px dashed rgba(212, 160, 23, 0.2); padding-bottom: 6px; }
+                .ting-label { font-size: 0.85rem; font-weight: 800; color: var(--accent); }
+                .ting-list { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+                .ting-row-item { display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s; background: #fff; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); position: relative; }
+                .ting-row-item.invalid { border-color: rgba(192, 57, 43, 0.2); background: rgba(192, 57, 43, 0.02); }
+                .ting-row-item:hover { transform: translateX(4px); border-color: var(--accent); box-shadow: 2px 2px 8px rgba(212, 160, 23, 0.15); }
+                .ting-row-item.invalid:hover { border-color: var(--danger); }
+                .ting-row-left { display: flex; align-items: center; gap: 8px; }
+                .ting-tile-wrap { width: 32px; flex-shrink: 0; }
+                .ting-tile-wrap .calc-tile-container { width: 100%; height: auto; padding: 2px; }
+                .ting-row-status { margin-left: auto; font-size: 0.7rem; font-weight: 700; color: var(--danger); background: rgba(192, 57, 43, 0.1); padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+                .no-ting-text { font-size: 0.8rem; color: var(--text-light); font-style: italic; }
                 
                 .options-grid.compact { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
                 .options-grid.compact .opt-btn { padding: 6px 0; font-size: 0.75rem; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; }
