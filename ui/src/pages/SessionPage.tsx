@@ -5,7 +5,6 @@ import { SessionDetail, PlayerInfo, FAN_OPTIONS, FU_OPTIONS } from '../types'
 import { calculateRanks } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { nameFontSize } from '../utils/fontSize'
-import { abbrName } from '../utils/format'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -604,7 +603,7 @@ export default function SessionPage() {
                 <button
                   className={`quick-player-btn win-type-btn ${isSelfDraw ? 'zimo' : 'dianpao'}`}
                   onClick={handleWinTypeToggle}
-                  disabled={isSelfDraw && !dealInPlayerId}
+                  disabled={!winnerId}
                 >
                   {isSelfDraw ? '自摸' : '点炮'}
                 </button>
