@@ -5,50 +5,49 @@ interface Props {
   details?: string
 }
 
+const TILE_MAP: Record<string, string> = {
+  '1m': 'Man1',
+  '2m': 'Man2',
+  '3m': 'Man3',
+  '4m': 'Man4',
+  '5m': 'Man5',
+  '6m': 'Man6',
+  '7m': 'Man7',
+  '8m': 'Man8',
+  '9m': 'Man9',
+  '1p': 'Pin1',
+  '2p': 'Pin2',
+  '3p': 'Pin3',
+  '4p': 'Pin4',
+  '5p': 'Pin5',
+  '6p': 'Pin6',
+  '7p': 'Pin7',
+  '8p': 'Pin8',
+  '9p': 'Pin9',
+  '1s': 'Sou1',
+  '2s': 'Sou2',
+  '3s': 'Sou3',
+  '4s': 'Sou4',
+  '5s': 'Sou5',
+  '6s': 'Sou6',
+  '7s': 'Sou7',
+  '8s': 'Sou8',
+  '9s': 'Sou9',
+  '1z': 'Ton',
+  '2z': 'Nan',
+  '3z': 'Shaa',
+  '4z': 'Pei',
+  '5z': 'Chun',
+  '6z': 'Hatsu',
+  '7z': 'Haku',
+}
+
 export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
   if (!hand) return null
-
-  const TILE_MAP: Record<string, string> = {
-    '1m': 'Man1',
-    '2m': 'Man2',
-    '3m': 'Man3',
-    '4m': 'Man4',
-    '5m': 'Man5',
-    '6m': 'Man6',
-    '7m': 'Man7',
-    '8m': 'Man8',
-    '9m': 'Man9',
-    '1p': 'Pin1',
-    '2p': 'Pin2',
-    '3p': 'Pin3',
-    '4p': 'Pin4',
-    '5p': 'Pin5',
-    '6p': 'Pin6',
-    '7p': 'Pin7',
-    '8p': 'Pin8',
-    '9p': 'Pin9',
-    '1s': 'Sou1',
-    '2s': 'Sou2',
-    '3s': 'Sou3',
-    '4s': 'Sou4',
-    '5s': 'Sou5',
-    '6s': 'Sou6',
-    '7s': 'Sou7',
-    '8s': 'Sou8',
-    '9s': 'Sou9',
-    '1z': 'Ton',
-    '2z': 'Nan',
-    '3z': 'Shaa',
-    '4z': 'Pei',
-    '5z': 'Chun',
-    '6z': 'Hatsu',
-    '7z': 'Haku',
-  }
 
   const elements: React.ReactNode[] = []
   let i = 0
   let currentGroup: { tile: string; isWin: boolean }[] = []
-  let inGroup = false
   let isGroupOpen = true
 
   while (i < hand.length) {
@@ -61,7 +60,7 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
               <img
                 key={idx}
                 src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${
-                  TILE_MAP[g.tile]
+                  TILE_MAP[g.tile] || 'Back'
                 }.svg`}
                 alt={g.tile}
                 className={`mahjong-tile ${g.isWin ? 'highlighted-tile' : ''}`}
@@ -71,7 +70,6 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
         )
         currentGroup = []
       }
-      inGroup = true
       isGroupOpen = char === '['
       i++
     } else if (char === ']' || char === ')') {
@@ -81,7 +79,7 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
             <img
               key={idx}
               src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${
-                TILE_MAP[g.tile]
+                TILE_MAP[g.tile] || 'Back'
               }.svg`}
               alt={g.tile}
               className={`mahjong-tile ${g.isWin ? 'highlighted-tile' : ''}`}
@@ -90,7 +88,6 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
         </div>
       )
       currentGroup = []
-      inGroup = false
       i++
     } else if (char === '^') {
       i++
@@ -114,7 +111,7 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
           <img
             key={idx}
             src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${
-              TILE_MAP[g.tile]
+              TILE_MAP[g.tile] || 'Back'
             }.svg`}
             alt={g.tile}
             className={`mahjong-tile ${g.isWin ? 'highlighted-tile' : ''}`}

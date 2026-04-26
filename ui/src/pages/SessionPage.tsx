@@ -847,10 +847,10 @@ export default function SessionPage() {
           <div className="best-hand-list">
             {bestRounds.map((round, idx) => {
               const winner = session.players.find((p) => p.id === round.winnerId)
-              const loserId = Object.entries(round.scores).find(
-                ([pid, s]) => s < 0 && Number(pid) !== round.winnerId
-              )?.[0]
-              const loser = loserId ? session.players.find((p) => p.id === Number(loserId)) : null
+              const payerIds = Object.entries(round.scores)
+                .filter(([pid, s]) => s < 0 && Number(pid) !== round.winnerId)
+                .map(([pid]) => Number(pid))
+              const loser = payerIds.length === 1 ? session.players.find((p) => p.id === payerIds[0]) : null
 
               return (
                 <div key={idx} className="best-hand-item">
