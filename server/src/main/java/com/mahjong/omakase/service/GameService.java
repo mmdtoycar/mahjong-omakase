@@ -199,7 +199,14 @@ public class GameService {
                           .filter(rs -> rs.getPlayer() != null)
                           .collect(
                               Collectors.toMap(rs -> rs.getPlayer().getId(), RoundScore::getScore));
-                  return new SessionDetailResponse.RoundInfo(round.getRoundNumber(), scores);
+                  return new SessionDetailResponse.RoundInfo(
+                      round.getRoundNumber(),
+                      scores,
+                      round.getWinnerId(),
+                      round.getWinHand(),
+                      round.getFanDetails(),
+                      round.getFanCount());
+
                 })
             .collect(Collectors.toList()));
 
@@ -265,7 +272,15 @@ public class GameService {
         request.getParsedRoundType(),
         session.getGameMode());
 
-    saveRoundScores(session, nextRoundNumber, computedScores);
+    saveRoundScores(
+        session,
+        nextRoundNumber,
+        computedScores,
+        request.getWinnerId(),
+        request.getWinHand(),
+        request.getFanDetails(),
+        request.getFanCount());
+
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -301,7 +316,58 @@ public class GameService {
     log.info("Completed session id={}", sessionId);
   }
 
+  public List<BestRoundResponse> getBestRounds() {
+    Integer maxFan = roundRepo.findMaxFanCount();
+    if (maxFan == null || maxFan == 0) return Collections.emptyList();
+
+    return roundRepo.findByFanCount(maxFan).stream()
+        .map(
+            round -> {
+              Map<Long, Integer> scores =
+                  round.getScores().stream()
+                      .collect(
+                          Collectors.toMap(rs -> rs.getPlayer().getId(), RoundScore::getScore));
+
+              String winnerName =
+                  round.getWinnerId() != null
+                      ? playerRepo.findById(round.getWinnerId()).map(Player::getUserName).orElse("?")
+                      : null;
+
+              // Find deal-in player
+              Long dealInId =
+                  scores.entrySet().stream()
+                      .filter(e -> e.getValue() < 0 && !e.getKey().equals(round.getWinnerId()))
+                      .findFirst() // Simplification: assume first negative that isn't winner
+                      .map(Map.Entry::getKey)
+                      .orElse(null);
+              // Note: For Guobiao, multiple players can have negative scores if it's self-draw.
+              // So we only set dealInPlayerId if it's a discard win.
+              // We can check if more than 1 player has negative scores.
+              long numNegative = scores.values().stream().filter(v -> v < 0).count();
+              if (numNegative > 1) dealInId = null; // Self-draw
+
+              String dealInName =
+                  dealInId != null
+                      ? playerRepo.findById(dealInId).map(Player::getUserName).orElse("?")
+                      : null;
+
+              return new BestRoundResponse(
+                  round.getGameSession().getId(),
+                  round.getRoundNumber(),
+                  round.getWinnerId(),
+                  winnerName,
+                  round.getWinHand(),
+                  round.getFanDetails(),
+                  round.getFanCount(),
+                  scores,
+                  dealInId,
+                  dealInName);
+            })
+        .collect(Collectors.toList());
+  }
+
   public List<PlayerStatsResponse> getPlayerStats(
+
       GameMode gameMode, LocalDateTime start, LocalDateTime end) {
     List<Player> players = playerRepo.findAll();
     boolean hasDateRange = start != null && end != null;
@@ -464,10 +530,21 @@ public class GameService {
   }
 
   private void saveRoundScores(
-      GameSession session, int roundNumber, Map<Long, Integer> computedScores) {
+      GameSession session,
+      int roundNumber,
+      Map<Long, Integer> computedScores,
+      Long winnerId,
+      String winHand,
+      String fanDetails,
+      Integer fanCount) {
     Round round = new Round();
     round.setGameSession(session);
     round.setRoundNumber(roundNumber);
+    round.setWinnerId(winnerId);
+    round.setWinHand(winHand);
+    round.setFanDetails(fanDetails);
+    round.setFanCount(fanCount);
+
     round = roundRepo.save(round);
 
     for (Map.Entry<Long, Integer> entry : computedScores.entrySet()) {

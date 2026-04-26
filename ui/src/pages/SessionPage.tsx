@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, Fragment } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
-import { SessionDetail, PlayerInfo, FAN_OPTIONS, FU_OPTIONS } from '../types'
+import { SessionDetail, PlayerInfo, RoundInfo, FAN_OPTIONS, FU_OPTIONS } from '../types'
 import { calculateRanks } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
+import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 
 export default function SessionPage() {
@@ -24,17 +25,28 @@ export default function SessionPage() {
   const [isCalcOpen, setIsCalcOpen] = useState(false)
   const [calcResetCount, setCalcResetCount] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [winHand, setWinHand] = useState<string>('')
+  const [fanDetails, setFanDetails] = useState<string>('')
+  const [fanCount, setFanCount] = useState<number>(0)
   const [error, setError] = useState('')
 
-  const handleCalcScoreSelect = useCallback((s: number | null) => {
+
+  const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
     if (s !== null) {
       setScore(String(s))
+      setWinHand(hand || '')
+      setFanDetails(details || '')
+      setFanCount(fCount || 0)
     } else {
       setScore('')
+      setWinHand('')
+      setFanDetails('')
+      setFanCount(0)
     }
   }, [])
 
   const load = async () => {
+
     const detail = await fetchSessionDetail(Number(id))
     setSession(detail)
     setError('')
@@ -128,6 +140,7 @@ export default function SessionPage() {
           honba: parseInt(honba) || 0,
           kyoutaku: parseInt(kyoutaku) || 0,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
+          fanCount: parseInt(fan),
         })
       } else if (isDongbei) {
         await addRound(session.id, {
@@ -136,14 +149,19 @@ export default function SessionPage() {
           dealerId: Number(dealerId),
           bimenPlayerIds,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
+          fanCount: parseInt(fan),
         })
       } else {
         await addRound(session.id, {
           winnerId: Number(winnerId),
           score: parseInt(score),
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
+          winHand,
+          fanDetails,
+          fanCount: fanCount || parseInt(score),
         })
       }
+
       resetForm()
       await load()
     } catch (e: any) {
@@ -184,6 +202,28 @@ export default function SessionPage() {
   const sortedPlayers = [...session.players].sort(
     (a, b) => (session.totalScores[b.id] || 0) - (session.totalScores[a.id] || 0)
   )
+
+  // Find max fan hand(s)
+  const parseFanCount = (r: RoundInfo) => {
+    if (r.fanCount) return r.fanCount
+    if (!r.fanDetails) return 0
+    // Fallback: parse from "Name(Score)" or "Name(ScorexCount)"
+    const matches = r.fanDetails.match(/\((\d+)(x\d+)?\)/g)
+    if (!matches) return 0
+    return matches.reduce((sum: number, m: string) => {
+      const score = parseInt(m.match(/\d+/)?.[0] || '0')
+      const multMatch = m.match(/x(\d+)/)
+      const mult = multMatch ? parseInt(multMatch[1]) : 1
+      return sum + score * mult
+    }, 0)
+
+  }
+
+  const roundsWithFan = session.rounds.map(r => ({ ...r, effectiveFan: parseFanCount(r) }))
+  const maxFan = roundsWithFan.reduce((max, r) => Math.max(max, r.effectiveFan), 0)
+  const bestRounds = maxFan > 0 ? roundsWithFan.filter((r) => r.effectiveFan === maxFan) : []
+
+
 
   const rankings = calculateRanks(
     session.players.map((p) => ({ playerId: p.id, score: session.totalScores[p.id] || 0 })),
@@ -361,11 +401,13 @@ export default function SessionPage() {
           <table>
             <thead>
               <tr>
-                <th>局</th>
+                <th style={{ textAlign: 'center', width: '60px' }}>局</th>
                 {session.players.map((p) => (
                   <th key={p.id} style={playerColStyle}>
                     <div className="player-header-cell">
-                      <span className="player-rank">#{rankMap[p.id]?.rank}</span>
+                      <span className={`rank-tag rank-tag-${rankMap[p.id]?.rank}`}>
+                        #{rankMap[p.id]?.rank}
+                      </span>
                       <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
                         {p.userName}
                       </span>
@@ -377,43 +419,73 @@ export default function SessionPage() {
             </thead>
             <tbody>
               {session.rounds.map((round) => {
-                const rw = getRoundWind(round.roundNumber)
-                return (
-                  <tr key={round.roundNumber}>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>R{round.roundNumber}</span>
-                        {rw && <span className="round-wind-tag">{rw.name}</span>}
-                      </div>
-                    </td>
-                    {session.players.map((p) => {
-                      const val = round.scores[p.id] ?? 0
-                      return (
-                        <td
-                          key={p.id}
-                          className={`score-cell${val > 0 ? ' score-positive' : val < 0 ? ' score-negative' : ''}`}
-                          style={{ textAlign: 'center' }}
-                        >
-                          {val > 0 ? `+${val}` : val}
+                  return (
+                    <React.Fragment key={round.roundNumber}>
+                      <tr>
+                        <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+                          <div className="round-info-cell">
+                            {(() => {
+                              const rw = getRoundWind(round.roundNumber)
+                              return rw ? (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '2px',
+                                    width: '100%',
+                                  }}
+                                >
+                                  <span className="round-wind-tag">{rw.name}</span>
+                                </div>
+                              ) : (
+                                <strong>#{round.roundNumber}</strong>
+                              )
+                            })()}
+                          </div>
                         </td>
-                      )
-                    })}
-                    {session.status === 'IN_PROGRESS' && (
-                      <td>
-                        <button
-                          className="delete-btn"
-                          onClick={() => handleDeleteRound(round.roundNumber)}
-                          disabled={submitting}
-                        >
-                          &times;
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                )
-              })}
+                        {session.players.map((p) => {
+                          const val = round.scores[p.id] || 0
+                          const isWinner = round.winnerId === p.id
+                          return (
+                            <td
+                              key={p.id}
+                              className={`score-cell${val > 0 ? ' score-positive' : val < 0 ? ' score-negative' : ''}${
+                                isWinner ? ' score-winner' : ''
+                              }`}
+                              style={{ textAlign: 'center' }}
+                            >
+                              {val > 0 ? `+${val}` : val}
+                            </td>
+                          )
+                        })}
+                        {session.status === 'IN_PROGRESS' && (
+                          <td>
+                            <button
+                              className="delete-btn"
+                              onClick={() => handleDeleteRound(round.roundNumber)}
+                              disabled={submitting}
+                            >
+                              &times;
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                      {round.winHand && (
+                        <tr className="hand-details-row">
+                          <td
+                            colSpan={session.players.length + (session.status === 'IN_PROGRESS' ? 2 : 1)}
+                            className="hand-details-cell"
+                          >
+                            <MahjongHand hand={round.winHand} details={round.fanDetails} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  )
+                })}
               <tr className="total-row">
-                <td style={{ whiteSpace: 'nowrap' }}>
+                <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
                   <strong>合计</strong>
                 </td>
                 {session.players.map((p) => {
@@ -738,7 +810,11 @@ export default function SessionPage() {
                   const rp = rankMap[p.id]?.rp ?? 0
                   return (
                     <tr key={p.id}>
-                      <td className={i < 3 ? `rank-${i + 1}` : ''}>#{i + 1}</td>
+                      <td>
+                        <span className={`rank-tag rank-tag-${i + 1}`}>
+                          #{i + 1}
+                        </span>
+                      </td>
                       <td>{p.userName}</td>
                       <td
                         style={{
@@ -767,6 +843,47 @@ export default function SessionPage() {
           </div>
         </div>
       )}
+
+
+      {bestRounds.length > 0 && (
+        <div className="card best-hand-card">
+          <div className="best-hand-header">
+            <span className="best-hand-crown">👑</span>
+            <h2>最高番和牌</h2>
+          </div>
+          <div className="best-hand-list">
+            {bestRounds.map((round, idx) => {
+              const winner = session.players.find((p) => p.id === round.winnerId)
+              const loserId = Object.entries(round.scores).find(
+                ([pid, s]) => s < 0 && Number(pid) !== round.winnerId
+              )?.[0]
+              const loser = loserId ? session.players.find((p) => p.id === Number(loserId)) : null
+
+              return (
+                <div key={idx} className="best-hand-item">
+                  <div className="best-hand-meta">
+                    <span className="best-hand-fan-count">{round.effectiveFan} 番</span>
+                    <span className="best-hand-players">
+                      <span className="winner-label">赢家:</span> {winner?.userName}
+                      {loser ? (
+                        <>
+                          <span className="loser-label ml-2">输家:</span> {loser.userName}
+                        </>
+                      ) : (
+                        <span className="zimo-label ml-2">(自摸)</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="best-hand-display">
+                    <MahjongHand hand={round.winHand} details={round.fanDetails} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </>
   )
 }
+

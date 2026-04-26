@@ -93,3 +93,9 @@ export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {
   const res = await fetch(`${API}/players/${id}/detail`)
   return handleResponse(res)
 }
+
+export async function fetchBestRounds(): Promise<any[]> {
+  const res = await fetch(`${API}/stats/best-rounds`)
+  return handleResponse(res)
+}
+

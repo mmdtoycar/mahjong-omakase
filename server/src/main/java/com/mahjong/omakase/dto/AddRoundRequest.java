@@ -33,6 +33,36 @@ public class AddRoundRequest {
 
   private List<Long> tenpaiPlayerIds; // for drawn games
 
+  private String winHand;
+
+  private String fanDetails;
+  private Integer fanCount;
+
+  public Integer getFanCount() {
+    return fanCount;
+  }
+
+  public void setFanCount(Integer fanCount) {
+    this.fanCount = fanCount;
+  }
+
+
+  public String getWinHand() {
+    return winHand;
+  }
+
+  public void setWinHand(String winHand) {
+    this.winHand = winHand;
+  }
+
+  public String getFanDetails() {
+    return fanDetails;
+  }
+
+  public void setFanDetails(String fanDetails) {
+    this.fanDetails = fanDetails;
+  }
+
   public String getRoundType() {
     return roundType;
   }

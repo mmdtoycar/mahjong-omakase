@@ -47,4 +47,10 @@ public class StatsController {
 
     return gameService.getPlayerStats(mode, start, end);
   }
+
+  @GetMapping("/best-rounds")
+  public List<com.mahjong.omakase.dto.BestRoundResponse> getBestRounds() {
+    return gameService.getBestRounds();
+  }
 }
+

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, Fragment } from 'react'
 import { Tile } from '../logic/guobiao/tiles'
 import { Meld, GameOptions, CalcResult } from '../logic/guobiao/types'
 import { calculateBestScore } from '../logic/guobiao/fan'
@@ -122,7 +122,7 @@ const TileComponent: React.FC<{
 }
 
 interface GuobiaoCalculatorProps {
-  onSelectScore: (score: number | null) => void
+  onSelectScore: (score: number | null, hand?: string, fanDetails?: string, fanCount?: number) => void
   initialOptions?: Partial<GameOptions>
   resetTrigger?: number
   isSelfDraw: boolean
@@ -228,11 +228,31 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
 
   useEffect(() => {
     if (currentCount === 14 && huResult && huResult.totalScore >= 8) {
-      onSelectScore(huResult.totalScore)
+      // Serialize hand
+      const lastTile = concealedTiles.length > 0 ? concealedTiles[concealedTiles.length - 1] : undefined
+      let handStr = ''
+      if (lastTile) {
+        const others = concealedTiles.slice(0, -1).sort((a, b) => a.compareTo(b))
+        const concealedStr = others.map((t) => t.toString()).join('')
+        const winTileStr = `^${lastTile.toString()}`
+        const meldsStr = melds
+          .map((m) => {
+            const tStr = m.tiles.map((t) => t.toString()).join('')
+            return m.isOpen ? `[${tStr}]` : `(${tStr})`
+          })
+          .join('')
+        handStr = concealedStr + winTileStr + meldsStr
+      }
+
+      // Serialize fan details
+      const fanDetailsStr = huResult.fans.map((f) => `${f.name}(${f.score}${f.count && f.count > 1 ? `x${f.count}` : ''})`).join(', ')
+
+      onSelectScore(huResult.totalScore, handStr, fanDetailsStr, huResult.totalScore)
+
     } else {
       onSelectScore(null)
     }
-  }, [huResult, onSelectScore, currentCount])
+  }, [huResult, onSelectScore, currentCount, concealedTiles, melds])
 
   const tingResults = useMemo(() => {
     if (currentCount !== 13) return []
