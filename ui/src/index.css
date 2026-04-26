@@ -16,12 +16,11 @@
   --sol-blue: #268bd2;
   --sol-cyan: #2aa198;
   --sol-green: #859900;
-  
+
   /* Mahjong Tile Inspired Colors */
-  --mj-red: #b33939;   /* Rich Character Red */
+  --mj-red: #b33939; /* Rich Character Red */
   --mj-green: #218c74; /* Deep Bamboo Green */
   --mj-gold: #d4a017;
-
 
   --primary: var(--sol-base02);
   --primary-light: var(--sol-base01);
@@ -43,18 +42,20 @@
   font-weight: 800;
   font-size: 0.9rem;
 }
-.rank-tag-1 { color: #b58900; } /* Gold */
-.rank-tag-2 { color: #839496; } /* Silver/Base0 */
-.rank-tag-3 { color: #cb4b16; } /* Bronze/Orange */
-.rank-tag-4 { color: var(--sol-base01); }
+.rank-tag-1 {
+  color: #b58900;
+} /* Gold */
+.rank-tag-2 {
+  color: #839496;
+} /* Silver/Base0 */
+.rank-tag-3 {
+  color: #cb4b16;
+} /* Bronze/Orange */
+.rank-tag-4 {
+  color: var(--sol-base01);
+}
 
 /* Rank Circles (Legacy, will remove if unused) */
-
-
-
-
-
-
 
 html {
   scroll-behavior: smooth;
@@ -841,22 +842,33 @@ tr:hover td {
   color: var(--sol-base01);
 }
 
-.winner-label { color: var(--mj-green); font-weight: 800; }
-.loser-label { color: var(--mj-red); font-weight: 800; }
+.winner-label {
+  color: var(--mj-green);
+  font-weight: 800;
+}
+.loser-label {
+  color: var(--mj-red);
+  font-weight: 800;
+}
 
-.zimo-label { color: var(--sol-blue); font-style: italic; }
-.session-link-label a { color: var(--sol-cyan); text-decoration: underline; font-size: 0.85rem; }
-.ml-2 { margin-left: 8px; }
-
+.zimo-label {
+  color: var(--sol-blue);
+  font-style: italic;
+}
+.session-link-label a {
+  color: var(--sol-cyan);
+  text-decoration: underline;
+  font-size: 0.85rem;
+}
+.ml-2 {
+  margin-left: 8px;
+}
 
 .best-hand-display {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
-
-
 
 .win-type-selector {
   display: flex;
@@ -1625,11 +1637,9 @@ tr:hover td {
   font-weight: 600;
 }
 
-
 .hand-details-row {
   background: rgba(238, 232, 213, 0.3) !important;
 }
-
 
 .hand-details-cell {
   padding: 8px 12px !important;
@@ -1654,7 +1664,6 @@ tr:hover td {
   border-width: 2px;
   box-shadow: 0 0 8px rgba(212, 160, 23, 0.5);
 }
-
 
 .hand-fan-list {
   font-size: 0.8rem;
@@ -2082,7 +2091,6 @@ tr:hover td {
   box-shadow: 0 0 0 1px var(--sol-red);
 }
 
-
 .quick-player-btn.win-type-btn {
   font-weight: 700;
   border-width: 2px;
@@ -2099,7 +2107,6 @@ tr:hover td {
   color: var(--sol-orange);
   background: rgba(203, 75, 22, 0.08);
 }
-
 
 .quick-player-btn .btn-name {
   font-size: 0.9rem;

@@ -38,14 +38,43 @@ public class BestRoundResponse {
   }
 
   // Getters
-  public Long getSessionId() { return sessionId; }
-  public int getRoundNumber() { return roundNumber; }
-  public Long getWinnerId() { return winnerId; }
-  public String getWinnerName() { return winnerName; }
-  public String getWinHand() { return winHand; }
-  public String getFanDetails() { return fanDetails; }
-  public Integer getFanCount() { return fanCount; }
-  public Map<Long, Integer> getScores() { return scores; }
-  public Long getDealInPlayerId() { return dealInPlayerId; }
-  public String getDealInPlayerName() { return dealInPlayerName; }
+  public Long getSessionId() {
+    return sessionId;
+  }
+
+  public int getRoundNumber() {
+    return roundNumber;
+  }
+
+  public Long getWinnerId() {
+    return winnerId;
+  }
+
+  public String getWinnerName() {
+    return winnerName;
+  }
+
+  public String getWinHand() {
+    return winHand;
+  }
+
+  public String getFanDetails() {
+    return fanDetails;
+  }
+
+  public Integer getFanCount() {
+    return fanCount;
+  }
+
+  public Map<Long, Integer> getScores() {
+    return scores;
+  }
+
+  public Long getDealInPlayerId() {
+    return dealInPlayerId;
+  }
+
+  public String getDealInPlayerName() {
+    return dealInPlayerName;
+  }
 }

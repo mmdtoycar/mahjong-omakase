@@ -39,7 +39,6 @@ public class Round {
     this.fanCount = fanCount;
   }
 
-
   public Long getWinnerId() {
     return winnerId;
   }

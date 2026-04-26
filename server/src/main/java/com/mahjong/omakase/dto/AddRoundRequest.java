@@ -46,7 +46,6 @@ public class AddRoundRequest {
     this.fanCount = fanCount;
   }
 
-
   public String getWinHand() {
     return winHand;
   }

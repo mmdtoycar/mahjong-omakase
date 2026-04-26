@@ -53,4 +53,3 @@ public class StatsController {
     return gameService.getBestRounds();
   }
 }
-

@@ -98,4 +98,3 @@ export async function fetchBestRounds(): Promise<any[]> {
   const res = await fetch(`${API}/stats/best-rounds`)
   return handleResponse(res)
 }
-

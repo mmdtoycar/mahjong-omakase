@@ -206,7 +206,6 @@ public class GameService {
                       round.getWinHand(),
                       round.getFanDetails(),
                       round.getFanCount());
-
                 })
             .collect(Collectors.toList()));
 
@@ -280,7 +279,6 @@ public class GameService {
         request.getWinHand(),
         request.getFanDetails(),
         request.getFanCount());
-
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -330,7 +328,10 @@ public class GameService {
 
               String winnerName =
                   round.getWinnerId() != null
-                      ? playerRepo.findById(round.getWinnerId()).map(Player::getUserName).orElse("?")
+                      ? playerRepo
+                          .findById(round.getWinnerId())
+                          .map(Player::getUserName)
+                          .orElse("?")
                       : null;
 
               // Find deal-in player
@@ -367,7 +368,6 @@ public class GameService {
   }
 
   public List<PlayerStatsResponse> getPlayerStats(
-
       GameMode gameMode, LocalDateTime start, LocalDateTime end) {
     List<Player> players = playerRepo.findAll();
     boolean hasDateRange = start != null && end != null;

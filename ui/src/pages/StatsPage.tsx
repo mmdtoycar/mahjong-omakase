@@ -4,7 +4,6 @@ import { PlayerStats, Player, GameModeKey, GAME_MODES, Season, getCurrentSeason,
 import { fetchStats, fetchPlayers, fetchBestRounds } from '../api'
 import { MahjongHand } from '../components/MahjongHand'
 
-
 type Tab = 'games' | 'players'
 
 const seasons = getAvailableSeasons()
@@ -70,7 +69,6 @@ export default function StatsPage() {
       loadPlayers()
     }
   }, [gameMode, seasonKey, tab])
-
 
   const abbr = (s: PlayerStats) => abbrName(s.displayName)
 
@@ -224,7 +222,6 @@ export default function StatsPage() {
             </div>
           )}
 
-
           {bestRounds.length > 0 && (
             <div className="card best-hand-card">
               <div className="best-hand-header">
@@ -260,7 +257,6 @@ export default function StatsPage() {
           )}
         </>
       )}
-
 
       {tab === 'players' && (
         <>

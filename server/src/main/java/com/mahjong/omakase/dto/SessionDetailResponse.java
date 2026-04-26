@@ -108,7 +108,6 @@ public class SessionDetailResponse {
     }
   }
 
-
   public Long getId() {
     return id;
   }

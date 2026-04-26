@@ -11,4 +11,3 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
 
   java.util.List<Round> findByFanCount(Integer fanCount);
 }
-

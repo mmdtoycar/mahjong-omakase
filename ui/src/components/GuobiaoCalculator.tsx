@@ -245,10 +245,11 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
       }
 
       // Serialize fan details
-      const fanDetailsStr = huResult.fans.map((f) => `${f.name}(${f.score}${f.count && f.count > 1 ? `x${f.count}` : ''})`).join(', ')
+      const fanDetailsStr = huResult.fans
+        .map((f) => `${f.name}(${f.score}${f.count && f.count > 1 ? `x${f.count}` : ''})`)
+        .join(', ')
 
       onSelectScore(huResult.totalScore, handStr, fanDetailsStr, huResult.totalScore)
-
     } else {
       onSelectScore(null)
     }
