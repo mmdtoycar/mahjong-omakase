@@ -31,6 +31,16 @@ public class Round {
 
   private Integer fanCount;
 
+  private Long dealInPlayerId;
+
+  public Long getDealInPlayerId() {
+    return dealInPlayerId;
+  }
+
+  public void setDealInPlayerId(Long dealInPlayerId) {
+    this.dealInPlayerId = dealInPlayerId;
+  }
+
   public Integer getFanCount() {
     return fanCount;
   }

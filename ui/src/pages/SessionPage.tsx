@@ -77,6 +77,9 @@ export default function SessionPage() {
     setTenpaiPlayerIds([])
     setHonba('0')
     setKyoutaku('0')
+    setWinHand('')
+    setFanDetails('')
+    setFanCount(0)
     setCalcResetCount((prev) => prev + 1)
   }
 

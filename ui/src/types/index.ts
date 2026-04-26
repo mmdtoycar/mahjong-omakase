@@ -140,3 +140,15 @@ export interface PlayerDetail {
   lastName: string
   games: PlayerGameEntry[]
 }
+export interface BestRound {
+  sessionId: number
+  roundNumber: number
+  winnerId: number
+  winnerName: string
+  winHand: string
+  fanDetails: string
+  fanCount: number
+  scores: Record<number, number>
+  dealInPlayerId: number | null
+  dealInPlayerName: string | null
+}

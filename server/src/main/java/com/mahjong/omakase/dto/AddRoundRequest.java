@@ -36,6 +36,8 @@ public class AddRoundRequest {
   private String winHand;
 
   private String fanDetails;
+
+  @Min(value = 0, message = "Fan count must be non-negative")
   private Integer fanCount;
 
   public Integer getFanCount() {

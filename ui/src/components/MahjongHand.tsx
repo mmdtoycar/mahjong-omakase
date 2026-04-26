@@ -40,9 +40,9 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
     '2z': 'Nan',
     '3z': 'Shaa',
     '4z': 'Pei',
-    '5z': 'Haku',
+    '5z': 'Chun',
     '6z': 'Hatsu',
-    '7z': 'Chun',
+    '7z': 'Haku',
   }
 
   const elements: React.ReactNode[] = []

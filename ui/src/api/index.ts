@@ -1,4 +1,4 @@
-import { Player, GameSession, SessionDetail, PlayerStats, PlayerDetail, AddRoundData } from '../types'
+import { Player, GameSession, SessionDetail, PlayerStats, PlayerDetail, AddRoundData, BestRound } from '../types'
 
 const API = '/api'
 
@@ -94,7 +94,7 @@ export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {
   return handleResponse(res)
 }
 
-export async function fetchBestRounds(): Promise<any[]> {
+export async function fetchBestRounds(): Promise<BestRound[]> {
   const res = await fetch(`${API}/stats/best-rounds`)
-  return handleResponse(res)
+  return handleResponse<BestRound[]>(res)
 }

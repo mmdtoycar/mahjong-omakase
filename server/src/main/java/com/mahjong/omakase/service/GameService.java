@@ -278,7 +278,8 @@ public class GameService {
         request.getWinnerId(),
         request.getWinHand(),
         request.getFanDetails(),
-        request.getFanCount());
+        request.getFanCount(),
+        request.isSelfDraw() ? null : request.getDealInPlayerId());
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -323,6 +324,7 @@ public class GameService {
             round -> {
               Map<Long, Integer> scores =
                   round.getScores().stream()
+                      .filter(rs -> rs.getPlayer() != null)
                       .collect(
                           Collectors.toMap(rs -> rs.getPlayer().getId(), RoundScore::getScore));
 
@@ -335,17 +337,7 @@ public class GameService {
                       : null;
 
               // Find deal-in player
-              Long dealInId =
-                  scores.entrySet().stream()
-                      .filter(e -> e.getValue() < 0 && !e.getKey().equals(round.getWinnerId()))
-                      .findFirst() // Simplification: assume first negative that isn't winner
-                      .map(Map.Entry::getKey)
-                      .orElse(null);
-              // Note: For Guobiao, multiple players can have negative scores if it's self-draw.
-              // So we only set dealInPlayerId if it's a discard win.
-              // We can check if more than 1 player has negative scores.
-              long numNegative = scores.values().stream().filter(v -> v < 0).count();
-              if (numNegative > 1) dealInId = null; // Self-draw
+              Long dealInId = round.getDealInPlayerId();
 
               String dealInName =
                   dealInId != null
@@ -536,7 +528,8 @@ public class GameService {
       Long winnerId,
       String winHand,
       String fanDetails,
-      Integer fanCount) {
+      Integer fanCount,
+      Long dealInId) {
     Round round = new Round();
     round.setGameSession(session);
     round.setRoundNumber(roundNumber);
@@ -544,6 +537,7 @@ public class GameService {
     round.setWinHand(winHand);
     round.setFanDetails(fanDetails);
     round.setFanCount(fanCount);
+    round.setDealInPlayerId(dealInId);
 
     round = roundRepo.save(round);
 
