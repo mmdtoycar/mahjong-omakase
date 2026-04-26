@@ -63,10 +63,24 @@ public class SessionDetailResponse {
   public static class RoundInfo {
     private int roundNumber;
     private Map<Long, Integer> scores;
+    private Long winnerId;
+    private String winHand;
+    private String fanDetails;
+    private Integer fanCount;
 
-    public RoundInfo(int roundNumber, Map<Long, Integer> scores) {
+    public RoundInfo(
+        int roundNumber,
+        Map<Long, Integer> scores,
+        Long winnerId,
+        String winHand,
+        String fanDetails,
+        Integer fanCount) {
       this.roundNumber = roundNumber;
       this.scores = scores;
+      this.winnerId = winnerId;
+      this.winHand = winHand;
+      this.fanDetails = fanDetails;
+      this.fanCount = fanCount;
     }
 
     public int getRoundNumber() {
@@ -75,6 +89,22 @@ public class SessionDetailResponse {
 
     public Map<Long, Integer> getScores() {
       return scores;
+    }
+
+    public Long getWinnerId() {
+      return winnerId;
+    }
+
+    public String getWinHand() {
+      return winHand;
+    }
+
+    public String getFanDetails() {
+      return fanDetails;
+    }
+
+    public Integer getFanCount() {
+      return fanCount;
     }
   }
 

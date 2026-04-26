@@ -21,6 +21,58 @@ public class Round {
   @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<RoundScore> scores = new ArrayList<>();
 
+  private Long winnerId;
+
+  @Column(columnDefinition = "TEXT")
+  private String winHand;
+
+  @Column(columnDefinition = "TEXT")
+  private String fanDetails;
+
+  private Integer fanCount;
+
+  private Long dealInPlayerId;
+
+  public Long getDealInPlayerId() {
+    return dealInPlayerId;
+  }
+
+  public void setDealInPlayerId(Long dealInPlayerId) {
+    this.dealInPlayerId = dealInPlayerId;
+  }
+
+  public Integer getFanCount() {
+    return fanCount;
+  }
+
+  public void setFanCount(Integer fanCount) {
+    this.fanCount = fanCount;
+  }
+
+  public Long getWinnerId() {
+    return winnerId;
+  }
+
+  public void setWinnerId(Long winnerId) {
+    this.winnerId = winnerId;
+  }
+
+  public String getWinHand() {
+    return winHand;
+  }
+
+  public void setWinHand(String winHand) {
+    this.winHand = winHand;
+  }
+
+  public String getFanDetails() {
+    return fanDetails;
+  }
+
+  public void setFanDetails(String fanDetails) {
+    this.fanDetails = fanDetails;
+  }
+
   public Long getId() {
     return id;
   }

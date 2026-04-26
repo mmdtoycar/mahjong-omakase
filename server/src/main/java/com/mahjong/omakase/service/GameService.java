@@ -199,7 +199,13 @@ public class GameService {
                           .filter(rs -> rs.getPlayer() != null)
                           .collect(
                               Collectors.toMap(rs -> rs.getPlayer().getId(), RoundScore::getScore));
-                  return new SessionDetailResponse.RoundInfo(round.getRoundNumber(), scores);
+                  return new SessionDetailResponse.RoundInfo(
+                      round.getRoundNumber(),
+                      scores,
+                      round.getWinnerId(),
+                      round.getWinHand(),
+                      round.getFanDetails(),
+                      round.getFanCount());
                 })
             .collect(Collectors.toList()));
 
@@ -265,7 +271,15 @@ public class GameService {
         request.getParsedRoundType(),
         session.getGameMode());
 
-    saveRoundScores(session, nextRoundNumber, computedScores);
+    saveRoundScores(
+        session,
+        nextRoundNumber,
+        computedScores,
+        request.getWinnerId(),
+        request.getWinHand(),
+        request.getFanDetails(),
+        request.getFanCount(),
+        request.isSelfDraw() ? null : request.getDealInPlayerId());
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -299,6 +313,50 @@ public class GameService {
     session.setStatus(SessionStatus.COMPLETED);
     sessionRepo.save(session);
     log.info("Completed session id={}", sessionId);
+  }
+
+  public List<BestRoundResponse> getBestRounds() {
+    Integer maxFan = roundRepo.findMaxFanCount();
+    if (maxFan == null || maxFan == 0) return Collections.emptyList();
+
+    return roundRepo.findByFanCount(maxFan).stream()
+        .map(
+            round -> {
+              Map<Long, Integer> scores =
+                  round.getScores().stream()
+                      .filter(rs -> rs.getPlayer() != null)
+                      .collect(
+                          Collectors.toMap(rs -> rs.getPlayer().getId(), RoundScore::getScore));
+
+              String winnerName =
+                  round.getWinnerId() != null
+                      ? playerRepo
+                          .findById(round.getWinnerId())
+                          .map(Player::getUserName)
+                          .orElse("?")
+                      : null;
+
+              // Find deal-in player
+              Long dealInId = round.getDealInPlayerId();
+
+              String dealInName =
+                  dealInId != null
+                      ? playerRepo.findById(dealInId).map(Player::getUserName).orElse("?")
+                      : null;
+
+              return new BestRoundResponse(
+                  round.getGameSession().getId(),
+                  round.getRoundNumber(),
+                  round.getWinnerId(),
+                  winnerName,
+                  round.getWinHand(),
+                  round.getFanDetails(),
+                  round.getFanCount(),
+                  scores,
+                  dealInId,
+                  dealInName);
+            })
+        .collect(Collectors.toList());
   }
 
   public List<PlayerStatsResponse> getPlayerStats(
@@ -464,10 +522,23 @@ public class GameService {
   }
 
   private void saveRoundScores(
-      GameSession session, int roundNumber, Map<Long, Integer> computedScores) {
+      GameSession session,
+      int roundNumber,
+      Map<Long, Integer> computedScores,
+      Long winnerId,
+      String winHand,
+      String fanDetails,
+      Integer fanCount,
+      Long dealInId) {
     Round round = new Round();
     round.setGameSession(session);
     round.setRoundNumber(roundNumber);
+    round.setWinnerId(winnerId);
+    round.setWinHand(winHand);
+    round.setFanDetails(fanDetails);
+    round.setFanCount(fanCount);
+    round.setDealInPlayerId(dealInId);
+
     round = roundRepo.save(round);
 
     for (Map.Entry<Long, Integer> entry : computedScores.entrySet()) {

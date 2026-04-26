@@ -98,7 +98,12 @@ spotless {
 
   format 'frontend', {
     target fileTree('ui/src') { include '**/*.ts', '**/*.tsx', '**/*.css' }
-    prettier().config(['singleQuote': true, 'semi': false, 'printWidth': 120])
+    def isWindows = System.getProperty('os.name').toLowerCase().contains('win')
+    def nodeVersion = '18.20.4'
+    def npmBin = isWindows ? 'npm.cmd' : 'bin/npm'
+    def nodeDirName = "node-v${nodeVersion}-${isWindows ? 'win-x64' : 'linux-x64'}"
+    def npmExec = file("${projectDir}/.gradle/nodejs/${nodeDirName}/${npmBin}")
+    prettier().npmExecutable(npmExec.absolutePath).config(['singleQuote': true, 'semi': false, 'printWidth': 120])
     trimTrailingWhitespace()
     endWithNewline()
   }

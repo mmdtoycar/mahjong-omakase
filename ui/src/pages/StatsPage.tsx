@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { fetchStats, fetchPlayers } from '../api'
-import { PlayerStats, Player, GameModeKey, GAME_MODES, Season, getCurrentSeason, getAvailableSeasons } from '../types'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import {
+  PlayerStats,
+  Player,
+  GameModeKey,
+  GAME_MODES,
+  Season,
+  getCurrentSeason,
+  getAvailableSeasons,
+  BestRound,
+} from '../types'
+import { fetchStats, fetchPlayers, fetchBestRounds } from '../api'
+import { MahjongHand } from '../components/MahjongHand'
 
 type Tab = 'games' | 'players'
 
@@ -20,6 +30,9 @@ export default function StatsPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [bestRounds, setBestRounds] = useState<BestRound[]>([])
+  const [bestRoundsError, setBestRoundsError] = useState('')
+
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.quarter}`)
 
@@ -59,9 +72,21 @@ export default function StatsPage() {
   }
 
   useEffect(() => {
-    if (tab === 'games') loadStats(gameMode, seasonKey)
-    else loadPlayers()
+    if (tab === 'games') {
+      loadStats(gameMode, seasonKey)
+    } else {
+      loadPlayers()
+    }
   }, [gameMode, seasonKey, tab])
+
+  useEffect(() => {
+    if (tab === 'games') {
+      setBestRoundsError('')
+      fetchBestRounds()
+        .then(setBestRounds)
+        .catch((e) => setBestRoundsError(e.message))
+    }
+  }, [tab])
 
   const abbr = (s: PlayerStats) => abbrName(s.displayName)
 
@@ -211,6 +236,41 @@ export default function StatsPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {bestRounds.length > 0 && (
+            <div className="card best-hand-card">
+              <div className="best-hand-header">
+                <span className="best-hand-crown">👑</span>
+                <h2>历史最高和牌</h2>
+              </div>
+              {bestRoundsError && <p className="error-text">加载最高和牌失败: {bestRoundsError}</p>}
+              <div className="best-hand-list">
+                {bestRounds.map((round, idx) => (
+                  <div key={idx} className="best-hand-item">
+                    <div className="best-hand-meta">
+                      <span className="best-hand-fan-count">{round.fanCount} 番</span>
+                      <span className="best-hand-players">
+                        <span className="winner-label">赢家:</span> {round.winnerName}
+                        {round.dealInPlayerName ? (
+                          <>
+                            <span className="loser-label ml-2">输家:</span> {round.dealInPlayerName}
+                          </>
+                        ) : (
+                          <span className="zimo-label ml-2">(自摸)</span>
+                        )}
+                        <span className="session-link-label ml-2">
+                          <Link to={`/session/${round.sessionId}`}>查看对局</Link>
+                        </span>
+                      </span>
+                    </div>
+                    <div className="best-hand-display">
+                      <MahjongHand hand={round.winHand} details={round.fanDetails} />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

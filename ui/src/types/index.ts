@@ -36,6 +36,10 @@ export interface PlayerInfo {
 export interface RoundInfo {
   roundNumber: number
   scores: Record<number, number>
+  winnerId?: number
+  winHand?: string
+  fanDetails?: string
+  fanCount?: number
 }
 
 export interface SessionDetail {
@@ -66,6 +70,9 @@ export interface AddRoundData {
   bimenPlayerIds?: number[] // for Dongbei: 闭门 players
   dealInPlayerId?: number | null // null = 自摸
   tenpaiPlayerIds?: number[] // for drawn games
+  winHand?: string
+  fanDetails?: string
+  fanCount?: number
 }
 
 export const FAN_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
@@ -132,4 +139,16 @@ export interface PlayerDetail {
   firstName: string
   lastName: string
   games: PlayerGameEntry[]
+}
+export interface BestRound {
+  sessionId: number
+  roundNumber: number
+  winnerId: number
+  winnerName: string
+  winHand: string
+  fanDetails: string
+  fanCount: number
+  scores: Record<number, number>
+  dealInPlayerId: number | null
+  dealInPlayerName: string | null
 }
