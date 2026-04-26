@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, Fragment } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, PlayerInfo, RoundInfo, FAN_OPTIONS, FU_OPTIONS } from '../types'
@@ -804,10 +804,11 @@ export default function SessionPage() {
                 {sortedPlayers.map((p, i) => {
                   const val = session.totalScores[p.id] || 0
                   const rp = rankMap[p.id]?.rp ?? 0
+                  const rank = rankMap[p.id]?.rank ?? i + 1
                   return (
                     <tr key={p.id}>
                       <td>
-                        <span className={`rank-tag rank-tag-${i + 1}`}>#{i + 1}</span>
+                        <span className={`rank-tag rank-tag-${rank}`}>#{rank}</span>
                       </td>
                       <td>{p.userName}</td>
                       <td
@@ -853,7 +854,7 @@ export default function SessionPage() {
               const loser = payerIds.length === 1 ? session.players.find((p) => p.id === payerIds[0]) : null
 
               return (
-                <div key={idx} className="best-hand-item">
+                <div key={round.roundNumber} className="best-hand-item">
                   <div className="best-hand-meta">
                     <span className="best-hand-fan-count">{round.effectiveFan} 番</span>
                     <span className="best-hand-players">
