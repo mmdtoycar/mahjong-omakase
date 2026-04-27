@@ -298,8 +298,8 @@ export default function StatsPage() {
                 </div>
               )}
               <div className="best-hand-list">
-                {monthlyBestRounds.map((round, idx) => (
-                  <div key={idx} className="best-hand-item">
+                {monthlyBestRounds.map((round) => (
+                  <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">
                       <span className="best-hand-fan-count">{round.fanCount} 番</span>
                       <span className="best-hand-players">
@@ -327,8 +327,8 @@ export default function StatsPage() {
               </div>
               {bestRoundsError && <p className="error-text">加载历史最高和牌失败: {bestRoundsError}</p>}
               <div className="best-hand-list">
-                {bestRounds.map((round, idx) => (
-                  <div key={idx} className="best-hand-item">
+                {bestRounds.map((round) => (
+                  <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">
                       <span className="best-hand-fan-count">{round.fanCount} 番</span>
                       <span className="best-hand-players">
