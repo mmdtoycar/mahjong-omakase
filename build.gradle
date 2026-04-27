@@ -96,7 +96,7 @@ spotless {
     endWithNewline()
   }
 
-  format 'frontend', {
+  format 'ui', {
     target fileTree('ui/src') { include '**/*.ts', '**/*.tsx', '**/*.css' }
     def isWindows = System.getProperty('os.name').toLowerCase().contains('win')
     def nodeVersion = '18.20.4'
