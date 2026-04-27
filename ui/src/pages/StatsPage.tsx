@@ -87,18 +87,23 @@ export default function StatsPage() {
       fetchBestRounds()
         .then(setBestRounds)
         .catch((e) => setBestRoundsError(e.message))
+    }
+  }, [tab])
 
+  useEffect(() => {
+    if (tab === 'games' && seasonKey !== 'all') {
       setMonthlyBestRoundsError('')
-      let year: number | undefined
-      let month: number | undefined
-      if (seasonKey !== 'all') {
-        const [y, m] = seasonKey.split('-').map(Number)
-        year = y
-        month = m
-      }
-      fetchBestRounds(year, month)
+      setMonthlyBestRounds([])
+      const [y, m] = seasonKey.split('-').map(Number)
+      fetchBestRounds(y, m)
         .then(setMonthlyBestRounds)
-        .catch((e) => setMonthlyBestRoundsError(e.message))
+        .catch((e) => {
+          setMonthlyBestRoundsError(e.message)
+          setMonthlyBestRounds([])
+        })
+    } else {
+      setMonthlyBestRounds([])
+      setMonthlyBestRoundsError('')
     }
   }, [tab, seasonKey])
 
@@ -268,13 +273,18 @@ export default function StatsPage() {
             </div>
           )}
 
-          {monthlyBestRounds.length > 0 && seasonKey !== 'all' && (
+          {seasonKey !== 'all' && (
             <div className="card best-hand-card">
               <div className="best-hand-header">
                 <span className="best-hand-crown">🌟</span>
                 <h2>{selectedSeason?.label}最高和牌</h2>
               </div>
               {monthlyBestRoundsError && <p className="error-text">加载月度最高和牌失败: {monthlyBestRoundsError}</p>}
+              {!monthlyBestRoundsError && monthlyBestRounds.length === 0 && (
+                <div className="empty-state" style={{ padding: '20px 0' }}>
+                  <p>本月无记录</p>
+                </div>
+              )}
               <div className="best-hand-list">
                 {monthlyBestRounds.map((round, idx) => (
                   <div key={idx} className="best-hand-item">

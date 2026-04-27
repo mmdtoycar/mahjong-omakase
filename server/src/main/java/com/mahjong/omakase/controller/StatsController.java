@@ -39,7 +39,14 @@ public class StatsController {
 
     LocalDateTime start = null;
     LocalDateTime end = null;
-    if (year != null && month != null) {
+    if (year != null || month != null) {
+      if (year == null || month == null) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "Both year and month must be provided");
+      }
+      if (month < 1 || month > 12) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
+      }
       start = LocalDateTime.of(year, month, 1, 0, 0);
       end = start.plusMonths(1);
     }
@@ -52,7 +59,14 @@ public class StatsController {
       @RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
     LocalDateTime start = null;
     LocalDateTime end = null;
-    if (year != null && month != null) {
+    if (year != null || month != null) {
+      if (year == null || month == null) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "Both year and month must be provided");
+      }
+      if (month < 1 || month > 12) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
+      }
       start = LocalDateTime.of(year, month, 1, 0, 0);
       end = start.plusMonths(1);
     }
