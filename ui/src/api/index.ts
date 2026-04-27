@@ -94,13 +94,13 @@ export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {
   return handleResponse(res)
 }
 
-export async function fetchBestRounds(year?: number, month?: number): Promise<BestRound[]> {
+export async function fetchBestRounds(year?: number, month?: number, signal?: AbortSignal): Promise<BestRound[]> {
   const params = new URLSearchParams()
   if (year != null && month != null) {
     params.set('year', String(year))
     params.set('month', String(month))
   }
   const qs = params.toString()
-  const res = await fetch(`${API}/stats/best-rounds${qs ? `?${qs}` : ''}`)
+  const res = await fetch(`${API}/stats/best-rounds${qs ? `?${qs}` : ''}`, { signal })
   return handleResponse<BestRound[]>(res)
 }

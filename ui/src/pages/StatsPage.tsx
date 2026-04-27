@@ -85,7 +85,7 @@ export default function StatsPage() {
     const controller = new AbortController()
     if (tab === 'games') {
       setBestRoundsError('')
-      fetchBestRounds()
+      fetchBestRounds(undefined, undefined, controller.signal)
         .then((data) => {
           if (!controller.signal.aborted) setBestRounds(data)
         })
@@ -102,7 +102,7 @@ export default function StatsPage() {
       setMonthlyBestRoundsError('')
       setMonthlyBestRounds([])
       const [y, m] = seasonKey.split('-').map(Number)
-      fetchBestRounds(y, m)
+      fetchBestRounds(y, m, controller.signal)
         .then((data) => {
           if (!controller.signal.aborted) setMonthlyBestRounds(data)
         })
