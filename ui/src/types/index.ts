@@ -40,6 +40,8 @@ export interface RoundInfo {
   winHand?: string
   fanDetails?: string
   fanCount?: number
+  dealInPlayerId?: number | null
+  dealInPlayerName?: string | null
 }
 
 export interface SessionDetail {

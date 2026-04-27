@@ -254,9 +254,9 @@ export default function StatsPage() {
                       <span className="best-hand-fan-count">{round.fanCount} 番</span>
                       <span className="best-hand-players">
                         <span className="winner-label">赢家:</span> {round.winnerName}
-                        {round.dealInPlayerName ? (
+                        {round.dealInPlayerId != null ? (
                           <>
-                            <span className="loser-label ml-2">输家:</span> {round.dealInPlayerName}
+                            <span className="loser-label ml-2">输家:</span> {round.dealInPlayerName || '?'}
                           </>
                         ) : (
                           <span className="zimo-label ml-2">(自摸)</span>
