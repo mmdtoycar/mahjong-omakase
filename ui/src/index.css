@@ -797,6 +797,44 @@ tr:hover td {
   white-space: nowrap;
 }
 
+.wind-selector-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 12px;
+  vertical-align: middle;
+}
+
+.wind-chip {
+  padding: 2px 8px;
+  background: var(--sol-base2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-light);
+  line-height: 1.2;
+}
+
+.wind-chip:hover {
+  background: var(--border);
+}
+
+.wind-chip.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.hand-num-info {
+  margin-left: 8px;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
 /* Best Hand Card */
 .best-hand-card {
   margin-top: 24px;

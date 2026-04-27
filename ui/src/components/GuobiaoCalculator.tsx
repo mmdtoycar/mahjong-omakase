@@ -274,41 +274,30 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   return (
     <div className="guobiao-inline-calculator">
       <div className="calc-top-row">
-        {initialOptions ? (
-          <div className="mini-option">
-            <span className="mini-opt-label">场况:</span>
-            <span className="mini-opt-val">
-              {['东', '南', '西', '北'][options.quanfeng - 1]}圈 · {['东', '南', '西', '北'][options.menfeng - 1]}风
-            </span>
-          </div>
-        ) : (
-          <>
-            <div className="mini-option">
-              <span className="mini-opt-label">圈:</span>
-              {[1, 2, 3, 4].map((v) => (
-                <button
-                  key={v}
-                  className={`micro-btn ${options.quanfeng === v ? 'active' : ''}`}
-                  onClick={() => setOptions({ ...options, quanfeng: v })}
-                >
-                  {['东', '南', '西', '北'][v - 1]}
-                </button>
-              ))}
-            </div>
-            <div className="mini-option">
-              <span className="mini-opt-label">门:</span>
-              {[1, 2, 3, 4].map((v) => (
-                <button
-                  key={v}
-                  className={`micro-btn ${options.menfeng === v ? 'active' : ''}`}
-                  onClick={() => setOptions({ ...options, menfeng: v })}
-                >
-                  {['东', '南', '西', '北'][v - 1]}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+        <div className="mini-option">
+          <span className="mini-opt-label">圈:</span>
+          {[1, 2, 3, 4].map((v) => (
+            <button
+              key={v}
+              className={`micro-btn ${options.quanfeng === v ? 'active' : ''}`}
+              onClick={() => setOptions({ ...options, quanfeng: v })}
+            >
+              {['东', '南', '西', '北'][v - 1]}
+            </button>
+          ))}
+        </div>
+        <div className="mini-option">
+          <span className="mini-opt-label">门:</span>
+          {[1, 2, 3, 4].map((v) => (
+            <button
+              key={v}
+              className={`micro-btn ${options.menfeng === v ? 'active' : ''}`}
+              onClick={() => setOptions({ ...options, menfeng: v })}
+            >
+              {['东', '南', '西', '北'][v - 1]}
+            </button>
+          ))}
+        </div>
         <div className="mini-option">
           <span className="mini-opt-label">花:</span>
           <div className="hua-stepper">

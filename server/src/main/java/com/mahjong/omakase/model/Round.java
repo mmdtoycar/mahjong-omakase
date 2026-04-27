@@ -32,6 +32,15 @@ public class Round {
   private Integer fanCount;
 
   private Long dealInPlayerId;
+  private Integer prevalentWind;
+
+  public Integer getPrevalentWind() {
+    return prevalentWind;
+  }
+
+  public void setPrevalentWind(Integer prevalentWind) {
+    this.prevalentWind = prevalentWind;
+  }
 
   public Long getDealInPlayerId() {
     return dealInPlayerId;

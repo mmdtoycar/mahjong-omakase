@@ -1,6 +1,7 @@
 package com.mahjong.omakase.dto;
 
 import com.mahjong.omakase.model.RoundType;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
@@ -39,6 +40,18 @@ public class AddRoundRequest {
 
   @Min(value = 0, message = "Fan count must be non-negative")
   private Integer fanCount;
+
+  @Min(value = 1, message = "Prevalent wind must be between 1 and 4")
+  @Max(value = 4, message = "Prevalent wind must be between 1 and 4")
+  private Integer prevalentWind;
+
+  public Integer getPrevalentWind() {
+    return prevalentWind;
+  }
+
+  public void setPrevalentWind(Integer prevalentWind) {
+    this.prevalentWind = prevalentWind;
+  }
 
   public Integer getFanCount() {
     return fanCount;
