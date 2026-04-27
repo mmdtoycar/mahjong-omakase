@@ -82,29 +82,41 @@ export default function StatsPage() {
   }, [gameMode, seasonKey, tab])
 
   useEffect(() => {
+    const controller = new AbortController()
     if (tab === 'games') {
       setBestRoundsError('')
       fetchBestRounds()
-        .then(setBestRounds)
-        .catch((e) => setBestRoundsError(e.message))
+        .then((data) => {
+          if (!controller.signal.aborted) setBestRounds(data)
+        })
+        .catch((e) => {
+          if (!controller.signal.aborted) setBestRoundsError(e.message)
+        })
     }
+    return () => controller.abort()
   }, [tab])
 
   useEffect(() => {
+    const controller = new AbortController()
     if (tab === 'games' && seasonKey !== 'all') {
       setMonthlyBestRoundsError('')
       setMonthlyBestRounds([])
       const [y, m] = seasonKey.split('-').map(Number)
       fetchBestRounds(y, m)
-        .then(setMonthlyBestRounds)
+        .then((data) => {
+          if (!controller.signal.aborted) setMonthlyBestRounds(data)
+        })
         .catch((e) => {
-          setMonthlyBestRoundsError(e.message)
-          setMonthlyBestRounds([])
+          if (!controller.signal.aborted) {
+            setMonthlyBestRoundsError(e.message)
+            setMonthlyBestRounds([])
+          }
         })
     } else {
       setMonthlyBestRounds([])
       setMonthlyBestRoundsError('')
     }
+    return () => controller.abort()
   }, [tab, seasonKey])
 
   const abbr = (s: PlayerStats) => abbrName(s.displayName)
@@ -307,7 +319,7 @@ export default function StatsPage() {
             </div>
           )}
 
-          {bestRounds.length > 0 && (
+          {(bestRounds.length > 0 || !!bestRoundsError) && (
             <div className="card best-hand-card">
               <div className="best-hand-header">
                 <span className="best-hand-crown">👑</span>
