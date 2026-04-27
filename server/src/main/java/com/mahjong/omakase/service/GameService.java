@@ -220,7 +220,8 @@ public class GameService {
                       round.getFanDetails(),
                       round.getFanCount(),
                       round.getDealInPlayerId(),
-                      dealInName);
+                      dealInName,
+                      round.getPrevalentWind());
                 })
             .collect(Collectors.toList()));
 
@@ -294,7 +295,8 @@ public class GameService {
         request.getWinHand(),
         request.getFanDetails(),
         request.getFanCount(),
-        request.isSelfDraw() ? null : request.getDealInPlayerId());
+        request.isSelfDraw() ? null : request.getDealInPlayerId(),
+        request.getPrevalentWind());
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -544,7 +546,8 @@ public class GameService {
       String winHand,
       String fanDetails,
       Integer fanCount,
-      Long dealInId) {
+      Long dealInId,
+      Integer prevalentWind) {
     Round round = new Round();
     round.setGameSession(session);
     round.setRoundNumber(roundNumber);
@@ -553,6 +556,7 @@ public class GameService {
     round.setFanDetails(fanDetails);
     round.setFanCount(fanCount);
     round.setDealInPlayerId(dealInId);
+    round.setPrevalentWind(prevalentWind);
 
     round = roundRepo.save(round);
 

@@ -28,6 +28,7 @@ export default function SessionPage() {
   const [winHand, setWinHand] = useState<string>('')
   const [fanDetails, setFanDetails] = useState<string>('')
   const [fanCount, setFanCount] = useState<number>(0)
+  const [manualQuanfeng, setManualQuanfeng] = useState<number | null>(null)
   const [error, setError] = useState('')
 
   const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
@@ -80,6 +81,7 @@ export default function SessionPage() {
     setWinHand('')
     setFanDetails('')
     setFanCount(0)
+    setManualQuanfeng(null)
     setCalcResetCount((prev) => prev + 1)
   }
 
@@ -160,6 +162,7 @@ export default function SessionPage() {
           winHand,
           fanDetails,
           fanCount: fanCount || parseInt(score),
+          prevalentWind: gbWinds?.quanfeng,
         })
       }
 
@@ -232,7 +235,27 @@ export default function SessionPage() {
   const getGuobiaoWinds = () => {
     if (!isGuobiao) return null
     const handIdx = session.rounds.length + 1
-    const qf = (Math.floor((handIdx - 1) / 4) % 4) + 1
+
+    let qf: number
+    if (manualQuanfeng !== null) {
+      qf = manualQuanfeng
+    } else if (session.rounds.length > 0) {
+      const lastRound = session.rounds[session.rounds.length - 1]
+      // Use the stored prevalent wind from the last round, or fall back to calculation
+      const lastQf = lastRound.prevalentWind || (Math.floor((session.rounds.length - 1) / 4) % 4) + 1
+
+      if (handIdx > 1 && (handIdx - 1) % 4 === 0) {
+        // Every 4 rounds, the wind should increment (e.g. 5th, 9th, 13th round)
+        qf = (lastQf % 4) + 1
+      } else {
+        // Otherwise stay the same as the previous round
+        qf = lastQf
+      }
+    } else {
+      // First round default
+      qf = (Math.floor((handIdx - 1) / 4) % 4) + 1
+    }
+
     const dealerSeat = ((handIdx - 1) % 4) + 1
     return { quanfeng: qf, dealerSeat, handIdx }
   }
@@ -254,9 +277,10 @@ export default function SessionPage() {
 
   const getWindName = (w: number) => ['东', '南', '西', '北'][w - 1] + '风'
 
-  const getRoundWind = (roundNum: number) => {
+  const getRoundWind = (round: RoundInfo) => {
     if (!isGuobiao) return null
-    const qf = (Math.floor((roundNum - 1) / 4) % 4) + 1
+    const roundNum = round.roundNumber
+    const qf = round.prevalentWind || (Math.floor((roundNum - 1) / 4) % 4) + 1
     const hand = ((roundNum - 1) % 4) + 1
     return { qf, hand, name: `${['东', '南', '西', '北'][qf - 1]}${hand}` }
   }
@@ -421,7 +445,7 @@ export default function SessionPage() {
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
                         <div className="round-info-cell">
                           {(() => {
-                            const rw = getRoundWind(round.roundNumber)
+                            const rw = getRoundWind(round)
                             return rw ? (
                               <div
                                 style={{
@@ -679,9 +703,19 @@ export default function SessionPage() {
                     <label>
                       分数
                       {gbWinds && (
-                        <span className="gb-wind-info">
-                          ({getWindName(gbWinds.quanfeng)} 第{((gbWinds.handIdx - 1) % 4) + 1}局)
-                        </span>
+                        <div className="wind-selector-mini">
+                          {[1, 2, 3, 4].map((w) => (
+                            <button
+                              key={w}
+                              type="button"
+                              className={`wind-chip ${gbWinds.quanfeng === w ? 'active' : ''}`}
+                              onClick={() => setManualQuanfeng(w)}
+                            >
+                              {['东', '南', '西', '北'][w - 1]}
+                            </button>
+                          ))}
+                          <span className="hand-num-info">第{((gbWinds.handIdx - 1) % 4) + 1}局</span>
+                        </div>
                       )}
                     </label>
                     <div className="score-input-row">

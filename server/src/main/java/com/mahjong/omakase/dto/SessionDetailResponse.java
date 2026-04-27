@@ -69,6 +69,7 @@ public class SessionDetailResponse {
     private Integer fanCount;
     private Long dealInPlayerId;
     private String dealInPlayerName;
+    private Integer prevalentWind;
 
     public RoundInfo(
         int roundNumber,
@@ -78,7 +79,8 @@ public class SessionDetailResponse {
         String fanDetails,
         Integer fanCount,
         Long dealInPlayerId,
-        String dealInPlayerName) {
+        String dealInPlayerName,
+        Integer prevalentWind) {
       this.roundNumber = roundNumber;
       this.scores = scores;
       this.winnerId = winnerId;
@@ -87,6 +89,7 @@ public class SessionDetailResponse {
       this.fanCount = fanCount;
       this.dealInPlayerId = dealInPlayerId;
       this.dealInPlayerName = dealInPlayerName;
+      this.prevalentWind = prevalentWind;
     }
 
     public int getRoundNumber() {
@@ -119,6 +122,10 @@ public class SessionDetailResponse {
 
     public String getDealInPlayerName() {
       return dealInPlayerName;
+    }
+
+    public Integer getPrevalentWind() {
+      return prevalentWind;
     }
   }
 

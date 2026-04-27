@@ -40,6 +40,16 @@ public class AddRoundRequest {
   @Min(value = 0, message = "Fan count must be non-negative")
   private Integer fanCount;
 
+  private Integer prevalentWind;
+
+  public Integer getPrevalentWind() {
+    return prevalentWind;
+  }
+
+  public void setPrevalentWind(Integer prevalentWind) {
+    this.prevalentWind = prevalentWind;
+  }
+
   public Integer getFanCount() {
     return fanCount;
   }
