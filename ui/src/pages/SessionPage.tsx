@@ -848,7 +848,8 @@ export default function SessionPage() {
           <div className="best-hand-list">
             {bestRounds.map((round, idx) => {
               const winner = session.players.find((p) => p.id === round.winnerId)
-              const loser = round.dealInPlayerId ? session.players.find((p) => p.id === round.dealInPlayerId) : null
+              const loser =
+                round.dealInPlayerId != null ? session.players.find((p) => p.id === round.dealInPlayerId) : null
 
               return (
                 <div key={round.roundNumber} className="best-hand-item">
@@ -856,9 +857,9 @@ export default function SessionPage() {
                     <span className="best-hand-fan-count">{round.effectiveFan} 番</span>
                     <span className="best-hand-players">
                       <span className="winner-label">赢家:</span> {winner?.userName}
-                      {loser ? (
+                      {round.dealInPlayerId != null ? (
                         <>
-                          <span className="loser-label ml-2">输家:</span> {loser.userName}
+                          <span className="loser-label ml-2">输家:</span> {loser?.userName || '?'}
                         </>
                       ) : (
                         <span className="zimo-label ml-2">(自摸)</span>

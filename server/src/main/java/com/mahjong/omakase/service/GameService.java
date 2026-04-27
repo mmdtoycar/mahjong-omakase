@@ -190,6 +190,13 @@ public class GameService {
                         gsp.getSeat()))
             .collect(Collectors.toList()));
 
+    Map<Long, String> playerNameMap =
+        session.getPlayers().stream()
+            .filter(gsp -> gsp.getPlayer() != null)
+            .collect(
+                Collectors.toMap(
+                    gsp -> gsp.getPlayer().getId(), gsp -> gsp.getPlayer().getUserName()));
+
     resp.setRounds(
         session.getRounds().stream()
             .map(
@@ -202,11 +209,7 @@ public class GameService {
 
                   String dealInName = null;
                   if (round.getDealInPlayerId() != null) {
-                    dealInName =
-                        playerRepo
-                            .findById(round.getDealInPlayerId())
-                            .map(Player::getUserName)
-                            .orElse("?");
+                    dealInName = playerNameMap.getOrDefault(round.getDealInPlayerId(), "?");
                   }
 
                   return new SessionDetailResponse.RoundInfo(
