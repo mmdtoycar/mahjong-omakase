@@ -332,11 +332,24 @@ public class GameService {
     log.info("Completed session id={}", sessionId);
   }
 
-  public List<BestRoundResponse> getBestRounds() {
-    Integer maxFan = roundRepo.findMaxFanCount();
+  public List<BestRoundResponse> getBestRounds(LocalDateTime start, LocalDateTime end) {
+    Integer maxFan;
+    if (start != null && end != null) {
+      maxFan = roundRepo.findMaxFanCountByDateRange(start, end);
+    } else {
+      maxFan = roundRepo.findMaxFanCount();
+    }
+
     if (maxFan == null || maxFan == 0) return Collections.emptyList();
 
-    return roundRepo.findByFanCount(maxFan).stream()
+    List<Round> bestRounds;
+    if (start != null && end != null) {
+      bestRounds = roundRepo.findByFanCountAndDateRange(maxFan, start, end);
+    } else {
+      bestRounds = roundRepo.findByFanCount(maxFan);
+    }
+
+    return bestRounds.stream()
         .map(
             round -> {
               Map<Long, Integer> scores =
@@ -482,6 +495,7 @@ public class GameService {
               double bonusRP = totalBonusPerPlayer.getOrDefault(p.getId(), 0.0);
               double totalRPVal = baseRP + bonusRP;
               stat.setTotalRP(totalRPVal);
+              stat.setBaseRP(baseRP);
               int games = gamesPlayed.getOrDefault(p.getId(), 0);
               stat.setAvgScore(games > 0 ? totalRPVal / games : 0);
               return stat;
