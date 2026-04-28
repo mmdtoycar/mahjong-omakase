@@ -20,7 +20,7 @@ Landing page with quick access to start a game
 - Support for 自摸 and 点炮
 
 ### Stats & Leaderboard
-- Monthly seasons: 1月, 2月, 3月, ..., 12月
+- Monthly seasons with 节气-inspired names (大寒, 立春, 春分, 清明, ...)
 - 🏆 赛季冠军 and 👑 最多胜场 highlights
 - Filter leaderboard by game mode
 - Player profiles with individual game history

@@ -7,15 +7,14 @@ import {
   GAME_MODES,
   Season,
   getCurrentSeason,
-  getAvailableSeasons,
+  getSeasonLabel,
   BestRound,
 } from '../types'
-import { fetchStats, fetchPlayers, fetchBestRounds } from '../api'
+import { fetchStats, fetchPlayers, fetchBestRounds, fetchActiveSeasons } from '../api'
 import { MahjongHand } from '../components/MahjongHand'
 
 type Tab = 'games' | 'players'
 
-const seasons = getAvailableSeasons()
 const currentSeason = getCurrentSeason()
 
 import { statFontSize } from '../utils/fontSize'
@@ -34,6 +33,7 @@ export default function StatsPage() {
   const [bestRoundsError, setBestRoundsError] = useState('')
   const [monthlyBestRounds, setMonthlyBestRounds] = useState<BestRound[]>([])
   const [monthlyBestRoundsError, setMonthlyBestRoundsError] = useState('')
+  const [seasons, setSeasons] = useState<Season[]>([])
 
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
@@ -72,6 +72,16 @@ export default function StatsPage() {
         setLoading(false)
       })
   }
+
+  useEffect(() => {
+    fetchActiveSeasons().then((data) => {
+      const list = data.map((s) => ({ year: s.year, month: s.month, label: getSeasonLabel(s.year, s.month) }))
+      setSeasons(list)
+      if (list.length > 0 && !list.some((s) => `${s.year}-${s.month}` === seasonKey)) {
+        setSeasonKey(`${list[0].year}-${list[0].month}`)
+      }
+    })
+  }, [])
 
   useEffect(() => {
     if (tab === 'games') {

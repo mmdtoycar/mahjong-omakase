@@ -5,6 +5,7 @@ import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.service.GameService;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,6 +53,11 @@ public class StatsController {
     }
 
     return gameService.getPlayerStats(mode, start, end);
+  }
+
+  @GetMapping("/seasons")
+  public List<Map<String, Integer>> getActiveSeasons() {
+    return gameService.getActiveSeasons();
   }
 
   @GetMapping("/best-rounds")
