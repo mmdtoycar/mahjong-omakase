@@ -1,4 +1,13 @@
-import { Player, GameSession, SessionDetail, PlayerStats, PlayerDetail, AddRoundData, BestRound, FanDiscovery } from '../types'
+import {
+  Player,
+  GameSession,
+  SessionDetail,
+  PlayerStats,
+  PlayerDetail,
+  AddRoundData,
+  BestRound,
+  FanDiscovery,
+} from '../types'
 
 const API = '/api'
 

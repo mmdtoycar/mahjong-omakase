@@ -90,7 +90,7 @@ public class StatsController {
     }
     return gameService.getBestRounds(mode, start, end);
   }
-  
+
   @GetMapping("/fan-discoveries")
   public List<FanDiscoveryResponse> getFanDiscoveries() {
     return gameService.getFanDiscoveries();

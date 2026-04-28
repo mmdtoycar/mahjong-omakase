@@ -121,7 +121,12 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
     )
   }
 
-  const fanTags = details ? details.split(',').map(s => s.trim()).filter(Boolean) : []
+  const fanTags = details
+    ? details
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : []
 
   return (
     <div className="mahjong-hand-container">
@@ -137,11 +142,16 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
               const count = match[4]
               return (
                 <span key={idx} className="mini-fan-tag">
-                  {name}{count ? `x${count}` : ''} +{totalScore}
+                  {name}
+                  {count ? `x${count}` : ''} +{totalScore}
                 </span>
               )
             }
-            return <span key={idx} className="mini-fan-tag">{tag}</span>
+            return (
+              <span key={idx} className="mini-fan-tag">
+                {tag}
+              </span>
+            )
           })}
         </div>
       )}
