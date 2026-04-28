@@ -1,9 +1,9 @@
 plugins {
-  id 'java'
-  id 'org.springframework.boot' version '3.2.5'
-  id 'io.spring.dependency-management' version '1.1.5'
-  id 'com.github.node-gradle.node' version '7.1.0'
-  id 'com.diffplug.spotless' version '7.1.0'
+    id 'java'
+    id 'org.springframework.boot' version '3.2.5'
+    id 'io.spring.dependency-management' version '1.1.5'
+    id 'com.github.node-gradle.node' version '7.1.0'
+    id 'com.diffplug.spotless' version '7.1.0'
 }
 
 import com.github.gradle.node.npm.task.NpmTask
@@ -12,97 +12,116 @@ group = 'com.mahjong'
 version = '0.0.1-SNAPSHOT'
 
 java {
-  sourceCompatibility = '17'
-}
-
-sourceSets {
-  main {
-    java.srcDirs = ['server/src/main/java']
-    resources.srcDirs = ['server/src/main/resources']
-  }
-  test {
-    java.srcDirs = ['server/src/test/java']
-    resources.srcDirs = ['server/src/test/resources']
-  }
+    sourceCompatibility = '17'
 }
 
 repositories {
-  mavenCentral()
+    mavenCentral()
 }
 
 configurations.all {
-  exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+}
+
+// ==========================================================================
+// Backend (server/)
+// ==========================================================================
+
+sourceSets {
+    main {
+        java.srcDirs = ['server/src/main/java']
+        resources.srcDirs = ['server/src/main/resources']
+    }
+    test {
+        java.srcDirs = ['server/src/test/java']
+        resources.srcDirs = ['server/src/test/resources']
+    }
 }
 
 dependencies {
-  implementation 'org.springframework.boot:spring-boot-starter-web'
-  implementation 'org.springframework.boot:spring-boot-starter-log4j2'
-  implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-  implementation 'org.springframework.boot:spring-boot-starter-validation'
-  runtimeOnly 'com.h2database:h2'
-  compileOnly 'org.projectlombok:lombok'
-  annotationProcessor 'org.projectlombok:lombok'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    runtimeOnly 'com.h2database:h2'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 }
 
+// ==========================================================================
+// UI (ui/) — React app built with Vite, output copied into Spring Boot jar
+// ==========================================================================
+
 def uiDir = "${projectDir}/ui"
+def nodeVersion = '18.20.4'
 
 node {
-  version = '18.20.4'
-  download = true
-  workDir = file("${projectDir}/.gradle/nodejs")
-  npmWorkDir = file("${projectDir}/.gradle/npm")
-  nodeProjectDir = file(uiDir)
+    version = nodeVersion
+    download = true
+    workDir = file("${projectDir}/.gradle/nodejs")
+    npmWorkDir = file("${projectDir}/.gradle/npm")
+    nodeProjectDir = file(uiDir)
 }
 
 tasks.register('npmBuild', NpmTask) {
-  dependsOn npmInstall
-  workingDir = file(uiDir)
-  args = ['run', 'build']
-  inputs.dir("${uiDir}/src")
-  inputs.file("${uiDir}/index.html")
-  inputs.file("${uiDir}/vite.config.ts")
-  inputs.file("${uiDir}/package.json")
-  inputs.file("${uiDir}/package-lock.json")
-  outputs.dir("${uiDir}/dist")
+    dependsOn npmInstall
+    workingDir = file(uiDir)
+    args = ['run', 'build']
+    inputs.dir("${uiDir}/src")
+    inputs.file("${uiDir}/index.html")
+    inputs.file("${uiDir}/vite.config.ts")
+    inputs.file("${uiDir}/package.json")
+    inputs.file("${uiDir}/package-lock.json")
+    outputs.dir("${uiDir}/dist")
 }
 
 tasks.register('npmTest', NpmTask) {
-  dependsOn npmInstall
-  workingDir = file(uiDir)
-  args = ['run', 'test:run']
+    dependsOn npmInstall
+    workingDir = file(uiDir)
+    args = ['run', 'test:run']
 }
 
 tasks.register('copyUI', Copy) {
-  dependsOn npmBuild
-  from "${uiDir}/dist"
-  into "${projectDir}/server/src/main/resources/static"
+    dependsOn npmBuild
+    from "${uiDir}/dist"
+    into "${projectDir}/server/src/main/resources/static"
 }
 
 processResources.dependsOn copyUI
 
-spotless {
-  encoding 'UTF-8'
+// ==========================================================================
+// Code formatting — google-java-format for backend, Prettier for UI
+// ==========================================================================
 
-  java {
-    target fileTree('server/src/main/java') {
-      include '**/*.java'
+spotless {
+    encoding 'UTF-8'
+
+    java {
+        target fileTree('server/src/main/java') { include '**/*.java' }
+        toggleOffOn()
+        removeUnusedImports()
+        googleJavaFormat('1.17.0')
+        leadingTabsToSpaces(2)
+        trimTrailingWhitespace()
+        endWithNewline()
     }
 
-    toggleOffOn()
-    removeUnusedImports()
-    googleJavaFormat('1.17.0')
-    leadingTabsToSpaces(2)
-    trimTrailingWhitespace()
-    endWithNewline()
-  }
+    format 'ui', {
+        target fileTree('ui/src') { include '**/*.ts', '**/*.tsx', '**/*.css' }
 
-  format 'ui', {
-    target fileTree('ui/src') { include '**/*.ts', '**/*.tsx', '**/*.css' }
-    def nodeDir = file("${projectDir}/.gradle/nodejs").listFiles()?.find { it.isDirectory() && it.name.startsWith('node-') }
-    def npmBin = System.getProperty('os.name').toLowerCase().contains('win') ? 'npm.cmd' : 'bin/npm'
-    def npmExec = new File(nodeDir, npmBin)
-    prettier().npmExecutable(npmExec.absolutePath).config(['singleQuote': true, 'semi': false, 'printWidth': 120])
-    trimTrailingWhitespace()
-    endWithNewline()
-  }
+        def os = System.getProperty('os.name').toLowerCase()
+        def arm = System.getProperty('os.arch').toLowerCase().contains('aarch64')
+        def platform = os.contains('mac') ? (arm ? 'darwin-arm64' : 'darwin-x64') :
+                        os.contains('win') ? 'win-x64' :
+                        (arm ? 'linux-arm64' : 'linux-x64')
+        def npmExec = file("${projectDir}/.gradle/nodejs/node-v${nodeVersion}-${platform}/${os.contains('win') ? 'npm.cmd' : 'bin/npm'}")
+
+        prettier().npmExecutable(npmExec.absolutePath).config([
+            'singleQuote': true,
+            'semi': false,
+            'printWidth': 120,
+        ])
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }
