@@ -184,7 +184,7 @@ const FanTablePage: React.FC = () => {
                       })}
                     </div>
                   )}
-                  {discoveriesMap[item.name] && (
+                  {discoveriesMap[item.name]?.exampleHand && (
                     <div className="fan-item-example-real">
                       <MahjongHand hand={discoveriesMap[item.name].exampleHand} />
                       <span className="example-hint">实战例子</span>

@@ -1678,7 +1678,7 @@ tr:hover td {
   max-width: 22px;
   /* Ensure they don't get too large on wide screens */
   min-width: 0;
-  flex-shrink: 1;
+  flex-shrink: 0;
   object-fit: contain;
   border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 3px;

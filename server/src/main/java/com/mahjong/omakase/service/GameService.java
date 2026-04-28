@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,12 +57,16 @@ public class GameService {
   }
 
   public void initializeDiscoveries() {
-    if (fanDiscoveryRepo.count() > 0) {
-      log.info("Fan discoveries already initialized, skipping scan.");
-      return;
-    }
-    log.info("Initializing fan discoveries from historical rounds...");
+    log.info("Checking for new fan discoveries from historical rounds...");
+    // Load existing discoveries to ensure idempotency
+    Set<String> discoveredFans =
+        fanDiscoveryRepo.findAll().stream()
+            .map(FanDiscovery::getFanName)
+            .collect(Collectors.toSet());
+
     List<Round> allRounds = roundRepo.findAllOrderByTime();
+    int newDiscoveries = 0;
+
     for (Round round : allRounds) {
       if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
       Player winner = playerRepo.findById(round.getWinnerId()).orElse(null);
@@ -69,24 +74,34 @@ public class GameService {
 
       String[] parts = round.getFanDetails().split(",\\s*");
       for (String p : parts) {
-        int bracketIdx = p.indexOf('(');
-        if (bracketIdx != -1) {
-          String fanName = p.substring(0, bracketIdx).trim();
-          if (!fanDiscoveryRepo.existsById(fanName)) {
-            FanDiscovery fd = new FanDiscovery(fanName, winner, round, round.getWinHand());
-            // Use session time as discovery time for historical data
-            fd.setDiscoveredAt(round.getGameSession().getCreatedAt());
+        String trimmedPart = p.trim();
+        if (trimmedPart.isEmpty()) continue;
+
+        int bracketIdx = trimmedPart.indexOf('(');
+        String fanName =
+            bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
+
+        if (!discoveredFans.contains(fanName)) {
+          LocalDateTime discoveryTime = round.getGameSession().getCreatedAt();
+          try {
+            FanDiscovery fd =
+                new FanDiscovery(fanName, winner, round, round.getWinHand(), discoveryTime);
             fanDiscoveryRepo.save(fd);
+            discoveredFans.add(fanName);
+            newDiscoveries++;
             log.info(
                 "Historical Discovery: '{}' by player '{}' at {}",
                 fanName,
                 winner.getUserName(),
-                fd.getDiscoveredAt());
+                discoveryTime);
+          } catch (DataIntegrityViolationException e) {
+            // Already discovered by a concurrent thread/process
+            discoveredFans.add(fanName);
           }
         }
       }
     }
-    log.info("Fan discoveries initialization complete.");
+    log.info("Fan discoveries initialization complete. Found {} new discoveries.", newDiscoveries);
   }
 
   public void reloadSettings() {
@@ -657,18 +672,24 @@ public class GameService {
       if (winner != null) {
         String[] parts = fanDetails.split(",\\s*");
         for (String p : parts) {
-          int bracketIdx = p.indexOf('(');
-          if (bracketIdx != -1) {
-            String fanName = p.substring(0, bracketIdx).trim();
-            if (!fanDiscoveryRepo.existsById(fanName)) {
-              FanDiscovery fd = new FanDiscovery(fanName, winner, round, winHand);
-              fanDiscoveryRepo.save(fd);
-              log.info(
-                  "New Fan Discovered: '{}' by player '{}' in round {}",
-                  fanName,
-                  winner.getUserName(),
-                  round.getId());
-            }
+          String trimmedPart = p.trim();
+          if (trimmedPart.isEmpty()) continue;
+
+          int bracketIdx = trimmedPart.indexOf('(');
+          String fanName =
+              bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
+
+          try {
+            FanDiscovery fd =
+                new FanDiscovery(fanName, winner, round, winHand, LocalDateTime.now());
+            fanDiscoveryRepo.save(fd);
+            log.info(
+                "New Fan Discovered: '{}' by player '{}' in round {}",
+                fanName,
+                winner.getUserName(),
+                round.getId());
+          } catch (DataIntegrityViolationException e) {
+            // Already discovered, skip silently
           }
         }
       }
