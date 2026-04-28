@@ -777,7 +777,7 @@ const CalculatorPage: React.FC = () => {
                 .micro-select { padding: 1px 4px; border-radius: 4px; border: 1px solid var(--solaris-base1); font-size: 0.75rem; font-weight: 700; }
 
                 .mobile-back-home { display: none; }
-                @media (max-width: 600px) {
+                @media (max-width: 640px) {
                     .calculator-page .compact-header { padding: 4px 0; margin-bottom: 8px; }
                     .calculator-page .compact-header h2 { font-size: 1.1rem; }
                     .calculator-page .back-home-link { font-size: 0.8rem; }
