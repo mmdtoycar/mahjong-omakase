@@ -63,7 +63,9 @@ public class GameService {
     log.info("Checking for new fan discoveries from historical rounds...");
     // Load existing discoveries to ensure idempotency
     Set<String> discoveredFans =
-        fanDiscoveryRepo.findAll().stream().map(FanDiscovery::getFanName).collect(Collectors.toSet());
+        fanDiscoveryRepo.findAll().stream()
+            .map(FanDiscovery::getFanName)
+            .collect(Collectors.toSet());
 
     int page = 0;
     int size = 100;
@@ -91,7 +93,8 @@ public class GameService {
           if (trimmedPart.isEmpty()) continue;
 
           int bracketIdx = trimmedPart.indexOf('(');
-          String fanName = bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
+          String fanName =
+              bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
 
           if (!discoveredFans.contains(fanName)) {
             LocalDateTime discoveryTime = round.getGameSession().getCreatedAt();
@@ -101,7 +104,11 @@ public class GameService {
               fanDiscoveryRepo.save(fd);
               discoveredFans.add(fanName);
               newDiscoveries++;
-              log.info("Historical Discovery: '{}' by player '{}' at {}", fanName, winner.getUserName(), discoveryTime);
+              log.info(
+                  "Historical Discovery: '{}' by player '{}' at {}",
+                  fanName,
+                  winner.getUserName(),
+                  discoveryTime);
             } catch (DataIntegrityViolationException e) {
               // Already discovered by a concurrent thread/process
               discoveredFans.add(fanName);
