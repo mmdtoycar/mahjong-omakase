@@ -160,4 +160,6 @@ export interface FanDiscovery {
   playerName: string
   exampleHand: string
   discoveredAt: string
+  bonusRp: number
+  season: string
 }

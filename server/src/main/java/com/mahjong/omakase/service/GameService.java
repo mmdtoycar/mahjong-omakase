@@ -6,6 +6,7 @@ import com.mahjong.omakase.repository.*;
 import com.mahjong.omakase.service.handler.GameModeHandler;
 import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -87,6 +88,7 @@ public class GameService {
         Player winner = playerRepo.findById(round.getWinnerId()).orElse(null);
         if (winner == null) continue;
 
+        String season = getSeasonString(round.getGameSession().getCreatedAt());
         String[] parts = round.getFanDetails().split(",\\s*");
         for (String p : parts) {
           String trimmedPart = p.trim();
@@ -96,22 +98,38 @@ public class GameService {
           String fanName =
               bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
 
-          if (!discoveredFans.contains(fanName)) {
+          String key = season + "_" + fanName;
+          if (!discoveredFans.contains(key)) {
             LocalDateTime discoveryTime = round.getGameSession().getCreatedAt();
             try {
+              int fanScore = 0;
+              if (bracketIdx != -1) {
+                int endBracket = trimmedPart.indexOf(')', bracketIdx);
+                if (endBracket != -1) {
+                  String scorePart = trimmedPart.substring(bracketIdx + 1, endBracket);
+                  try {
+                    fanScore = Integer.parseInt(scorePart.split("x")[0]);
+                  } catch (NumberFormatException e) {
+                    // ignore
+                  }
+                }
+              }
+              double bonusRp = fanScore >= 8 ? fanScore / 2.0 : 0.0;
+
               FanDiscovery fd =
-                  new FanDiscovery(fanName, winner, round, round.getWinHand(), discoveryTime);
+                  new FanDiscovery(
+                      fanName, season, winner, round, round.getWinHand(), bonusRp, discoveryTime);
               fanDiscoveryRepo.save(fd);
-              discoveredFans.add(fanName);
+              discoveredFans.add(key);
               newDiscoveries++;
               log.info(
-                  "Historical Discovery: '{}' by player '{}' at {}",
+                  "Historical Discovery: '{}' in season '{}' by player '{}' at {}",
                   fanName,
+                  season,
                   winner.getUserName(),
                   discoveryTime);
             } catch (DataIntegrityViolationException e) {
-              // Already discovered by a concurrent thread/process
-              discoveredFans.add(fanName);
+              discoveredFans.add(key);
             }
           }
         }
@@ -119,6 +137,10 @@ public class GameService {
       page++;
     }
     log.info("Fan discoveries initialization complete. Found {} new discoveries.", newDiscoveries);
+  }
+
+  private String getSeasonString(LocalDateTime time) {
+    return YearMonth.from(time).toString();
   }
 
   public void reloadSettings() {
@@ -532,6 +554,26 @@ public class GameService {
                     !hasDateRange
                         || (!s.getCreatedAt().isBefore(start) && s.getCreatedAt().isBefore(end)))
             .toList();
+
+    // Add Fan Discovery Bonuses
+    if (hasDateRange) {
+      String season = getSeasonString(start);
+      List<FanDiscovery> discoveries = fanDiscoveryRepo.findBySeason(season);
+      for (FanDiscovery fd : discoveries) {
+        if (fd.getBonusRp() > 0) {
+          totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), Double::sum);
+        }
+      }
+    } else {
+      // All-time: Sum bonuses from all seasons
+      List<FanDiscovery> allDiscoveries = fanDiscoveryRepo.findAll();
+      for (FanDiscovery fd : allDiscoveries) {
+        if (fd.getBonusRp() > 0) {
+          totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), Double::sum);
+        }
+      }
+    }
+
     for (GameSession session : completedSessions) {
       List<Object[]> sessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
       if (!sessionScores.isEmpty()) {
@@ -687,6 +729,7 @@ public class GameService {
     if (winnerId != null && fanDetails != null && !fanDetails.isBlank()) {
       Player winner = playerRepo.findById(winnerId).orElse(null);
       if (winner != null) {
+        String season = getSeasonString(LocalDateTime.now());
         String[] parts = fanDetails.split(",\\s*");
         for (String p : parts) {
           String trimmedPart = p.trim();
@@ -696,17 +739,35 @@ public class GameService {
           String fanName =
               bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
 
-          try {
-            FanDiscovery fd =
-                new FanDiscovery(fanName, winner, round, winHand, LocalDateTime.now());
-            fanDiscoveryRepo.save(fd);
-            log.info(
-                "New Fan Discovered: '{}' by player '{}' in round {}",
-                fanName,
-                winner.getUserName(),
-                round.getId());
-          } catch (DataIntegrityViolationException e) {
-            // Already discovered, skip silently
+          if (fanDiscoveryRepo.findBySeasonAndFanName(season, fanName).isEmpty()) {
+            try {
+              int fanScore = 0;
+              if (bracketIdx != -1) {
+                int endBracket = trimmedPart.indexOf(')', bracketIdx);
+                if (endBracket != -1) {
+                  String scorePart = trimmedPart.substring(bracketIdx + 1, endBracket);
+                  try {
+                    fanScore = Integer.parseInt(scorePart.split("x")[0]);
+                  } catch (NumberFormatException e) {
+                    // ignore
+                  }
+                }
+              }
+              double bonusRp = fanScore >= 8 ? fanScore / 2.0 : 0.0;
+
+              FanDiscovery fd =
+                  new FanDiscovery(
+                      fanName, season, winner, round, winHand, bonusRp, LocalDateTime.now());
+              fanDiscoveryRepo.save(fd);
+              log.info(
+                  "New Fan Discovered: '{}' in season '{}' by player '{}' in round {}",
+                  fanName,
+                  season,
+                  winner.getUserName(),
+                  round.getId());
+            } catch (DataIntegrityViolationException e) {
+              // Already discovered, skip silently
+            }
           }
         }
       }

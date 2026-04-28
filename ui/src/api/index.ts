@@ -125,7 +125,13 @@ export async function fetchBestRounds(
   return handleResponse<BestRound[]>(res)
 }
 
-export async function fetchFanDiscoveries(): Promise<FanDiscovery[]> {
-  const res = await fetch(`${API}/stats/fan-discoveries`)
+export async function fetchFanDiscoveries(year?: number, month?: number): Promise<FanDiscovery[]> {
+  const params = new URLSearchParams()
+  if (year != null && month != null) {
+    params.set('year', String(year))
+    params.set('month', String(month))
+  }
+  const qs = params.toString()
+  const res = await fetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`)
   return handleResponse<FanDiscovery[]>(res)
 }

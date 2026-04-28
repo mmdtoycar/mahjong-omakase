@@ -92,7 +92,21 @@ public class StatsController {
   }
 
   @GetMapping("/fan-discoveries")
-  public List<FanDiscoveryResponse> getFanDiscoveries() {
-    return gameService.getFanDiscoveries();
+  public List<FanDiscoveryResponse> getFanDiscoveries(
+      @RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
+    LocalDateTime start = null;
+    LocalDateTime end = null;
+    if (year != null || month != null) {
+      if (year == null || month == null) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "Both year and month must be provided");
+      }
+      if (month < 1 || month > 12) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
+      }
+      start = LocalDateTime.of(year, month, 1, 0, 0);
+      end = start.plusMonths(1);
+    }
+    return gameService.getFanDiscoveries(start, end);
   }
 }

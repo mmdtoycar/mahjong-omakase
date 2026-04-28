@@ -3,7 +3,7 @@ import { fanTableData, FanItem } from '../data/fanTableData'
 import { riichiFanTableData } from '../data/riichiFanTableData'
 import { shenyangFanTableData } from '../data/shenyangFanTableData'
 import { fetchFanDiscoveries } from '../api'
-import { FanDiscovery } from '../types'
+import { FanDiscovery, getCurrentSeason, getAvailableSeasons, Season } from '../types'
 import { MahjongHand } from '../components/MahjongHand'
 
 type TabType = 'guobiao' | 'riichi' | 'shenyang'
@@ -12,10 +12,16 @@ const FanTablePage: React.FC = () => {
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<TabType>('guobiao')
   const [discoveries, setDiscoveries] = useState<FanDiscovery[]>([])
+  const [seasonKey, setSeasonKey] = useState<string>(() => {
+    const s = getCurrentSeason()
+    return `${s.year}-${s.month}`
+  })
+  const seasons = useMemo(() => getAvailableSeasons(2024), [])
 
   useEffect(() => {
-    fetchFanDiscoveries().then(setDiscoveries).catch(console.error)
-  }, [])
+    const [y, m] = seasonKey.split('-').map(Number)
+    fetchFanDiscoveries(y, m).then(setDiscoveries).catch(console.error)
+  }, [seasonKey])
 
   const discoveriesMap = useMemo(() => {
     return Object.fromEntries(discoveries.map((d) => [d.fanName, d]))
@@ -106,13 +112,21 @@ const FanTablePage: React.FC = () => {
         </div>
         <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>{getSubtitle()}</p>
 
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
           <input
             type="text"
             placeholder="搜索番名、分数或描述..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            style={{ flex: 1, minWidth: '200px' }}
           />
+          <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} style={{ width: '150px' }}>
+            {seasons.map((s) => (
+              <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
+                {s.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {fans.length === 0 && (
@@ -132,9 +146,12 @@ const FanTablePage: React.FC = () => {
                         <span
                           className="badge badge-accent"
                           style={{ fontSize: '0.7rem', padding: '2px 6px' }}
-                          title={`首位达成者: ${discoveriesMap[item.name].playerName}`}
+                          title={`首位达成者: ${discoveriesMap[item.name].playerName}${
+                            discoveriesMap[item.name].bonusRp > 0 ? ` (+${discoveriesMap[item.name].bonusRp} RP)` : ''
+                          }`}
                         >
                           🏆 {discoveriesMap[item.name].playerName}
+                          {discoveriesMap[item.name].bonusRp > 0 && ` (+${discoveriesMap[item.name].bonusRp})`}
                         </span>
                       )}
                       {item.tags?.map((tag) => (

@@ -8,14 +8,22 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "fan_discoveries")
+@Table(
+    name = "fan_discoveries_v2",
+    uniqueConstraints = {@UniqueConstraint(columnNames = {"season", "fanName"})})
 @Getter
 @Setter
 @NoArgsConstructor
 public class FanDiscovery {
   @Id
-  @Column(length = 50)
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @Column(length = 50, nullable = false)
   private String fanName;
+
+  @Column(length = 7, nullable = false)
+  private String season; // format: YYYY-MM
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "player_id", nullable = false)
@@ -29,14 +37,25 @@ public class FanDiscovery {
   private String exampleHand;
 
   @Column(nullable = false)
+  private Double bonusRp;
+
+  @Column(nullable = false)
   private LocalDateTime discoveredAt;
 
   public FanDiscovery(
-      String fanName, Player player, Round round, String exampleHand, LocalDateTime discoveredAt) {
+      String fanName,
+      String season,
+      Player player,
+      Round round,
+      String exampleHand,
+      Double bonusRp,
+      LocalDateTime discoveredAt) {
     this.fanName = fanName;
+    this.season = season;
     this.player = player;
     this.round = round;
     this.exampleHand = exampleHand;
+    this.bonusRp = bonusRp;
     this.discoveredAt = discoveredAt;
   }
 
@@ -45,16 +64,25 @@ public class FanDiscovery {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     FanDiscovery that = (FanDiscovery) o;
-    return Objects.equals(fanName, that.fanName);
+    return Objects.equals(id, that.id);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(fanName);
+    return Objects.hash(id);
   }
 
   @Override
   public String toString() {
-    return "FanDiscovery{" + "fanName='" + fanName + '\'' + '}';
+    return "FanDiscovery{"
+        + "id="
+        + id
+        + ", fanName='"
+        + fanName
+        + '\''
+        + ", season='"
+        + season
+        + '\''
+        + '}';
   }
 }

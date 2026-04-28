@@ -14,4 +14,6 @@ public class FanDiscoveryResponse {
   private String playerName;
   private String exampleHand;
   private LocalDateTime discoveredAt;
+  private Double bonusRp;
+  private String season;
 }
