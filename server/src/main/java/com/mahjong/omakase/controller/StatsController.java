@@ -27,7 +27,7 @@ public class StatsController {
   public List<PlayerStatsResponse> getStats(
       @RequestParam(required = false) String gameMode,
       @RequestParam(required = false) Integer year,
-      @RequestParam(required = false) Integer quarter) {
+      @RequestParam(required = false) Integer month) {
     GameMode mode = null;
     if (gameMode != null && !gameMode.isEmpty()) {
       try {
@@ -39,17 +39,37 @@ public class StatsController {
 
     LocalDateTime start = null;
     LocalDateTime end = null;
-    if (year != null && quarter != null) {
-      int startMonth = (quarter - 1) * 3 + 1;
-      start = LocalDateTime.of(year, startMonth, 1, 0, 0);
-      end = start.plusMonths(3);
+    if (year != null || month != null) {
+      if (year == null || month == null) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "Both year and month must be provided");
+      }
+      if (month < 1 || month > 12) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
+      }
+      start = LocalDateTime.of(year, month, 1, 0, 0);
+      end = start.plusMonths(1);
     }
 
     return gameService.getPlayerStats(mode, start, end);
   }
 
   @GetMapping("/best-rounds")
-  public List<com.mahjong.omakase.dto.BestRoundResponse> getBestRounds() {
-    return gameService.getBestRounds();
+  public List<com.mahjong.omakase.dto.BestRoundResponse> getBestRounds(
+      @RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
+    LocalDateTime start = null;
+    LocalDateTime end = null;
+    if (year != null || month != null) {
+      if (year == null || month == null) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "Both year and month must be provided");
+      }
+      if (month < 1 || month > 12) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
+      }
+      start = LocalDateTime.of(year, month, 1, 0, 0);
+      end = start.plusMonths(1);
+    }
+    return gameService.getBestRounds(start, end);
   }
 }

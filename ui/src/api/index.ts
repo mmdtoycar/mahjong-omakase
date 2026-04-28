@@ -77,12 +77,12 @@ export async function completeSession(id: number): Promise<void> {
   }
 }
 
-export async function fetchStats(gameMode?: string, year?: number, quarter?: number): Promise<PlayerStats[]> {
+export async function fetchStats(gameMode?: string, year?: number, month?: number): Promise<PlayerStats[]> {
   const params = new URLSearchParams()
   if (gameMode) params.set('gameMode', gameMode)
-  if (year != null && quarter != null) {
+  if (year != null && month != null) {
     params.set('year', String(year))
-    params.set('quarter', String(quarter))
+    params.set('month', String(month))
   }
   const qs = params.toString()
   const res = await fetch(`${API}/stats${qs ? `?${qs}` : ''}`)
@@ -94,7 +94,13 @@ export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {
   return handleResponse(res)
 }
 
-export async function fetchBestRounds(): Promise<BestRound[]> {
-  const res = await fetch(`${API}/stats/best-rounds`)
+export async function fetchBestRounds(year?: number, month?: number, signal?: AbortSignal): Promise<BestRound[]> {
+  const params = new URLSearchParams()
+  if (year != null && month != null) {
+    params.set('year', String(year))
+    params.set('month', String(month))
+  }
+  const qs = params.toString()
+  const res = await fetch(`${API}/stats/best-rounds${qs ? `?${qs}` : ''}`, { signal })
   return handleResponse<BestRound[]>(res)
 }

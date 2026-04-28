@@ -32,21 +32,23 @@ export default function StatsPage() {
   const [error, setError] = useState('')
   const [bestRounds, setBestRounds] = useState<BestRound[]>([])
   const [bestRoundsError, setBestRoundsError] = useState('')
+  const [monthlyBestRounds, setMonthlyBestRounds] = useState<BestRound[]>([])
+  const [monthlyBestRoundsError, setMonthlyBestRoundsError] = useState('')
 
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
-  const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.quarter}`)
+  const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
 
   const loadStats = (mode: GameModeKey, sKey: string) => {
     setError('')
     setLoading(true)
     let year: number | undefined
-    let quarter: number | undefined
+    let month: number | undefined
     if (sKey !== 'all') {
-      const [y, q] = sKey.split('-').map(Number)
+      const [y, m] = sKey.split('-').map(Number)
       year = y
-      quarter = q
+      month = m
     }
-    fetchStats(mode, year, quarter)
+    fetchStats(mode, year, month)
       .then((s) => {
         setStats(s.sort((a, b) => b.totalRP - a.totalRP || b.totalScore - a.totalScore))
         setLoading(false)
@@ -80,18 +82,47 @@ export default function StatsPage() {
   }, [gameMode, seasonKey, tab])
 
   useEffect(() => {
+    const controller = new AbortController()
     if (tab === 'games') {
       setBestRoundsError('')
-      fetchBestRounds()
-        .then(setBestRounds)
-        .catch((e) => setBestRoundsError(e.message))
+      fetchBestRounds(undefined, undefined, controller.signal)
+        .then((data) => {
+          if (!controller.signal.aborted) setBestRounds(data)
+        })
+        .catch((e) => {
+          if (!controller.signal.aborted) setBestRoundsError(e.message)
+        })
     }
+    return () => controller.abort()
   }, [tab])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    if (tab === 'games' && seasonKey !== 'all') {
+      setMonthlyBestRoundsError('')
+      setMonthlyBestRounds([])
+      const [y, m] = seasonKey.split('-').map(Number)
+      fetchBestRounds(y, m, controller.signal)
+        .then((data) => {
+          if (!controller.signal.aborted) setMonthlyBestRounds(data)
+        })
+        .catch((e) => {
+          if (!controller.signal.aborted) {
+            setMonthlyBestRoundsError(e.message)
+            setMonthlyBestRounds([])
+          }
+        })
+    } else {
+      setMonthlyBestRounds([])
+      setMonthlyBestRoundsError('')
+    }
+    return () => controller.abort()
+  }, [tab, seasonKey])
 
   const abbr = (s: PlayerStats) => abbrName(s.displayName)
 
   const activeStats = stats.filter((s) => s.gamesPlayed > 0)
-  const selectedSeason = seasons.find((s) => `${s.year}-${s.quarter}` === seasonKey)
+  const selectedSeason = seasons.find((s) => `${s.year}-${s.month}` === seasonKey)
 
   if (loading)
     return (
@@ -133,7 +164,7 @@ export default function StatsPage() {
               <h2>赛季</h2>
               <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
                 {seasons.map((s) => (
-                  <option key={`${s.year}-${s.quarter}`} value={`${s.year}-${s.quarter}`}>
+                  <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
                     {s.label}
                   </option>
                 ))}
@@ -206,6 +237,10 @@ export default function StatsPage() {
                         积分(RP)
                         <div className="th-subtitle">含局数奖励</div>
                       </th>
+                      <th style={{ textAlign: 'right' }}>
+                        纯积分
+                        <div className="th-subtitle">刨除奖励</div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -232,6 +267,16 @@ export default function StatsPage() {
                         >
                           {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
                         </td>
+                        <td
+                          style={{
+                            textAlign: 'right',
+                            fontVariantNumeric: 'tabular-nums',
+                            color: 'var(--text-secondary)',
+                            fontSize: '0.9rem',
+                          }}
+                        >
+                          {s.baseRP > 0 ? `+${s.baseRP.toFixed(1)}` : s.baseRP.toFixed(1)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -240,27 +285,55 @@ export default function StatsPage() {
             </div>
           )}
 
-          {bestRounds.length > 0 && (
+          {seasonKey !== 'all' && (
+            <div className="card best-hand-card">
+              <div className="best-hand-header">
+                <span className="best-hand-crown">🌟</span>
+                <h2>{selectedSeason?.label}最高和牌</h2>
+              </div>
+              {monthlyBestRoundsError && <p className="error-text">加载月度最高和牌失败: {monthlyBestRoundsError}</p>}
+              {!monthlyBestRoundsError && monthlyBestRounds.length === 0 && (
+                <div className="empty-state" style={{ padding: '20px 0' }}>
+                  <p>本月无记录</p>
+                </div>
+              )}
+              <div className="best-hand-list">
+                {monthlyBestRounds.map((round) => (
+                  <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
+                    <div className="best-hand-meta">
+                      <span className="best-hand-fan-count">{round.fanCount} 番</span>
+                      <span className="best-hand-players">
+                        <span className="winner-label">赢家:</span> {round.winnerName}
+                        <span className="win-type-label ml-2">({round.dealInPlayerId != null ? '点炮' : '自摸'})</span>
+                        <span className="session-link-label ml-2">
+                          <Link to={`/session/${round.sessionId}`}>查看对局</Link>
+                        </span>
+                      </span>
+                    </div>
+                    <div className="best-hand-display">
+                      <MahjongHand hand={round.winHand} details={round.fanDetails} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(bestRounds.length > 0 || !!bestRoundsError) && (
             <div className="card best-hand-card">
               <div className="best-hand-header">
                 <span className="best-hand-crown">👑</span>
                 <h2>历史最高和牌</h2>
               </div>
-              {bestRoundsError && <p className="error-text">加载最高和牌失败: {bestRoundsError}</p>}
+              {bestRoundsError && <p className="error-text">加载历史最高和牌失败: {bestRoundsError}</p>}
               <div className="best-hand-list">
-                {bestRounds.map((round, idx) => (
-                  <div key={idx} className="best-hand-item">
+                {bestRounds.map((round) => (
+                  <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">
                       <span className="best-hand-fan-count">{round.fanCount} 番</span>
                       <span className="best-hand-players">
                         <span className="winner-label">赢家:</span> {round.winnerName}
-                        {round.dealInPlayerId != null ? (
-                          <>
-                            <span className="loser-label ml-2">输家:</span> {round.dealInPlayerName || '?'}
-                          </>
-                        ) : (
-                          <span className="zimo-label ml-2">(自摸)</span>
-                        )}
+                        <span className="win-type-label ml-2">({round.dealInPlayerId != null ? '点炮' : '自摸'})</span>
                         <span className="session-link-label ml-2">
                           <Link to={`/session/${round.sessionId}`}>查看对局</Link>
                         </span>

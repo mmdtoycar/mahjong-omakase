@@ -89,39 +89,48 @@ export interface PlayerStats {
   gamesPlayed: number
   totalScore: number
   totalRP: number
+  baseRP: number
   avgScore: number
   wins: number
 }
 
 export interface Season {
   year: number
-  quarter: number
+  month: number
   label: string
 }
 
-const SEASON_NAMES: Record<number, string> = {
-  1: '春之赛季',
-  2: '夏之赛季',
-  3: '秋之赛季',
-  4: '冬之赛季',
+const MONTH_NAMES: Record<number, string> = {
+  1: '1月',
+  2: '2月',
+  3: '3月',
+  4: '4月',
+  5: '5月',
+  6: '6月',
+  7: '7月',
+  8: '8月',
+  9: '9月',
+  10: '10月',
+  11: '11月',
+  12: '12月',
 }
 
 export function getCurrentSeason(): Season {
   const now = new Date()
-  const quarter = Math.ceil((now.getMonth() + 1) / 3)
-  return { year: now.getFullYear(), quarter, label: `${now.getFullYear()} ${SEASON_NAMES[quarter]}` }
+  const month = now.getMonth() + 1
+  return { year: now.getFullYear(), month, label: `${now.getFullYear()} ${MONTH_NAMES[month]}` }
 }
 
 export function getAvailableSeasons(startYear: number = 2026): Season[] {
   const seasons: Season[] = []
   const now = new Date()
   const currentYear = now.getFullYear()
-  const currentQuarter = Math.ceil((now.getMonth() + 1) / 3)
+  const currentMonth = now.getMonth() + 1
 
   for (let y = currentYear; y >= startYear; y--) {
-    const maxQ = y === currentYear ? currentQuarter : 4
-    for (let q = maxQ; q >= 1; q--) {
-      seasons.push({ year: y, quarter: q, label: `${y} ${SEASON_NAMES[q]}` })
+    const maxM = y === currentYear ? currentMonth : 12
+    for (let m = maxM; m >= 1; m--) {
+      seasons.push({ year: y, month: m, label: `${y} ${MONTH_NAMES[m]}` })
     }
   }
   return seasons

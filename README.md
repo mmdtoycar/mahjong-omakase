@@ -20,7 +20,7 @@ Landing page with quick access to start a game
 - Support for 自摸 and 点炮
 
 ### Stats & Leaderboard
-- Quarterly seasons: 春之赛季, 夏之赛季, 秋之赛季, 冬之赛季
+- Monthly seasons: 1月, 2月, 3月, ..., 12月
 - 🏆 赛季冠军 and 👑 最多胜场 highlights
 - Filter leaderboard by game mode
 - Player profiles with individual game history
