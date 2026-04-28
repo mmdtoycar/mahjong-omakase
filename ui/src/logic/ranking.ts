@@ -21,7 +21,7 @@ export function calculateRanks(scores: PlayerScore[], config: RpConfig): PlayerR
   const sorted = [...scores].sort((a, b) => b.score - a.score)
 
   const results: PlayerRank[] = []
-  const { rpFactor: factor, rpOrigin: origin, umaDist } = config
+  const { rpFactor: factor, umaDist } = config
 
   let i = 0
   while (i < sorted.length) {
