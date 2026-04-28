@@ -1518,6 +1518,40 @@ tr:hover td {
   .fan-item-example {
     overflow-x: auto;
   }
+
+  .best-hand-meta {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .best-hand-item {
+    padding: 10px;
+  }
+
+  .best-hand-header {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .best-hand-crown {
+    font-size: 1.4rem;
+  }
+
+  .score-input-row {
+    flex-wrap: wrap;
+  }
+
+  .score-input-row input {
+    flex: 1 1 100%;
+  }
+
+  .calc-trigger-btn {
+    width: 100%;
+  }
+
+  .options-grid.compact {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 380px) {
