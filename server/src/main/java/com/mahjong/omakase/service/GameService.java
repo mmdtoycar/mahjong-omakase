@@ -4,6 +4,7 @@ import com.mahjong.omakase.dto.*;
 import com.mahjong.omakase.model.*;
 import com.mahjong.omakase.repository.*;
 import com.mahjong.omakase.service.handler.GameModeHandler;
+import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
@@ -23,6 +24,7 @@ public class GameService {
   private final RoundScoreRepository roundScoreRepo;
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
   private final AppSettingRepository appSettingRepo;
+  private final FanDiscoveryRepository fanDiscoveryRepo;
   private final Map<GameMode, GameModeHandler> handlers;
   private volatile double participationBonus;
 
@@ -33,6 +35,7 @@ public class GameService {
       RoundScoreRepository roundScoreRepo,
       GameSessionPlayerRepository gameSessionPlayerRepo,
       AppSettingRepository appSettingRepo,
+      FanDiscoveryRepository fanDiscoveryRepo,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
@@ -40,10 +43,50 @@ public class GameService {
     this.roundScoreRepo = roundScoreRepo;
     this.gameSessionPlayerRepo = gameSessionPlayerRepo;
     this.appSettingRepo = appSettingRepo;
+    this.fanDiscoveryRepo = fanDiscoveryRepo;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
     this.participationBonus = loadParticipationBonus();
+  }
+
+  @PostConstruct
+  public void init() {
+    initializeDiscoveries();
+  }
+
+  public void initializeDiscoveries() {
+    if (fanDiscoveryRepo.count() > 0) {
+      log.info("Fan discoveries already initialized, skipping scan.");
+      return;
+    }
+    log.info("Initializing fan discoveries from historical rounds...");
+    List<Round> allRounds = roundRepo.findAllOrderByTime();
+    for (Round round : allRounds) {
+      if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
+      Player winner = playerRepo.findById(round.getWinnerId()).orElse(null);
+      if (winner == null) continue;
+
+      String[] parts = round.getFanDetails().split(",\\s*");
+      for (String p : parts) {
+        int bracketIdx = p.indexOf('(');
+        if (bracketIdx != -1) {
+          String fanName = p.substring(0, bracketIdx).trim();
+          if (!fanDiscoveryRepo.existsById(fanName)) {
+            FanDiscovery fd = new FanDiscovery(fanName, winner, round, round.getWinHand());
+            // Use session time as discovery time for historical data
+            fd.setDiscoveredAt(round.getGameSession().getCreatedAt());
+            fanDiscoveryRepo.save(fd);
+            log.info(
+                "Historical Discovery: '{}' by player '{}' at {}",
+                fanName,
+                winner.getUserName(),
+                fd.getDiscoveredAt());
+          }
+        }
+      }
+    }
+    log.info("Fan discoveries initialization complete.");
   }
 
   public void reloadSettings() {
@@ -606,6 +649,29 @@ public class GameService {
       rs.setPlayer(player);
       rs.setScore(entry.getValue());
       roundScoreRepo.save(rs);
+    }
+
+    // Process Fan Discoveries
+    if (winnerId != null && fanDetails != null && !fanDetails.isBlank()) {
+      Player winner = playerRepo.findById(winnerId).orElse(null);
+      if (winner != null) {
+        String[] parts = fanDetails.split(",\\s*");
+        for (String p : parts) {
+          int bracketIdx = p.indexOf('(');
+          if (bracketIdx != -1) {
+            String fanName = p.substring(0, bracketIdx).trim();
+            if (!fanDiscoveryRepo.existsById(fanName)) {
+              FanDiscovery fd = new FanDiscovery(fanName, winner, round, winHand);
+              fanDiscoveryRepo.save(fd);
+              log.info(
+                  "New Fan Discovered: '{}' by player '{}' in round {}",
+                  fanName,
+                  winner.getUserName(),
+                  round.getId());
+            }
+          }
+        }
+      }
     }
   }
 }

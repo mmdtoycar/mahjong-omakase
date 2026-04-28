@@ -1,13 +1,25 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { fanTableData, FanItem } from '../data/fanTableData'
-import { riichiFanTableData, RiichiFanItem } from '../data/riichiFanTableData'
-import { shenyangFanTableData, ShenyangFanItem } from '../data/shenyangFanTableData'
+import { riichiFanTableData } from '../data/riichiFanTableData'
+import { shenyangFanTableData } from '../data/shenyangFanTableData'
+import { fetchFanDiscoveries } from '../api'
+import { FanDiscovery } from '../types'
+import { MahjongHand } from '../components/MahjongHand'
 
 type TabType = 'guobiao' | 'riichi' | 'shenyang'
 
 const FanTablePage: React.FC = () => {
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<TabType>('guobiao')
+  const [discoveries, setDiscoveries] = useState<FanDiscovery[]>([])
+
+  useEffect(() => {
+    fetchFanDiscoveries().then(setDiscoveries).catch(console.error)
+  }, [])
+
+  const discoveriesMap = useMemo(() => {
+    return Object.fromEntries(discoveries.map((d) => [d.fanName, d]))
+  }, [discoveries])
 
   const filteredFanTable = useMemo(() => {
     let data
@@ -116,6 +128,15 @@ const FanTablePage: React.FC = () => {
                   <div className="fan-item-header">
                     <span className="fan-item-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {item.name}
+                      {discoveriesMap[item.name] && (
+                        <span
+                          className="badge badge-accent"
+                          style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                          title={`首位达成者: ${discoveriesMap[item.name].playerName}`}
+                        >
+                          🏆 {discoveriesMap[item.name].playerName}
+                        </span>
+                      )}
                       {item.tags?.map((tag) => (
                         <span
                           key={tag}
@@ -131,6 +152,7 @@ const FanTablePage: React.FC = () => {
                   <p className="fan-item-desc">{item.description}</p>
                   {item.example && item.example.length > 0 && (
                     <div className="fan-item-example">
+                      <span className="example-hint reference">理论参考</span>
                       {item.example.split('|').map((group, groupIdx) => {
                         const trimmedGroup = group.trim()
                         const isGroupHighlighted = trimmedGroup.startsWith('*')
@@ -160,6 +182,12 @@ const FanTablePage: React.FC = () => {
                           </div>
                         )
                       })}
+                    </div>
+                  )}
+                  {discoveriesMap[item.name] && (
+                    <div className="fan-item-example-real">
+                      <MahjongHand hand={discoveriesMap[item.name].exampleHand} />
+                      <span className="example-hint">实战例子</span>
                     </div>
                   )}
                 </div>

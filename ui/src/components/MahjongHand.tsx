@@ -121,10 +121,30 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
     )
   }
 
+  const fanTags = details ? details.split(',').map(s => s.trim()).filter(Boolean) : []
+
   return (
     <div className="mahjong-hand-container">
       <div className="mahjong-hand">{elements}</div>
-      {details && <div className="fan-details">{details}</div>}
+      {fanTags.length > 0 && (
+        <div className="fan-list-mini" style={{ marginTop: '8px' }}>
+          {fanTags.map((tag, idx) => {
+            // tag is like "花牌(2x2)" or "大四喜(88)"
+            const match = tag.match(/^(.+)\((\d+)(x(\d+))?\)$/)
+            if (match) {
+              const name = match[1]
+              const totalScore = match[2]
+              const count = match[4]
+              return (
+                <span key={idx} className="mini-fan-tag">
+                  {name}{count ? `x${count}` : ''} +{totalScore}
+                </span>
+              )
+            }
+            return <span key={idx} className="mini-fan-tag">{tag}</span>
+          })}
+        </div>
+      )}
     </div>
   )
 }

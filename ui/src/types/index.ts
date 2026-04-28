@@ -153,3 +153,11 @@ export interface BestRound {
   dealInPlayerId: number | null
   dealInPlayerName: string | null
 }
+
+export interface FanDiscovery {
+  fanName: string
+  playerId: number
+  playerName: string
+  exampleHand: string
+  discoveredAt: string
+}

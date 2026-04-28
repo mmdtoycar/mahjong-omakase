@@ -1,4 +1,4 @@
-import { Player, GameSession, SessionDetail, PlayerStats, PlayerDetail, AddRoundData, BestRound } from '../types'
+import { Player, GameSession, SessionDetail, PlayerStats, PlayerDetail, AddRoundData, BestRound, FanDiscovery } from '../types'
 
 const API = '/api'
 
@@ -114,4 +114,9 @@ export async function fetchBestRounds(
   const qs = params.toString()
   const res = await fetch(`${API}/stats/best-rounds${qs ? `?${qs}` : ''}`, { signal })
   return handleResponse<BestRound[]>(res)
+}
+
+export async function fetchFanDiscoveries(): Promise<FanDiscovery[]> {
+  const res = await fetch(`${API}/stats/fan-discoveries`)
+  return handleResponse<FanDiscovery[]>(res)
 }

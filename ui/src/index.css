@@ -1640,20 +1640,35 @@ tr:hover td {
   width: 100%;
 }
 
+.mahjong-hand {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: flex-end;
+  padding: 4px 0;
+}
+
+.mahjong-hand-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .mahjong-group {
   display: flex;
-  flex-shrink: 1;
-  min-width: 0;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
   gap: 1px;
   padding: 2px;
   border-radius: 4px;
-  border: 2px solid transparent;
-  transition: all 0.2s;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .mahjong-group.highlighted-group {
   background: rgba(212, 160, 23, 0.1);
-  border-color: rgba(212, 160, 23, 0.6);
+  border-color: var(--accent);
+  border-width: 2px;
   box-shadow: 0 2px 4px rgba(212, 160, 23, 0.2);
 }
 
@@ -1845,26 +1860,30 @@ tr:hover td {
   border-radius: 8px;
   margin-bottom: 12px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: center;
   min-height: 48px;
   border: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tiles-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
+  flex-wrap: nowrap;
+  gap: 1px;
 }
 
 .meld-box {
   display: flex;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
   gap: 1px;
   border: 1px solid var(--border);
-  padding: 1px;
+  padding: 2px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .win-tile-area {
@@ -2203,4 +2222,47 @@ tr:hover td {
     min-width: 60px;
     padding: 10px 4px;
   }
+}
+.fan-item-example-real {
+  margin-top: 20px;
+  padding: 16px 10px 10px 10px;
+  background: rgba(42, 161, 152, 0.05);
+  border-radius: 8px;
+  border: 1px dashed var(--sol-cyan);
+  position: relative;
+}
+
+.example-hint {
+  position: absolute;
+  top: 4px;
+  right: 10px;
+  font-size: 0.65rem;
+  background: var(--sol-cyan);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-accent {
+  background: var(--sol-yellow);
+  color: white;
+}
+
+.fan-details-cell {
+  background: var(--sol-base3);
+  padding: 12px !important;
+}
+
+.example-hint.reference {
+  background: var(--sol-base1);
+}
+
+.fan-item-example {
+  position: relative;
+  margin-top: 20px;
+  padding: 16px 10px 10px 10px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
 }

@@ -1,5 +1,6 @@
 package com.mahjong.omakase.controller;
 
+import com.mahjong.omakase.dto.FanDiscoveryResponse;
 import com.mahjong.omakase.dto.PlayerStatsResponse;
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.service.GameService;
@@ -88,5 +89,10 @@ public class StatsController {
       end = start.plusMonths(1);
     }
     return gameService.getBestRounds(mode, start, end);
+  }
+  
+  @GetMapping("/fan-discoveries")
+  public List<FanDiscoveryResponse> getFanDiscoveries() {
+    return gameService.getFanDiscoveries();
   }
 }
