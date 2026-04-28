@@ -1629,14 +1629,17 @@ tr:hover td {
 }
 
 .fan-item-example {
+  position: relative;
+  margin-top: 24px;
+  padding: 20px 10px 10px 10px;
   display: flex;
   flex-wrap: nowrap;
   column-gap: 4px;
   background: rgba(0, 0, 0, 0.03);
-  padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   align-items: center;
   overflow-x: auto;
+  border: 1px solid rgba(0, 0, 0, 0.05);
   width: 100%;
 }
 
@@ -2234,20 +2237,24 @@ tr:hover td {
 
 .example-hint {
   position: absolute;
-  top: 4px;
-  right: 10px;
-  font-size: 0.65rem;
-  background: var(--sol-cyan);
+  top: -12px;
+  right: 12px;
+  font-size: 0.8rem;
+  background: #069494;
   color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 800;
   text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 10;
 }
 
 .badge-accent {
-  background: var(--sol-yellow);
-  color: white;
+  background: #d4a017;
+  color: #000;
+  font-weight: 800;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .fan-details-cell {
@@ -2259,10 +2266,3 @@ tr:hover td {
   background: var(--sol-base1);
 }
 
-.fan-item-example {
-  position: relative;
-  margin-top: 20px;
-  padding: 16px 10px 10px 10px;
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 8px;
-}

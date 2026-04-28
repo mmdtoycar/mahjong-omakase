@@ -11,6 +11,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,46 +63,53 @@ public class GameService {
     log.info("Checking for new fan discoveries from historical rounds...");
     // Load existing discoveries to ensure idempotency
     Set<String> discoveredFans =
-        fanDiscoveryRepo.findAll().stream()
-            .map(FanDiscovery::getFanName)
-            .collect(Collectors.toSet());
+        fanDiscoveryRepo.findAll().stream().map(FanDiscovery::getFanName).collect(Collectors.toSet());
 
-    List<Round> allRounds = roundRepo.findAllOrderByTime();
+    int page = 0;
+    int size = 100;
     int newDiscoveries = 0;
+    boolean hasMore = true;
 
-    for (Round round : allRounds) {
-      if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
-      Player winner = playerRepo.findById(round.getWinnerId()).orElse(null);
-      if (winner == null) continue;
+    while (hasMore) {
+      Pageable pageable = PageRequest.of(page, size);
+      Page<Round> roundPage = roundRepo.findAllOrderByTime(pageable);
+      List<Round> rounds = roundPage.getContent();
 
-      String[] parts = round.getFanDetails().split(",\\s*");
-      for (String p : parts) {
-        String trimmedPart = p.trim();
-        if (trimmedPart.isEmpty()) continue;
+      if (rounds.isEmpty()) {
+        hasMore = false;
+        break;
+      }
 
-        int bracketIdx = trimmedPart.indexOf('(');
-        String fanName =
-            bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
+      for (Round round : rounds) {
+        if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
+        Player winner = playerRepo.findById(round.getWinnerId()).orElse(null);
+        if (winner == null) continue;
 
-        if (!discoveredFans.contains(fanName)) {
-          LocalDateTime discoveryTime = round.getGameSession().getCreatedAt();
-          try {
-            FanDiscovery fd =
-                new FanDiscovery(fanName, winner, round, round.getWinHand(), discoveryTime);
-            fanDiscoveryRepo.save(fd);
-            discoveredFans.add(fanName);
-            newDiscoveries++;
-            log.info(
-                "Historical Discovery: '{}' by player '{}' at {}",
-                fanName,
-                winner.getUserName(),
-                discoveryTime);
-          } catch (DataIntegrityViolationException e) {
-            // Already discovered by a concurrent thread/process
-            discoveredFans.add(fanName);
+        String[] parts = round.getFanDetails().split(",\\s*");
+        for (String p : parts) {
+          String trimmedPart = p.trim();
+          if (trimmedPart.isEmpty()) continue;
+
+          int bracketIdx = trimmedPart.indexOf('(');
+          String fanName = bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
+
+          if (!discoveredFans.contains(fanName)) {
+            LocalDateTime discoveryTime = round.getGameSession().getCreatedAt();
+            try {
+              FanDiscovery fd =
+                  new FanDiscovery(fanName, winner, round, round.getWinHand(), discoveryTime);
+              fanDiscoveryRepo.save(fd);
+              discoveredFans.add(fanName);
+              newDiscoveries++;
+              log.info("Historical Discovery: '{}' by player '{}' at {}", fanName, winner.getUserName(), discoveryTime);
+            } catch (DataIntegrityViolationException e) {
+              // Already discovered by a concurrent thread/process
+              discoveredFans.add(fanName);
+            }
           }
         }
       }
+      page++;
     }
     log.info("Fan discoveries initialization complete. Found {} new discoveries.", newDiscoveries);
   }
