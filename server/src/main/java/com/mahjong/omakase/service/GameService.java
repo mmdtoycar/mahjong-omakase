@@ -493,11 +493,9 @@ public class GameService {
               stat.setWins(wins.getOrDefault(p.getId(), 0));
               double baseRP = totalRP.getOrDefault(p.getId(), 0.0);
               double bonusRP = totalBonusPerPlayer.getOrDefault(p.getId(), 0.0);
-              double totalRPVal = baseRP + bonusRP;
-              stat.setTotalRP(totalRPVal);
-              stat.setBaseRP(baseRP);
+              stat.setTotalRP(baseRP + bonusRP);
               int games = gamesPlayed.getOrDefault(p.getId(), 0);
-              stat.setAvgScore(games > 0 ? totalRPVal / games : 0);
+              stat.setAvgScore(games > 0 ? (baseRP + bonusRP) / games : 0);
               return stat;
             })
         .collect(Collectors.toList());

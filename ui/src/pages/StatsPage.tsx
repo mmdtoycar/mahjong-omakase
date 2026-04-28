@@ -237,10 +237,6 @@ export default function StatsPage() {
                         积分(RP)
                         <div className="th-subtitle">含局数奖励</div>
                       </th>
-                      <th style={{ textAlign: 'right' }}>
-                        纯积分
-                        <div className="th-subtitle">刨除奖励</div>
-                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -266,16 +262,6 @@ export default function StatsPage() {
                           }}
                         >
                           {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: 'right',
-                            fontVariantNumeric: 'tabular-nums',
-                            color: 'var(--text-secondary)',
-                            fontSize: '0.9rem',
-                          }}
-                        >
-                          {s.baseRP > 0 ? `+${s.baseRP.toFixed(1)}` : s.baseRP.toFixed(1)}
                         </td>
                       </tr>
                     ))}

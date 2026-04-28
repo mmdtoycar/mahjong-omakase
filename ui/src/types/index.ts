@@ -89,7 +89,6 @@ export interface PlayerStats {
   gamesPlayed: number
   totalScore: number
   totalRP: number
-  baseRP: number
   avgScore: number
   wins: number
 }
