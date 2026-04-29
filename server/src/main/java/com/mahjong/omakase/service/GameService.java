@@ -332,9 +332,17 @@ public class GameService {
     log.info("Completed session id={}", sessionId);
   }
 
-  public List<BestRoundResponse> getBestRounds(LocalDateTime start, LocalDateTime end) {
+  public List<BestRoundResponse> getBestRounds(
+      GameMode gameMode, LocalDateTime start, LocalDateTime end) {
+    boolean hasMode = gameMode != null;
+    boolean hasDate = start != null && end != null;
+
     Integer maxFan;
-    if (start != null && end != null) {
+    if (hasMode && hasDate) {
+      maxFan = roundRepo.findMaxFanCountByModeAndDateRange(gameMode, start, end);
+    } else if (hasMode) {
+      maxFan = roundRepo.findMaxFanCountByMode(gameMode);
+    } else if (hasDate) {
       maxFan = roundRepo.findMaxFanCountByDateRange(start, end);
     } else {
       maxFan = roundRepo.findMaxFanCount();
@@ -343,7 +351,11 @@ public class GameService {
     if (maxFan == null || maxFan == 0) return Collections.emptyList();
 
     List<Round> bestRounds;
-    if (start != null && end != null) {
+    if (hasMode && hasDate) {
+      bestRounds = roundRepo.findByFanCountAndModeAndDateRange(maxFan, gameMode, start, end);
+    } else if (hasMode) {
+      bestRounds = roundRepo.findByFanCountAndMode(maxFan, gameMode);
+    } else if (hasDate) {
       bestRounds = roundRepo.findByFanCountAndDateRange(maxFan, start, end);
     } else {
       bestRounds = roundRepo.findByFanCount(maxFan);
