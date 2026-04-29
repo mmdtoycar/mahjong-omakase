@@ -99,8 +99,14 @@ export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {
   return handleResponse(res)
 }
 
-export async function fetchBestRounds(year?: number, month?: number, signal?: AbortSignal): Promise<BestRound[]> {
+export async function fetchBestRounds(
+  gameMode?: string,
+  year?: number,
+  month?: number,
+  signal?: AbortSignal
+): Promise<BestRound[]> {
   const params = new URLSearchParams()
+  if (gameMode) params.set('gameMode', gameMode)
   if (year != null && month != null) {
     params.set('year', String(year))
     params.set('month', String(month))

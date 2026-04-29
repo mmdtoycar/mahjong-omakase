@@ -107,7 +107,7 @@ export default function StatsPage() {
     const controller = new AbortController()
     if (tab === 'games') {
       setBestRoundsError('')
-      fetchBestRounds(undefined, undefined, controller.signal)
+      fetchBestRounds(gameMode, undefined, undefined, controller.signal)
         .then((data) => {
           if (!controller.signal.aborted) setBestRounds(data)
         })
@@ -116,7 +116,7 @@ export default function StatsPage() {
         })
     }
     return () => controller.abort()
-  }, [tab])
+  }, [tab, gameMode])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -124,7 +124,7 @@ export default function StatsPage() {
       setMonthlyBestRoundsError('')
       setMonthlyBestRounds([])
       const [y, m] = seasonKey.split('-').map(Number)
-      fetchBestRounds(y, m, controller.signal)
+      fetchBestRounds(gameMode, y, m, controller.signal)
         .then((data) => {
           if (!controller.signal.aborted) setMonthlyBestRounds(data)
         })
@@ -139,7 +139,7 @@ export default function StatsPage() {
       setMonthlyBestRoundsError('')
     }
     return () => controller.abort()
-  }, [tab, seasonKey])
+  }, [tab, seasonKey, gameMode])
 
   const abbr = (s: PlayerStats) => abbrName(s.displayName)
 

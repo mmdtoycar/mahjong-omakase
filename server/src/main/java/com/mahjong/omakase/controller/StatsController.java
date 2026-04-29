@@ -62,7 +62,18 @@ public class StatsController {
 
   @GetMapping("/best-rounds")
   public List<com.mahjong.omakase.dto.BestRoundResponse> getBestRounds(
-      @RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
+      @RequestParam(required = false) String gameMode,
+      @RequestParam(required = false) Integer year,
+      @RequestParam(required = false) Integer month) {
+    GameMode mode = null;
+    if (gameMode != null && !gameMode.isEmpty()) {
+      try {
+        mode = GameMode.valueOf(gameMode);
+      } catch (IllegalArgumentException e) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid game mode: " + gameMode);
+      }
+    }
+
     LocalDateTime start = null;
     LocalDateTime end = null;
     if (year != null || month != null) {
@@ -76,6 +87,6 @@ public class StatsController {
       start = LocalDateTime.of(year, month, 1, 0, 0);
       end = start.plusMonths(1);
     }
-    return gameService.getBestRounds(start, end);
+    return gameService.getBestRounds(mode, start, end);
   }
 }
