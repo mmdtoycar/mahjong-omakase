@@ -74,13 +74,25 @@ export default function StatsPage() {
   }
 
   useEffect(() => {
-    fetchActiveSeasons().then((data) => {
-      const list = data.map((s) => ({ year: s.year, month: s.month, label: getSeasonLabel(s.year, s.month) }))
-      setSeasons(list)
-      if (list.length > 0 && !list.some((s) => `${s.year}-${s.month}` === seasonKey)) {
-        setSeasonKey(`${list[0].year}-${list[0].month}`)
-      }
-    })
+    let mounted = true
+    fetchActiveSeasons()
+      .then((data) => {
+        if (!mounted) return
+        const list = data.map((s) => ({ year: s.year, month: s.month, label: getSeasonLabel(s.year, s.month) }))
+        setSeasons(list)
+        if (list.length > 0) {
+          setSeasonKey((prev) =>
+            list.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${list[0].year}-${list[0].month}`
+          )
+        }
+      })
+      .catch((e) => {
+        if (!mounted) return
+        setError(e.message)
+      })
+    return () => {
+      mounted = false
+    }
   }, [])
 
   useEffect(() => {

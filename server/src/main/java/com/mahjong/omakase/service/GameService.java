@@ -394,8 +394,8 @@ public class GameService {
         .map(
             row -> {
               Map<String, Integer> m = new LinkedHashMap<>();
-              m.put("year", (Integer) row[0]);
-              m.put("month", (Integer) row[1]);
+              m.put("year", ((Number) row[0]).intValue());
+              m.put("month", ((Number) row[1]).intValue());
               return m;
             })
         .collect(Collectors.toList());
