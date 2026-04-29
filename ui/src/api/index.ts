@@ -77,6 +77,11 @@ export async function completeSession(id: number): Promise<void> {
   }
 }
 
+export async function fetchActiveSeasons(): Promise<{ year: number; month: number }[]> {
+  const res = await fetch(`${API}/stats/seasons`)
+  return handleResponse(res)
+}
+
 export async function fetchStats(gameMode?: string, year?: number, month?: number): Promise<PlayerStats[]> {
   const params = new URLSearchParams()
   if (gameMode) params.set('gameMode', gameMode)

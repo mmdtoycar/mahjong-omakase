@@ -389,6 +389,18 @@ public class GameService {
         .collect(Collectors.toList());
   }
 
+  public List<Map<String, Integer>> getActiveSeasons() {
+    return sessionRepo.findDistinctSeasons().stream()
+        .map(
+            row -> {
+              Map<String, Integer> m = new LinkedHashMap<>();
+              m.put("year", ((Number) row[0]).intValue());
+              m.put("month", ((Number) row[1]).intValue());
+              return m;
+            })
+        .collect(Collectors.toList());
+  }
+
   public List<PlayerStatsResponse> getPlayerStats(
       GameMode gameMode, LocalDateTime start, LocalDateTime end) {
     List<Player> players = playerRepo.findAll();

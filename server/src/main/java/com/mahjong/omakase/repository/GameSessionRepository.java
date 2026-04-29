@@ -17,4 +17,9 @@ public interface GameSessionRepository extends JpaRepository<GameSession, Long> 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT s FROM GameSession s WHERE s.id = :id")
   Optional<GameSession> findByIdForUpdate(@Param("id") Long id);
+
+  @Query(
+      "SELECT DISTINCT YEAR(s.createdAt) AS y, MONTH(s.createdAt) AS m"
+          + " FROM GameSession s WHERE s.rounds IS NOT EMPTY ORDER BY y DESC, m DESC")
+  List<Object[]> findDistinctSeasons();
 }

@@ -99,40 +99,29 @@ export interface Season {
   label: string
 }
 
-const MONTH_NAMES: Record<number, string> = {
-  1: '1月',
-  2: '2月',
-  3: '3月',
-  4: '4月',
-  5: '5月',
-  6: '6月',
-  7: '7月',
-  8: '8月',
-  9: '9月',
-  10: '10月',
-  11: '11月',
-  12: '12月',
+const SEASON_NAMES: Record<number, string> = {
+  1: '大寒赛季',
+  2: '立春赛季',
+  3: '春分赛季',
+  4: '清明赛季',
+  5: '立夏赛季',
+  6: '夏至赛季',
+  7: '大暑赛季',
+  8: '立秋赛季',
+  9: '秋分赛季',
+  10: '霜降赛季',
+  11: '立冬赛季',
+  12: '冬至赛季',
+}
+
+export function getSeasonLabel(year: number, month: number): string {
+  return `${year} ${SEASON_NAMES[month]}`
 }
 
 export function getCurrentSeason(): Season {
   const now = new Date()
   const month = now.getMonth() + 1
-  return { year: now.getFullYear(), month, label: `${now.getFullYear()} ${MONTH_NAMES[month]}` }
-}
-
-export function getAvailableSeasons(startYear: number = 2026): Season[] {
-  const seasons: Season[] = []
-  const now = new Date()
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth() + 1
-
-  for (let y = currentYear; y >= startYear; y--) {
-    const maxM = y === currentYear ? currentMonth : 12
-    for (let m = maxM; m >= 1; m--) {
-      seasons.push({ year: y, month: m, label: `${y} ${MONTH_NAMES[m]}` })
-    }
-  }
-  return seasons
+  return { year: now.getFullYear(), month, label: getSeasonLabel(now.getFullYear(), month) }
 }
 
 export interface PlayerGameEntry {
