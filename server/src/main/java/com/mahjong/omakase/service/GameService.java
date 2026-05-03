@@ -4,13 +4,14 @@ import com.mahjong.omakase.dto.*;
 import com.mahjong.omakase.model.*;
 import com.mahjong.omakase.repository.*;
 import com.mahjong.omakase.service.handler.GameModeHandler;
-import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -55,7 +56,7 @@ public class GameService {
     this.participationBonus = loadParticipationBonus();
   }
 
-  @PostConstruct
+  @EventListener(ApplicationReadyEvent.class)
   public void init() {
     initializeDiscoveries();
   }
@@ -85,7 +86,8 @@ public class GameService {
 
       for (Round round : rounds) {
         if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
-        Player winner = playerRepo.findById(round.getWinnerId()).orElse(null);
+        Player winner =
+            playerRepo.findById(java.util.Objects.requireNonNull(round.getWinnerId())).orElse(null);
         if (winner == null) continue;
 
         String season = getSeasonString(round.getGameSession().getCreatedAt());
@@ -192,7 +194,9 @@ public class GameService {
 
   public Player updatePlayer(Long id, String firstName, String lastName) {
     Player player =
-        playerRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("Player not found"));
+        playerRepo
+            .findById(java.util.Objects.requireNonNull(id))
+            .orElseThrow(() -> new IllegalArgumentException("Player not found"));
     if (firstName != null && !firstName.isBlank()) {
       player.setFirstName(firstName.trim());
     }
@@ -218,7 +222,7 @@ public class GameService {
 
     roundScoreRepo.nullifyPlayerScores(id);
     gameSessionPlayerRepo.deleteByPlayerId(id);
-    playerRepo.deleteById(id);
+    playerRepo.deleteById(java.util.Objects.requireNonNull(id));
   }
 
   public List<GameSession> getAllSessions() {
@@ -227,7 +231,8 @@ public class GameService {
 
   public GameSession createSession(CreateSessionRequest request) {
     Map<Long, Player> playerMap = new HashMap<>();
-    for (Player p : playerRepo.findAllById(request.getPlayerIds())) {
+    for (Player p :
+        playerRepo.findAllById(java.util.Objects.requireNonNull(request.getPlayerIds()))) {
       playerMap.put(p.getId(), p);
     }
     if (playerMap.size() != request.getPlayerIds().size()) {
@@ -262,7 +267,7 @@ public class GameService {
   public SessionDetailResponse getSessionDetail(Long sessionId) {
     GameSession session =
         sessionRepo
-            .findById(sessionId)
+            .findById(java.util.Objects.requireNonNull(sessionId))
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
 
     SessionDetailResponse resp = new SessionDetailResponse();
@@ -326,7 +331,7 @@ public class GameService {
     for (var round : session.getRounds()) {
       for (var rs : round.getScores()) {
         if (rs.getPlayer() != null) {
-          totals.merge(rs.getPlayer().getId(), rs.getScore(), Integer::sum);
+          totals.merge(rs.getPlayer().getId(), rs.getScore(), (a, b) -> a + b);
         }
       }
     }
@@ -410,7 +415,7 @@ public class GameService {
             .orElseThrow(() -> new NoSuchElementException("Round not found"));
 
     session.getRounds().remove(round);
-    roundRepo.delete(round);
+    roundRepo.delete(java.util.Objects.requireNonNull(round));
 
     int num = 1;
     for (Round r : session.getRounds()) {
@@ -470,7 +475,7 @@ public class GameService {
               String winnerName =
                   round.getWinnerId() != null
                       ? playerRepo
-                          .findById(round.getWinnerId())
+                          .findById(java.util.Objects.requireNonNull(round.getWinnerId()))
                           .map(Player::getUserName)
                           .orElse("?")
                       : null;
@@ -561,7 +566,7 @@ public class GameService {
       List<FanDiscovery> discoveries = fanDiscoveryRepo.findBySeason(season);
       for (FanDiscovery fd : discoveries) {
         if (fd.getBonusRp() > 0) {
-          totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), Double::sum);
+          totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
         }
       }
     } else {
@@ -569,7 +574,7 @@ public class GameService {
       List<FanDiscovery> allDiscoveries = fanDiscoveryRepo.findAll();
       for (FanDiscovery fd : allDiscoveries) {
         if (fd.getBonusRp() > 0) {
-          totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), Double::sum);
+          totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
         }
       }
     }
@@ -581,7 +586,7 @@ public class GameService {
           if (row[0] != null) {
             double bonus =
                 session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
-            totalBonusPerPlayer.merge((Long) row[0], bonus, Double::sum);
+            totalBonusPerPlayer.merge((Long) row[0], bonus, (a, b) -> a + b);
           }
         }
         List<Object[]> sorted = new ArrayList<>(sessionScores);
@@ -609,7 +614,7 @@ public class GameService {
             if (pid == null) continue;
             int raw = ((Number) sorted.get(k)[1]).intValue();
             double rp = (raw / factor) + avgUma;
-            totalRP.merge(pid, rp, Double::sum);
+            totalRP.merge(pid, rp, (a, b) -> a + b);
           }
           i = j;
         }
@@ -617,7 +622,7 @@ public class GameService {
         int topScore = ((Number) sorted.get(0)[1]).intValue();
         for (Object[] row : sorted) {
           if (((Number) row[1]).intValue() != topScore) break;
-          if (row[0] != null) wins.merge((Long) row[0], 1, Integer::sum);
+          if (row[0] != null) wins.merge((Long) row[0], 1, (a, b) -> a + b);
         }
       }
     }
@@ -645,7 +650,7 @@ public class GameService {
   public PlayerDetailResponse getPlayerDetail(Long playerId) {
     Player player =
         playerRepo
-            .findById(playerId)
+            .findById(java.util.Objects.requireNonNull(playerId))
             .orElseThrow(() -> new NoSuchElementException("Player not found"));
 
     List<GameSession> sessions = sessionRepo.findByPlayersPlayerIdOrderByCreatedAtDesc(playerId);
@@ -716,7 +721,7 @@ public class GameService {
     for (Map.Entry<Long, Integer> entry : computedScores.entrySet()) {
       Player player =
           playerRepo
-              .findById(entry.getKey())
+              .findById(java.util.Objects.requireNonNull(entry.getKey()))
               .orElseThrow(() -> new NoSuchElementException("Player not found: " + entry.getKey()));
       RoundScore rs = new RoundScore();
       rs.setRound(round);

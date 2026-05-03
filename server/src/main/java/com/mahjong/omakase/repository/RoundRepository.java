@@ -57,6 +57,9 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
       @Param("start") LocalDateTime start,
       @Param("end") LocalDateTime end);
 
-  @Query("SELECT r FROM Round r JOIN r.gameSession s ORDER BY s.createdAt ASC, r.roundNumber ASC")
+  @Query(
+      value =
+          "SELECT r FROM Round r JOIN FETCH r.gameSession s ORDER BY s.createdAt ASC, r.roundNumber ASC",
+      countQuery = "SELECT count(r) FROM Round r")
   Page<Round> findAllOrderByTime(Pageable pageable);
 }
