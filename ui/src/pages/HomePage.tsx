@@ -26,7 +26,7 @@ export default function HomePage() {
         const details = settledDetails
           .filter((res): res is PromiseFulfilledResult<SessionDetail> => res.status === 'fulfilled')
           .map((res) => res.value)
-        
+
         if (isActive) setActiveSessions(details)
 
         // 3. Fetch stats for each mode
