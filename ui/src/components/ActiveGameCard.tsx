@@ -10,7 +10,8 @@ export const ActiveGameCard: React.FC<Props> = ({ session }) => {
   const getWindName = (w: number) => ['东', '南', '西', '北'][(w - 1) % 4]
 
   const nextRoundNum = session.rounds.length + 1
-  const qf = (Math.floor((nextRoundNum - 1) / 4) % 4) + 1
+  const lastRound = session.rounds.length > 0 ? session.rounds[session.rounds.length - 1] : null
+  const qf = lastRound?.prevalentWind ?? (Math.floor((nextRoundNum - 1) / 4) % 4) + 1
   const hand = ((nextRoundNum - 1) % 4) + 1
   const roundStatus = `${getWindName(qf)}${hand}`
 

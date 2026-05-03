@@ -2455,6 +2455,13 @@ tr:hover td {
   margin-top: 16px;
 }
 
+@media (max-width: 600px) {
+  .hall-of-fame-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 .mode-rank-column {
   background: var(--card);
   border-radius: var(--radius);
