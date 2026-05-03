@@ -376,10 +376,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
       </div>
 
       <div className="winning-options-section">
-        <div className="options-grid compact">
-          <button className={`opt-btn ${isSelfDraw ? 'active' : ''}`} onClick={() => onIsSelfDrawChange(!isSelfDraw)}>
-            自摸
-          </button>
+        <div className="options-grid compact cols-3">
           <button
             className={`opt-btn ${options.juezhang ? 'active' : ''}`}
             onClick={() => setOptions({ ...options, juezhang: !options.juezhang })}

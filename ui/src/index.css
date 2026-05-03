@@ -2060,6 +2060,10 @@ tr:hover td {
   gap: 4px;
 }
 
+.options-grid.compact.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .options-grid.compact .opt-btn {
   padding: 6px 0;
   font-size: 0.75rem;
