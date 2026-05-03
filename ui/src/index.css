@@ -2247,6 +2247,12 @@ tr:hover td {
   color: var(--text);
 }
 
+.quick-player-btn.win-type-btn {
+  grid-column: span 2;
+  margin-top: 4px;
+  padding: 12px;
+}
+
 .quick-player-btn:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: var(--shadow-lg);
