@@ -86,9 +86,11 @@ public class GameService {
 
       for (Round round : rounds) {
         if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
+        // Fan discoveries only apply to GUOBIAO mode
+        if (round.getGameSession().getGameMode() != GameMode.GUOBIAO) continue;
         Player winner =
             playerRepo.findById(java.util.Objects.requireNonNull(round.getWinnerId())).orElse(null);
-        if (winner == null) continue;
+        if (winner == null || winner.isBot()) continue;
 
         String season = getSeasonString(round.getGameSession().getCreatedAt());
         String[] parts = round.getFanDetails().split(",\\s*");
@@ -628,6 +630,7 @@ public class GameService {
     }
 
     return players.stream()
+        .filter(p -> !p.isBot())
         .map(
             p -> {
               PlayerStatsResponse stat = new PlayerStatsResponse();
@@ -730,10 +733,11 @@ public class GameService {
       roundScoreRepo.save(rs);
     }
 
-    // Process Fan Discoveries
-    if (winnerId != null && fanDetails != null && !fanDetails.isBlank()) {
+    // Process Fan Discoveries (GUOBIAO only, skip BOT winners)
+    if (winnerId != null && fanDetails != null && !fanDetails.isBlank()
+        && session.getGameMode() == GameMode.GUOBIAO) {
       Player winner = playerRepo.findById(winnerId).orElse(null);
-      if (winner != null) {
+      if (winner != null && !winner.isBot()) {
         String season = getSeasonString(session.getCreatedAt());
         String[] parts = fanDetails.split(",\\s*");
         for (String p : parts) {

@@ -75,14 +75,18 @@ export default function NewSessionPage() {
 
       <div className="form-group">
         <label>游戏模式</label>
-        <select value={gameMode} onChange={(e) => setGameMode(e.target.value as GameModeKey)}>
-          <option value="">-- 选择游戏模式 --</option>
+        <div className="tab-bar" style={{ marginTop: 8 }}>
           {GAME_MODES.map((m) => (
-            <option key={m.key} value={m.key}>
+            <button
+              key={m.key}
+              className={`tab-btn${gameMode === m.key ? ' tab-active' : ''}`}
+              onClick={() => setGameMode(m.key)}
+              type="button"
+            >
               {m.label}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
       <div className="form-group">

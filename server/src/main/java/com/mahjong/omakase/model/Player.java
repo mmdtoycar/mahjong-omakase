@@ -73,4 +73,8 @@ public class Player {
   public String getDisplayName() {
     return firstName + " " + lastName;
   }
+
+  public boolean isBot() {
+    return "BOT".equals(this.userName);
+  }
 }
