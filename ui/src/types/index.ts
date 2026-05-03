@@ -22,6 +22,14 @@ export interface GameSession {
   playerCount: number
   status: 'IN_PROGRESS' | 'COMPLETED'
   createdAt: string
+  rankings?: PlayerPerformance[]
+}
+
+export interface PlayerPerformance {
+  userName: string
+  totalScore: number
+  rp: number
+  rank: number
 }
 
 export interface PlayerInfo {
