@@ -2245,12 +2245,6 @@ tr:hover td {
   color: var(--text);
 }
 
-.quick-player-btn.win-type-btn {
-  grid-column: span 2;
-  margin-top: 4px;
-  padding: 12px;
-}
-
 .quick-player-btn:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: var(--shadow-lg);
@@ -2276,6 +2270,16 @@ tr:hover td {
 .quick-player-btn.win-type-btn {
   font-weight: 700;
   border-width: 2px;
+}
+
+.quick-player-btn.reset-btn {
+  border-color: var(--sol-red);
+  color: var(--sol-red);
+  background: rgba(220, 50, 47, 0.06);
+}
+
+.quick-player-btn.reset-btn:hover {
+  background: rgba(220, 50, 47, 0.14);
 }
 
 .quick-player-btn.zimo {

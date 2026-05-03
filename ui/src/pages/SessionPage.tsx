@@ -725,6 +725,9 @@ export default function SessionPage() {
                     >
                       {isSelfDraw ? '自摸' : '点炮'}
                     </button>
+                    <button className="quick-player-btn win-type-btn reset-btn" onClick={resetForm}>
+                      重置
+                    </button>
                   </div>
                 </div>
 
