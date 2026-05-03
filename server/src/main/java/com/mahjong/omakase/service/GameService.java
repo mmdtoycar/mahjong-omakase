@@ -734,7 +734,9 @@ public class GameService {
     }
 
     // Process Fan Discoveries (GUOBIAO only, skip BOT winners)
-    if (winnerId != null && fanDetails != null && !fanDetails.isBlank()
+    if (winnerId != null
+        && fanDetails != null
+        && !fanDetails.isBlank()
         && session.getGameMode() == GameMode.GUOBIAO) {
       Player winner = playerRepo.findById(winnerId).orElse(null);
       if (winner != null && !winner.isBot()) {

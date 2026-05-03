@@ -18,9 +18,7 @@ const FanTablePage: React.FC = () => {
   // Previous season discoveries (fallback when current season has no record yet)
   const [prevDiscoveries, setPrevDiscoveries] = useState<FanDiscovery[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
-  const [seasonKey, setSeasonKey] = useState<string>(
-    `${currentSeason.year}-${currentSeason.month}`
-  )
+  const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
 
   // Load active seasons from backend (same as StatsPage)
   useEffect(() => {
@@ -36,9 +34,7 @@ const FanTablePage: React.FC = () => {
         setSeasons(list)
         if (list.length > 0) {
           setSeasonKey((prev) =>
-            list.some((s) => `${s.year}-${s.month}` === prev)
-              ? prev
-              : `${list[0].year}-${list[0].month}`
+            list.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${list[0].year}-${list[0].month}`
           )
         }
       })
@@ -71,16 +67,13 @@ const FanTablePage: React.FC = () => {
 
   // Load previous season discoveries as fallback (only when viewing current season)
   useEffect(() => {
-    const isCurrentSeason =
-      seasonKey === `${currentSeason.year}-${currentSeason.month}`
+    const isCurrentSeason = seasonKey === `${currentSeason.year}-${currentSeason.month}`
     if (!isCurrentSeason) {
       setPrevDiscoveries([])
       return
     }
     // Find the season just before current in the list
-    const idx = seasons.findIndex(
-      (s) => `${s.year}-${s.month}` === seasonKey
-    )
+    const idx = seasons.findIndex((s) => `${s.year}-${s.month}` === seasonKey)
     const prev = seasons[idx + 1] // seasons are newest-first
     if (!prev) {
       setPrevDiscoveries([])
@@ -97,10 +90,7 @@ const FanTablePage: React.FC = () => {
     return () => controller.abort()
   }, [seasonKey, seasons])
 
-  const discoveriesMap = useMemo(
-    () => Object.fromEntries(discoveries.map((d) => [d.fanName, d])),
-    [discoveries]
-  )
+  const discoveriesMap = useMemo(() => Object.fromEntries(discoveries.map((d) => [d.fanName, d])), [discoveries])
   const prevDiscoveriesMap = useMemo(
     () => Object.fromEntries(prevDiscoveries.map((d) => [d.fanName, d])),
     [prevDiscoveries]
@@ -200,11 +190,7 @@ const FanTablePage: React.FC = () => {
             style={{ flex: 1, minWidth: '200px' }}
           />
           {activeTab === 'guobiao' && seasons.length > 0 && (
-            <select
-              value={seasonKey}
-              onChange={(e) => setSeasonKey(e.target.value)}
-              className="select-inline"
-            >
+            <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
               {seasons.map((s: Season) => (
                 <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
                   {s.label}
@@ -230,93 +216,91 @@ const FanTablePage: React.FC = () => {
                 const hasCurrent = !!currentDiscovery
                 const hasPrev = !hasCurrent && !!prevDiscovery
                 return (
-                <div key={item.name} className="fan-item-card">
-                  <div className="fan-item-header">
-                    <span className="fan-item-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {item.name}
-                      {hasCurrent && (
-                        <span
-                          className="badge badge-accent"
-                          style={{ fontSize: '0.7rem', padding: '2px 6px' }}
-                          title={`首位达成者: ${currentDiscovery.playerName}${
-                            (currentDiscovery.bonusRp ?? 0) > 0
-                              ? ` (+${currentDiscovery.bonusRp} RP)`
-                              : ''
-                          }`}
-                        >
-                          🏆 {currentDiscovery.playerName}
-                          {(currentDiscovery.bonusRp ?? 0) > 0 && ` (+${currentDiscovery.bonusRp})`}
-                        </span>
-                      )}
-                      {hasPrev && (
-                        <span
-                          className="badge"
-                          style={{
-                            fontSize: '0.7rem',
-                            padding: '2px 6px',
-                            background: 'var(--text-light)',
-                            color: 'white',
-                            opacity: 0.6,
-                          }}
-                          title={`上月冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
-                        >
-                          🏆 {prevDiscovery.playerName}
-                        </span>
-                      )}
-                      {item.tags?.map((tag) => (
-                        <span
-                          key={tag}
-                          className="badge badge-completed"
-                          style={{ fontSize: '0.7rem', padding: '2px 6px' }}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </span>
-                    <span className="fan-item-score">{getFanLabel(item.fan)}</span>
-                  </div>
-                  <p className="fan-item-desc">{item.description}</p>
-                  {item.example && item.example.length > 0 && (
-                    <div className="fan-item-example">
-                      <span className="example-hint reference">理论参考</span>
-                      {item.example.split('|').map((group, groupIdx) => {
-                        const trimmedGroup = group.trim()
-                        const isGroupHighlighted = trimmedGroup.startsWith('*')
-                        const cleanGroup = isGroupHighlighted ? trimmedGroup.substring(1).trim() : trimmedGroup
-                        const tiles = cleanGroup
-                          .split(' ')
-                          .map((t) => t.trim())
-                          .filter(Boolean)
-
-                        return (
-                          <div
-                            key={groupIdx}
-                            className={`mahjong-group ${isGroupHighlighted ? 'highlighted-group' : ''}`}
+                  <div key={item.name} className="fan-item-card">
+                    <div className="fan-item-header">
+                      <span className="fan-item-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {item.name}
+                        {hasCurrent && (
+                          <span
+                            className="badge badge-accent"
+                            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                            title={`首位达成者: ${currentDiscovery.playerName}${
+                              (currentDiscovery.bonusRp ?? 0) > 0 ? ` (+${currentDiscovery.bonusRp} RP)` : ''
+                            }`}
                           >
-                            {tiles.map((tile, tileIdx) => {
-                              const isTileHighlighted = tile.startsWith('*') || tile.startsWith('^')
-                              const cleanTile = isTileHighlighted ? tile.substring(1) : tile
-                              return (
-                                <img
-                                  key={tileIdx}
-                                  src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${cleanTile}.svg`}
-                                  alt={cleanTile}
-                                  className={`mahjong-tile ${isTileHighlighted ? 'highlighted-tile' : ''}`}
-                                />
-                              )
-                            })}
-                          </div>
-                        )
-                      })}
+                            🏆 {currentDiscovery.playerName}
+                            {(currentDiscovery.bonusRp ?? 0) > 0 && ` (+${currentDiscovery.bonusRp})`}
+                          </span>
+                        )}
+                        {hasPrev && (
+                          <span
+                            className="badge"
+                            style={{
+                              fontSize: '0.7rem',
+                              padding: '2px 6px',
+                              background: 'var(--text-light)',
+                              color: 'white',
+                              opacity: 0.6,
+                            }}
+                            title={`上月冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
+                          >
+                            🏆 {prevDiscovery.playerName}
+                          </span>
+                        )}
+                        {item.tags?.map((tag) => (
+                          <span
+                            key={tag}
+                            className="badge badge-completed"
+                            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </span>
+                      <span className="fan-item-score">{getFanLabel(item.fan)}</span>
                     </div>
-                  )}
-                  {currentDiscovery?.exampleHand && (
-                    <div className="fan-item-example-real">
-                      <MahjongHand hand={currentDiscovery.exampleHand ?? undefined} />
-                      <span className="example-hint">实战例子</span>
-                    </div>
-                  )}
-                </div>
+                    <p className="fan-item-desc">{item.description}</p>
+                    {item.example && item.example.length > 0 && (
+                      <div className="fan-item-example">
+                        <span className="example-hint reference">理论参考</span>
+                        {item.example.split('|').map((group, groupIdx) => {
+                          const trimmedGroup = group.trim()
+                          const isGroupHighlighted = trimmedGroup.startsWith('*')
+                          const cleanGroup = isGroupHighlighted ? trimmedGroup.substring(1).trim() : trimmedGroup
+                          const tiles = cleanGroup
+                            .split(' ')
+                            .map((t) => t.trim())
+                            .filter(Boolean)
+
+                          return (
+                            <div
+                              key={groupIdx}
+                              className={`mahjong-group ${isGroupHighlighted ? 'highlighted-group' : ''}`}
+                            >
+                              {tiles.map((tile, tileIdx) => {
+                                const isTileHighlighted = tile.startsWith('*') || tile.startsWith('^')
+                                const cleanTile = isTileHighlighted ? tile.substring(1) : tile
+                                return (
+                                  <img
+                                    key={tileIdx}
+                                    src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${cleanTile}.svg`}
+                                    alt={cleanTile}
+                                    className={`mahjong-tile ${isTileHighlighted ? 'highlighted-tile' : ''}`}
+                                  />
+                                )
+                              })}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {currentDiscovery?.exampleHand && (
+                      <div className="fan-item-example-real">
+                        <MahjongHand hand={currentDiscovery.exampleHand ?? undefined} />
+                        <span className="example-hint">实战例子</span>
+                      </div>
+                    )}
+                  </div>
                 )
               })}
             </div>
