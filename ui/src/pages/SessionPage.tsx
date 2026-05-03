@@ -759,6 +759,7 @@ export default function SessionPage() {
                     </div>
                     <div className="inline-calc-wrapper">
                       <GuobiaoCalculator
+                        key={`${gbWinds?.quanfeng || 1}-${winnerMenfeng}`}
                         onSelectScore={handleCalcScoreSelect}
                         initialOptions={{
                           quanfeng: gbWinds?.quanfeng || 1,

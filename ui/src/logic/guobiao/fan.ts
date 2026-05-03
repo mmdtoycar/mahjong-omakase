@@ -926,26 +926,21 @@ export function scoreCombination(
     removeFan('三风刻')
     removeFan('圈风刻')
     removeFan('门风刻')
-    removeFan('幺九刻', 4)
     removeFan('碰碰和')
   }
   if (hasFan('小四喜')) {
     removeFan('三风刻')
-    removeFan('幺九刻', 3)
   }
   if (hasFan('三风刻')) {
     removeFan('圈风刻')
     removeFan('门风刻')
-    removeFan('幺九刻', 3)
   }
   if (hasFan('大三元')) {
     removeFan('双箭刻')
     removeFan('箭刻')
-    removeFan('幺九刻', 3)
   }
   if (hasFan('小三元')) {
     removeFan('箭刻')
-    removeFan('幺九刻', 2)
   }
   if (hasFan('九莲宝灯')) {
     removeFan('清一色')
