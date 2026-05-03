@@ -1886,17 +1886,37 @@ tr:hover td {
 
 .hand-display-area.compact {
   background: var(--bg);
-  padding: 8px;
+  padding: 10px 8px 14px;
   border-radius: 8px;
   margin-bottom: 12px;
   display: flex;
   flex-wrap: nowrap;
   gap: 6px;
-  align-items: center;
-  min-height: 48px;
+  align-items: flex-end;
+  min-height: 58px;
   border: 1px solid var(--border);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* 3D "lying down" effect: melds and flowers appear tilted forward on the table */
+.hand-display-area.compact .meld-box .calc-tile-container {
+  transform: perspective(70px) rotateX(48deg);
+  transform-origin: bottom center;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.22), inset 0 -2px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Flower tiles in hand area get same lying-down effect */
+.hand-display-area.compact > .hua-tile-btn {
+  transform: perspective(70px) rotateX(48deg);
+  transform-origin: bottom center;
+  box-shadow: 0 6px 10px rgba(76, 175, 80, 0.28), inset 0 -2px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Concealed tiles stay upright — no transform */
+.hand-display-area.compact .tiles-row .calc-tile-container {
+  transform: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
 
 .tiles-row {
