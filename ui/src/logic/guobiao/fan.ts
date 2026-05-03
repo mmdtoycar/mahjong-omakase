@@ -697,8 +697,8 @@ export function scoreCombination(
     shunKeysCounts.forEach((c) => {
       if (c >= 2) yiBanGaoCount += Math.floor(c / 2)
     })
-    if (yiBanGaoCount > 0 && !hasFan('一色三同顺') && !hasFan('一色四同顺')) {
-      addFan('一般高', 1, Math.min(2, yiBanGaoCount))
+    if (yiBanGaoCount > 0) {
+      addFan('一般高', 1, yiBanGaoCount)
     }
 
     // 喜相逢 (1) — 2 shuns, different suit, same rank
@@ -717,7 +717,7 @@ export function scoreCombination(
         }
       }
     }
-    if (xiXiangFengCount > 0 && !hasFan('三色三同顺')) addFan('喜相逢', 1, Math.min(2, xiXiangFengCount))
+    if (xiXiangFengCount > 0) addFan('喜相逢', 1, xiXiangFengCount)
 
     // 连六 (1) — same suit, 2 shuns differ by 3
     const usedLL = new Set<number>()
@@ -735,7 +735,7 @@ export function scoreCombination(
         }
       }
     }
-    if (lianLiuCount > 0 && !hasFan('清龙')) addFan('连六', 1, Math.min(2, lianLiuCount))
+    if (lianLiuCount > 0) addFan('连六', 1, lianLiuCount)
 
     // 老少副 (1) — same suit, 123 and 789
     const usedLS = new Set<number>()
@@ -753,27 +753,59 @@ export function scoreCombination(
         }
       }
     }
-    if (laoShaoFuCount > 0 && !hasFan('清龙') && !hasFan('花龙')) addFan('老少副', 1, Math.min(2, laoShaoFuCount))
+    if (laoShaoFuCount > 0) {
+      addFan('老少副', 1, laoShaoFuCount)
+    }
 
     // 幺九刻 (1)
     let yaoJiuKeCount = keMelds.filter((m) => m.tiles[0].isTerminalOrHonor).length
     if (hasFan('字一色') || hasFan('清幺九') || hasFan('混幺九')) {
       yaoJiuKeCount = 0
     } else {
-      const hasWindGroupFan = hasFan('大四喜') || hasFan('小四喜') || hasFan('三风刻')
-      if (hasFan('大四喜')) yaoJiuKeCount -= 4
-      else if (hasFan('小四喜')) yaoJiuKeCount -= 3
-      else if (hasFan('三风刻')) yaoJiuKeCount -= 3
+      // Count how many unique honor pungs are used by "higher" honor-based fans
+      const specialHonors = new Set<string>()
 
-      if (hasFan('大三元')) yaoJiuKeCount -= 3
-      else if (hasFan('小三元')) yaoJiuKeCount -= 2
-
-      if (!hasWindGroupFan) {
-        if (hasFan('双箭刻')) yaoJiuKeCount -= 2
-        else if (hasFan('箭刻')) yaoJiuKeCount -= 1
-        if (hasFan('圈风刻')) yaoJiuKeCount -= 1
-        if (hasFan('门风刻')) yaoJiuKeCount -= 1
+      // Wind pungs
+      if (hasFan('大四喜')) {
+        specialHonors.add('z1')
+        specialHonors.add('z2')
+        specialHonors.add('z3')
+        specialHonors.add('z4')
+      } else if (hasFan('小四喜')) {
+        // Find which 3 winds are pungs
+        keMelds.filter((m) => m.tiles[0].isWind).forEach((m) => specialHonors.add(m.tiles[0].toString()))
+      } else if (hasFan('三风刻')) {
+        keMelds.filter((m) => m.tiles[0].isWind).forEach((m) => specialHonors.add(m.tiles[0].toString()))
+      } else {
+        if (hasFan('圈风刻')) {
+          const t = keMelds.find((m) => m.tiles[0].suit === 'z' && m.tiles[0].rank === options.quanfeng)?.tiles[0]
+          if (t) specialHonors.add(t.toString())
+        }
+        if (hasFan('门风刻')) {
+          const t = keMelds.find((m) => m.tiles[0].suit === 'z' && m.tiles[0].rank === options.menfeng)?.tiles[0]
+          if (t) specialHonors.add(t.toString())
+        }
       }
+
+      // Dragon pungs
+      if (hasFan('大三元')) {
+        specialHonors.add('z5')
+        specialHonors.add('z6')
+        specialHonors.add('z7')
+      } else if (hasFan('小三元')) {
+        keMelds.filter((m) => m.tiles[0].isDragon).forEach((m) => specialHonors.add(m.tiles[0].toString()))
+      } else if (hasFan('双箭刻')) {
+        keMelds.filter((m) => m.tiles[0].isDragon).forEach((m) => specialHonors.add(m.tiles[0].toString()))
+      } else if (hasFan('箭刻')) {
+        keMelds.filter((m) => m.tiles[0].isDragon).forEach((m) => specialHonors.add(m.tiles[0].toString()))
+      }
+
+      // Terminal pungs (1, 9) are never "special" in the sense of being covered by wind/dragon fans
+      // But we only want to subtract the honor pungs that were already counted.
+      const terminalKeCount = keMelds.filter((m) => m.tiles[0].isTerminal).length
+      const honorKeCount = keMelds.filter((m) => m.tiles[0].isHonor).length
+
+      yaoJiuKeCount = terminalKeCount + Math.max(0, honorKeCount - specialHonors.size)
     }
 
     if (yaoJiuKeCount > 0) {
@@ -892,9 +924,22 @@ export function scoreCombination(
   // =====================================================================
   if (hasFan('大四喜')) {
     removeFan('三风刻')
+    removeFan('圈风刻')
+    removeFan('门风刻')
     removeFan('碰碰和')
   }
+  if (hasFan('小四喜')) {
+    removeFan('三风刻')
+  }
+  if (hasFan('三风刻')) {
+    removeFan('圈风刻')
+    removeFan('门风刻')
+  }
   if (hasFan('大三元')) {
+    removeFan('双箭刻')
+    removeFan('箭刻')
+  }
+  if (hasFan('小三元')) {
     removeFan('箭刻')
   }
   if (hasFan('九莲宝灯')) {

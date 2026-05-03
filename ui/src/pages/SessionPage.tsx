@@ -17,12 +17,11 @@ export default function SessionPage() {
   const [dealerId, setDealerId] = useState<string>('')
   const [honba, setHonba] = useState<string>('0')
   const [kyoutaku, setKyoutaku] = useState<string>('0')
-  const [isSelfDraw, setIsSelfDraw] = useState(true)
+  const [isSelfDraw, setIsSelfDraw] = useState(false)
   const [dealInPlayerId, setDealInPlayerId] = useState<string>('')
   const [bimenPlayerIds, setBimenPlayerIds] = useState<number[]>([])
   const [isRyuukyoku, setIsRyuukyoku] = useState(false)
   const [tenpaiPlayerIds, setTenpaiPlayerIds] = useState<number[]>([])
-  const [isCalcOpen, setIsCalcOpen] = useState(false)
   const [calcResetCount, setCalcResetCount] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [winHand, setWinHand] = useState<string>('')
@@ -72,7 +71,7 @@ export default function SessionPage() {
     setFan('')
     setFu('')
     setBimenPlayerIds([])
-    setIsSelfDraw(true)
+    setIsSelfDraw(false)
     setDealInPlayerId('')
     setIsRyuukyoku(false)
     setTenpaiPlayerIds([])
@@ -89,13 +88,13 @@ export default function SessionPage() {
     if (winnerId === pid) {
       setWinnerId('')
       setDealInPlayerId('')
-      setIsSelfDraw(true)
+      setIsSelfDraw(false)
     } else if (dealInPlayerId === pid) {
       setDealInPlayerId('')
-      setIsSelfDraw(true)
+      setIsSelfDraw(false)
     } else if (!winnerId) {
       setWinnerId(pid)
-      setIsSelfDraw(true)
+      setIsSelfDraw(false)
     } else {
       setDealInPlayerId(pid)
       setIsSelfDraw(false)
@@ -698,59 +697,6 @@ export default function SessionPage() {
                   </div>
                 )}
 
-                {!isRiichi && isGuobiao && (
-                  <div className="form-group">
-                    <label>
-                      分数
-                      {gbWinds && (
-                        <div className="wind-selector-mini">
-                          {[1, 2, 3, 4].map((w) => (
-                            <button
-                              key={w}
-                              type="button"
-                              className={`wind-chip ${gbWinds.quanfeng === w ? 'active' : ''}`}
-                              onClick={() => setManualQuanfeng(w)}
-                            >
-                              {['东', '南', '西', '北'][w - 1]}
-                            </button>
-                          ))}
-                          <span className="hand-num-info">第{((gbWinds.handIdx - 1) % 4) + 1}局</span>
-                        </div>
-                      )}
-                    </label>
-                    <div className="score-input-row">
-                      <input
-                        type="number"
-                        value={score}
-                        onChange={(e) => setScore(e.target.value)}
-                        placeholder="输入分数"
-                        min="8"
-                      />
-                      <button
-                        className={`btn btn-small calc-trigger-btn ${isCalcOpen ? 'btn-primary' : 'btn-accent'}`}
-                        onClick={() => setIsCalcOpen((prev) => !prev)}
-                      >
-                        {isCalcOpen ? '收起算番' : '算番器'}
-                      </button>
-                    </div>
-                    {isCalcOpen && (
-                      <div className="inline-calc-wrapper">
-                        <GuobiaoCalculator
-                          onSelectScore={handleCalcScoreSelect}
-                          initialOptions={{
-                            quanfeng: gbWinds?.quanfeng || 1,
-                            menfeng: winnerMenfeng,
-                          }}
-                          resetTrigger={calcResetCount}
-                          isSelfDraw={isSelfDraw}
-                          onIsSelfDrawChange={setIsSelfDraw}
-                          onClose={() => setIsCalcOpen(false)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <div className="form-group full-width">
                   <label>胜负选择</label>
                   <div className="quick-win-row">
@@ -781,6 +727,52 @@ export default function SessionPage() {
                     </button>
                   </div>
                 </div>
+
+                {!isRiichi && isGuobiao && (
+                  <div className="form-group">
+                    <label>
+                      分数
+                      {gbWinds && (
+                        <div className="wind-selector-mini">
+                          {[1, 2, 3, 4].map((w) => (
+                            <button
+                              key={w}
+                              type="button"
+                              className={`wind-chip ${gbWinds.quanfeng === w ? 'active' : ''}`}
+                              onClick={() => setManualQuanfeng(w)}
+                            >
+                              {['东', '南', '西', '北'][w - 1]}
+                            </button>
+                          ))}
+                          <span className="hand-num-info">第{((gbWinds.handIdx - 1) % 4) + 1}局</span>
+                        </div>
+                      )}
+                    </label>
+                    <div className="score-input-row">
+                      <input
+                        type="number"
+                        value={score}
+                        onChange={(e) => setScore(e.target.value)}
+                        placeholder="输入分数"
+                        min="8"
+                      />
+                    </div>
+                    <div className="inline-calc-wrapper">
+                      <GuobiaoCalculator
+                        key={`${gbWinds?.quanfeng || 1}-${winnerMenfeng}`}
+                        onSelectScore={handleCalcScoreSelect}
+                        initialOptions={{
+                          quanfeng: gbWinds?.quanfeng || 1,
+                          menfeng: winnerMenfeng,
+                        }}
+                        resetTrigger={calcResetCount}
+                        isSelfDraw={isSelfDraw}
+                        onIsSelfDrawChange={setIsSelfDraw}
+                        onClose={() => {}}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {isDongbei && winnerId && (
                   <div className="form-group">
