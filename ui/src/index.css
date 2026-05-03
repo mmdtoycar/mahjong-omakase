@@ -2275,13 +2275,13 @@ tr:hover td {
 }
 
 .quick-player-btn.reset-btn {
-  border-color: var(--sol-red);
-  color: var(--sol-red);
-  background: rgba(220, 50, 47, 0.06);
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(7, 54, 66, 0.06);
 }
 
 .quick-player-btn.reset-btn:hover {
-  background: rgba(220, 50, 47, 0.14);
+  background: rgba(7, 54, 66, 0.14);
 }
 
 .quick-player-btn.zimo {
