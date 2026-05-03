@@ -2231,6 +2231,17 @@ tr:hover td {
   margin-bottom: 8px;
 }
 
+/* Always keep 点炮/自摸 and 重置 on the same row */
+.win-action-row {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+
+.win-action-row .quick-player-btn {
+  flex: 1;
+}
+
 .quick-player-btn {
   width: 100%;
   padding: 10px 4px;

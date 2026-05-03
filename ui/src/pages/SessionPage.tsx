@@ -718,16 +718,18 @@ export default function SessionPage() {
                         </button>
                       )
                     })}
-                    <button
-                      className={`quick-player-btn win-type-btn ${isSelfDraw ? 'zimo' : 'dianpao'}`}
-                      onClick={handleWinTypeToggle}
-                      disabled={!winnerId}
-                    >
-                      {isSelfDraw ? '自摸' : '点炮'}
-                    </button>
-                    <button className="quick-player-btn win-type-btn reset-btn" onClick={resetForm}>
-                      重置
-                    </button>
+                    <div className="win-action-row">
+                      <button
+                        className={`quick-player-btn win-type-btn ${isSelfDraw ? 'zimo' : 'dianpao'}`}
+                        onClick={handleWinTypeToggle}
+                        disabled={!winnerId}
+                      >
+                        {isSelfDraw ? '自摸' : '点炮'}
+                      </button>
+                      <button className="quick-player-btn win-type-btn reset-btn" onClick={resetForm}>
+                        重置
+                      </button>
+                    </div>
                   </div>
                 </div>
 
