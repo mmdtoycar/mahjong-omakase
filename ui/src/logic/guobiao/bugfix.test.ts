@@ -69,7 +69,8 @@ describe('Guobiao Bug Fixes', () => {
 
   test('Lao-Shao-Fu with Pure Straight (Additivity)', () => {
     // Pure Straight (16) + Extra Lao-Shao-Fu (1)
-    const r = calc('s123 s456 s789 s123 s789 m55')
+    // s123 s456 s789 (Straight) + s789 (extra) + s11 (pair)
+    const r = calc('s123 s456 s789 s789 s11')
     const fanNames = r!.fans.map(f => f.name)
     expect(fanNames).toContain('清龙')
     expect(fanNames).toContain('老少副')
@@ -82,11 +83,8 @@ describe('Guobiao Bug Fixes', () => {
   })
 
   test('East wind in East round and East seat with West pung', () => {
-    // East Pung (z111), West Pung (z333), 3 shuns, 1 pair
-    // Round East (1), Seat East (1)
-    // Should have: Quanfeng-Ke (2), Menfeng-Ke (2), Yao-Jiu-Ke (1 for West)
-    // Total should be at least 5
-    const r = calc('z111 z333 s123 s456 s78', { quanfeng: 1, menfeng: 1 })
+    // East Pung (z111), West Pung (z333), 2 shuns, 1 pair
+    const r = calc('z111 z333 s123 s456 s77', { quanfeng: 1, menfeng: 1 })
     const fanNames = r!.fans.map(f => f.name)
     expect(fanNames).toContain('圈风刻')
     expect(fanNames).toContain('门风刻')
@@ -94,6 +92,6 @@ describe('Guobiao Bug Fixes', () => {
     
     const yjk = r!.fans.find(f => f.name === '幺九刻')
     expect(yjk).toBeDefined()
-    expect(yjk!.count).toBe(1) // Only West pung should be Yao-Jiu-Ke
+    expect(yjk!.count).toBe(1)
   })
 })
