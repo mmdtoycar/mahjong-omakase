@@ -125,13 +125,20 @@ export async function fetchBestRounds(
   return handleResponse<BestRound[]>(res)
 }
 
-export async function fetchFanDiscoveries(year?: number, month?: number): Promise<FanDiscovery[]> {
+export async function fetchFanDiscoveries(
+  year?: number,
+  month?: number,
+  signal?: AbortSignal
+): Promise<FanDiscovery[]> {
+  if ((year != null) !== (month != null)) {
+    throw new Error('Both year and month must be provided together')
+  }
   const params = new URLSearchParams()
   if (year != null && month != null) {
     params.set('year', String(year))
     params.set('month', String(month))
   }
   const qs = params.toString()
-  const res = await fetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`)
+  const res = await fetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`, { signal })
   return handleResponse<FanDiscovery[]>(res)
 }

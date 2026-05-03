@@ -19,8 +19,16 @@ const FanTablePage: React.FC = () => {
   const seasons = useMemo(() => getAvailableSeasons(2024), [])
 
   useEffect(() => {
+    const controller = new AbortController()
     const [y, m] = seasonKey.split('-').map(Number)
-    fetchFanDiscoveries(y, m).then(setDiscoveries).catch(console.error)
+    fetchFanDiscoveries(y, m, controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) setDiscoveries(data)
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') console.error(err)
+      })
+    return () => controller.abort()
   }, [seasonKey])
 
   const discoveriesMap = useMemo(() => {
@@ -147,11 +155,13 @@ const FanTablePage: React.FC = () => {
                           className="badge badge-accent"
                           style={{ fontSize: '0.7rem', padding: '2px 6px' }}
                           title={`首位达成者: ${discoveriesMap[item.name].playerName}${
-                            discoveriesMap[item.name].bonusRp > 0 ? ` (+${discoveriesMap[item.name].bonusRp} RP)` : ''
+                            (discoveriesMap[item.name].bonusRp ?? 0) > 0
+                              ? ` (+${discoveriesMap[item.name].bonusRp} RP)`
+                              : ''
                           }`}
                         >
                           🏆 {discoveriesMap[item.name].playerName}
-                          {discoveriesMap[item.name].bonusRp > 0 && ` (+${discoveriesMap[item.name].bonusRp})`}
+                          {(discoveriesMap[item.name].bonusRp ?? 0) > 0 && ` (+${discoveriesMap[item.name].bonusRp})`}
                         </span>
                       )}
                       {item.tags?.map((tag) => (
@@ -203,7 +213,7 @@ const FanTablePage: React.FC = () => {
                   )}
                   {discoveriesMap[item.name]?.exampleHand && (
                     <div className="fan-item-example-real">
-                      <MahjongHand hand={discoveriesMap[item.name].exampleHand} />
+                      <MahjongHand hand={discoveriesMap[item.name].exampleHand ?? undefined} />
                       <span className="example-hint">实战例子</span>
                     </div>
                   )}

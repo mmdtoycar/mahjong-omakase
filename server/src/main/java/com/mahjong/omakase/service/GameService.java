@@ -65,7 +65,7 @@ public class GameService {
     // Load existing discoveries to ensure idempotency
     Set<String> discoveredFans =
         fanDiscoveryRepo.findAll().stream()
-            .map(FanDiscovery::getFanName)
+            .map(fd -> fd.getSeason() + "_" + fd.getFanName())
             .collect(Collectors.toSet());
 
     int page = 0;
@@ -729,7 +729,7 @@ public class GameService {
     if (winnerId != null && fanDetails != null && !fanDetails.isBlank()) {
       Player winner = playerRepo.findById(winnerId).orElse(null);
       if (winner != null) {
-        String season = getSeasonString(LocalDateTime.now());
+        String season = getSeasonString(session.getCreatedAt());
         String[] parts = fanDetails.split(",\\s*");
         for (String p : parts) {
           String trimmedPart = p.trim();
@@ -757,7 +757,7 @@ public class GameService {
 
               FanDiscovery fd =
                   new FanDiscovery(
-                      fanName, season, winner, round, winHand, bonusRp, LocalDateTime.now());
+                      fanName, season, winner, round, winHand, bonusRp, session.getCreatedAt());
               fanDiscoveryRepo.save(fd);
               log.info(
                   "New Fan Discovered: '{}' in season '{}' by player '{}' in round {}",

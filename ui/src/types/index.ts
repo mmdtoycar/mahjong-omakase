@@ -173,8 +173,8 @@ export interface FanDiscovery {
   fanName: string
   playerId: number
   playerName: string
-  exampleHand: string
+  exampleHand: string | null
   discoveredAt: string
-  bonusRp: number
+  bonusRp: number | null
   season: string
 }
