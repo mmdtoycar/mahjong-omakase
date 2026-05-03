@@ -630,7 +630,7 @@ const CalculatorPage: React.FC = () => {
                     margin-bottom: 25px;
                     align-items: flex-start;
                 }
-                .tile-picker-card { padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.03); width: fit-content; }
+                .tile-picker-card { padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.03); width: fit-content; max-width: 100%; }
 
                 .mode-selector-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
                 .mode-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
@@ -645,6 +645,7 @@ const CalculatorPage: React.FC = () => {
                     grid-template-columns: repeat(9, 38px);
                     gap: 8px;
                     justify-content: start;
+                    max-width: 100%;
                 }
 
                 .options-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -779,6 +780,13 @@ const CalculatorPage: React.FC = () => {
                 .micro-select { padding: 1px 4px; border-radius: 4px; border: 1px solid var(--solaris-base1); font-size: 0.75rem; font-weight: 700; }
 
                 .mobile-back-home { display: none; }
+
+                /* Large screen cap: prevent tiles from scaling up beyond their designed size */
+                @media (min-width: 641px) {
+                    .tile-grid { grid-template-columns: repeat(9, 38px); }
+                    .calc-tile-container { width: 38px; height: 50px; flex-shrink: 0; }
+                }
+
                 @media (max-width: 640px) {
                     .calculator-page .compact-header { padding: 4px 0; margin-bottom: 8px; }
                     .calculator-page .compact-header h2 { font-size: 1.1rem; }
