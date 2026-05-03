@@ -51,17 +51,15 @@ const FanTablePage: React.FC = () => {
 
   // Load selected season discoveries
   useEffect(() => {
-    const controller = new AbortController()
-    let year: number | undefined
-    let month: number | undefined
-
-    if (seasonKey !== 'all') {
-      const [y, m] = seasonKey.split('-').map(Number)
-      year = y
-      month = m
+    if (seasonKey === 'all') {
+      setDiscoveries([])
+      return
     }
 
-    fetchFanDiscoveries(year, month, controller.signal)
+    const controller = new AbortController()
+    const [y, m] = seasonKey.split('-').map(Number)
+
+    fetchFanDiscoveries(y, m, controller.signal)
       .then((data) => {
         if (!controller.signal.aborted) setDiscoveries(data)
       })

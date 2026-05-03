@@ -78,7 +78,7 @@ public class Player {
   }
 
   public boolean isBot() {
-    return bot;
+    return bot || "BOT".equals(this.userName);
   }
 
   public void setBot(boolean bot) {

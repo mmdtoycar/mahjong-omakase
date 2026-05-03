@@ -12,7 +12,8 @@ export default function HomePage() {
   const currentSeason = getCurrentSeason()
 
   useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval>
+    let timeoutId: ReturnType<typeof setTimeout>
+    let isActive = true
 
     async function loadData() {
       try {
@@ -25,7 +26,8 @@ export default function HomePage() {
         const details = settledDetails
           .filter((res): res is PromiseFulfilledResult<SessionDetail> => res.status === 'fulfilled')
           .map((res) => res.value)
-        setActiveSessions(details)
+        
+        if (isActive) setActiveSessions(details)
 
         // 3. Fetch stats for each mode
         const rankingData: Record<string, { top: PlayerStats[]; best: BestRound | null }> = {}
@@ -48,18 +50,23 @@ export default function HomePage() {
           })
         )
 
-        setRankings(rankingData)
+        if (isActive) setRankings(rankingData)
       } catch (e) {
         console.error('Failed to load hub data:', e)
       } finally {
-        setLoading(false)
+        if (isActive) {
+          setLoading(false)
+          timeoutId = setTimeout(loadData, 10000)
+        }
       }
     }
 
     loadData()
-    intervalId = setInterval(loadData, 10000) // Poll every 10 seconds
 
-    return () => clearInterval(intervalId)
+    return () => {
+      isActive = false
+      clearTimeout(timeoutId)
+    }
   }, [currentSeason.year, currentSeason.month])
 
   if (loading) {
