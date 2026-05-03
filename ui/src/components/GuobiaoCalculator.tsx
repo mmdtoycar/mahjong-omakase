@@ -351,17 +351,6 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
             ))}
           </div>
         ))}
-        {/* Flower tiles in hand — click to remove */}
-        {Array.from({ length: options.huaCount }).map((_, i) => (
-          <div
-            key={`hua-${i}`}
-            className="calc-tile-container small selectable hua-tile-btn"
-            onClick={() => setOptions((prev) => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) }))}
-            title="点击移除花牌"
-          >
-            <span className="hua-tile-char">花</span>
-          </div>
-        ))}
         <div className="tiles-row small">
           {displayConcealed.map((tile, i) => (
             <TileComponent key={i} tile={tile} onClick={() => onHandTileClick(tile)} size="small" />
@@ -374,6 +363,17 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
               onClick={() => onHandTileClick(concealedTiles[concealedTiles.length - 1])}
               size="small"
             />
+          </div>
+        )}
+        {/* Flower tiles at the end — single tile with count badge */}
+        {options.huaCount > 0 && (
+          <div
+            className="calc-tile-container small selectable hua-tile-btn hua-hand-tile"
+            onClick={() => setOptions((prev) => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) }))}
+            title="点击移除花牌"
+          >
+            <span className="hua-tile-char">花</span>
+            {options.huaCount > 1 && <span className="hua-count-badge">x{options.huaCount}</span>}
           </div>
         )}
       </div>

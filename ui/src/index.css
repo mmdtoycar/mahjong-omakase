@@ -1917,6 +1917,29 @@ tr:hover td {
   box-shadow: 0 4px 8px rgba(76, 175, 80, 0.25), inset 0 -2px 3px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Flower tile at the end of hand — extra left margin for visual separation */
+.hua-hand-tile {
+  margin-left: 8px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Count badge: x2, x3, x4 etc. */
+.hua-count-badge {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  font-size: 0.5rem;
+  font-weight: 900;
+  color: white;
+  background: #2e7d32;
+  border-radius: 4px;
+  padding: 1px 3px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 /* Concealed tiles stay upright — no transform */
 .hand-display-area.compact .tiles-row .calc-tile-container {
   transform: none;
