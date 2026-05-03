@@ -298,11 +298,6 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
             </button>
           ))}
         </div>
-        <div className="mini-option">
-          <button className="micro-btn" onClick={resetHandState}>
-            重置
-          </button>
-        </div>
       </div>
 
       <div className="mode-selector-container">
