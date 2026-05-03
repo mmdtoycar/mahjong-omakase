@@ -1815,7 +1815,7 @@ tr:hover td {
 
 .tile-grid-compact {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(9, minmax(0, 32px));
   gap: 4px;
   margin-bottom: 12px;
 }
