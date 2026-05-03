@@ -2656,8 +2656,17 @@ tr:hover td {
   letter-spacing: 1px;
 }
 
-.dashboard-table tr:hover {
+.dashboard-table tr:hover td {
   background: rgba(33, 140, 116, 0.04);
+}
+
+.dashboard-table tr:focus-visible {
+  outline: 2px solid var(--mj-green);
+  outline-offset: -2px;
+}
+
+.dashboard-table tr:focus-visible td {
+  background: rgba(33, 140, 116, 0.08);
 }
 
 .cell-rank {
