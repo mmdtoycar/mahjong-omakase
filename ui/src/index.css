@@ -1832,24 +1832,22 @@ tr:hover td {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
 
-/* Flower tile button */
+/* Flower tile button — white background like other tiles */
 .hua-tile-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #e8f5e9, #c8e6c9) !important;
-  border-color: #81c784 !important;
 }
 
 .hua-tile-btn:hover:not(.disabled) {
-  border-color: #4caf50 !important;
-  box-shadow: 0 3px 6px rgba(76, 175, 80, 0.25) !important;
+  border-color: #e8a0b4 !important;
+  box-shadow: 0 3px 6px rgba(232, 134, 166, 0.25) !important;
 }
 
 .hua-tile-char {
   font-size: 1.1rem;
   font-weight: 400;
-  color: #2e7d32;
+  color: #d4688a;
   line-height: 1;
   font-family: 'Long Cang', serif;
   user-select: none;
@@ -1934,7 +1932,7 @@ tr:hover td {
   font-size: 0.5rem;
   font-weight: 900;
   color: white;
-  background: #2e7d32;
+  background: #d4688a;
   border-radius: 4px;
   padding: 1px 3px;
   line-height: 1.2;
