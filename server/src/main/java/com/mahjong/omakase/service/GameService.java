@@ -230,6 +230,13 @@ public class GameService {
     playerRepo.deleteById(java.util.Objects.requireNonNull(id));
   }
 
+  @org.springframework.transaction.annotation.Transactional(readOnly = true)
+  public List<SessionSummaryResponse> getAllSessionSummaries() {
+    return sessionRepo.findAllByOrderByCreatedAtDesc().stream()
+        .map(SessionSummaryResponse::from)
+        .toList();
+  }
+
   public List<GameSession> getAllSessions() {
     return sessionRepo.findAllByOrderByCreatedAtDesc();
   }

@@ -19,7 +19,7 @@ public class GameSessionController {
 
   @GetMapping
   public List<SessionSummaryResponse> list() {
-    return gameService.getAllSessions().stream().map(SessionSummaryResponse::from).toList();
+    return gameService.getAllSessionSummaries();
   }
 
   @PostMapping
