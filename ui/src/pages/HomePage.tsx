@@ -6,40 +6,48 @@ import { ActiveGameCard } from '../components/ActiveGameCard'
 
 export default function HomePage() {
   const [activeSessions, setActiveSessions] = useState<SessionDetail[]>([])
-  const [rankings, setRankings] = useState<Record<string, { top: PlayerStats[], best: BestRound | null }>>({})
+  const [rankings, setRankings] = useState<Record<string, { top: PlayerStats[]; best: BestRound | null }>>({})
   const [loading, setLoading] = useState(true)
 
   const currentSeason = getCurrentSeason()
 
   useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval>
+
     async function loadData() {
       try {
         // 1. Fetch sessions and filter for IN_PROGRESS
         const sessions = await fetchSessions()
-        const active = sessions.filter(s => s.status === 'IN_PROGRESS')
-        
-        // 2. Fetch details for active sessions
-        const details = await Promise.all(active.map(s => fetchSessionDetail(s.id)))
+        const active = sessions.filter((s) => s.status === 'IN_PROGRESS')
+
+        // 2. Fetch details for active sessions (using allSettled to prevent single failure from crashing all)
+        const settledDetails = await Promise.allSettled(active.map((s) => fetchSessionDetail(s.id)))
+        const details = settledDetails
+          .filter((res): res is PromiseFulfilledResult<SessionDetail> => res.status === 'fulfilled')
+          .map((res) => res.value)
         setActiveSessions(details)
 
         // 3. Fetch stats for each mode
-        const rankingData: Record<string, { top: PlayerStats[], best: BestRound | null }> = {}
-        
-        await Promise.all(GAME_MODES.map(async (mode) => {
-          try {
-            const stats = await fetchStats(mode.key, currentSeason.year, currentSeason.month)
-            const bestRounds = await fetchBestRounds(mode.key, currentSeason.year, currentSeason.month)
-            
-            rankingData[mode.key] = {
-              top: stats.sort((a, b) => b.totalRP - a.totalRP).slice(0, 3),
-              best: bestRounds.length > 0 ? bestRounds.sort((a, b) => (b.fanCount || 0) - (a.fanCount || 0))[0] : null
+        const rankingData: Record<string, { top: PlayerStats[]; best: BestRound | null }> = {}
+
+        await Promise.all(
+          GAME_MODES.map(async (mode) => {
+            try {
+              const stats = await fetchStats(mode.key, currentSeason.year, currentSeason.month)
+              const bestRounds = await fetchBestRounds(mode.key, currentSeason.year, currentSeason.month)
+
+              rankingData[mode.key] = {
+                top: stats.sort((a, b) => b.totalRP - a.totalRP).slice(0, 3),
+                best:
+                  bestRounds.length > 0 ? bestRounds.sort((a, b) => (b.fanCount || 0) - (a.fanCount || 0))[0] : null,
+              }
+            } catch (err) {
+              console.error(`Failed to fetch stats for ${mode.key}:`, err)
+              rankingData[mode.key] = { top: [], best: null }
             }
-          } catch (err) {
-            console.error(`Failed to fetch stats for ${mode.key}:`, err)
-            rankingData[mode.key] = { top: [], best: null }
-          }
-        }))
-        
+          })
+        )
+
         setRankings(rankingData)
       } catch (e) {
         console.error('Failed to load hub data:', e)
@@ -49,6 +57,9 @@ export default function HomePage() {
     }
 
     loadData()
+    intervalId = setInterval(loadData, 10000) // Poll every 10 seconds
+
+    return () => clearInterval(intervalId)
   }, [currentSeason.year, currentSeason.month])
 
   if (loading) {
@@ -62,14 +73,18 @@ export default function HomePage() {
   return (
     <div className="home-hub">
       <div style={{ marginBottom: '40px', textAlign: 'center' }}>
-        <Link to="/new-session" className="btn btn-accent btn-hero-shine" style={{ 
-          display: 'inline-flex', 
-          alignItems: 'center', 
-          gap: '12px',
-          fontSize: '1.1rem', 
-          padding: '12px 24px',
-          borderRadius: '50px'
-        }}>
+        <Link
+          to="/new-session"
+          className="btn btn-accent btn-hero-shine"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '1.1rem',
+            padding: '12px 24px',
+            borderRadius: '50px',
+          }}
+        >
           <img src="/logo-header.png" alt="" style={{ height: '24px', width: 'auto' }} />
           麻将，启动！
         </Link>
@@ -78,7 +93,10 @@ export default function HomePage() {
       <div className="active-games-section">
         <h2 style={{ marginBottom: '16px' }}>正在进行的对局</h2>
         {activeSessions.length === 0 ? (
-          <div className="empty-state" style={{ background: 'white', borderRadius: '12px', padding: '40px', boxShadow: 'var(--shadow)' }}>
+          <div
+            className="empty-state"
+            style={{ background: 'white', borderRadius: '12px', padding: '40px', boxShadow: 'var(--shadow)' }}
+          >
             <p style={{ color: 'var(--text-light)', marginBottom: '12px' }}>当前没有正在进行的对局</p>
             <Link to="/new-session" style={{ color: 'var(--mj-green)', fontWeight: 'bold', textDecoration: 'none' }}>
               + 开启一局新游戏
@@ -86,7 +104,7 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="active-games-grid">
-            {activeSessions.map(s => (
+            {activeSessions.map((s) => (
               <ActiveGameCard key={s.id} session={s} />
             ))}
           </div>
@@ -96,14 +114,16 @@ export default function HomePage() {
       <div className="rankings-section" style={{ marginTop: '48px' }}>
         <h2 style={{ marginBottom: '16px' }}>本月荣誉殿堂</h2>
         <div className="hall-of-fame-grid">
-          {GAME_MODES.map(mode => {
+          {GAME_MODES.map((mode) => {
             const data = rankings[mode.key]
             return (
               <div key={mode.key} className="mode-rank-column">
                 <h3 className="mode-rank-title">{mode.label}</h3>
                 <div className="rank-list">
-                  {(!data || data.top.length === 0) ? (
-                    <p className="empty-state" style={{ padding: '20px 0' }}>暂无本月排名</p>
+                  {!data || data.top.length === 0 ? (
+                    <p className="empty-state" style={{ padding: '20px 0' }}>
+                      暂无本月排名
+                    </p>
                   ) : (
                     data.top.map((player, idx) => (
                       <div key={player.playerId} className="rank-item">
@@ -121,7 +141,16 @@ export default function HomePage() {
                     <span className="best-hand-label">🏆 本月最高和牌</span>
                     <div className="best-hand-value">
                       {data.best.fanCount} 番 · {data.best.winnerName}
-                      <div style={{ fontSize: '0.75rem', marginTop: '4px', color: 'var(--sol-base01)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div
+                        style={{
+                          fontSize: '0.75rem',
+                          marginTop: '4px',
+                          color: 'var(--sol-base01)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {data.best.fanDetails}
                       </div>
                     </div>
@@ -132,7 +161,7 @@ export default function HomePage() {
           })}
         </div>
       </div>
-      
+
       <div style={{ marginTop: '60px', textAlign: 'center', opacity: 0.5, fontSize: '0.9rem' }}>
         <p>© 2026 Mahjong Omakase Team · Let's NB!</p>
       </div>
