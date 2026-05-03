@@ -2722,7 +2722,10 @@ tr:hover td {
     border-radius: var(--radius);
     margin-bottom: 16px;
     background: var(--card);
-    padding: 8px 0;
+    padding: 4px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
   }
 
   .dashboard-table td {
@@ -2733,6 +2736,37 @@ tr:hover td {
     min-height: 48px;
     display: flex;
     align-items: center;
+  }
+
+  .dashboard-table td.cell-rank {
+    width: 100%;
+    order: 4;
+  }
+
+  .dashboard-table td.cell-mode {
+    order: 1;
+    width: auto;
+    padding: 8px 16px;
+    border-bottom: none;
+    min-height: auto;
+  }
+
+  .dashboard-table td.cell-date {
+    order: 2;
+    width: auto;
+    margin-left: auto;
+    padding: 8px 8px 8px 0;
+    border-bottom: none;
+    min-height: auto;
+    font-size: 0.75rem;
+  }
+
+  .dashboard-table td.cell-status {
+    order: 3;
+    width: auto;
+    padding: 8px 16px 8px 0;
+    border-bottom: none;
+    min-height: auto;
   }
 
   .dashboard-table td:last-child {
@@ -2750,9 +2784,12 @@ tr:hover td {
     text-transform: uppercase;
   }
 
-  .dashboard-table td:nth-of-type(1):before {
-    content: '模式';
+  .dashboard-table td.cell-mode:before,
+  .dashboard-table td.cell-date:before,
+  .dashboard-table td.cell-status:before {
+    display: none;
   }
+
   .dashboard-table td:nth-of-type(2):before {
     content: '#1';
     color: #b58900;
@@ -2767,12 +2804,6 @@ tr:hover td {
   }
   .dashboard-table td:nth-of-type(5):before {
     content: '#4';
-  }
-  .dashboard-table td:nth-of-type(6):before {
-    content: '时间';
-  }
-  .dashboard-table td:nth-of-type(7):before {
-    content: '状态';
   }
 
   .cell-player-box {

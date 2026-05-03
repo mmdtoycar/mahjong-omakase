@@ -110,7 +110,7 @@ export default function DashboardPage() {
                       minute: '2-digit',
                     })}
                   </td>
-                  <td>
+                  <td className="cell-status">
                     <span
                       className={`cell-status-badge badge ${
                         s.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'
