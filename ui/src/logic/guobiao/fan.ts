@@ -165,6 +165,8 @@ export function scoreCombination(
     }))
 
   // Helper functions
+  let addedLaoShaoFuCount = 0
+
   const addFan = (name: string, score: number, countToAdd: number = 1) => {
     const existing = fans.find((f) => f.name === name)
     if (existing) {
@@ -754,6 +756,7 @@ export function scoreCombination(
       }
     }
     if (laoShaoFuCount > 0) {
+      addedLaoShaoFuCount = laoShaoFuCount
       addFan('老少副', 1, laoShaoFuCount)
     }
 
@@ -1042,11 +1045,11 @@ export function scoreCombination(
   }
   if (hasFan('清龙')) {
     removeFan('连六', 2)
-    removeFan('老少副')
+    if (addedLaoShaoFuCount === 0) removeFan('老少副')
   }
   if (hasFan('花龙')) {
     removeFan('喜相逢')
-    removeFan('老少副')
+    if (addedLaoShaoFuCount === 0) removeFan('老少副')
   }
   if (hasFan('推不倒')) {
     removeFan('缺一门')
