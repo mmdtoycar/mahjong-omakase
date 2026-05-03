@@ -12,9 +12,9 @@ export const ActiveGameCard: React.FC<Props> = ({ session }) => {
   const nextRoundNum = session.rounds.length + 1
   const lastRound = session.rounds.length > 0 ? session.rounds[session.rounds.length - 1] : null
   let qf = (Math.floor((nextRoundNum - 1) / 4) % 4) + 1
-  if (lastRound?.prevalentWind != null && lastRound?.roundNum != null) {
+  if (lastRound?.prevalentWind != null) {
     const nextGroup = Math.floor((nextRoundNum - 1) / 4)
-    const lastGroup = Math.floor((lastRound.roundNum - 1) / 4)
+    const lastGroup = Math.floor((session.rounds.length - 1) / 4)
     qf = ((lastRound.prevalentWind - 1 + (nextGroup - lastGroup)) % 4) + 1
   }
   const hand = ((nextRoundNum - 1) % 4) + 1
