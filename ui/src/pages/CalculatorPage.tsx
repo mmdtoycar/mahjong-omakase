@@ -235,13 +235,13 @@ const CalculatorPage: React.FC = () => {
       const rawTings = checkTing(concealedTiles, melds, { ...options, juezhang: false })
       if (rawTings.length > 0) {
         const impossibleTings = rawTings.filter((res: { tile: Tile; score: number }) => {
-          const countInHand =
+          const countInConcealed =
             concealedTiles.filter((t) => t.equals(res.tile)).length +
-            melds.reduce((acc, m) => acc + m.tiles.filter((t) => t.equals(res.tile)).length, 0)
-          return countInHand >= 1 // If I already have 1, winning on the 2nd (pair) makes 5 tiles needed for Juezhang (3 table + 2 hand)
+            melds.filter((m) => !m.isOpen).reduce((acc, m) => acc + m.tiles.filter((t) => t.equals(res.tile)).length, 0)
+          return countInConcealed >= 1
         })
         if (impossibleTings.length === rawTings.length) {
-          return `绝张错误：当前为“单调将”或类似听牌（手牌已持有所听之牌），不可能凑齐场面显现 3 张且你和第 4 张（共需 5 张）。`
+          return `绝张错误：当前听牌的手牌（立牌或暗杠）中已有所听之牌，不可能凑齐场面显现 3 张且你和第 4 张（共需 5 张，场面显现含你的副露）。`
         }
       }
     }
@@ -260,11 +260,13 @@ const CalculatorPage: React.FC = () => {
     if (currentCount === 14 && options.juezhang) {
       const lastTile = concealedTiles[concealedTiles.length - 1]
       if (lastTile) {
-        const countInHand =
+        const countInConcealed =
           concealedTiles.filter((t) => t.equals(lastTile)).length +
-          melds.reduce((acc, m) => acc + m.tiles.filter((t) => t.equals(lastTile)).length, 0)
-        if (countInHand > 1) {
-          return `绝张逻辑错误：你手牌已有 ${countInHand - 1} 张 ${getTileName(lastTile)}，场面上不可能已显现 3 张。`
+          melds.filter((m) => !m.isOpen).reduce((acc, m) => acc + m.tiles.filter((t) => t.equals(lastTile)).length, 0)
+        if (countInConcealed > 1) {
+          return `绝张逻辑错误：你立牌或暗杠中已有 ${
+            countInConcealed - 1
+          } 张 ${getTileName(lastTile)}，场面上不可能已显现 3 张（场面显现含你的副露）。`
         }
       }
     }
