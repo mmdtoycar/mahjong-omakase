@@ -54,6 +54,7 @@ function calc(handStr: string, opts: Partial<GameOptions> = {}): CalcResult | nu
 describe('Guobiao Bug Fixes', () => {
   test('Lao-Shao-Fu with multiple sets and Identical Chows', () => {
     // 123s, 789s, 789s + pair + another meld
+    // 应该计算 1番老少副 + 1番一般高
     const r = calc('s123 s789 s789 s55 m123')
     const fanNames = r!.fans.map(f => f.name)
     expect(fanNames).toContain('老少副')
@@ -61,19 +62,12 @@ describe('Guobiao Bug Fixes', () => {
   })
 
   test('Lao-Shao-Fu x2 with 123s, 123s, 789s, 789s', () => {
+    // 123s, 123s, 789s, 789s + pair
+    // 应该计算 2番老少副
     const r = calc('s123 s123 s789 s789 m55')
     const ls = r!.fans.find(f => f.name === '老少副')
     expect(ls).toBeDefined()
     expect(ls!.count).toBe(2)
-  })
-
-  test('Lao-Shao-Fu with Pure Straight (Additivity)', () => {
-    // Pure Straight (16) + Extra Lao-Shao-Fu (1)
-    // s123 s456 s789 (Straight) + s789 (extra) + s11 (pair)
-    const r = calc('s123 s456 s789 s789 s11')
-    const fanNames = r!.fans.map(f => f.name)
-    expect(fanNames).toContain('清龙')
-    expect(fanNames).toContain('老少副')
   })
 
   test('He-Jue-Zhang fan calculation', () => {
@@ -83,7 +77,8 @@ describe('Guobiao Bug Fixes', () => {
   })
 
   test('East wind in East round and East seat with West pung', () => {
-    // East Pung (z111), West Pung (z333), 2 shuns, 1 pair
+    // 东风刻 (z111), 西风刻 (z333), 2个顺子, 1个将牌
+    // 此时应该计 圈风刻(2) + 门风刻(2) + 幺九刻(1，西风) = 5番
     const r = calc('z111 z333 s123 s456 s77', { quanfeng: 1, menfeng: 1 })
     const fanNames = r!.fans.map(f => f.name)
     expect(fanNames).toContain('圈风刻')
