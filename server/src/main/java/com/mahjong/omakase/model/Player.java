@@ -22,6 +22,9 @@ public class Player {
   @Column(nullable = false)
   private LocalDateTime createdAt = LocalDateTime.now();
 
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private boolean bot = false;
+
   public Player() {}
 
   public Player(String userName, String firstName, String lastName) {
@@ -75,6 +78,10 @@ public class Player {
   }
 
   public boolean isBot() {
-    return "BOT".equals(this.userName);
+    return bot || "BOT".equals(this.userName);
+  }
+
+  public void setBot(boolean bot) {
+    this.bot = bot;
   }
 }

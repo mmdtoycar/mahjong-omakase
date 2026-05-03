@@ -171,6 +171,9 @@ public class GameService {
   }
 
   public Player createPlayer(CreatePlayerRequest request) {
+    if ("BOT".equalsIgnoreCase(request.getUserName())) {
+      throw new IllegalArgumentException("Username 'BOT' is reserved");
+    }
     if (playerRepo.existsByUserName(request.getUserName())) {
       log.warn("Duplicate userName '{}'", request.getUserName());
       throw new IllegalArgumentException(
@@ -562,21 +565,23 @@ public class GameService {
                         || (!s.getCreatedAt().isBefore(start) && s.getCreatedAt().isBefore(end)))
             .toList();
 
-    // Add Fan Discovery Bonuses
-    if (hasDateRange) {
-      String season = getSeasonString(start);
-      List<FanDiscovery> discoveries = fanDiscoveryRepo.findBySeason(season);
-      for (FanDiscovery fd : discoveries) {
-        if (fd.getBonusRp() > 0) {
-          totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
+    // Add Fan Discovery Bonuses (GUOBIAO only)
+    if (gameMode == null || gameMode == GameMode.GUOBIAO) {
+      if (hasDateRange) {
+        String season = getSeasonString(start);
+        List<FanDiscovery> discoveries = fanDiscoveryRepo.findBySeason(season);
+        for (FanDiscovery fd : discoveries) {
+          if (fd.getBonusRp() > 0) {
+            totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
+          }
         }
-      }
-    } else {
-      // All-time: Sum bonuses from all seasons
-      List<FanDiscovery> allDiscoveries = fanDiscoveryRepo.findAll();
-      for (FanDiscovery fd : allDiscoveries) {
-        if (fd.getBonusRp() > 0) {
-          totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
+      } else {
+        // All-time: Sum bonuses from all seasons
+        List<FanDiscovery> allDiscoveries = fanDiscoveryRepo.findAll();
+        for (FanDiscovery fd : allDiscoveries) {
+          if (fd.getBonusRp() > 0) {
+            totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
+          }
         }
       }
     }

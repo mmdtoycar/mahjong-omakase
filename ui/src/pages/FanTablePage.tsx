@@ -51,17 +51,15 @@ const FanTablePage: React.FC = () => {
 
   // Load selected season discoveries
   useEffect(() => {
-    const controller = new AbortController()
-    let year: number | undefined
-    let month: number | undefined
-
-    if (seasonKey !== 'all') {
-      const [y, m] = seasonKey.split('-').map(Number)
-      year = y
-      month = m
+    if (seasonKey === 'all') {
+      setDiscoveries([])
+      return
     }
 
-    fetchFanDiscoveries(year, month, controller.signal)
+    const controller = new AbortController()
+    const [y, m] = seasonKey.split('-').map(Number)
+
+    fetchFanDiscoveries(y, m, controller.signal)
       .then((data) => {
         if (!controller.signal.aborted) setDiscoveries(data)
       })
@@ -216,9 +214,11 @@ const FanTablePage: React.FC = () => {
             <h3 className="fan-group-title">{getFanLabel(fan)}</h3>
             <div className="fan-item-grid">
               {groupedAndSortedFans[fan].map((item) => {
-                // Badge logic: only for guobiao tab
-                const currentDiscovery = activeTab === 'guobiao' ? discoveriesMap[item.name] : null
-                const prevDiscovery = activeTab === 'guobiao' ? prevDiscoveriesMap[item.name] : null
+                // Badge logic: only for guobiao tab and specific season
+                const currentDiscovery =
+                  activeTab === 'guobiao' && seasonKey !== 'all' ? discoveriesMap[item.name] : null
+                const prevDiscovery =
+                  activeTab === 'guobiao' && seasonKey !== 'all' ? prevDiscoveriesMap[item.name] : null
                 const hasCurrent = !!currentDiscovery
                 const hasPrev = !hasCurrent && !!prevDiscovery
                 return (
