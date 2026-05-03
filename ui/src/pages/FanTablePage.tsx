@@ -26,11 +26,13 @@ const FanTablePage: React.FC = () => {
     fetchActiveSeasons()
       .then((data) => {
         if (!mounted) return
-        const list = data.map((s) => ({
-          year: s.year,
-          month: s.month,
-          label: getSeasonLabel(s.year, s.month),
-        }))
+        const list = data
+          .map((s) => ({
+            year: s.year,
+            month: s.month,
+            label: getSeasonLabel(s.year, s.month),
+          }))
+          .sort((a, b) => b.year - a.year || b.month - a.month)
         setSeasons(list)
         if (list.length > 0) {
           setSeasonKey((prev) =>
@@ -49,13 +51,17 @@ const FanTablePage: React.FC = () => {
 
   // Load selected season discoveries
   useEffect(() => {
-    if (seasonKey === 'all') {
-      setDiscoveries([])
-      return
-    }
     const controller = new AbortController()
-    const [y, m] = seasonKey.split('-').map(Number)
-    fetchFanDiscoveries(y, m, controller.signal)
+    let year: number | undefined
+    let month: number | undefined
+
+    if (seasonKey !== 'all') {
+      const [y, m] = seasonKey.split('-').map(Number)
+      year = y
+      month = m
+    }
+
+    fetchFanDiscoveries(year, month, controller.signal)
       .then((data) => {
         if (!controller.signal.aborted) setDiscoveries(data)
       })

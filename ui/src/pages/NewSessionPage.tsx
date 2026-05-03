@@ -75,13 +75,15 @@ export default function NewSessionPage() {
 
       <div className="form-group">
         <label>游戏模式</label>
-        <div className="tab-bar" style={{ marginTop: 8 }}>
+        <div className="tab-bar" style={{ marginTop: 8 }} role="tablist" aria-label="游戏模式选择">
           {GAME_MODES.map((m) => (
             <button
               key={m.key}
               className={`tab-btn${gameMode === m.key ? ' tab-active' : ''}`}
               onClick={() => setGameMode(m.key)}
               type="button"
+              role="tab"
+              aria-selected={gameMode === m.key}
             >
               {m.label}
             </button>
