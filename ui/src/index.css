@@ -2774,4 +2774,17 @@ tr:hover td {
   .dashboard-table td:nth-of-type(7):before {
     content: '状态';
   }
+
+  .cell-player-box {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    padding-right: 16px;
+  }
+
+  .cell-player-stats {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
 }
