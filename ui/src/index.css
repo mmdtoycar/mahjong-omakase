@@ -2198,6 +2198,8 @@ tr:hover td {
   border-radius: 4px;
   background: #fff;
   cursor: pointer;
+  min-width: 36px;
+  text-align: center;
 }
 
 .mode-btn.active {
