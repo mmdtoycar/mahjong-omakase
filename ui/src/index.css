@@ -1845,21 +1845,23 @@ tr:hover td {
 }
 
 .hua-tile-char {
-  font-size: 1.1rem;
+  font-size: 2rem;
   font-weight: 400;
   color: #d4688a;
   line-height: 1;
   font-family: 'Long Cang', serif;
   user-select: none;
+  -webkit-text-stroke: 0.6px #d4688a;
 }
 
 .calc-tile-container.small .hua-tile-char {
-  font-size: 0.9rem;
+  font-size: 1.4rem;
+  -webkit-text-stroke: 0.4px #d4688a;
 }
 
 .calc-tile-container.small {
   width: 22px;
-  height: 29px;
+  height: 36px;
   padding: 2px;
   border-radius: 3px;
   background: white;
