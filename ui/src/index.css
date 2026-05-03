@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Long+Cang&display=swap');
+
 :root {
   /* Solarized Palette */
   --sol-base03: #002b36;
@@ -1845,16 +1847,16 @@ tr:hover td {
 }
 
 .hua-tile-char {
-  font-size: 0.85rem;
-  font-weight: 900;
+  font-size: 1.1rem;
+  font-weight: 400;
   color: #2e7d32;
   line-height: 1;
-  font-family: serif;
+  font-family: 'Long Cang', serif;
   user-select: none;
 }
 
 .calc-tile-container.small .hua-tile-char {
-  font-size: 0.65rem;
+  font-size: 0.9rem;
 }
 
 .calc-tile-container.small {
