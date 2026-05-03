@@ -94,11 +94,18 @@ const FanTablePage: React.FC = () => {
     return () => controller.abort()
   }, [seasonKey, seasons])
 
-  const discoveriesMap = useMemo(() => Object.fromEntries(discoveries.map((d) => [d.fanName, d])), [discoveries])
-  const prevDiscoveriesMap = useMemo(
-    () => Object.fromEntries(prevDiscoveries.map((d) => [d.fanName, d])),
-    [prevDiscoveries]
-  )
+  const discoveriesMap = useMemo(() => {
+    const sorted = [...discoveries].sort(
+      (a, b) => new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime()
+    )
+    return Object.fromEntries(sorted.map((d) => [d.fanName, d]))
+  }, [discoveries])
+  const prevDiscoveriesMap = useMemo(() => {
+    const sorted = [...prevDiscoveries].sort(
+      (a, b) => new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime()
+    )
+    return Object.fromEntries(sorted.map((d) => [d.fanName, d]))
+  }, [prevDiscoveries])
 
   const filteredFanTable = useMemo(() => {
     let data

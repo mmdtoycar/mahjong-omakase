@@ -17,6 +17,10 @@ export const ActiveGameCard: React.FC<Props> = ({ session }) => {
 
   const dealerSeat = ((nextRoundNum - 1) % 4) + 1
 
+  // Compute stable standard ranks from scores
+  const sortedScores = session.players.map((p) => session.totalScores[p.id] || 0).sort((a, b) => b - a)
+  const getRank = (score: number) => sortedScores.indexOf(score) + 1
+
   return (
     <Link to={`/session/${session.id}`} className="active-game-card">
       <div className="active-game-header">
@@ -26,7 +30,9 @@ export const ActiveGameCard: React.FC<Props> = ({ session }) => {
       <div className="active-game-players">
         {[...session.players]
           .sort((a, b) => (session.totalScores[b.id] || 0) - (session.totalScores[a.id] || 0))
-          .map((p, idx) => {
+          .map((p) => {
+            const score = session.totalScores[p.id] || 0
+            const rank = getRank(score)
             const originalIdx = session.players.findIndex((op) => op.id === p.id)
             const seat = p.seat ?? originalIdx + 1
             const menfeng = ((seat - dealerSeat + 4) % 4) + 1
@@ -34,8 +40,8 @@ export const ActiveGameCard: React.FC<Props> = ({ session }) => {
             return (
               <div key={p.id} className="active-game-player-row">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className={`rank-tag rank-tag-${idx + 1}`} style={{ minWidth: '24px', fontSize: '0.8rem' }}>
-                    #{idx + 1}
+                  <span className={`rank-tag rank-tag-${rank}`} style={{ minWidth: '24px', fontSize: '0.8rem' }}>
+                    #{rank}
                   </span>
                   <span
                     className={isDealer ? 'dealer-tag' : ''}

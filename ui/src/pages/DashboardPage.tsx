@@ -84,7 +84,19 @@ export default function DashboardPage() {
             </thead>
             <tbody>
               {sessions.map((s) => (
-                <tr key={s.id} onClick={() => navigate(`/session/${s.id}`)} style={{ cursor: 'pointer' }}>
+                <tr
+                  key={s.id}
+                  onClick={() => navigate(`/session/${s.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      navigate(`/session/${s.id}`)
+                    }
+                  }}
+                  tabIndex={0}
+                  role="row"
+                  style={{ cursor: 'pointer' }}
+                >
                   <td className="cell-mode">{s.gameModeDisplayName}</td>
                   {renderPlayerCell(s.rankings, 0)}
                   {renderPlayerCell(s.rankings, 1)}
