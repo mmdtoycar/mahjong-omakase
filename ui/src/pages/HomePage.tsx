@@ -12,10 +12,15 @@ export default function HomePage() {
   const currentSeason = getCurrentSeason()
 
   useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>
+    let intervalId: ReturnType<typeof setInterval>
     let isActive = true
+    let inFlight = false
+    const controller = new AbortController()
 
     async function loadData() {
+      if (inFlight) return
+      inFlight = true
+
       try {
         // 1. Fetch sessions and filter for IN_PROGRESS
         const sessions = await fetchSessions()
@@ -35,8 +40,10 @@ export default function HomePage() {
         await Promise.all(
           GAME_MODES.map(async (mode) => {
             try {
-              const stats = await fetchStats(mode.key, currentSeason.year, currentSeason.month)
-              const bestRounds = await fetchBestRounds(mode.key, currentSeason.year, currentSeason.month)
+              const [stats, bestRounds] = await Promise.all([
+                fetchStats(mode.key, currentSeason.year, currentSeason.month),
+                fetchBestRounds(mode.key, currentSeason.year, currentSeason.month, controller.signal),
+              ])
 
               rankingData[mode.key] = {
                 top: stats.sort((a, b) => b.totalRP - a.totalRP).slice(0, 3),
@@ -44,7 +51,9 @@ export default function HomePage() {
                   bestRounds.length > 0 ? bestRounds.sort((a, b) => (b.fanCount || 0) - (a.fanCount || 0))[0] : null,
               }
             } catch (err) {
-              console.error(`Failed to fetch stats for ${mode.key}:`, err)
+              if ((err as Error).name !== 'AbortError') {
+                console.error(`Failed to fetch stats for ${mode.key}:`, err)
+              }
               rankingData[mode.key] = { top: [], best: null }
             }
           })
@@ -52,20 +61,22 @@ export default function HomePage() {
 
         if (isActive) setRankings(rankingData)
       } catch (e) {
-        console.error('Failed to load hub data:', e)
+        if ((e as Error).name !== 'AbortError') console.error('Failed to load hub data:', e)
       } finally {
+        inFlight = false
         if (isActive) {
           setLoading(false)
-          timeoutId = setTimeout(loadData, 10000)
         }
       }
     }
 
     loadData()
+    intervalId = setInterval(loadData, 10000)
 
     return () => {
       isActive = false
-      clearTimeout(timeoutId)
+      clearInterval(intervalId)
+      controller.abort()
     }
   }, [currentSeason.year, currentSeason.month])
 

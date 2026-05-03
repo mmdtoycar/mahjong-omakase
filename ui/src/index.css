@@ -2441,6 +2441,26 @@ tr:hover td {
   color: var(--primary);
 }
 
+.wind-tag {
+  font-size: 0.75rem;
+  padding: 1px 5px;
+  border: 1.5px solid var(--mj-gold);
+  color: var(--mj-gold);
+  background-color: transparent;
+  border-radius: 4px;
+  font-weight: bold;
+  min-width: 24px;
+  text-align: center;
+  display: inline-block;
+  line-height: 1.2;
+}
+
+.wind-tag-dealer {
+  border-color: var(--mj-red);
+  color: #fff;
+  background-color: var(--mj-red);
+}
+
 .active-game-footer {
   font-size: 0.8rem;
   color: var(--text-light);

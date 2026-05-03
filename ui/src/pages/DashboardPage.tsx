@@ -103,7 +103,7 @@ export default function DashboardPage() {
                   {renderPlayerCell(s.rankings, 2)}
                   {renderPlayerCell(s.rankings, 3)}
                   <td className="cell-date">
-                    {new Date(s.createdAt).toLocaleDateString([], {
+                    {new Date(s.createdAt).toLocaleString([], {
                       month: '2-digit',
                       day: '2-digit',
                       hour: '2-digit',

@@ -56,6 +56,7 @@ const FanTablePage: React.FC = () => {
       return
     }
 
+    setDiscoveries([])
     const controller = new AbortController()
     const [y, m] = seasonKey.split('-').map(Number)
 
@@ -83,6 +84,7 @@ const FanTablePage: React.FC = () => {
       setPrevDiscoveries([])
       return
     }
+    setPrevDiscoveries([])
     const controller = new AbortController()
     fetchFanDiscoveries(prev.year, prev.month, controller.signal)
       .then((data) => {

@@ -43,24 +43,7 @@ export const ActiveGameCard: React.FC<Props> = ({ session }) => {
                   <span className={`rank-tag rank-tag-${rank}`} style={{ minWidth: '24px', fontSize: '0.8rem' }}>
                     #{rank}
                   </span>
-                  <span
-                    className={isDealer ? 'dealer-tag' : ''}
-                    style={{
-                      fontSize: '0.75rem',
-                      padding: '1px 5px',
-                      border: `1.5px solid ${isDealer ? 'var(--mj-red)' : 'var(--mj-gold)'}`,
-                      color: isDealer ? '#fff' : 'var(--mj-gold)',
-                      backgroundColor: isDealer ? 'var(--mj-red)' : 'transparent',
-                      borderRadius: '4px',
-                      fontWeight: 'bold',
-                      minWidth: '24px',
-                      textAlign: 'center',
-                      display: 'inline-block',
-                      lineHeight: '1.2',
-                    }}
-                  >
-                    {getWindName(menfeng)}
-                  </span>
+                  <span className={`wind-tag ${isDealer ? 'wind-tag-dealer' : ''}`}>{getWindName(menfeng)}</span>
                   <span className="player-name">{p.userName}</span>
                 </div>
                 <span className="player-score">{session.totalScores[p.id] || 0}</span>
