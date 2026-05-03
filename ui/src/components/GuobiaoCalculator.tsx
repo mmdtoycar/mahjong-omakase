@@ -298,27 +298,6 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
             </button>
           ))}
         </div>
-        <div className="mini-option">
-          <span className="mini-opt-label">花:</span>
-          <div className="hua-stepper">
-            <button
-              className="micro-btn"
-              onClick={() => setOptions((prev) => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) }))}
-            >
-              -
-            </button>
-            <span className="hua-count">{options.huaCount}</span>
-            <button
-              className="micro-btn"
-              onClick={() => setOptions((prev) => ({ ...prev, huaCount: Math.min(8, prev.huaCount + 1) }))}
-            >
-              +
-            </button>
-          </div>
-          <button className="micro-btn" style={{ marginLeft: '8px' }} onClick={resetHandState}>
-            重置
-          </button>
-        </div>
       </div>
 
       <div className="mode-selector-container">
@@ -344,6 +323,14 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
             disabled={!mode.canUse(concealedTiles, melds) || mode.isDisabled(concealedTiles, melds, tile)}
           />
         ))}
+        {/* Flower tile button — up to 8 flowers */}
+        <div
+          className={`calc-tile-container selectable hua-tile-btn ${options.huaCount >= 8 ? 'disabled' : ''}`}
+          onClick={() => options.huaCount < 8 && setOptions((prev) => ({ ...prev, huaCount: prev.huaCount + 1 }))}
+          title="点击添加花牌"
+        >
+          <span className="hua-tile-char">花</span>
+        </div>
       </div>
 
       <div className="hand-display-area compact">
@@ -373,13 +360,21 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
             />
           </div>
         )}
+        {/* Flower tiles at the end — single tile with count badge */}
+        {options.huaCount > 0 && (
+          <div
+            className="calc-tile-container small selectable hua-tile-btn hua-hand-tile"
+            onClick={() => setOptions((prev) => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) }))}
+            title="点击移除花牌"
+          >
+            <span className="hua-tile-char">花</span>
+            {options.huaCount > 1 && <span className="hua-count-badge">x{options.huaCount}</span>}
+          </div>
+        )}
       </div>
 
       <div className="winning-options-section">
-        <div className="options-grid compact">
-          <button className={`opt-btn ${isSelfDraw ? 'active' : ''}`} onClick={() => onIsSelfDrawChange(!isSelfDraw)}>
-            自摸
-          </button>
+        <div className="options-grid compact cols-3">
           <button
             className={`opt-btn ${options.juezhang ? 'active' : ''}`}
             onClick={() => setOptions({ ...options, juezhang: !options.juezhang })}

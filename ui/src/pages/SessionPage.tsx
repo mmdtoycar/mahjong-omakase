@@ -718,36 +718,24 @@ export default function SessionPage() {
                         </button>
                       )
                     })}
-                    <button
-                      className={`quick-player-btn win-type-btn ${isSelfDraw ? 'zimo' : 'dianpao'}`}
-                      onClick={handleWinTypeToggle}
-                      disabled={!winnerId}
-                    >
-                      {isSelfDraw ? '自摸' : '点炮'}
-                    </button>
+                    <div className="win-action-row">
+                      <button
+                        className={`quick-player-btn win-type-btn ${isSelfDraw ? 'zimo' : 'dianpao'}`}
+                        onClick={handleWinTypeToggle}
+                        disabled={!winnerId}
+                      >
+                        {isSelfDraw ? '自摸' : '点炮'}
+                      </button>
+                      <button className="quick-player-btn win-type-btn reset-btn" onClick={resetForm}>
+                        重置
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {!isRiichi && isGuobiao && (
                   <div className="form-group">
-                    <label>
-                      分数
-                      {gbWinds && (
-                        <div className="wind-selector-mini">
-                          {[1, 2, 3, 4].map((w) => (
-                            <button
-                              key={w}
-                              type="button"
-                              className={`wind-chip ${gbWinds.quanfeng === w ? 'active' : ''}`}
-                              onClick={() => setManualQuanfeng(w)}
-                            >
-                              {['东', '南', '西', '北'][w - 1]}
-                            </button>
-                          ))}
-                          <span className="hand-num-info">第{((gbWinds.handIdx - 1) % 4) + 1}局</span>
-                        </div>
-                      )}
-                    </label>
+                    <label>分数</label>
                     <div className="score-input-row">
                       <input
                         type="number"

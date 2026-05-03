@@ -100,7 +100,10 @@ public class AdminController {
             throw new ResponseStatusException(
                 HttpStatus.BAD_REQUEST, "Invalid value for setting: " + key);
           }
-          AppSetting setting = appSettingRepo.findById(key).orElse(new AppSetting(key, value));
+          AppSetting setting =
+              appSettingRepo
+                  .findById(java.util.Objects.requireNonNull(key))
+                  .orElse(new AppSetting(key, value));
           setting.setValue(value);
           appSettingRepo.save(setting);
         });

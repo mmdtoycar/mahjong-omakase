@@ -1,5 +1,6 @@
 package com.mahjong.omakase.controller;
 
+import com.mahjong.omakase.dto.FanDiscoveryResponse;
 import com.mahjong.omakase.dto.PlayerStatsResponse;
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.service.GameService;
@@ -88,5 +89,24 @@ public class StatsController {
       end = start.plusMonths(1);
     }
     return gameService.getBestRounds(mode, start, end);
+  }
+
+  @GetMapping("/fan-discoveries")
+  public List<FanDiscoveryResponse> getFanDiscoveries(
+      @RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
+    LocalDateTime start = null;
+    LocalDateTime end = null;
+    if (year != null || month != null) {
+      if (year == null || month == null) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "Both year and month must be provided");
+      }
+      if (month < 1 || month > 12) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
+      }
+      start = LocalDateTime.of(year, month, 1, 0, 0);
+      end = start.plusMonths(1);
+    }
+    return gameService.getFanDiscoveries(start, end);
   }
 }

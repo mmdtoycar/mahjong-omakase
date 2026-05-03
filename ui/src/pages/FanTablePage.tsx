@@ -1,13 +1,39 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { fanTableData, FanItem } from '../data/fanTableData'
-import { riichiFanTableData, RiichiFanItem } from '../data/riichiFanTableData'
-import { shenyangFanTableData, ShenyangFanItem } from '../data/shenyangFanTableData'
+import { riichiFanTableData } from '../data/riichiFanTableData'
+import { shenyangFanTableData } from '../data/shenyangFanTableData'
+import { fetchFanDiscoveries } from '../api'
+import { FanDiscovery, getCurrentSeason, getAvailableSeasons, Season } from '../types'
+import { MahjongHand } from '../components/MahjongHand'
 
 type TabType = 'guobiao' | 'riichi' | 'shenyang'
 
 const FanTablePage: React.FC = () => {
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<TabType>('guobiao')
+  const [discoveries, setDiscoveries] = useState<FanDiscovery[]>([])
+  const [seasonKey, setSeasonKey] = useState<string>(() => {
+    const s = getCurrentSeason()
+    return `${s.year}-${s.month}`
+  })
+  const seasons = useMemo(() => getAvailableSeasons(2024), [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const [y, m] = seasonKey.split('-').map(Number)
+    fetchFanDiscoveries(y, m, controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) setDiscoveries(data)
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') console.error(err)
+      })
+    return () => controller.abort()
+  }, [seasonKey])
+
+  const discoveriesMap = useMemo(() => {
+    return Object.fromEntries(discoveries.map((d) => [d.fanName, d]))
+  }, [discoveries])
 
   const filteredFanTable = useMemo(() => {
     let data
@@ -94,13 +120,21 @@ const FanTablePage: React.FC = () => {
         </div>
         <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>{getSubtitle()}</p>
 
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
           <input
             type="text"
             placeholder="搜索番名、分数或描述..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            style={{ flex: 1, minWidth: '200px' }}
           />
+          <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} style={{ width: '150px' }}>
+            {seasons.map((s: Season) => (
+              <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
+                {s.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {fans.length === 0 && (
@@ -116,6 +150,20 @@ const FanTablePage: React.FC = () => {
                   <div className="fan-item-header">
                     <span className="fan-item-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {item.name}
+                      {discoveriesMap[item.name] && (
+                        <span
+                          className="badge badge-accent"
+                          style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                          title={`首位达成者: ${discoveriesMap[item.name].playerName}${
+                            (discoveriesMap[item.name].bonusRp ?? 0) > 0
+                              ? ` (+${discoveriesMap[item.name].bonusRp} RP)`
+                              : ''
+                          }`}
+                        >
+                          🏆 {discoveriesMap[item.name].playerName}
+                          {(discoveriesMap[item.name].bonusRp ?? 0) > 0 && ` (+${discoveriesMap[item.name].bonusRp})`}
+                        </span>
+                      )}
                       {item.tags?.map((tag) => (
                         <span
                           key={tag}
@@ -131,6 +179,7 @@ const FanTablePage: React.FC = () => {
                   <p className="fan-item-desc">{item.description}</p>
                   {item.example && item.example.length > 0 && (
                     <div className="fan-item-example">
+                      <span className="example-hint reference">理论参考</span>
                       {item.example.split('|').map((group, groupIdx) => {
                         const trimmedGroup = group.trim()
                         const isGroupHighlighted = trimmedGroup.startsWith('*')
@@ -160,6 +209,12 @@ const FanTablePage: React.FC = () => {
                           </div>
                         )
                       })}
+                    </div>
+                  )}
+                  {discoveriesMap[item.name]?.exampleHand && (
+                    <div className="fan-item-example-real">
+                      <MahjongHand hand={discoveriesMap[item.name].exampleHand ?? undefined} />
+                      <span className="example-hint">实战例子</span>
                     </div>
                   )}
                 </div>

@@ -5,10 +5,17 @@ import com.mahjong.omakase.model.*;
 import com.mahjong.omakase.repository.*;
 import com.mahjong.omakase.service.handler.GameModeHandler;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +30,7 @@ public class GameService {
   private final RoundScoreRepository roundScoreRepo;
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
   private final AppSettingRepository appSettingRepo;
+  private final FanDiscoveryRepository fanDiscoveryRepo;
   private final Map<GameMode, GameModeHandler> handlers;
   private volatile double participationBonus;
 
@@ -33,6 +41,7 @@ public class GameService {
       RoundScoreRepository roundScoreRepo,
       GameSessionPlayerRepository gameSessionPlayerRepo,
       AppSettingRepository appSettingRepo,
+      FanDiscoveryRepository fanDiscoveryRepo,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
@@ -40,10 +49,100 @@ public class GameService {
     this.roundScoreRepo = roundScoreRepo;
     this.gameSessionPlayerRepo = gameSessionPlayerRepo;
     this.appSettingRepo = appSettingRepo;
+    this.fanDiscoveryRepo = fanDiscoveryRepo;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
     this.participationBonus = loadParticipationBonus();
+  }
+
+  @EventListener(ApplicationReadyEvent.class)
+  public void init() {
+    initializeDiscoveries();
+  }
+
+  public void initializeDiscoveries() {
+    log.info("Checking for new fan discoveries from historical rounds...");
+    // Load existing discoveries to ensure idempotency
+    Set<String> discoveredFans =
+        fanDiscoveryRepo.findAll().stream()
+            .map(fd -> fd.getSeason() + "_" + fd.getFanName())
+            .collect(Collectors.toSet());
+
+    int page = 0;
+    int size = 100;
+    int newDiscoveries = 0;
+    boolean hasMore = true;
+
+    while (hasMore) {
+      Pageable pageable = PageRequest.of(page, size);
+      Page<Round> roundPage = roundRepo.findAllOrderByTime(pageable);
+      List<Round> rounds = roundPage.getContent();
+
+      if (rounds.isEmpty()) {
+        hasMore = false;
+        break;
+      }
+
+      for (Round round : rounds) {
+        if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
+        Player winner =
+            playerRepo.findById(java.util.Objects.requireNonNull(round.getWinnerId())).orElse(null);
+        if (winner == null) continue;
+
+        String season = getSeasonString(round.getGameSession().getCreatedAt());
+        String[] parts = round.getFanDetails().split(",\\s*");
+        for (String p : parts) {
+          String trimmedPart = p.trim();
+          if (trimmedPart.isEmpty()) continue;
+
+          int bracketIdx = trimmedPart.indexOf('(');
+          String fanName =
+              bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
+
+          String key = season + "_" + fanName;
+          if (!discoveredFans.contains(key)) {
+            LocalDateTime discoveryTime = round.getGameSession().getCreatedAt();
+            try {
+              int fanScore = 0;
+              if (bracketIdx != -1) {
+                int endBracket = trimmedPart.indexOf(')', bracketIdx);
+                if (endBracket != -1) {
+                  String scorePart = trimmedPart.substring(bracketIdx + 1, endBracket);
+                  try {
+                    fanScore = Integer.parseInt(scorePart.split("x")[0]);
+                  } catch (NumberFormatException e) {
+                    // ignore
+                  }
+                }
+              }
+              double bonusRp = fanScore >= 8 ? fanScore / 2.0 : 0.0;
+
+              FanDiscovery fd =
+                  new FanDiscovery(
+                      fanName, season, winner, round, round.getWinHand(), bonusRp, discoveryTime);
+              fanDiscoveryRepo.save(fd);
+              discoveredFans.add(key);
+              newDiscoveries++;
+              log.info(
+                  "Historical Discovery: '{}' in season '{}' by player '{}' at {}",
+                  fanName,
+                  season,
+                  winner.getUserName(),
+                  discoveryTime);
+            } catch (DataIntegrityViolationException e) {
+              discoveredFans.add(key);
+            }
+          }
+        }
+      }
+      page++;
+    }
+    log.info("Fan discoveries initialization complete. Found {} new discoveries.", newDiscoveries);
+  }
+
+  private String getSeasonString(LocalDateTime time) {
+    return YearMonth.from(time).toString();
   }
 
   public void reloadSettings() {
@@ -95,7 +194,9 @@ public class GameService {
 
   public Player updatePlayer(Long id, String firstName, String lastName) {
     Player player =
-        playerRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("Player not found"));
+        playerRepo
+            .findById(java.util.Objects.requireNonNull(id))
+            .orElseThrow(() -> new IllegalArgumentException("Player not found"));
     if (firstName != null && !firstName.isBlank()) {
       player.setFirstName(firstName.trim());
     }
@@ -121,7 +222,7 @@ public class GameService {
 
     roundScoreRepo.nullifyPlayerScores(id);
     gameSessionPlayerRepo.deleteByPlayerId(id);
-    playerRepo.deleteById(id);
+    playerRepo.deleteById(java.util.Objects.requireNonNull(id));
   }
 
   public List<GameSession> getAllSessions() {
@@ -130,7 +231,8 @@ public class GameService {
 
   public GameSession createSession(CreateSessionRequest request) {
     Map<Long, Player> playerMap = new HashMap<>();
-    for (Player p : playerRepo.findAllById(request.getPlayerIds())) {
+    for (Player p :
+        playerRepo.findAllById(java.util.Objects.requireNonNull(request.getPlayerIds()))) {
       playerMap.put(p.getId(), p);
     }
     if (playerMap.size() != request.getPlayerIds().size()) {
@@ -165,7 +267,7 @@ public class GameService {
   public SessionDetailResponse getSessionDetail(Long sessionId) {
     GameSession session =
         sessionRepo
-            .findById(sessionId)
+            .findById(java.util.Objects.requireNonNull(sessionId))
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
 
     SessionDetailResponse resp = new SessionDetailResponse();
@@ -229,7 +331,7 @@ public class GameService {
     for (var round : session.getRounds()) {
       for (var rs : round.getScores()) {
         if (rs.getPlayer() != null) {
-          totals.merge(rs.getPlayer().getId(), rs.getScore(), Integer::sum);
+          totals.merge(rs.getPlayer().getId(), rs.getScore(), (a, b) -> a + b);
         }
       }
     }
@@ -313,7 +415,7 @@ public class GameService {
             .orElseThrow(() -> new NoSuchElementException("Round not found"));
 
     session.getRounds().remove(round);
-    roundRepo.delete(round);
+    roundRepo.delete(java.util.Objects.requireNonNull(round));
 
     int num = 1;
     for (Round r : session.getRounds()) {
@@ -373,7 +475,7 @@ public class GameService {
               String winnerName =
                   round.getWinnerId() != null
                       ? playerRepo
-                          .findById(round.getWinnerId())
+                          .findById(java.util.Objects.requireNonNull(round.getWinnerId()))
                           .map(Player::getUserName)
                           .orElse("?")
                       : null;
@@ -457,6 +559,26 @@ public class GameService {
                     !hasDateRange
                         || (!s.getCreatedAt().isBefore(start) && s.getCreatedAt().isBefore(end)))
             .toList();
+
+    // Add Fan Discovery Bonuses
+    if (hasDateRange) {
+      String season = getSeasonString(start);
+      List<FanDiscovery> discoveries = fanDiscoveryRepo.findBySeason(season);
+      for (FanDiscovery fd : discoveries) {
+        if (fd.getBonusRp() > 0) {
+          totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
+        }
+      }
+    } else {
+      // All-time: Sum bonuses from all seasons
+      List<FanDiscovery> allDiscoveries = fanDiscoveryRepo.findAll();
+      for (FanDiscovery fd : allDiscoveries) {
+        if (fd.getBonusRp() > 0) {
+          totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
+        }
+      }
+    }
+
     for (GameSession session : completedSessions) {
       List<Object[]> sessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
       if (!sessionScores.isEmpty()) {
@@ -464,7 +586,7 @@ public class GameService {
           if (row[0] != null) {
             double bonus =
                 session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
-            totalBonusPerPlayer.merge((Long) row[0], bonus, Double::sum);
+            totalBonusPerPlayer.merge((Long) row[0], bonus, (a, b) -> a + b);
           }
         }
         List<Object[]> sorted = new ArrayList<>(sessionScores);
@@ -492,7 +614,7 @@ public class GameService {
             if (pid == null) continue;
             int raw = ((Number) sorted.get(k)[1]).intValue();
             double rp = (raw / factor) + avgUma;
-            totalRP.merge(pid, rp, Double::sum);
+            totalRP.merge(pid, rp, (a, b) -> a + b);
           }
           i = j;
         }
@@ -500,7 +622,7 @@ public class GameService {
         int topScore = ((Number) sorted.get(0)[1]).intValue();
         for (Object[] row : sorted) {
           if (((Number) row[1]).intValue() != topScore) break;
-          if (row[0] != null) wins.merge((Long) row[0], 1, Integer::sum);
+          if (row[0] != null) wins.merge((Long) row[0], 1, (a, b) -> a + b);
         }
       }
     }
@@ -528,7 +650,7 @@ public class GameService {
   public PlayerDetailResponse getPlayerDetail(Long playerId) {
     Player player =
         playerRepo
-            .findById(playerId)
+            .findById(java.util.Objects.requireNonNull(playerId))
             .orElseThrow(() -> new NoSuchElementException("Player not found"));
 
     List<GameSession> sessions = sessionRepo.findByPlayersPlayerIdOrderByCreatedAtDesc(playerId);
@@ -599,7 +721,7 @@ public class GameService {
     for (Map.Entry<Long, Integer> entry : computedScores.entrySet()) {
       Player player =
           playerRepo
-              .findById(entry.getKey())
+              .findById(java.util.Objects.requireNonNull(entry.getKey()))
               .orElseThrow(() -> new NoSuchElementException("Player not found: " + entry.getKey()));
       RoundScore rs = new RoundScore();
       rs.setRound(round);
@@ -607,5 +729,76 @@ public class GameService {
       rs.setScore(entry.getValue());
       roundScoreRepo.save(rs);
     }
+
+    // Process Fan Discoveries
+    if (winnerId != null && fanDetails != null && !fanDetails.isBlank()) {
+      Player winner = playerRepo.findById(winnerId).orElse(null);
+      if (winner != null) {
+        String season = getSeasonString(session.getCreatedAt());
+        String[] parts = fanDetails.split(",\\s*");
+        for (String p : parts) {
+          String trimmedPart = p.trim();
+          if (trimmedPart.isEmpty()) continue;
+
+          int bracketIdx = trimmedPart.indexOf('(');
+          String fanName =
+              bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
+
+          if (fanDiscoveryRepo.findBySeasonAndFanName(season, fanName).isEmpty()) {
+            try {
+              int fanScore = 0;
+              if (bracketIdx != -1) {
+                int endBracket = trimmedPart.indexOf(')', bracketIdx);
+                if (endBracket != -1) {
+                  String scorePart = trimmedPart.substring(bracketIdx + 1, endBracket);
+                  try {
+                    fanScore = Integer.parseInt(scorePart.split("x")[0]);
+                  } catch (NumberFormatException e) {
+                    // ignore
+                  }
+                }
+              }
+              double bonusRp = fanScore >= 8 ? fanScore / 2.0 : 0.0;
+
+              FanDiscovery fd =
+                  new FanDiscovery(
+                      fanName, season, winner, round, winHand, bonusRp, session.getCreatedAt());
+              fanDiscoveryRepo.save(fd);
+              log.info(
+                  "New Fan Discovered: '{}' in season '{}' by player '{}' in round {}",
+                  fanName,
+                  season,
+                  winner.getUserName(),
+                  round.getId());
+            } catch (DataIntegrityViolationException e) {
+              // Already discovered, skip silently
+            }
+          }
+        }
+      }
+    }
+  }
+
+  public List<FanDiscoveryResponse> getFanDiscoveries(LocalDateTime start, LocalDateTime end) {
+    List<FanDiscovery> discoveries;
+    if (start != null && end != null) {
+      String season = getSeasonString(start);
+      discoveries = fanDiscoveryRepo.findBySeason(season);
+    } else {
+      discoveries = fanDiscoveryRepo.findAll();
+    }
+
+    return discoveries.stream()
+        .map(
+            fd ->
+                new FanDiscoveryResponse(
+                    fd.getFanName(),
+                    fd.getPlayer().getId(),
+                    fd.getPlayer().getUserName(),
+                    fd.getExampleHand(),
+                    fd.getDiscoveredAt(),
+                    fd.getBonusRp(),
+                    fd.getSeason()))
+        .collect(Collectors.toList());
   }
 }

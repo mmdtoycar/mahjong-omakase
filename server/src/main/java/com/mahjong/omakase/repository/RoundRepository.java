@@ -4,6 +4,8 @@ import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.model.Round;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -54,4 +56,10 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
       @Param("mode") GameMode mode,
       @Param("start") LocalDateTime start,
       @Param("end") LocalDateTime end);
+
+  @Query(
+      value =
+          "SELECT r FROM Round r JOIN FETCH r.gameSession s ORDER BY s.createdAt ASC, r.roundNumber ASC",
+      countQuery = "SELECT count(r) FROM Round r")
+  Page<Round> findAllOrderByTime(Pageable pageable);
 }
