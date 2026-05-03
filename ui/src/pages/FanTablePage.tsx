@@ -121,7 +121,7 @@ const FanTablePage: React.FC = () => {
             style={{ flex: 1, minWidth: '200px' }}
           />
           <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} style={{ width: '150px' }}>
-            {seasons.map((s) => (
+            {seasons.map((s: Season) => (
               <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
                 {s.label}
               </option>

@@ -56,4 +56,7 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
       @Param("mode") GameMode mode,
       @Param("start") LocalDateTime start,
       @Param("end") LocalDateTime end);
+
+  @Query("SELECT r FROM Round r JOIN r.gameSession s ORDER BY s.createdAt ASC, r.roundNumber ASC")
+  Page<Round> findAllOrderByTime(Pageable pageable);
 }

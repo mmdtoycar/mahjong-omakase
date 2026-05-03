@@ -773,4 +773,27 @@ public class GameService {
       }
     }
   }
+
+  public List<FanDiscoveryResponse> getFanDiscoveries(LocalDateTime start, LocalDateTime end) {
+    List<FanDiscovery> discoveries;
+    if (start != null && end != null) {
+      String season = getSeasonString(start);
+      discoveries = fanDiscoveryRepo.findBySeason(season);
+    } else {
+      discoveries = fanDiscoveryRepo.findAll();
+    }
+
+    return discoveries.stream()
+        .map(
+            fd ->
+                new FanDiscoveryResponse(
+                    fd.getFanName(),
+                    fd.getPlayer().getId(),
+                    fd.getPlayer().getUserName(),
+                    fd.getExampleHand(),
+                    fd.getDiscoveredAt(),
+                    fd.getBonusRp(),
+                    fd.getSeason()))
+        .collect(Collectors.toList());
+  }
 }
