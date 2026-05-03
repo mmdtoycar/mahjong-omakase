@@ -573,8 +573,8 @@ const CalculatorPage: React.FC = () => {
 
                 /* Unified Tile Style - Using calc prefix to avoid global index.css conflicts */
                 .calc-tile-container {
-                    width: 38px;
-                    height: 50px;
+                    width: 28px;
+                    height: 38px;
                     flex-shrink: 0;
                     background: #fff;
                     border-radius: 4px;
@@ -642,8 +642,8 @@ const CalculatorPage: React.FC = () => {
 
                 .tile-grid {
                     display: grid;
-                    grid-template-columns: repeat(9, 38px);
-                    gap: 8px;
+                    grid-template-columns: repeat(9, 28px);
+                    gap: 6px;
                     justify-content: start;
                     max-width: 100%;
                 }
@@ -783,8 +783,8 @@ const CalculatorPage: React.FC = () => {
 
                 /* Large screen cap: prevent tiles from scaling up beyond their designed size */
                 @media (min-width: 641px) {
-                    .tile-grid { grid-template-columns: repeat(9, 38px); }
-                    .calc-tile-container { width: 38px; height: 50px; flex-shrink: 0; }
+                    .tile-grid { grid-template-columns: repeat(9, 28px); gap: 6px; }
+                    .calc-tile-container { width: 28px; height: 38px; flex-shrink: 0; }
                 }
 
                 @media (max-width: 640px) {
