@@ -264,9 +264,9 @@ const CalculatorPage: React.FC = () => {
           concealedTiles.filter((t) => t.equals(lastTile)).length +
           melds.filter((m) => !m.isOpen).reduce((acc, m) => acc + m.tiles.filter((t) => t.equals(lastTile)).length, 0)
         if (countInConcealed > 1) {
-          return `绝张逻辑错误：你立牌或暗杠中已有 ${
-            countInConcealed - 1
-          } 张 ${getTileName(lastTile)}，场面上不可能已显现 3 张（场面显现含你的副露）。`
+          return `绝张逻辑错误：你立牌或暗杠中已有 ${countInConcealed - 1} 张 ${getTileName(
+            lastTile
+          )}，场面上不可能已显现 3 张（场面显现含你的副露）。`
         }
       }
     }

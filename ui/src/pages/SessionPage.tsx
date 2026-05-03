@@ -773,7 +773,6 @@ export default function SessionPage() {
                   </div>
                 )}
 
-
                 {isDongbei && winnerId && (
                   <div className="form-group">
                     <label>闭门</label>

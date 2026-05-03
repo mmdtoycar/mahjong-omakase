@@ -764,42 +764,47 @@ export function scoreCombination(
     } else {
       // Count how many unique honor pungs are used by "higher" honor-based fans
       const specialHonors = new Set<string>()
-      
+
       // Wind pungs
       if (hasFan('大四喜')) {
-        specialHonors.add('z1'); specialHonors.add('z2'); specialHonors.add('z3'); specialHonors.add('z4')
+        specialHonors.add('z1')
+        specialHonors.add('z2')
+        specialHonors.add('z3')
+        specialHonors.add('z4')
       } else if (hasFan('小四喜')) {
         // Find which 3 winds are pungs
-        keMelds.filter(m => m.tiles[0].isWind).forEach(m => specialHonors.add(m.tiles[0].toString()))
+        keMelds.filter((m) => m.tiles[0].isWind).forEach((m) => specialHonors.add(m.tiles[0].toString()))
       } else if (hasFan('三风刻')) {
-        keMelds.filter(m => m.tiles[0].isWind).forEach(m => specialHonors.add(m.tiles[0].toString()))
+        keMelds.filter((m) => m.tiles[0].isWind).forEach((m) => specialHonors.add(m.tiles[0].toString()))
       } else {
         if (hasFan('圈风刻')) {
-          const t = keMelds.find(m => m.tiles[0].suit === 'z' && m.tiles[0].rank === options.quanfeng)?.tiles[0]
+          const t = keMelds.find((m) => m.tiles[0].suit === 'z' && m.tiles[0].rank === options.quanfeng)?.tiles[0]
           if (t) specialHonors.add(t.toString())
         }
         if (hasFan('门风刻')) {
-          const t = keMelds.find(m => m.tiles[0].suit === 'z' && m.tiles[0].rank === options.menfeng)?.tiles[0]
+          const t = keMelds.find((m) => m.tiles[0].suit === 'z' && m.tiles[0].rank === options.menfeng)?.tiles[0]
           if (t) specialHonors.add(t.toString())
         }
       }
 
       // Dragon pungs
       if (hasFan('大三元')) {
-        specialHonors.add('z5'); specialHonors.add('z6'); specialHonors.add('z7')
+        specialHonors.add('z5')
+        specialHonors.add('z6')
+        specialHonors.add('z7')
       } else if (hasFan('小三元')) {
-        keMelds.filter(m => m.tiles[0].isDragon).forEach(m => specialHonors.add(m.tiles[0].toString()))
+        keMelds.filter((m) => m.tiles[0].isDragon).forEach((m) => specialHonors.add(m.tiles[0].toString()))
       } else if (hasFan('双箭刻')) {
-        keMelds.filter(m => m.tiles[0].isDragon).forEach(m => specialHonors.add(m.tiles[0].toString()))
+        keMelds.filter((m) => m.tiles[0].isDragon).forEach((m) => specialHonors.add(m.tiles[0].toString()))
       } else if (hasFan('箭刻')) {
-        keMelds.filter(m => m.tiles[0].isDragon).forEach(m => specialHonors.add(m.tiles[0].toString()))
+        keMelds.filter((m) => m.tiles[0].isDragon).forEach((m) => specialHonors.add(m.tiles[0].toString()))
       }
 
       // Terminal pungs (1, 9) are never "special" in the sense of being covered by wind/dragon fans
       // But we only want to subtract the honor pungs that were already counted.
-      const terminalKeCount = keMelds.filter(m => m.tiles[0].isTerminal).length
-      const honorKeCount = keMelds.filter(m => m.tiles[0].isHonor).length
-      
+      const terminalKeCount = keMelds.filter((m) => m.tiles[0].isTerminal).length
+      const honorKeCount = keMelds.filter((m) => m.tiles[0].isHonor).length
+
       yaoJiuKeCount = terminalKeCount + Math.max(0, honorKeCount - specialHonors.size)
     }
 
