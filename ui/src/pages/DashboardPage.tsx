@@ -1,18 +1,29 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { fetchSessions } from '../api'
-import { GameSession, PlayerPerformance } from '../types'
+import { GameSession, Season, getCurrentSeason, getSeasonLabel } from '../types'
+import { fetchSessions, fetchActiveSeasons } from '../api'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
   const [sessions, setSessions] = useState<GameSession[]>([])
+  const [seasons, setSeasons] = useState<Season[]>([])
+  const [seasonKey, setSeasonKey] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchSessions()
-      .then((s) => {
-        setSessions(s)
+    Promise.all([fetchSessions(), fetchActiveSeasons()])
+      .then(([sData, seasonsData]) => {
+        setSessions(sData)
+        const list = seasonsData.map((s) => ({
+          year: s.year,
+          month: s.month,
+          label: getSeasonLabel(s.year, s.month),
+        }))
+        setSeasons(list)
         setLoading(false)
       })
       .catch((e) => {
@@ -20,6 +31,21 @@ export default function DashboardPage() {
         setLoading(false)
       })
   }, [])
+
+  // Reset to page 1 when season changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [seasonKey])
+
+  const filteredSessions = sessions.filter((s) => {
+    if (seasonKey === 'all') return true
+    const d = new Date(s.createdAt)
+    const key = `${d.getFullYear()}-${d.getMonth() + 1}`
+    return key === seasonKey
+  })
+
+  const totalPages = Math.ceil(filteredSessions.length / pageSize)
+  const paginatedSessions = filteredSessions.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   if (loading)
     return (
@@ -36,8 +62,21 @@ export default function DashboardPage() {
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div className="flex-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-        <h2 style={{ margin: 0 }}>对局历史</h2>
+      <div
+        className="flex-between"
+        style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: '12px' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <h2 style={{ margin: 0 }}>对局历史</h2>
+          <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
+            <option value="all">全部赛季</option>
+            {seasons.map((s) => (
+              <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <Link to="/new-session" className="btn btn-primary">
           + 新建游戏
         </Link>
@@ -49,7 +88,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="dashboard-sessions-list">
-          {sessions.map((s) => (
+          {paginatedSessions.map((s) => (
             <Link
               key={s.id}
               to={`/session/${s.id}`}
@@ -102,6 +141,28 @@ export default function DashboardPage() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="pagination-container">
+          <button
+            className="pagination-btn"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+          >
+            上一页
+          </button>
+          <div className="pagination-info">
+            第 {currentPage} 页 / 共 {totalPages} 页
+          </div>
+          <button
+            className="pagination-btn"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+          >
+            下一页
+          </button>
         </div>
       )}
     </div>

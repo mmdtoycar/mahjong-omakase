@@ -2856,3 +2856,45 @@ tr:hover td {
     grid-template-columns: 1fr;
   }
 }
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--sol-base3);
+  border-top: 1px solid var(--border);
+}
+
+.pagination-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  transition: all 0.2s;
+  box-shadow: var(--shadow);
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--sol-base2);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-weight: 500;
+}
