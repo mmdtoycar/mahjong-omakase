@@ -395,7 +395,6 @@ export default function SessionPage() {
 
   return (
     <>
-
       {session.status === 'IN_PROGRESS' && (
         <div className="card round-form-card">
           <div className="round-form">
