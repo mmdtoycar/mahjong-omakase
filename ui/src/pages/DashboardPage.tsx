@@ -80,17 +80,16 @@ export default function DashboardPage() {
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
       <div
         className="flex-between"
-        style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: '12px' }}
+        style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', gap: '12px' }}
       >
         <h2 style={{ margin: 0, whiteSpace: 'nowrap' }}>对局历史</h2>
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: '8px',
             flex: 1,
             justifyContent: 'flex-end',
-            flexWrap: 'wrap',
           }}
         >
           <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
