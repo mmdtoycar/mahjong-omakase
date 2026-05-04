@@ -251,7 +251,7 @@ const FanTablePage: React.FC = () => {
                           <span
                             className="badge badge-discovery-prev"
                             style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}
-                            title={`上月冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
+                            title={`历史冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
                           >
                             历史冠名: {prevDiscovery.playerName}
                           </span>

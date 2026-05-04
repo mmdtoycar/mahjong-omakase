@@ -50,18 +50,11 @@ export default function DashboardPage() {
       ) : (
         <div className="dashboard-sessions-list">
           {sessions.map((s) => (
-            <div
+            <Link
               key={s.id}
+              to={`/session/${s.id}`}
               className="session-history-card"
-              onClick={() => navigate(`/session/${s.id}`)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  navigate(`/session/${s.id}`)
-                }
-              }}
-              tabIndex={0}
-              role="button"
+              style={{ textDecoration: 'none' }}
             >
               <div className="session-card-header">
                 <div className="session-card-mode">

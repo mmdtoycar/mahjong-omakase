@@ -2763,27 +2763,27 @@ tr:hover td {
   gap: 8px;
 }
 
-.rank-number {
+.session-history-card .rank-number {
   font-weight: 900;
   font-size: 0.75rem;
   min-width: 18px;
   opacity: 0.4;
 }
 
-.rank-1 .rank-number {
+.session-history-card .rank-1 .rank-number {
   color: #b58900;
   opacity: 1;
 }
-.rank-2 .rank-number {
+.session-history-card .rank-2 .rank-number {
   color: #839496;
   opacity: 1;
 }
-.rank-3 .rank-number {
+.session-history-card .rank-3 .rank-number {
   color: #cb4b16;
   opacity: 1;
 }
 
-.player-name {
+.session-history-card .player-name {
   font-weight: 600;
   color: var(--primary);
   font-size: 0.9rem;
@@ -2793,7 +2793,7 @@ tr:hover td {
   text-overflow: ellipsis;
 }
 
-.player-score {
+.session-history-card .player-score {
   font-size: 0.85rem;
   font-weight: 800;
 }
@@ -2810,5 +2810,6 @@ tr:hover td {
   .dashboard-sessions-list {
     padding: 16px;
     gap: 16px;
+    grid-template-columns: 1fr;
   }
 }
