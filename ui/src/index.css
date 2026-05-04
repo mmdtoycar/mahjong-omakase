@@ -535,9 +535,6 @@ tr:hover td {
 }
 
 .round-form {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 2px solid var(--border);
 }
 
 .round-form-title {
