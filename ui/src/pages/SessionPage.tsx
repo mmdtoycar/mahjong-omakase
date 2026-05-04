@@ -378,68 +378,58 @@ export default function SessionPage() {
 
             {isRyuukyoku ? (
               <>
-                <div className="form-group">
-                  <label>选择听牌玩家</label>
-                  <div className="player-chips">
-                    {session.players.map((p) => (
-                      <span
-                        key={p.id}
-                        className={`chip ${tenpaiPlayerIds.includes(p.id) ? 'selected' : ''}`}
-                        onClick={() => {
-                          setTenpaiPlayerIds((prev) =>
-                            prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
-                          )
-                          if (tenpaiPlayerIds.includes(p.id)) {
-                            setRiichiPlayerIds((prev) => prev.filter((id) => id !== p.id))
-                          }
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {p.userName}
-                        {tenpaiPlayerIds.includes(p.id) && ' ✓'}
-                      </span>
-                    ))}
-                  </div>
-                  <span className="field-hint">
-                    {tenpaiPlayerIds.length === 0 || tenpaiPlayerIds.length === session.players.length
-                      ? '全员听牌或全员未听 → 无点数变动'
-                      : `${tenpaiPlayerIds.length}人听牌, ${
-                          session.players.length - tenpaiPlayerIds.length
-                        }人未听 → 未听各付${3000 / (session.players.length - tenpaiPlayerIds.length)}, 听牌各得${
-                          3000 / tenpaiPlayerIds.length
-                        }`}
-                  </span>
-                </div>
-                <div className="form-group">
-                  <label>选择立直玩家</label>
-                  <div className="player-chips">
-                    {session.players.map((p) => (
-                      <span
-                        key={p.id}
-                        className={`chip ${riichiPlayerIds.includes(p.id) ? 'selected' : ''}`}
-                        onClick={() => {
-                          if (riichiPlayerIds.includes(p.id)) {
-                            setRiichiPlayerIds((prev) => prev.filter((id) => id !== p.id))
-                          } else {
-                            setRiichiPlayerIds((prev) => [...prev, p.id])
-                            if (!tenpaiPlayerIds.includes(p.id)) {
-                              setTenpaiPlayerIds((prev) => [...prev, p.id])
+                <div className="quick-win-container">
+                  <div className="quick-win-row">
+                    {session.players.map((p, idx) => {
+                      const isRiichiPlayer = riichiPlayerIds.includes(p.id)
+                      const isTenpaiOnly = !isRiichiPlayer && tenpaiPlayerIds.includes(p.id)
+                      let btnClass = 'quick-player-btn'
+                      if (isRiichiPlayer) btnClass += ' winner'
+                      if (isTenpaiOnly) btnClass += ' loser'
+
+                      return (
+                        <button
+                          key={p.id}
+                          className={btnClass}
+                          onClick={() => {
+                            if (isRiichiPlayer) {
+                              setRiichiPlayerIds((prev) => prev.filter((id) => id !== p.id))
+                              setTenpaiPlayerIds((prev) => (prev.includes(p.id) ? prev : [...prev, p.id]))
+                            } else if (isTenpaiOnly) {
+                              setTenpaiPlayerIds((prev) => prev.filter((id) => id !== p.id))
+                            } else {
+                              setRiichiPlayerIds((prev) => [...prev, p.id])
+                              setTenpaiPlayerIds((prev) => (prev.includes(p.id) ? prev : [...prev, p.id]))
                             }
-                          }
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {p.userName}
-                        {riichiPlayerIds.includes(p.id) && ' ✓'}
-                      </span>
-                    ))}
+                          }}
+                        >
+                          <div className="btn-name">{p.userName}</div>
+                          <div className={`btn-wind${p.id === gameState.dealerPlayerId ? ' btn-wind-dealer' : ''}`}>
+                            {isRiichiPlayer
+                              ? '立直'
+                              : isTenpaiOnly
+                              ? '默听'
+                              : getWindName(getPlayerMenfeng(getPlayerSeat(p, idx)))}
+                          </div>
+                        </button>
+                      )
+                    })}
                   </div>
-                  {riichiPlayerIds.length > 0 && (
-                    <span className="field-hint">
-                      {riichiPlayerIds.length}人立直 → 各扣1000, 供托 +{riichiPlayerIds.length * 1000}
-                    </span>
-                  )}
                 </div>
+                <span className="field-hint">
+                  {tenpaiPlayerIds.length === 0 || tenpaiPlayerIds.length === session.players.length
+                    ? '全员听牌或全员未听 → 无点数变动'
+                    : `${tenpaiPlayerIds.length}人听牌, ${
+                        session.players.length - tenpaiPlayerIds.length
+                      }人未听 → 未听各付${3000 / (session.players.length - tenpaiPlayerIds.length)}, 听牌各得${
+                        3000 / tenpaiPlayerIds.length
+                      }`}
+                </span>
+                {riichiPlayerIds.length > 0 && (
+                  <span className="field-hint">
+                    {riichiPlayerIds.length}人立直 → 各扣1000, 供托 +{riichiPlayerIds.length * 1000}
+                  </span>
+                )}
                 <button className="btn btn-primary" onClick={handleAddRound} disabled={submitting}>
                   {submitting ? '提交中...' : '添加流局'}
                 </button>

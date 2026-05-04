@@ -200,17 +200,12 @@ export const riichiFanTableData: RiichiFanItem[] = [
   },
 
   // 13番 (役满)
+  { fan: 13, name: '天和', description: '庄家发牌后第一张牌即和牌。暗杠不成立。', example: '' },
   {
     fan: 13,
-    name: '四暗刻',
-    description: '含有4个暗刻。门前清限定。必须自摸，若荣和则为三暗刻对对和。',
-    example: '*Man1 Man1 Man1 | *Man2 Man2 Man2 | *Man3 Man3 Man3 | *Man4 Man4 Man4 | Pin1 Pin1',
-  },
-  {
-    fan: 13,
-    name: '国士无双',
-    description: '由13种一、九及字牌各一张，外加其中任何一种的一张组成的和牌。门前清限定。',
-    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun Chun',
+    name: '地和',
+    description: '闲家在第一巡自摸和牌。这之前如有他家的吃、碰、明杠，则该役不成立。',
+    example: '',
   },
   {
     fan: 13,
@@ -220,15 +215,21 @@ export const riichiFanTableData: RiichiFanItem[] = [
   },
   {
     fan: 13,
-    name: '字一色',
-    description: '全部由字牌组成的和牌。',
-    example: '*Ton Ton Ton | *Nan Nan Nan | *Shaa Shaa Shaa | *Haku Haku Haku | *Chun Chun',
+    name: '四暗刻',
+    description: '含有4个暗刻。门前清限定。必须自摸，若荣和则为三暗刻对对和。',
+    example: '*Man1 Man1 Man1 | *Man2 Man2 Man2 | *Man3 Man3 Man3 | *Man4 Man4 Man4 | Pin1 Pin1',
   },
   {
     fan: 13,
-    name: '小四喜',
-    description: '包含风牌的3副刻子和1对将牌组成的和牌。',
-    example: '*Ton Ton Ton | *Nan Nan Nan | *Shaa Shaa Shaa | *Pei Pei | Man1 Man2 Man3',
+    name: '四暗刻单骑',
+    description: '先集齐4个暗刻，单听将牌的和牌型。',
+    example: '*Man1 Man1 Man1 | *Man2 Man2 Man2 | *Man3 Man3 Man3 | *Man4 Man4 Man4 | ^Pin1 Pin1',
+  },
+  {
+    fan: 13,
+    name: '字一色',
+    description: '全部由字牌组成的和牌。',
+    example: '*Ton Ton Ton | *Nan Nan Nan | *Shaa Shaa Shaa | *Haku Haku Haku | *Chun Chun',
   },
   {
     fan: 13,
@@ -244,9 +245,33 @@ export const riichiFanTableData: RiichiFanItem[] = [
   },
   {
     fan: 13,
-    name: '地和',
-    description: '闲家在第一巡自摸和牌。这之前如有他家的吃、碰、明杠，则该役不成立。',
-    example: '',
+    name: '国士无双',
+    description: '由13种一、九及字牌各一张，外加其中任何一种的一张组成的和牌。门前清限定。',
+    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun Chun',
+  },
+  {
+    fan: 13,
+    name: '国士无双十三面听',
+    description: '手牌先集齐13种幺九牌各一张，听所有13种幺九牌。',
+    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun ^Chun',
+  },
+  {
+    fan: 13,
+    name: '小四喜',
+    description: '包含风牌的3副刻子和1对将牌组成的和牌。',
+    example: '*Ton Ton Ton | *Nan Nan Nan | *Shaa Shaa Shaa | *Pei Pei | Man1 Man2 Man3',
+  },
+  {
+    fan: 13,
+    name: '大四喜',
+    description: '包含风牌的4副刻子组成的和牌。',
+    example: '*Ton Ton Ton | *Nan Nan Nan | *Shaa Shaa Shaa | *Pei Pei Pei | Man1 Man1',
+  },
+  {
+    fan: 13,
+    name: '四杠子',
+    description: '4个杠。',
+    example: '*Pin1 Pin1 Pin1 Pin1 | *Pin2 Pin2 Pin2 Pin2 | *Pin3 Pin3 Pin3 Pin3 | *Pin4 Pin4 Pin4 Pin4 | Shaa Shaa',
   },
   {
     fan: 13,
@@ -254,35 +279,8 @@ export const riichiFanTableData: RiichiFanItem[] = [
     description: '由一种花色的1112345678999构成的牌型，和该种花色的任意一张。门前清限定。',
     example: '*Man1 Man1 Man1 Man2 Man3 Man4 Man5 Man6 Man7 Man8 Man9 Man9 Man9 Man1',
   },
-  { fan: 13, name: '天和', description: '庄家发牌后第一张牌即和牌。暗杠不成立。', example: '' },
   {
     fan: 13,
-    name: '四杠子',
-    description: '4个杠。',
-    example: '*Pin1 Pin1 Pin1 Pin1 | *Pin2 Pin2 Pin2 Pin2 | *Pin3 Pin3 Pin3 Pin3 | *Pin4 Pin4 Pin4 Pin4 | Shaa Shaa',
-  },
-
-  // 26番 (双倍役满)
-  {
-    fan: 26,
-    name: '四暗刻单骑',
-    description: '先集齐4个暗刻，单听将牌的和牌型。',
-    example: '*Man1 Man1 Man1 | *Man2 Man2 Man2 | *Man3 Man3 Man3 | *Man4 Man4 Man4 | ^Pin1 Pin1',
-  },
-  {
-    fan: 26,
-    name: '国士无双十三面听',
-    description: '手牌先集齐13种么九牌各一张，听所有13种么九牌。',
-    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun ^Chun',
-  },
-  {
-    fan: 26,
-    name: '大四喜',
-    description: '包含风牌的4副刻子组成的和牌。',
-    example: '*Ton Ton Ton | *Nan Nan Nan | *Shaa Shaa Shaa | *Pei Pei Pei | Man1 Man1',
-  },
-  {
-    fan: 26,
     name: '纯正九莲宝灯',
     description: '九莲宝灯听九面。1112345678999听所有同花色牌。',
     example: '*Man1 Man1 Man1 Man2 Man3 Man4 Man5 Man6 Man7 Man8 Man9 Man9 Man9 | ^Man1',
