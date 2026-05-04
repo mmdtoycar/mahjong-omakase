@@ -385,11 +385,14 @@ export default function SessionPage() {
                       <span
                         key={p.id}
                         className={`chip ${tenpaiPlayerIds.includes(p.id) ? 'selected' : ''}`}
-                        onClick={() =>
+                        onClick={() => {
                           setTenpaiPlayerIds((prev) =>
                             prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
                           )
-                        }
+                          if (tenpaiPlayerIds.includes(p.id)) {
+                            setRiichiPlayerIds((prev) => prev.filter((id) => id !== p.id))
+                          }
+                        }}
                         style={{ cursor: 'pointer' }}
                       >
                         {p.userName}
@@ -414,11 +417,16 @@ export default function SessionPage() {
                       <span
                         key={p.id}
                         className={`chip ${riichiPlayerIds.includes(p.id) ? 'selected' : ''}`}
-                        onClick={() =>
-                          setRiichiPlayerIds((prev) =>
-                            prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
-                          )
-                        }
+                        onClick={() => {
+                          if (riichiPlayerIds.includes(p.id)) {
+                            setRiichiPlayerIds((prev) => prev.filter((id) => id !== p.id))
+                          } else {
+                            setRiichiPlayerIds((prev) => [...prev, p.id])
+                            if (!tenpaiPlayerIds.includes(p.id)) {
+                              setTenpaiPlayerIds((prev) => [...prev, p.id])
+                            }
+                          }
+                        }}
                         style={{ cursor: 'pointer' }}
                       >
                         {p.userName}
