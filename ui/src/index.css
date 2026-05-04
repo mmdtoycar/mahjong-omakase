@@ -2598,6 +2598,8 @@ tr:hover td {
   display: flex;
   flex-direction: column;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  text-decoration: none;
+  color: inherit;
 }
 
 .session-history-card:hover {
