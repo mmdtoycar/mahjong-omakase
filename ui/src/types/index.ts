@@ -37,6 +37,7 @@ export interface GameSession {
   playerCount: number
   status: 'IN_PROGRESS' | 'COMPLETED'
   createdAt: string
+  roundCount: number
   rankings?: PlayerPerformance[]
 }
 

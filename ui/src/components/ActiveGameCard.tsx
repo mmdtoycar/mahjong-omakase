@@ -17,7 +17,17 @@ export const ActiveGameCard: React.FC<Props> = ({ session }) => {
     <Link to={`/session/${session.id}`} className="active-game-card">
       <div className="active-game-header">
         <span className="active-game-mode">{session.gameModeDisplayName}</span>
-        <span className="badge badge-progress">{state.displayName} 进行中</span>
+        <div className="session-card-meta">
+          <span className="session-card-date">
+            {new Date(session.createdAt).toLocaleString([], {
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
+          <span className="badge badge-progress">{state.displayName} 进行中</span>
+        </div>
       </div>
       <div className="active-game-players">
         {[...session.players]

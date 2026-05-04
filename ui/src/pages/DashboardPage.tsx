@@ -122,7 +122,7 @@ export default function DashboardPage() {
                   <span
                     className={`badge badge-sm ${s.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}
                   >
-                    {s.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
+                    {s.status === 'IN_PROGRESS' ? `第${s.roundCount + 1}局 进行中` : `${s.roundCount}局 已结束`}
                   </span>
                 </div>
               </div>

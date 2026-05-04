@@ -15,6 +15,7 @@ public class SessionSummaryResponse {
   private String status;
   private LocalDateTime createdAt;
   private Double participationBonus;
+  private int roundCount;
   private List<PlayerPerformanceDTO> rankings;
 
   public static SessionSummaryResponse from(GameSession session) {
@@ -27,6 +28,7 @@ public class SessionSummaryResponse {
     r.status = session.getStatus().name();
     r.createdAt = session.getCreatedAt();
     r.participationBonus = session.getParticipationBonus();
+    r.roundCount = session.getRounds() != null ? session.getRounds().size() : 0;
 
     // Calculate rankings and RP
     r.rankings = calculateRankings(session);
@@ -130,6 +132,10 @@ public class SessionSummaryResponse {
 
   public Double getParticipationBonus() {
     return participationBonus;
+  }
+
+  public int getRoundCount() {
+    return roundCount;
   }
 
   public List<PlayerPerformanceDTO> getRankings() {
