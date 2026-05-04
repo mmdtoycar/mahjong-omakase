@@ -578,8 +578,8 @@ export default function SessionPage() {
                   </div>
                 )}
 
-                <div className="form-group full-width">
-                  <label>胜负选择</label>
+                <div className="form-group full-width no-border-top">
+                  <h4 className="form-section-title">胜负选择</h4>
                   <div className="quick-win-row">
                     {session.players.map((p, idx) => {
                       const isWinner = winnerId === String(p.id)

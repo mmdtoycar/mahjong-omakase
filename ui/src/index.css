@@ -2327,6 +2327,25 @@ tr:hover td {
   padding: 6px 10px !important;
 }
 
+.form-section-title {
+  background: var(--sol-base3);
+  font-size: 0.85rem;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-weight: 800;
+  display: inline-block;
+}
+
+.no-border-top {
+  border-top: none !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
 .quick-player-btn .btn-name {
   font-size: 0.9rem;
 }
