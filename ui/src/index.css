@@ -23,6 +23,7 @@
   --mj-red: #b33939; /* Rich Character Red */
   --mj-green: #218c74; /* Deep Bamboo Green */
   --mj-gold: #d4a017;
+  --mj-gold-light: #f0c040;
 
   --mj-teal: #046b6b;
 
@@ -2290,7 +2291,7 @@ tr:hover td {
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--mj-gold);
-  background: linear-gradient(135deg, var(--mj-gold), #f0c040, var(--mj-gold));
+  background: linear-gradient(135deg, var(--mj-gold), var(--mj-gold-light), var(--mj-gold));
   background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
