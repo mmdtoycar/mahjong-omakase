@@ -2344,6 +2344,11 @@ tr:hover td {
   margin-top: 0 !important;
 }
 
+.quick-player-btn .wind-badge {
+  top: 2px;
+  right: 2px;
+}
+
 .quick-player-btn .btn-name {
   font-size: 0.9rem;
 }
