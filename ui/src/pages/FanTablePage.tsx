@@ -161,7 +161,6 @@ const FanTablePage: React.FC = () => {
   const getFanLabel = (fan: number) => {
     if (activeTab === 'RIICHI') {
       if (fan === 13) return '役满'
-      if (fan === 26) return '双倍役满'
     }
     if (activeTab === 'DONGBEI') {
       if (fan === 0) return '规则概览'
