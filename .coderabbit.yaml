@@ -1,34 +1,11 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-language: "zh"
 tone_instructions: |
-  You must read the file .claude/commands/audit.md from this repository and check all changed code against its rules.
-  Focus on: Chinese localization, mobile responsiveness, UI consistency, dead code, code duplication.
+  You must read .claude/commands/audit.md from this repository and check all changed code against its rules.
 reviews:
   profile: "chill"
   auto_review:
     enabled: true
     drafts: false
-  path_instructions:
-    - path: "ui/src/**/*.{ts,tsx}"
-      instructions: |
-        Read .claude/commands/audit.md and check against these rules:
-        - Localization (Part 1): verify user-visible strings (labels, headings, buttons, placeholders, errors, hints, badges, empty states) are consistently Chinese and match the canonical game mode naming.
-        - Exceptions: SignUpPage English tagline, AdminPage, App.tsx branding, HomePage footer, Japanese Riichi terms (役満, 三倍満, 倍満, 跳満, 満貫).
-        - Mobile (Part 2): tables need .score-table wrapper, flex layouts need flex-wrap, no fixed widths causing overflow on <640px.
-        - UI Consistency (Part 3): use .badge + .badge-progress/.badge-completed, .empty-state, .error-text, .score-positive/.score-negative CSS classes instead of inline styles. Use CSS variables not hardcoded hex. Use .game-card for session cards.
-    - path: "ui/src/index.css"
-      instructions: |
-        Read .claude/commands/audit.md Part 4 (Dead Code) rules:
-        - Flag CSS classes not referenced in any .tsx file
-        - Flag duplicate selectors
-        - Colors should use CSS variables (--mj-gold, --mj-green, --mj-red, etc), flag hardcoded hex not in :root
-    - path: "server/src/**/*.java"
-      instructions: |
-        Read .claude/commands/audit.md Part 4-5 rules:
-        - Flag unused imports
-        - Flag unused private methods
-        - Flag repeated logic blocks (5+ identical lines in 2+ places)
-        - Flag duplicated parameter validation patterns
   tools:
     biome:
       enabled: true
