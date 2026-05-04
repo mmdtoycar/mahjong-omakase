@@ -51,6 +51,7 @@ export interface RoundInfo {
   dealInPlayerId?: number | null
   dealInPlayerName?: string | null
   prevalentWind?: number
+  riichiPlayerIds?: number[]
 }
 
 export interface SessionDetail {
@@ -81,6 +82,7 @@ export interface AddRoundData {
   bimenPlayerIds?: number[] // for Dongbei: 闭门 players
   dealInPlayerId?: number | null // null = 自摸
   tenpaiPlayerIds?: number[] // for drawn games
+  riichiPlayerIds?: number[] // players who declared riichi
   winHand?: string
   fanDetails?: string
   fanCount?: number

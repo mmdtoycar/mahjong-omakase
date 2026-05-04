@@ -4,8 +4,10 @@ import com.mahjong.omakase.dto.AddRoundRequest;
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.service.scoring.RiichiScoreCalculator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -89,6 +91,17 @@ public class RiichiModeHandler implements GameModeHandler {
         } else {
           scores.put(id, -eachNotenPays);
         }
+      }
+    }
+    // Riichi stick deductions: -1000 per declaring player
+    List<Long> riichiIds = request.getRiichiPlayerIds();
+    if (riichiIds != null) {
+      Set<Long> uniqueRiichiIds = new HashSet<>(riichiIds);
+      for (Long id : uniqueRiichiIds) {
+        if (id == null || !sessionPlayerIds.contains(id)) {
+          throw new IllegalArgumentException("Riichi player " + id + " is not in this session");
+        }
+        scores.merge(id, -1000, Integer::sum);
       }
     }
     return scores;

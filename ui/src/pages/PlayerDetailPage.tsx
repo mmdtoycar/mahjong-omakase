@@ -54,7 +54,7 @@ export default function PlayerDetailPage() {
           </div>
         ) : (
           <div className="score-table">
-            <table>
+            <table style={{ minWidth: 340 }}>
               <thead>
                 <tr>
                   <th>游戏</th>

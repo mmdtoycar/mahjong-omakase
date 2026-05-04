@@ -70,6 +70,7 @@ public class SessionDetailResponse {
     private Long dealInPlayerId;
     private String dealInPlayerName;
     private Integer prevalentWind;
+    private List<Long> riichiPlayerIds;
 
     public RoundInfo(
         int roundNumber,
@@ -80,7 +81,8 @@ public class SessionDetailResponse {
         Integer fanCount,
         Long dealInPlayerId,
         String dealInPlayerName,
-        Integer prevalentWind) {
+        Integer prevalentWind,
+        List<Long> riichiPlayerIds) {
       this.roundNumber = roundNumber;
       this.scores = scores;
       this.winnerId = winnerId;
@@ -90,6 +92,7 @@ public class SessionDetailResponse {
       this.dealInPlayerId = dealInPlayerId;
       this.dealInPlayerName = dealInPlayerName;
       this.prevalentWind = prevalentWind;
+      this.riichiPlayerIds = riichiPlayerIds;
     }
 
     public int getRoundNumber() {
@@ -126,6 +129,10 @@ public class SessionDetailResponse {
 
     public Integer getPrevalentWind() {
       return prevalentWind;
+    }
+
+    public List<Long> getRiichiPlayerIds() {
+      return riichiPlayerIds;
     }
   }
 

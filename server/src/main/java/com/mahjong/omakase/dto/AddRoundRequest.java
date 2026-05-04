@@ -34,6 +34,8 @@ public class AddRoundRequest {
 
   private List<Long> tenpaiPlayerIds; // for drawn games
 
+  private List<Long> riichiPlayerIds; // players who declared riichi
+
   private String winHand;
 
   private String fanDetails;
@@ -175,5 +177,13 @@ public class AddRoundRequest {
 
   public void setTenpaiPlayerIds(List<Long> tenpaiPlayerIds) {
     this.tenpaiPlayerIds = tenpaiPlayerIds;
+  }
+
+  public List<Long> getRiichiPlayerIds() {
+    return riichiPlayerIds;
+  }
+
+  public void setRiichiPlayerIds(List<Long> riichiPlayerIds) {
+    this.riichiPlayerIds = riichiPlayerIds;
   }
 }
