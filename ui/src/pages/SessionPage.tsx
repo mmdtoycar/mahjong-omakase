@@ -395,26 +395,6 @@ export default function SessionPage() {
 
   return (
     <>
-      <div className="card">
-        <div className="flex-between">
-          <div>
-            <h2>{session.name || `Game #${session.id}`}</h2>
-            <span className="session-meta">
-              {session.gameModeDisplayName} &middot; {session.playerCount}玩家 &middot;{' '}
-              {new Date(session.createdAt).toLocaleDateString()}
-              &nbsp;
-              <span className={`badge ${session.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
-                {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
-              </span>
-            </span>
-          </div>
-          {session.status === 'IN_PROGRESS' && (
-            <button className="btn btn-danger btn-small" onClick={handleComplete} disabled={submitting}>
-              结束游戏
-            </button>
-          )}
-        </div>
-      </div>
 
       {session.status === 'IN_PROGRESS' && (
         <div className="card round-form-card">
@@ -579,7 +559,7 @@ export default function SessionPage() {
                 )}
 
                 <div className="quick-win-container" style={{ gridColumn: '1 / -1', marginBottom: '16px' }}>
-                  <h2>胜负选择</h2>
+                  <h2>算番器</h2>
                   <div className="quick-win-row">
                     {session.players.map((p, idx) => {
                       const isWinner = winnerId === String(p.id)
@@ -681,7 +661,23 @@ export default function SessionPage() {
       )}
 
       <div className="card">
-        <h2>计分板</h2>
+        <div className="flex-between" style={{ marginBottom: 16 }}>
+          <h2 style={{ marginBottom: 0 }}>计分板</h2>
+          <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span className="session-meta" style={{ margin: 0, fontSize: '0.85rem' }}>
+              {session.gameModeDisplayName} &middot; {new Date(session.createdAt).toLocaleDateString()}
+              &nbsp;
+              <span className={`badge ${session.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
+                {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
+              </span>
+            </span>
+            {session.status === 'IN_PROGRESS' && (
+              <button className="btn btn-danger btn-small" onClick={handleComplete} disabled={submitting}>
+                结束游戏
+              </button>
+            )}
+          </div>
+        </div>
         <div className="score-table">
           <table>
             <thead>
