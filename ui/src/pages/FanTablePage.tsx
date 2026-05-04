@@ -237,29 +237,23 @@ const FanTablePage: React.FC = () => {
                         {item.name}
                         {hasCurrent && (
                           <span
-                            className="badge badge-accent"
-                            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                            className="badge badge-discovery"
+                            style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}
                             title={`首位达成者: ${currentDiscovery.playerName}${
                               (currentDiscovery.bonusRp ?? 0) > 0 ? ` (+${currentDiscovery.bonusRp} RP)` : ''
                             }`}
                           >
-                            🏆 {currentDiscovery.playerName}
+                            本月冠名: {currentDiscovery.playerName}
                             {(currentDiscovery.bonusRp ?? 0) > 0 && ` (+${currentDiscovery.bonusRp})`}
                           </span>
                         )}
                         {hasPrev && (
                           <span
-                            className="badge"
-                            style={{
-                              fontSize: '0.7rem',
-                              padding: '2px 6px',
-                              background: 'var(--text-light)',
-                              color: 'white',
-                              opacity: 0.6,
-                            }}
-                            title={`上月冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
+                            className="badge badge-discovery-prev"
+                            style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}
+                            title={`历史冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
                           >
-                            🏆 {prevDiscovery.playerName}
+                            历史冠名: {prevDiscovery.playerName}
                           </span>
                         )}
                         {item.tags?.map((tag) => (
@@ -276,43 +270,48 @@ const FanTablePage: React.FC = () => {
                     </div>
                     <p className="fan-item-desc">{item.description}</p>
                     {item.example && item.example.length > 0 && (
-                      <div className="fan-item-example">
+                      <div className="fan-item-example-container">
                         <span className="example-hint reference">理论参考</span>
-                        {item.example.split('|').map((group, groupIdx) => {
-                          const trimmedGroup = group.trim()
-                          const isGroupHighlighted = trimmedGroup.startsWith('*')
-                          const cleanGroup = isGroupHighlighted ? trimmedGroup.substring(1).trim() : trimmedGroup
-                          const tiles = cleanGroup
-                            .split(' ')
-                            .map((t) => t.trim())
-                            .filter(Boolean)
+                        <div className="fan-item-example">
+                          {item.example.split('|').map((group, groupIdx) => {
+                            const trimmedGroup = group.trim()
+                            const isGroupHighlighted = trimmedGroup.startsWith('*')
+                            const cleanGroup = isGroupHighlighted ? trimmedGroup.substring(1).trim() : trimmedGroup
+                            const tiles = cleanGroup
+                              .split(' ')
+                              .map((t) => t.trim())
+                              .filter(Boolean)
 
-                          return (
-                            <div
-                              key={groupIdx}
-                              className={`mahjong-group ${isGroupHighlighted ? 'highlighted-group' : ''}`}
-                            >
-                              {tiles.map((tile, tileIdx) => {
-                                const isTileHighlighted = tile.startsWith('*') || tile.startsWith('^')
-                                const cleanTile = isTileHighlighted ? tile.substring(1) : tile
-                                return (
-                                  <img
-                                    key={tileIdx}
-                                    src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${cleanTile}.svg`}
-                                    alt={cleanTile}
-                                    className={`mahjong-tile ${isTileHighlighted ? 'highlighted-tile' : ''}`}
-                                  />
-                                )
-                              })}
-                            </div>
-                          )
-                        })}
+                            return (
+                              <div
+                                key={groupIdx}
+                                className={`mahjong-group ${isGroupHighlighted ? 'highlighted-group' : ''}`}
+                              >
+                                {tiles.map((tile, tileIdx) => {
+                                  const isTileHighlighted = tile.startsWith('*') || tile.startsWith('^')
+                                  const cleanTile = isTileHighlighted ? tile.substring(1) : tile
+                                  return (
+                                    <img
+                                      key={tileIdx}
+                                      src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${cleanTile}.svg`}
+                                      alt={cleanTile}
+                                      className={`mahjong-tile ${isTileHighlighted ? 'highlighted-tile' : ''}`}
+                                    />
+                                  )
+                                })}
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     )}
-                    {currentDiscovery?.exampleHand && (
-                      <div className="fan-item-example-real">
-                        <MahjongHand hand={currentDiscovery.exampleHand ?? undefined} />
-                        <span className="example-hint">实战例子</span>
+                    {/* Show real example hand: current month priority, otherwise historical fallback */}
+                    {(currentDiscovery?.exampleHand || prevDiscovery?.exampleHand) && (
+                      <div className={`fan-item-example-real ${!currentDiscovery?.exampleHand ? 'prev-season' : ''}`}>
+                        <MahjongHand
+                          hand={(currentDiscovery?.exampleHand || prevDiscovery?.exampleHand) ?? undefined}
+                        />
+                        <span className={`example-hint ${!currentDiscovery?.exampleHand ? 'prev' : ''}`}>实战例子</span>
                       </div>
                     )}
                   </div>
