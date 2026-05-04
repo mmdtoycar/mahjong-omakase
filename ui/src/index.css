@@ -2365,7 +2365,7 @@ tr:hover td {
 }
 
 .example-hint.reference {
-  background: var(--sol-base1);
+  background: #d4a017;
 }
 
 /* HomePage Hub Styles */
