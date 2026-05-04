@@ -1668,7 +1668,7 @@ tr:hover td {
   top: -13px;
   left: 10px;
   font-size: 0.75rem;
-  background: #069494;
+  background: #046b6b; /* Darker teal for better contrast with white text */
   color: white;
   padding: 2px 10px;
   border-radius: 6px 6px 0 0;
@@ -1679,18 +1679,18 @@ tr:hover td {
 
 .example-hint.prev {
   background: #a2cecd;
-  color: white;
+  color: #003333; /* Dark text for light background */
 }
 
 .badge-discovery {
-  background: #069494;
+  background: #046b6b; /* Consistent with example-hint */
   color: white;
   font-weight: 700;
 }
 
 .badge-discovery-prev {
   background: #a2cecd;
-  color: white;
+  color: #003333; /* Dark text for light background */
   font-weight: 700;
 }
 
