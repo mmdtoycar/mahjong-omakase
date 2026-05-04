@@ -237,8 +237,8 @@ const FanTablePage: React.FC = () => {
                         {item.name}
                         {hasCurrent && (
                           <span
-                            className="badge badge-accent"
-                            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                            className="badge badge-discovery"
+                            style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}
                             title={`首位达成者: ${currentDiscovery.playerName}${
                               (currentDiscovery.bonusRp ?? 0) > 0 ? ` (+${currentDiscovery.bonusRp} RP)` : ''
                             }`}
@@ -249,14 +249,8 @@ const FanTablePage: React.FC = () => {
                         )}
                         {hasPrev && (
                           <span
-                            className="badge"
-                            style={{
-                              fontSize: '0.7rem',
-                              padding: '2px 6px',
-                              background: 'var(--text-light)',
-                              color: 'white',
-                              opacity: 0.6,
-                            }}
+                            className="badge badge-discovery-prev"
+                            style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}
                             title={`上月冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
                           >
                             历史冠名: {prevDiscovery.playerName}
@@ -311,10 +305,15 @@ const FanTablePage: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    {currentDiscovery?.exampleHand && (
-                      <div className="fan-item-example-real">
-                        <MahjongHand hand={currentDiscovery.exampleHand ?? undefined} />
-                        <span className="example-hint">实战例子</span>
+                    {/* Show real example hand: current month priority, otherwise historical fallback */}
+                    {(currentDiscovery?.exampleHand || prevDiscovery?.exampleHand) && (
+                      <div className={`fan-item-example-real ${!currentDiscovery?.exampleHand ? 'prev-season' : ''}`}>
+                        <MahjongHand
+                          hand={(currentDiscovery?.exampleHand || prevDiscovery?.exampleHand) ?? undefined}
+                        />
+                        <span className={`example-hint ${!currentDiscovery?.exampleHand ? 'prev' : ''}`}>
+                          {currentDiscovery?.exampleHand ? '实战例子' : '实战例子 (历史)'}
+                        </span>
                       </div>
                     )}
                   </div>

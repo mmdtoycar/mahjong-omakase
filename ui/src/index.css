@@ -1657,6 +1657,12 @@ tr:hover td {
   position: relative;
 }
 
+.fan-item-example-real.prev-season {
+  background: rgba(42, 161, 152, 0.02);
+  border-color: rgba(42, 161, 152, 0.2);
+  opacity: 0.8;
+}
+
 .example-hint {
   position: absolute;
   top: -13px;
@@ -1669,6 +1675,23 @@ tr:hover td {
   font-weight: 800;
   text-transform: uppercase;
   z-index: 10;
+}
+
+.example-hint.prev {
+  background: #a2cecd;
+  color: #046b6b;
+}
+
+.badge-discovery {
+  background: #069494;
+  color: white;
+  font-weight: 700;
+}
+
+.badge-discovery-prev {
+  background: #a2cecd;
+  color: #046b6b;
+  font-weight: 700;
 }
 
 .mahjong-hand {
