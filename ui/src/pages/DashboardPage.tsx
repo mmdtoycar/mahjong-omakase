@@ -79,20 +79,11 @@ export default function DashboardPage() {
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
       <div
-        className="flex-between"
-        style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', gap: '12px' }}
+        className="flex-between dashboard-header"
+        style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)' }}
       >
         <h2 style={{ margin: 0, whiteSpace: 'nowrap' }}>对局历史</h2>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            flex: 1,
-            justifyContent: 'flex-end',
-            flexWrap: 'wrap',
-          }}
-        >
+        <div className="dashboard-header-actions">
           <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
             <option value="all">全部赛季</option>
             {seasons.map((s) => (
@@ -108,18 +99,13 @@ export default function DashboardPage() {
       </div>
 
       {filteredSessions.length === 0 ? (
-        <div className="empty-state" style={{ padding: '40px' }}>
+        <div className="empty-state">
           <p>{seasonKey === 'all' ? '暂无对局记录。开始你的第一局吧！' : '该赛季暂无对局记录。'}</p>
         </div>
       ) : (
         <div className="dashboard-sessions-list">
           {paginatedSessions.map((s) => (
-            <Link
-              key={s.id}
-              to={`/session/${s.id}`}
-              className="session-history-card"
-              style={{ textDecoration: 'none' }}
-            >
+            <Link key={s.id} to={`/session/${s.id}`} className="session-history-card">
               <div className="session-card-header">
                 <div className="session-card-mode">
                   <span className="mode-text">{s.gameModeDisplayName}</span>
@@ -133,7 +119,9 @@ export default function DashboardPage() {
                       minute: '2-digit',
                     })}
                   </span>
-                  <span className={`session-status-tag status-${s.status.toLowerCase()}`}>
+                  <span
+                    className={`badge badge-sm ${s.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}
+                  >
                     {s.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
                   </span>
                 </div>

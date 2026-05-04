@@ -207,9 +207,9 @@ const FanTablePage: React.FC = () => {
             </button>
           </div>
         </div>
-        <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>{getSubtitle()}</p>
+        <p className="page-subtitle">{getSubtitle()}</p>
 
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="filter-bar">
           <input
             type="text"
             placeholder="搜索番名、分数、描述或冠名玩家..."
@@ -230,7 +230,9 @@ const FanTablePage: React.FC = () => {
         </div>
 
         {fans.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>没有找到匹配的番型</div>
+          <div className="empty-state">
+            <p>没有找到匹配的番型</p>
+          </div>
         )}
 
         {fans.map((fan) => (
@@ -255,12 +257,8 @@ const FanTablePage: React.FC = () => {
                         {item.name}
                         {hasCurrent && (
                           <span
-                            className="badge badge-discovery"
-                            style={{
-                              fontSize: nameFontSize(currentDiscovery.playerName),
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                            }}
+                            className="badge badge-discovery badge-sm"
+                            style={{ fontSize: nameFontSize(currentDiscovery.playerName) }}
                             title={`首位达成者: ${currentDiscovery.playerName}${
                               (currentDiscovery.bonusRp ?? 0) > 0 ? ` (+${currentDiscovery.bonusRp} RP)` : ''
                             }`}
@@ -271,23 +269,15 @@ const FanTablePage: React.FC = () => {
                         )}
                         {hasPrev && (
                           <span
-                            className="badge badge-discovery-prev"
-                            style={{
-                              fontSize: nameFontSize(prevDiscovery.playerName),
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                            }}
+                            className="badge badge-discovery-prev badge-sm"
+                            style={{ fontSize: nameFontSize(prevDiscovery.playerName) }}
                             title={`历史冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
                           >
                             历史冠名: {prevDiscovery.playerName}
                           </span>
                         )}
                         {item.tags?.map((tag) => (
-                          <span
-                            key={tag}
-                            className="badge badge-completed"
-                            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
-                          >
+                          <span key={tag} className="badge badge-completed badge-sm">
                             {tag}
                           </span>
                         ))}

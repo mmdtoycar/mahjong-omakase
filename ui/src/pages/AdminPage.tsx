@@ -179,7 +179,7 @@ export default function AdminPage() {
     <>
       <div className="card">
         <h2>Admin Panel</h2>
-        <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>
+        <p className="page-subtitle">
           Deleting a player removes them from stats and player list. Game round scores are preserved.
         </p>
       </div>

@@ -30,30 +30,9 @@ public class StatsController {
       @RequestParam(required = false) String gameMode,
       @RequestParam(required = false) Integer year,
       @RequestParam(required = false) Integer month) {
-    GameMode mode = null;
-    if (gameMode != null && !gameMode.isEmpty()) {
-      try {
-        mode = GameMode.valueOf(gameMode);
-      } catch (IllegalArgumentException e) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid game mode: " + gameMode);
-      }
-    }
-
-    LocalDateTime start = null;
-    LocalDateTime end = null;
-    if (year != null || month != null) {
-      if (year == null || month == null) {
-        throw new ResponseStatusException(
-            HttpStatus.BAD_REQUEST, "Both year and month must be provided");
-      }
-      if (month < 1 || month > 12) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
-      }
-      start = LocalDateTime.of(year, month, 1, 0, 0);
-      end = start.plusMonths(1);
-    }
-
-    return gameService.getPlayerStats(mode, start, end);
+    GameMode mode = parseGameMode(gameMode);
+    LocalDateTime[] range = parseDateRange(year, month);
+    return gameService.getPlayerStats(mode, range[0], range[1]);
   }
 
   @GetMapping("/seasons")
@@ -66,47 +45,37 @@ public class StatsController {
       @RequestParam(required = false) String gameMode,
       @RequestParam(required = false) Integer year,
       @RequestParam(required = false) Integer month) {
-    GameMode mode = null;
-    if (gameMode != null && !gameMode.isEmpty()) {
-      try {
-        mode = GameMode.valueOf(gameMode);
-      } catch (IllegalArgumentException e) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid game mode: " + gameMode);
-      }
-    }
-
-    LocalDateTime start = null;
-    LocalDateTime end = null;
-    if (year != null || month != null) {
-      if (year == null || month == null) {
-        throw new ResponseStatusException(
-            HttpStatus.BAD_REQUEST, "Both year and month must be provided");
-      }
-      if (month < 1 || month > 12) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
-      }
-      start = LocalDateTime.of(year, month, 1, 0, 0);
-      end = start.plusMonths(1);
-    }
-    return gameService.getBestRounds(mode, start, end);
+    GameMode mode = parseGameMode(gameMode);
+    LocalDateTime[] range = parseDateRange(year, month);
+    return gameService.getBestRounds(mode, range[0], range[1]);
   }
 
   @GetMapping("/fan-discoveries")
   public List<FanDiscoveryResponse> getFanDiscoveries(
       @RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
-    LocalDateTime start = null;
-    LocalDateTime end = null;
-    if (year != null || month != null) {
-      if (year == null || month == null) {
-        throw new ResponseStatusException(
-            HttpStatus.BAD_REQUEST, "Both year and month must be provided");
-      }
-      if (month < 1 || month > 12) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
-      }
-      start = LocalDateTime.of(year, month, 1, 0, 0);
-      end = start.plusMonths(1);
+    LocalDateTime[] range = parseDateRange(year, month);
+    return gameService.getFanDiscoveries(range[0], range[1]);
+  }
+
+  private GameMode parseGameMode(String gameMode) {
+    if (gameMode == null || gameMode.isEmpty()) return null;
+    try {
+      return GameMode.valueOf(gameMode);
+    } catch (IllegalArgumentException e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid game mode: " + gameMode);
     }
-    return gameService.getFanDiscoveries(start, end);
+  }
+
+  private LocalDateTime[] parseDateRange(Integer year, Integer month) {
+    if (year == null && month == null) return new LocalDateTime[] {null, null};
+    if (year == null || month == null) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Both year and month must be provided");
+    }
+    if (month < 1 || month > 12) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
+    }
+    LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0);
+    return new LocalDateTime[] {start, start.plusMonths(1)};
   }
 }
