@@ -3,17 +3,21 @@ import { fanTableData, FanItem } from '../data/fanTableData'
 import { riichiFanTableData } from '../data/riichiFanTableData'
 import { shenyangFanTableData } from '../data/shenyangFanTableData'
 import { fetchFanDiscoveries, fetchActiveSeasons } from '../api'
-import { FanDiscovery, getCurrentSeason, getSeasonLabel, Season } from '../types'
+import { FanDiscovery, getCurrentSeason, getSeasonLabel, Season, GAME_MODES, GameModeKey } from '../types'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 
-type TabType = 'guobiao' | 'riichi' | 'shenyang'
+const TAB_DATA_MAP: Record<GameModeKey, { data: () => FanItem[] }> = {
+  GUOBIAO: { data: () => fanTableData },
+  RIICHI: { data: () => riichiFanTableData },
+  DONGBEI: { data: () => shenyangFanTableData },
+}
 
 const currentSeason = getCurrentSeason()
 
 const FanTablePage: React.FC = () => {
   const [search, setSearch] = useState('')
-  const [activeTab, setActiveTab] = useState<TabType>('guobiao')
+  const [activeTab, setActiveTab] = useState<GameModeKey>('GUOBIAO')
   // Current season discoveries (for the selected season key)
   const [discoveries, setDiscoveries] = useState<FanDiscovery[]>([])
   // Previous season discoveries (fallback when current season has no record yet)
@@ -111,10 +115,7 @@ const FanTablePage: React.FC = () => {
   }, [prevDiscoveries])
 
   const filteredFanTable = useMemo(() => {
-    let data
-    if (activeTab === 'guobiao') data = fanTableData
-    else if (activeTab === 'riichi') data = riichiFanTableData
-    else data = shenyangFanTableData
+    const data = TAB_DATA_MAP[activeTab].data()
 
     if (!search.trim()) return data
     const lowerSearch = search.toLowerCase().trim()
@@ -126,7 +127,7 @@ const FanTablePage: React.FC = () => {
       )
         return true
       // Also match against visible champion badges only (mirrors hasCurrent / hasPrev display logic)
-      if (activeTab === 'guobiao' && seasonKey !== 'all') {
+      if (activeTab === 'GUOBIAO' && seasonKey !== 'all') {
         const currentDiscovery = discoveriesMap[item.name]
         const currentChampion = currentDiscovery?.playerName?.toLowerCase()
         if (currentChampion?.includes(lowerSearch)) return true
@@ -158,56 +159,37 @@ const FanTablePage: React.FC = () => {
     .sort((a, b) => a - b)
 
   const getFanLabel = (fan: number) => {
-    if (activeTab === 'riichi') {
+    if (activeTab === 'RIICHI') {
       if (fan === 13) return '役满'
       if (fan === 26) return '双倍役满'
     }
-    if (activeTab === 'shenyang') {
+    if (activeTab === 'DONGBEI') {
       if (fan === 0) return '规则概览'
       return `${fan} 番`
     }
     return `${fan} 番`
   }
 
-  const getTitle = () => {
-    if (activeTab === 'guobiao') return '国标麻将81番表'
-    if (activeTab === 'riichi') return '日本麻将(雀魂)番表'
-    return '东北沈阳穷胡麻将规则'
-  }
-
-  const getSubtitle = () => {
-    if (activeTab === 'guobiao') return '快速对照查询中国麻将竞赛规则（国标麻将）的81种番型及分数。'
-    if (activeTab === 'riichi') return '快速对照查询日本麻将（以雀魂规则为准）的各级役种及番数。'
-    return '学习和查询带有闭门、飘、手把一、旋风杠等浓密地方特色的沈阳穷胡规则。'
-  }
+  const activeMode = GAME_MODES.find((m) => m.key === activeTab)!
 
   return (
     <div className="fan-table-page">
       <div className="card">
         <div className="flex-between" style={{ marginBottom: '16px' }}>
-          <h2>{getTitle()}</h2>
+          <h2>{activeMode.fanTableTitle}</h2>
           <div className="tab-bar">
-            <button
-              className={`tab-btn ${activeTab === 'guobiao' ? 'tab-active' : ''}`}
-              onClick={() => setActiveTab('guobiao')}
-            >
-              国标麻将
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'riichi' ? 'tab-active' : ''}`}
-              onClick={() => setActiveTab('riichi')}
-            >
-              立直麻将
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'shenyang' ? 'tab-active' : ''}`}
-              onClick={() => setActiveTab('shenyang')}
-            >
-              东北麻将
-            </button>
+            {GAME_MODES.map((m) => (
+              <button
+                key={m.key}
+                className={`tab-btn ${activeTab === m.key ? 'tab-active' : ''}`}
+                onClick={() => setActiveTab(m.key)}
+              >
+                {m.label}
+              </button>
+            ))}
           </div>
         </div>
-        <p className="page-subtitle">{getSubtitle()}</p>
+        <p className="page-subtitle">{activeMode.fanTableSubtitle}</p>
 
         <div className="filter-bar">
           <input
@@ -217,7 +199,7 @@ const FanTablePage: React.FC = () => {
             onChange={(e) => setSearch(e.target.value)}
             style={{ flex: 1, minWidth: 0 }}
           />
-          {activeTab === 'guobiao' && seasons.length > 0 && (
+          {activeTab === 'GUOBIAO' && seasons.length > 0 && (
             <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
               {seasons.map((s: Season) => (
                 <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
@@ -242,9 +224,9 @@ const FanTablePage: React.FC = () => {
               {groupedAndSortedFans[fan].map((item) => {
                 // Badge logic: only for guobiao tab and specific season
                 const currentDiscovery =
-                  activeTab === 'guobiao' && seasonKey !== 'all' ? discoveriesMap[item.name] : null
+                  activeTab === 'GUOBIAO' && seasonKey !== 'all' ? discoveriesMap[item.name] : null
                 const prevDiscovery =
-                  activeTab === 'guobiao' && seasonKey !== 'all' ? prevDiscoveriesMap[item.name] : null
+                  activeTab === 'GUOBIAO' && seasonKey !== 'all' ? prevDiscoveriesMap[item.name] : null
                 const hasCurrent = !!currentDiscovery
                 const hasPrev = !hasCurrent && !!prevDiscovery
                 return (
