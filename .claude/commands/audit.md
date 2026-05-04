@@ -34,7 +34,7 @@ Check all pages for consistent use of shared patterns:
 
 ### CSS orphan classes
 ```bash
-grep -oP '^\.[a-zA-Z][\w-]*' ui/src/index.css | sort -u | sed 's/^\.//' > /tmp/css-classes.txt
+grep -oP '^\s*\.[a-zA-Z][\w-]*' ui/src/index.css | sed -E 's/^\s*\.//' | sort -u > /tmp/css-classes.txt
 while read cls; do
   if ! grep -rq "$cls" ui/src/pages/ ui/src/components/ ui/src/App.tsx 2>/dev/null; then
     echo "UNUSED CSS: .$cls"
@@ -88,7 +88,7 @@ grep -oP '#[0-9a-fA-F]{3,8}' ui/src/index.css | sort | uniq -c | sort -rn | head
 
 ### CSS duplicate selectors
 ```bash
-grep -oP '^\.[a-zA-Z][\w-]*' ui/src/index.css | sort | uniq -c | sort -rn | awk '$1>1{print "DUPLICATE SELECTOR:", $2, "("$1" times)"}'
+grep -oP '^\s*\.[a-zA-Z][\w-]*' ui/src/index.css | sed -E 's/^\s*\.//' | sort | uniq -c | sort -rn | awk '$1>1{print "DUPLICATE SELECTOR:", $2, "("$1" times)"}'
 ```
 
 ### Frontend inline style duplication

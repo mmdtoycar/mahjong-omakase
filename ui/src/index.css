@@ -137,7 +137,7 @@ main {
   padding: 24px;
 }
 
-@keyframes heroGradient {
+@keyframes hero-gradient {
   0% {
     background-position: 0% 50%;
   }
@@ -2276,7 +2276,7 @@ tr:hover td {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 20px rgba(212, 160, 23, 0.35), 0 0 0 4px rgba(212, 160, 23, 0.1);
-  animation: heroRingPulse 3s ease-in-out infinite;
+  animation: hero-ring-pulse 3s ease-in-out infinite;
   overflow: hidden;
 }
 
@@ -2295,10 +2295,10 @@ tr:hover td {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: heroGradient 4s ease infinite;
+  animation: hero-gradient 4s ease infinite;
 }
 
-@keyframes heroRingPulse {
+@keyframes hero-ring-pulse {
   0%,
   100% {
     box-shadow: 0 4px 20px rgba(212, 160, 23, 0.35), 0 0 0 4px rgba(212, 160, 23, 0.1);
