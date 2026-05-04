@@ -1720,10 +1720,10 @@ tr:hover td {
 }
 
 .mahjong-tile[src*='Back'] {
-  /* Use filter to transform the red SVG color into emerald green while keeping its original dimensions/aspect ratio */
-  filter: hue-rotate(140deg) saturate(1.6) brightness(0.8) contrast(1.1);
-  border-color: #065f46 !important;
-  box-shadow: 0 2px 4px rgba(6, 95, 70, 0.2);
+  /* Transform the red SVG into a fresh, light Tiffany Blue style */
+  filter: hue-rotate(185deg) brightness(1.3) saturate(0.6) contrast(0.95);
+  border-color: #96e0da !important;
+  box-shadow: 0 2px 6px rgba(129, 216, 208, 0.4);
 }
 
 .mahjong-tile:hover {
