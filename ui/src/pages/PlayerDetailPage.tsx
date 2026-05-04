@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPlayerDetail } from '../api'
 import { PlayerDetail } from '../types'
-import { abbrName } from '../utils/format'
+import { abbrName, scoreClass } from '../utils/format'
 
 export default function PlayerDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -80,10 +80,10 @@ export default function PlayerDetailPage() {
                       </span>
                     </td>
                     <td
+                      className={`${scoreClass(g.totalScore)}`}
                       style={{
                         textAlign: 'right',
                         fontVariantNumeric: 'tabular-nums',
-                        color: g.totalScore > 0 ? 'var(--success)' : g.totalScore < 0 ? 'var(--danger)' : undefined,
                       }}
                     >
                       {g.totalScore > 0 ? `+${g.totalScore}` : g.totalScore}

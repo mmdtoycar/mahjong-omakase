@@ -118,7 +118,7 @@ export default function NewSessionPage() {
         )}
 
         {error ? (
-          <p style={{ color: 'var(--danger)', fontSize: '0.9rem', marginTop: 8 }}>{error}</p>
+          <p className="error-text">{error}</p>
         ) : !loaded ? (
           <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: 8 }}>加载中...</p>
         ) : players.length > 0 ? (
@@ -165,7 +165,6 @@ export default function NewSessionPage() {
             至少需要{MIN_PLAYERS}名玩家才能开始游戏。(还差 {MIN_PLAYERS - selectedIds.length} 人)
           </p>
         )}
-        {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 16 }}>{error}</p>}
         <button
           className="btn btn-accent btn-large"
           onClick={handleStart}

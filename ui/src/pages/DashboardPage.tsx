@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { GameSession, Season, getCurrentSeason, getSeasonLabel } from '../types'
 import { fetchSessions, fetchActiveSeasons } from '../api'
+import { GameCard } from '../components/GameCard'
 
 export default function DashboardPage() {
-  const navigate = useNavigate()
   const [sessions, setSessions] = useState<GameSession[]>([])
   const [seasons, setSeasons] = useState<Season[]>([])
   const [seasonKey, setSeasonKey] = useState<string>('all')
@@ -53,12 +53,14 @@ export default function DashboardPage() {
     setCurrentPage(1)
   }, [seasonKey])
 
-  const filteredSessions = sessions.filter((s) => {
-    if (seasonKey === 'all') return true
-    const d = new Date(s.createdAt)
-    const key = `${d.getFullYear()}-${d.getMonth() + 1}`
-    return key === seasonKey
-  })
+  const filteredSessions = sessions
+    .filter((s) => s.status === 'COMPLETED')
+    .filter((s) => {
+      if (seasonKey === 'all') return true
+      const d = new Date(s.createdAt)
+      const key = `${d.getFullYear()}-${d.getMonth() + 1}`
+      return key === seasonKey
+    })
 
   const totalPages = Math.ceil(filteredSessions.length / pageSize)
   const paginatedSessions = filteredSessions.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -82,7 +84,7 @@ export default function DashboardPage() {
         className="flex-between dashboard-header"
         style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)' }}
       >
-        <h2 style={{ margin: 0, whiteSpace: 'nowrap' }}>对局历史</h2>
+        <h2 style={{ margin: 0, whiteSpace: 'nowrap' }}>历史对局</h2>
         <div className="dashboard-header-actions">
           <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
             <option value="all">全部赛季</option>
@@ -105,54 +107,23 @@ export default function DashboardPage() {
       ) : (
         <div className="dashboard-sessions-list">
           {paginatedSessions.map((s) => (
-            <Link key={s.id} to={`/session/${s.id}`} className="session-history-card">
-              <div className="session-card-header">
-                <div className="session-card-mode">
-                  <span className="mode-text">{s.gameModeDisplayName}</span>
-                </div>
-                <div className="session-card-meta">
-                  <span className="session-card-date">
-                    {new Date(s.createdAt).toLocaleString([], {
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                  <span
-                    className={`badge badge-sm ${s.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}
-                  >
-                    {s.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
-                  </span>
-                </div>
-              </div>
-              <div className="session-card-players">
-                {[0, 1, 2, 3].map((idx) => {
-                  const p = s.rankings?.[idx]
-                  if (!p)
-                    return (
-                      <div key={idx} className="player-rank-item empty">
-                        -
-                      </div>
-                    )
-                  return (
-                    <div key={p.userName} className={`player-rank-item rank-${idx + 1}`}>
-                      <div className="player-rank-main">
-                        <span className="rank-number">#{idx + 1}</span>
-                        <span className="player-name">{p.userName}</span>
-                      </div>
-                      <span
-                        className={`player-score ${
-                          p.totalScore > 0 ? 'score-positive' : p.totalScore < 0 ? 'score-negative' : ''
-                        }`}
-                      >
-                        {p.totalScore > 0 ? `+${p.totalScore}` : p.totalScore}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </Link>
+            <GameCard
+              key={s.id}
+              id={s.id}
+              gameModeDisplayName={s.gameModeDisplayName}
+              createdAt={s.createdAt}
+              roundLabel={`${s.roundCount}局 已结束`}
+              isActive={false}
+              players={
+                s.rankings
+                  ? s.rankings.map((p, idx) => ({
+                      rank: idx + 1,
+                      name: p.userName,
+                      score: p.totalScore,
+                    }))
+                  : []
+              }
+            />
           ))}
         </div>
       )}

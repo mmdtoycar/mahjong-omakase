@@ -1,17 +1,11 @@
-language: "en"
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+tone_instructions: |
+  You must read .claude/commands/audit.md from this repository and check all changed code against its rules.
 reviews:
+  profile: "chill"
   auto_review:
     enabled: true
     drafts: false
-  path_instructions:
-    - path: "ui/src/**"
-      instructions: "Follow the audit rules defined in .claude/commands/audit.md."
-    - path: "server/src/**"
-      instructions: "Follow the audit rules defined in .claude/commands/audit.md."
-  path_filters:
-    - "!dist/**"
-    - "!**/*.lock"
-    - "!data/**"
   tools:
     biome:
       enabled: true

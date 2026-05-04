@@ -30,3 +30,9 @@ export function abbrName(name: string | null | undefined): string {
 
   return trimmed[0].toUpperCase() + '.'
 }
+
+export function scoreClass(score: number): string {
+  if (score > 0) return 'score-positive'
+  if (score < 0) return 'score-negative'
+  return ''
+}
