@@ -2629,91 +2629,101 @@ tr:hover td {
   }
 }
 
-/* Dashboard Card List Styles */
+/* Dashboard Card Grid Styles */
 .dashboard-sessions-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  padding: 24px;
+  background: var(--sol-base2); /* Slightly darker background to make cards pop */
 }
 
 .session-history-card {
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
-}
-
-.session-history-card:last-child {
-  border-bottom: none;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .session-history-card:hover {
-  background: rgba(33, 140, 116, 0.04);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  border-color: var(--mj-green);
 }
 
 .session-history-card:focus-visible {
-  background: rgba(33, 140, 116, 0.08);
-  box-shadow: inset 4px 0 0 var(--mj-green);
+  border-color: var(--mj-green);
+  box-shadow: 0 0 0 3px rgba(33, 140, 116, 0.2);
 }
 
 .session-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
 }
 
 .mode-text {
   font-weight: 900;
   color: var(--mj-gold);
-  font-size: 1rem;
+  font-size: 0.95rem;
   letter-spacing: 0.5px;
-  text-transform: uppercase;
 }
 
 .session-card-meta {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
 .session-card-date {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--text-light);
-  font-family: 'JetBrains Mono', monospace;
 }
 
 .session-status-tag {
-  font-size: 0.7rem;
-  padding: 2px 8px;
-  border-radius: 12px;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .status-in_progress {
-  background: rgba(33, 140, 116, 0.15);
+  background: rgba(33, 140, 116, 0.1);
   color: var(--mj-green);
-  border: 1px solid rgba(33, 140, 116, 0.2);
 }
 
 .status-completed {
   background: var(--sol-base3);
   color: var(--text-light);
-  border: 1px solid var(--border);
 }
 
 .session-card-players {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .player-rank-item {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.player-rank-item:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.02);
+  padding-bottom: 8px;
 }
 
 .player-rank-main {
@@ -2724,9 +2734,9 @@ tr:hover td {
 
 .rank-number {
   font-weight: 900;
-  font-size: 0.8rem;
-  min-width: 20px;
-  opacity: 0.5;
+  font-size: 0.75rem;
+  min-width: 18px;
+  opacity: 0.4;
 }
 
 .rank-1 .rank-number {
@@ -2743,9 +2753,10 @@ tr:hover td {
 }
 
 .player-name {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--primary);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  max-width: 120px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2754,33 +2765,19 @@ tr:hover td {
 .player-score {
   font-size: 0.85rem;
   font-weight: 800;
-  padding-left: 28px;
 }
 
-@media (max-width: 850px) {
-  .session-card-header {
-    margin-bottom: 12px;
-  }
+.score-positive {
+  color: var(--success) !important;
+}
 
-  .session-card-players {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
+.score-negative {
+  color: var(--danger) !important;
+}
 
-  .player-rank-item {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
-  }
-
-  .player-rank-item:last-child {
-    border-bottom: none;
-  }
-
-  .player-score {
-    padding-left: 0;
-    font-size: 0.8rem;
+@media (max-width: 480px) {
+  .dashboard-sessions-list {
+    padding: 16px;
+    gap: 16px;
   }
 }
