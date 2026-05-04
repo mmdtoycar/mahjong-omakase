@@ -108,11 +108,7 @@ export default function SessionPage() {
 
   const canSubmit =
     winnerId &&
-    (isRiichi
-      ? fan && fu
-      : isDongbei
-      ? fan
-      : score && parseInt(score) >= (isGuobiao ? 8 : 1)) &&
+    (isRiichi ? fan && fu : isDongbei ? fan : score && parseInt(score) >= (isGuobiao ? 8 : 1)) &&
     (isSelfDraw || dealInPlayerId)
 
   const handleAddRound = async () => {
@@ -649,7 +645,15 @@ export default function SessionPage() {
                     <tr>
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
                         <div className="round-info-cell">
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', width: '100%' }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '2px',
+                              width: '100%',
+                            }}
+                          >
                             <span className="round-wind-tag">{getRoundLabel(round)}</span>
                           </div>
                         </div>

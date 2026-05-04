@@ -327,8 +327,7 @@ public class GameService {
                   }
 
                   List<Long> riichiIds = null;
-                  if (round.getRiichiPlayerIds() != null
-                      && !round.getRiichiPlayerIds().isBlank()) {
+                  if (round.getRiichiPlayerIds() != null && !round.getRiichiPlayerIds().isBlank()) {
                     riichiIds =
                         Arrays.stream(round.getRiichiPlayerIds().split(","))
                             .map(String::trim)
