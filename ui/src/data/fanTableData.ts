@@ -128,8 +128,7 @@ export const fanTableData: FanItem[] = [
     name: '七星不靠',
     description:
       '必须有7个单张的东西南北中发白，加上3种花色，数位按147、258、369中的7张序数牌组成没有将牌的和牌。不计五门齐、不求人、单钓将。',
-    example:
-      '*Man1 | *Man4 | *Man7 | *Pin2 | *Pin5 | *Pin8 | *Sou3 | *Ton | *Nan | *Shaa | *Pei | *Haku | *Hatsu | *Chun',
+    example: '*Man1 Man4 Man7 Pin2 Pin5 Pin8 Sou3 Ton Nan Shaa Pei Haku Hatsu Chun',
   },
   {
     fan: 24,
@@ -214,8 +213,7 @@ export const fanTableData: FanItem[] = [
     name: '全不靠',
     description:
       '由单张3种花色147、258、369不能错位的序数牌及东南西北中发白中的任何14张牌组成的和牌。不计五门齐、不求人、单钓将。',
-    example:
-      '*Man1 | *Man4 | *Man7 | *Pin2 | *Pin5 | *Pin8 | *Sou3 | *Sou6 | *Sou9 | *Ton | *Shaa | *Haku | *Hatsu | *Chun',
+    example: '*Man1 Man4 Man7 Pin2 Pin5 Pin8 Sou3 Sou6 Sou9 Ton Shaa Haku Hatsu Chun',
   },
   {
     fan: 12,
