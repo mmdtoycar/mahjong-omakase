@@ -535,9 +535,6 @@ tr:hover td {
 }
 
 .round-form {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 2px solid var(--border);
 }
 
 .round-form-title {
@@ -2300,7 +2297,7 @@ tr:hover td {
 
 .quick-player-btn {
   width: 100%;
-  padding: 10px 4px;
+  padding: 6px 28px 6px 10px; /* Increased right padding to avoid badge overlap */
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #fff;
@@ -2312,6 +2309,8 @@ tr:hover td {
   justify-content: center;
   box-shadow: var(--shadow);
   color: var(--text);
+  position: relative;
+  min-height: 40px; /* Ensure enough height for centered badge */
 }
 
 .quick-player-btn:hover:not(:disabled) {
@@ -2361,6 +2360,50 @@ tr:hover td {
   border-color: var(--sol-orange);
   color: var(--sol-orange);
   background: rgba(203, 75, 22, 0.08);
+}
+
+.round-form .score-inline-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.round-form .score-inline-group label {
+  margin-bottom: 0;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.round-form .score-input-compact {
+  max-width: 120px;
+  padding: 6px 10px;
+}
+
+.round-form .form-section-title {
+  background: var(--sol-base3);
+  font-size: 0.85rem;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-weight: 800;
+  display: inline-block;
+}
+
+.round-form .no-border-top {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.quick-player-btn .wind-badge {
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
 }
 
 .quick-player-btn .btn-name {
@@ -2812,4 +2855,46 @@ tr:hover td {
     gap: 16px;
     grid-template-columns: 1fr;
   }
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--sol-base3);
+  border-top: 1px solid var(--border);
+}
+
+.pagination-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  transition: all 0.2s;
+  box-shadow: var(--shadow);
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--sol-base2);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-weight: 500;
 }

@@ -395,149 +395,9 @@ export default function SessionPage() {
 
   return (
     <>
-      <div className="card">
-        <div className="flex-between">
-          <div>
-            <h2>{session.name || `Game #${session.id}`}</h2>
-            <span className="session-meta">
-              {session.gameModeDisplayName} &middot; {session.playerCount}玩家 &middot;{' '}
-              {new Date(session.createdAt).toLocaleDateString()}
-              &nbsp;
-              <span className={`badge ${session.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
-                {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
-              </span>
-            </span>
-          </div>
-          {session.status === 'IN_PROGRESS' && (
-            <button className="btn btn-danger btn-small" onClick={handleComplete} disabled={submitting}>
-              结束游戏
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>计分板</h2>
-        <div className="score-table">
-          <table>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'center', width: '60px' }}>局</th>
-                {session.players.map((p) => (
-                  <th key={p.id} style={playerColStyle}>
-                    <div className="player-header-cell">
-                      <span className={`rank-tag rank-tag-${rankMap[p.id]?.rank}`}>#{rankMap[p.id]?.rank}</span>
-                      <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
-                        {p.userName}
-                      </span>
-                    </div>
-                  </th>
-                ))}
-                {session.status === 'IN_PROGRESS' && <th></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {session.rounds.map((round) => {
-                return (
-                  <React.Fragment key={round.roundNumber}>
-                    <tr>
-                      <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
-                        <div className="round-info-cell">
-                          {(() => {
-                            const rw = getRoundWind(round)
-                            return rw ? (
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  gap: '2px',
-                                  width: '100%',
-                                }}
-                              >
-                                <span className="round-wind-tag">{rw.name}</span>
-                              </div>
-                            ) : (
-                              <strong>#{round.roundNumber}</strong>
-                            )
-                          })()}
-                        </div>
-                      </td>
-                      {session.players.map((p) => {
-                        const val = round.scores[p.id] || 0
-                        const isWinner = round.winnerId === p.id
-                        return (
-                          <td
-                            key={p.id}
-                            className={`score-cell${val > 0 ? ' score-positive' : val < 0 ? ' score-negative' : ''}${
-                              isWinner ? ' score-winner' : ''
-                            }`}
-                            style={{ textAlign: 'center' }}
-                          >
-                            {val > 0 ? `+${val}` : val}
-                          </td>
-                        )
-                      })}
-                      {session.status === 'IN_PROGRESS' && (
-                        <td>
-                          <button
-                            className="delete-btn"
-                            onClick={() => handleDeleteRound(round.roundNumber)}
-                            disabled={submitting}
-                          >
-                            &times;
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                    {round.winHand && (
-                      <tr className="hand-details-row">
-                        <td
-                          colSpan={session.players.length + (session.status === 'IN_PROGRESS' ? 2 : 1)}
-                          className="hand-details-cell"
-                        >
-                          <MahjongHand hand={round.winHand} details={round.fanDetails} />
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                )
-              })}
-              <tr className="total-row">
-                <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
-                  <strong>合计</strong>
-                </td>
-                {session.players.map((p) => {
-                  const delta = session.totalScores[p.id] || 0
-                  const total = session.rpOrigin + delta
-                  const displayVal = session.rpOrigin ? total : delta
-                  return (
-                    <td
-                      key={p.id}
-                      className={`score-cell${delta > 0 ? ' score-positive' : delta < 0 ? ' score-negative' : ''}`}
-                      style={{ textAlign: 'center' }}
-                    >
-                      <div className="total-score-box">
-                        <div className="total-val">{displayVal}</div>
-                        {session.rounds.length > 0 &&
-                          (() => {
-                            const rp = rankMap[p.id]?.rp ?? 0
-                            return <div className="rp-val">{rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)} RP</div>
-                          })()}
-                      </div>
-                    </td>
-                  )
-                })}
-                {session.status === 'IN_PROGRESS' && <td></td>}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {session.status === 'IN_PROGRESS' && (
+      {session.status === 'IN_PROGRESS' && (
+        <div className="card round-form-card">
           <div className="round-form">
-            <h3 className="round-form-title">添加</h3>
-
             {isRiichi && (
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <label className="zimo-toggle">
@@ -697,8 +557,8 @@ export default function SessionPage() {
                   </div>
                 )}
 
-                <div className="form-group full-width">
-                  <label>胜负选择</label>
+                <div className="quick-win-container" style={{ gridColumn: '1 / -1', marginBottom: '16px' }}>
+                  <h2>算番器</h2>
                   <div className="quick-win-row">
                     {session.players.map((p, idx) => {
                       const isWinner = winnerId === String(p.id)
@@ -711,7 +571,7 @@ export default function SessionPage() {
                         <button key={p.id} className={btnClass} onClick={() => handlePlayerClick(String(p.id))}>
                           <div className="btn-name">{p.userName}</div>
                           {isGuobiao && (
-                            <div className="btn-wind">
+                            <div className="wind-badge small">
                               {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, idx)) - 1]}
                             </div>
                           )}
@@ -734,15 +594,16 @@ export default function SessionPage() {
                 </div>
 
                 {!isRiichi && isGuobiao && (
-                  <div className="form-group">
-                    <label>分数</label>
-                    <div className="score-input-row">
+                  <div className="form-group score-inline-group-container">
+                    <div className="score-inline-group">
+                      <label>分数</label>
                       <input
                         type="number"
                         value={score}
                         onChange={(e) => setScore(e.target.value)}
                         placeholder="输入分数"
                         min="8"
+                        className="score-input-compact"
                       />
                     </div>
                     <div className="inline-calc-wrapper">
@@ -795,7 +656,142 @@ export default function SessionPage() {
               </>
             )}
           </div>
-        )}
+        </div>
+      )}
+
+      <div className="card">
+        <div className="flex-between" style={{ marginBottom: 16 }}>
+          <h2 style={{ marginBottom: 0 }}>计分板</h2>
+          <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span className="session-meta" style={{ margin: 0, fontSize: '0.85rem' }}>
+              {session.gameModeDisplayName} &middot; {new Date(session.createdAt).toLocaleDateString()}
+              &nbsp;
+              <span className={`badge ${session.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
+                {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
+              </span>
+            </span>
+            {session.status === 'IN_PROGRESS' && (
+              <button className="btn btn-danger btn-small" onClick={handleComplete} disabled={submitting}>
+                结束游戏
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="score-table">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'center', width: '60px' }}>局</th>
+                {session.players.map((p) => (
+                  <th key={p.id} style={playerColStyle}>
+                    <div className="player-header-cell">
+                      <span className={`rank-tag rank-tag-${rankMap[p.id]?.rank}`}>#{rankMap[p.id]?.rank}</span>
+                      <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
+                        {p.userName}
+                      </span>
+                    </div>
+                  </th>
+                ))}
+                {session.status === 'IN_PROGRESS' && <th></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {session.rounds.map((round) => {
+                return (
+                  <React.Fragment key={round.roundNumber}>
+                    <tr>
+                      <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+                        <div className="round-info-cell">
+                          {(() => {
+                            const rw = getRoundWind(round)
+                            return rw ? (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: '2px',
+                                  width: '100%',
+                                }}
+                              >
+                                <span className="round-wind-tag">{rw.name}</span>
+                              </div>
+                            ) : (
+                              <strong>#{round.roundNumber}</strong>
+                            )
+                          })()}
+                        </div>
+                      </td>
+                      {session.players.map((p) => {
+                        const val = round.scores[p.id] || 0
+                        const isWinner = round.winnerId === p.id
+                        return (
+                          <td
+                            key={p.id}
+                            className={`score-cell${val > 0 ? ' score-positive' : val < 0 ? ' score-negative' : ''}${
+                              isWinner ? ' score-winner' : ''
+                            }`}
+                            style={{ textAlign: 'center' }}
+                          >
+                            {val > 0 ? `+${val}` : val}
+                          </td>
+                        )
+                      })}
+                      {session.status === 'IN_PROGRESS' && (
+                        <td>
+                          <button
+                            className="delete-btn"
+                            onClick={() => handleDeleteRound(round.roundNumber)}
+                            disabled={submitting}
+                          >
+                            &times;
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                    {round.winHand && (
+                      <tr className="hand-details-row">
+                        <td
+                          colSpan={session.players.length + (session.status === 'IN_PROGRESS' ? 2 : 1)}
+                          className="hand-details-cell"
+                        >
+                          <MahjongHand hand={round.winHand} details={round.fanDetails} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                )
+              })}
+              <tr className="total-row">
+                <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+                  <strong>合计</strong>
+                </td>
+                {session.players.map((p) => {
+                  const delta = session.totalScores[p.id] || 0
+                  const total = session.rpOrigin + delta
+                  const displayVal = session.rpOrigin ? total : delta
+                  return (
+                    <td
+                      key={p.id}
+                      className={`score-cell${delta > 0 ? ' score-positive' : delta < 0 ? ' score-negative' : ''}`}
+                      style={{ textAlign: 'center' }}
+                    >
+                      <div className="total-score-box">
+                        <div className="total-val">{displayVal}</div>
+                        {session.rounds.length > 0 &&
+                          (() => {
+                            const rp = rankMap[p.id]?.rp ?? 0
+                            return <div className="rp-val">{rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)} RP</div>
+                          })()}
+                      </div>
+                    </td>
+                  )
+                })}
+                {session.status === 'IN_PROGRESS' && <td></td>}
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {session.rounds.length > 0 && (
