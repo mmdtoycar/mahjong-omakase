@@ -243,7 +243,7 @@ const FanTablePage: React.FC = () => {
                               (currentDiscovery.bonusRp ?? 0) > 0 ? ` (+${currentDiscovery.bonusRp} RP)` : ''
                             }`}
                           >
-                            🏆 {currentDiscovery.playerName}
+                            本月冠名: {currentDiscovery.playerName}
                             {(currentDiscovery.bonusRp ?? 0) > 0 && ` (+${currentDiscovery.bonusRp})`}
                           </span>
                         )}
@@ -259,7 +259,7 @@ const FanTablePage: React.FC = () => {
                             }}
                             title={`上月冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
                           >
-                            🏆 {prevDiscovery.playerName}
+                            历史冠名: {prevDiscovery.playerName}
                           </span>
                         )}
                         {item.tags?.map((tag) => (
