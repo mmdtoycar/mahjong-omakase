@@ -209,21 +209,9 @@ export const riichiFanTableData: RiichiFanItem[] = [
   },
   {
     fan: 13,
-    name: '四杠子',
-    description: '4个杠。',
-    example: '*Pin1 Pin1 Pin1 Pin1 | *Pin2 Pin2 Pin2 Pin2 | *Pin3 Pin3 Pin3 Pin3 | *Pin4 Pin4 Pin4 Pin4 | Shaa Shaa',
-  },
-  {
-    fan: 13,
-    name: '国士无双',
-    description: '由13种一、九及字牌各一张，外加其中任何一种的一张组成的和牌。门前清限定。',
-    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun Chun',
-  },
-  {
-    fan: 13,
-    name: '国士无双十三面听',
-    description: '手牌先集齐13种么九牌各一张，听所有13种么九牌。',
-    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun ^Chun',
+    name: '大三元',
+    description: '包含中、发、白的三副刻子。',
+    example: '*Chun Chun Chun | *Hatsu Hatsu Hatsu | *Haku Haku Haku | Man1 Man2 Man3 | Pin1 Pin1',
   },
   {
     fan: 13,
@@ -239,15 +227,33 @@ export const riichiFanTableData: RiichiFanItem[] = [
   },
   {
     fan: 13,
-    name: '大三元',
-    description: '包含中、发、白的三副刻子。',
-    example: '*Chun Chun Chun | *Hatsu Hatsu Hatsu | *Haku Haku Haku | Man1 Man2 Man3 | Pin1 Pin1',
-  },
-  {
-    fan: 13,
     name: '字一色',
     description: '全部由字牌组成的和牌。',
     example: '*Ton Ton Ton | *Nan Nan Nan | *Shaa Shaa Shaa | *Haku Haku Haku | *Chun Chun',
+  },
+  {
+    fan: 13,
+    name: '绿一色',
+    description: '只包含绿色牌（条子2、3、4、6、8和发财）构成的和牌。可不包含发财。',
+    example: '*Sou2 Sou3 Sou4 | *Sou6 Sou6 Sou6 | *Sou8 Sou8 Sou8 | *Hatsu Hatsu Hatsu | *Sou2 Sou2',
+  },
+  {
+    fan: 13,
+    name: '清老头',
+    description: '全部包含老头牌（一、九）的对对和。',
+    example: '*Man1 Man1 Man1 | *Man9 Man9 Man9 | *Pin1 Pin1 Pin1 | *Pin9 Pin9 Pin9 | *Sou1 Sou1',
+  },
+  {
+    fan: 13,
+    name: '国士无双',
+    description: '由13种一、九及字牌各一张，外加其中任何一种的一张组成的和牌。门前清限定。',
+    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun Chun',
+  },
+  {
+    fan: 13,
+    name: '国士无双十三面听',
+    description: '手牌先集齐13种幺九牌各一张，听所有13种幺九牌。',
+    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun ^Chun',
   },
   {
     fan: 13,
@@ -263,15 +269,9 @@ export const riichiFanTableData: RiichiFanItem[] = [
   },
   {
     fan: 13,
-    name: '绿一色',
-    description: '只包含绿色牌（条子2、3、4、6、8和发财）构成的和牌。可不包含发财。',
-    example: '*Sou2 Sou3 Sou4 | *Sou6 Sou6 Sou6 | *Sou8 Sou8 Sou8 | *Hatsu Hatsu Hatsu | *Sou2 Sou2',
-  },
-  {
-    fan: 13,
-    name: '清老头',
-    description: '全部包含老头牌（一、九）的对对和。',
-    example: '*Man1 Man1 Man1 | *Man9 Man9 Man9 | *Pin1 Pin1 Pin1 | *Pin9 Pin9 Pin9 | *Sou1 Sou1',
+    name: '四杠子',
+    description: '4个杠。',
+    example: '*Pin1 Pin1 Pin1 Pin1 | *Pin2 Pin2 Pin2 Pin2 | *Pin3 Pin3 Pin3 Pin3 | *Pin4 Pin4 Pin4 Pin4 | Shaa Shaa',
   },
   {
     fan: 13,
