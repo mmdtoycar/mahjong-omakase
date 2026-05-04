@@ -615,17 +615,18 @@ export default function SessionPage() {
                 </div>
 
                 {!isRiichi && isGuobiao && (
-                  <div className="form-group score-inline-group">
-                    <label>分数</label>
-                    <input
-                      type="number"
-                      value={score}
-                      onChange={(e) => setScore(e.target.value)}
-                      placeholder="输入分数"
-                      min="8"
-                      className="score-input-compact"
-                    />
-                  </div>
+                  <div className="form-group score-inline-group-container">
+                    <div className="score-inline-group">
+                      <label>分数</label>
+                      <input
+                        type="number"
+                        value={score}
+                        onChange={(e) => setScore(e.target.value)}
+                        placeholder="输入分数"
+                        min="8"
+                        className="score-input-compact"
+                      />
+                    </div>
                     <div className="inline-calc-wrapper">
                       <GuobiaoCalculator
                         key={`${gbWinds?.quanfeng || 1}-${winnerMenfeng}`}
