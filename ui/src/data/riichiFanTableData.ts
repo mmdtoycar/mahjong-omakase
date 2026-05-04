@@ -210,7 +210,7 @@ export const riichiFanTableData: RiichiFanItem[] = [
     fan: 13,
     name: '国士无双',
     description: '由13种一、九及字牌各一张，外加其中任何一种的一张组成的和牌。门前清限定。',
-    example: '*Man1 | *Man9 | *Pin1 | *Pin9 | *Sou1 | *Sou9 | *Ton | *Nan | *Shaa | *Pei | *Haku | *Hatsu | *Chun Chun',
+    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun Chun',
   },
   {
     fan: 13,
@@ -273,7 +273,7 @@ export const riichiFanTableData: RiichiFanItem[] = [
     fan: 26,
     name: '国士无双十三面听',
     description: '手牌先集齐13种么九牌各一张，听所有13种么九牌。',
-    example: '*Man1 *Man9 *Pin1 *Pin9 *Sou1 *Sou9 *Ton *Nan *Shaa *Pei *Haku *Hatsu *Chun | ^Chun',
+    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun ^Chun',
   },
   {
     fan: 26,
