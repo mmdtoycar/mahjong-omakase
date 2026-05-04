@@ -2798,12 +2798,12 @@ tr:hover td {
   font-weight: 800;
 }
 
-.score-positive {
-  color: var(--success) !important;
+.session-history-card .score-positive {
+  color: var(--success);
 }
 
-.score-negative {
-  color: var(--danger) !important;
+.session-history-card .score-negative {
+  color: var(--danger);
 }
 
 @media (max-width: 480px) {
