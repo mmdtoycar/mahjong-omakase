@@ -276,37 +276,39 @@ const FanTablePage: React.FC = () => {
                     </div>
                     <p className="fan-item-desc">{item.description}</p>
                     {item.example && item.example.length > 0 && (
-                      <div className="fan-item-example">
+                      <div className="fan-item-example-container">
                         <span className="example-hint reference">理论参考</span>
-                        {item.example.split('|').map((group, groupIdx) => {
-                          const trimmedGroup = group.trim()
-                          const isGroupHighlighted = trimmedGroup.startsWith('*')
-                          const cleanGroup = isGroupHighlighted ? trimmedGroup.substring(1).trim() : trimmedGroup
-                          const tiles = cleanGroup
-                            .split(' ')
-                            .map((t) => t.trim())
-                            .filter(Boolean)
+                        <div className="fan-item-example">
+                          {item.example.split('|').map((group, groupIdx) => {
+                            const trimmedGroup = group.trim()
+                            const isGroupHighlighted = trimmedGroup.startsWith('*')
+                            const cleanGroup = isGroupHighlighted ? trimmedGroup.substring(1).trim() : trimmedGroup
+                            const tiles = cleanGroup
+                              .split(' ')
+                              .map((t) => t.trim())
+                              .filter(Boolean)
 
-                          return (
-                            <div
-                              key={groupIdx}
-                              className={`mahjong-group ${isGroupHighlighted ? 'highlighted-group' : ''}`}
-                            >
-                              {tiles.map((tile, tileIdx) => {
-                                const isTileHighlighted = tile.startsWith('*') || tile.startsWith('^')
-                                const cleanTile = isTileHighlighted ? tile.substring(1) : tile
-                                return (
-                                  <img
-                                    key={tileIdx}
-                                    src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${cleanTile}.svg`}
-                                    alt={cleanTile}
-                                    className={`mahjong-tile ${isTileHighlighted ? 'highlighted-tile' : ''}`}
-                                  />
-                                )
-                              })}
-                            </div>
-                          )
-                        })}
+                            return (
+                              <div
+                                key={groupIdx}
+                                className={`mahjong-group ${isGroupHighlighted ? 'highlighted-group' : ''}`}
+                              >
+                                {tiles.map((tile, tileIdx) => {
+                                  const isTileHighlighted = tile.startsWith('*') || tile.startsWith('^')
+                                  const cleanTile = isTileHighlighted ? tile.substring(1) : tile
+                                  return (
+                                    <img
+                                      key={tileIdx}
+                                      src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${cleanTile}.svg`}
+                                      alt={cleanTile}
+                                      className={`mahjong-tile ${isTileHighlighted ? 'highlighted-tile' : ''}`}
+                                    />
+                                  )
+                                })}
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     )}
                     {currentDiscovery?.exampleHand && (

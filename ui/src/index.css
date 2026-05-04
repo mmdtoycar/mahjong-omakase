@@ -1630,20 +1630,22 @@ tr:hover td {
   margin-bottom: 8px;
 }
 
-.fan-item-example {
+.fan-item-example-container {
   position: relative;
   margin-top: 32px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  width: 100%;
+}
+
+.fan-item-example {
   padding: 16px 10px 10px 10px;
   display: flex;
   flex-wrap: nowrap;
   column-gap: 4px;
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: 8px;
   align-items: center;
   overflow-x: auto;
-  overflow-y: visible;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  width: 100%;
 }
 
 .fan-item-example-real {
