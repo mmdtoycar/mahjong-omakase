@@ -13,6 +13,9 @@ Check every file in ui/src/pages/ and ui/src/App.tsx for any user-visible Englis
 Note: SignUpPage.tsx ("Join Leo's friends' mahjong games!") is intentionally English — do not flag it.
 Note: AdminPage.tsx is intentionally English — do not flag it.
 Note: Game session default names ("Game #1", "Game 4/21/2026 17:19") are intentionally English — do not flag it.
+Note: App.tsx "Mahjong Omakase" in the header is intentional branding — do not flag it.
+Note: HomePage.tsx footer "© 2026 Mahjong Omakase Team · Let's NB!" is intentional — do not flag it.
+Note: Japanese Riichi terms (役満, 三倍満, 倍満, 跳満, 満貫) in SessionPage fan selector are intentional domain terminology — do not flag them.
 Note: Only flag text that is visually rendered to users. Do not flag non-visible text such as `alt` attributes, `title` attributes, HTML comments, console logs, variable names, etc.
 
 ## Part 2: Mobile Check

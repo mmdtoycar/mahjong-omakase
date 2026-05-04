@@ -34,6 +34,17 @@ public class Round {
   private Long dealInPlayerId;
   private Integer prevalentWind;
 
+  @Column(columnDefinition = "TEXT")
+  private String riichiPlayerIds;
+
+  public String getRiichiPlayerIds() {
+    return riichiPlayerIds;
+  }
+
+  public void setRiichiPlayerIds(String riichiPlayerIds) {
+    this.riichiPlayerIds = riichiPlayerIds;
+  }
+
   public Integer getPrevalentWind() {
     return prevalentWind;
   }

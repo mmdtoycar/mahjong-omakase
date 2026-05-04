@@ -6,6 +6,7 @@ import { calculateRanks } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
+import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -14,20 +15,17 @@ export default function SessionPage() {
   const [score, setScore] = useState('')
   const [fan, setFan] = useState<string>('')
   const [fu, setFu] = useState<string>('')
-  const [dealerId, setDealerId] = useState<string>('')
-  const [honba, setHonba] = useState<string>('0')
-  const [kyoutaku, setKyoutaku] = useState<string>('0')
   const [isSelfDraw, setIsSelfDraw] = useState(false)
   const [dealInPlayerId, setDealInPlayerId] = useState<string>('')
   const [bimenPlayerIds, setBimenPlayerIds] = useState<number[]>([])
   const [isRyuukyoku, setIsRyuukyoku] = useState(false)
   const [tenpaiPlayerIds, setTenpaiPlayerIds] = useState<number[]>([])
+  const [riichiPlayerIds, setRiichiPlayerIds] = useState<number[]>([])
   const [calcResetCount, setCalcResetCount] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [winHand, setWinHand] = useState<string>('')
   const [fanDetails, setFanDetails] = useState<string>('')
   const [fanCount, setFanCount] = useState<number>(0)
-  const [manualQuanfeng, setManualQuanfeng] = useState<number | null>(null)
   const [error, setError] = useState('')
 
   const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
@@ -75,12 +73,10 @@ export default function SessionPage() {
     setDealInPlayerId('')
     setIsRyuukyoku(false)
     setTenpaiPlayerIds([])
-    setHonba('0')
-    setKyoutaku('0')
+    setRiichiPlayerIds([])
     setWinHand('')
     setFanDetails('')
     setFanCount(0)
-    setManualQuanfeng(null)
     setCalcResetCount((prev) => prev + 1)
   }
 
@@ -113,9 +109,9 @@ export default function SessionPage() {
   const canSubmit =
     winnerId &&
     (isRiichi
-      ? fan && fu && dealerId
+      ? fan && fu
       : isDongbei
-      ? fan && dealerId
+      ? fan
       : score && parseInt(score) >= (isGuobiao ? 8 : 1)) &&
     (isSelfDraw || dealInPlayerId)
 
@@ -127,6 +123,7 @@ export default function SessionPage() {
         await addRound(session.id, {
           roundType: 'DRAWN_GAME',
           tenpaiPlayerIds,
+          riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
         })
         resetForm()
         await load()
@@ -138,9 +135,9 @@ export default function SessionPage() {
           winnerId: Number(winnerId),
           fan: parseInt(fan),
           fu: parseInt(fu),
-          dealerId: Number(dealerId),
-          honba: parseInt(honba) || 0,
-          kyoutaku: parseInt(kyoutaku) || 0,
+          dealerId: gameState.dealerPlayerId,
+          honba: gameState.honba,
+          kyoutaku: gameState.kyoutaku,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
           fanCount: parseInt(fan),
         })
@@ -148,7 +145,7 @@ export default function SessionPage() {
         await addRound(session.id, {
           winnerId: Number(winnerId),
           fan: parseInt(fan),
-          dealerId: Number(dealerId),
+          dealerId: gameState.dealerPlayerId,
           bimenPlayerIds,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
           fanCount: parseInt(fan),
@@ -161,7 +158,7 @@ export default function SessionPage() {
           winHand,
           fanDetails,
           fanCount: fanCount || parseInt(score),
-          prevalentWind: gbWinds?.quanfeng,
+          prevalentWind: gameState.prevalentWind,
         })
       }
 
@@ -231,34 +228,7 @@ export default function SessionPage() {
   )
   const rankMap = Object.fromEntries(rankings.map((r) => [r.playerId, r]))
 
-  const getGuobiaoWinds = () => {
-    if (!isGuobiao) return null
-    const handIdx = session.rounds.length + 1
-
-    let qf: number
-    if (manualQuanfeng !== null) {
-      qf = manualQuanfeng
-    } else if (session.rounds.length > 0) {
-      const lastRound = session.rounds[session.rounds.length - 1]
-      // Use the stored prevalent wind from the last round, or fall back to calculation
-      const lastQf = lastRound.prevalentWind || (Math.floor((session.rounds.length - 1) / 4) % 4) + 1
-
-      if (handIdx > 1 && (handIdx - 1) % 4 === 0) {
-        // Every 4 rounds, the wind should increment (e.g. 5th, 9th, 13th round)
-        qf = (lastQf % 4) + 1
-      } else {
-        // Otherwise stay the same as the previous round
-        qf = lastQf
-      }
-    } else {
-      // First round default
-      qf = (Math.floor((handIdx - 1) / 4) % 4) + 1
-    }
-
-    const dealerSeat = ((handIdx - 1) % 4) + 1
-    return { quanfeng: qf, dealerSeat, handIdx }
-  }
-  const gbWinds = getGuobiaoWinds()
+  const gameState = deriveGameState(session)
 
   const winnerIndex = session.players.findIndex((p) => String(p.id) === winnerId)
 
@@ -267,32 +237,27 @@ export default function SessionPage() {
   }
 
   function getPlayerMenfeng(playerSeat: number) {
-    if (!gbWinds) return 1
-    return ((playerSeat - gbWinds.dealerSeat + 4) % 4) + 1
+    return ((playerSeat - gameState.dealerSeat + gameState.playerCount) % gameState.playerCount) + 1
   }
 
   const winnerMenfeng =
     winnerIndex !== -1 ? getPlayerMenfeng(getPlayerSeat(session.players[winnerIndex], winnerIndex)) : 1
 
-  const getWindName = (w: number) => ['东', '南', '西', '北'][w - 1] + '风'
-
-  const getRoundWind = (round: RoundInfo) => {
-    if (!isGuobiao) return null
-    const roundNum = round.roundNumber
-    const qf = round.prevalentWind || (Math.floor((roundNum - 1) / 4) % 4) + 1
-    const hand = ((roundNum - 1) % 4) + 1
-    return { qf, hand, name: `${['东', '南', '西', '北'][qf - 1]}${hand}` }
+  const getRoundLabel = (round: RoundInfo) => {
+    const state = deriveRoundState(session, round.roundNumber)
+    return state.displayName
   }
 
   const playerColPct = `${Math.floor(90 / session.players.length)}%`
-  const playerColStyle = { textAlign: 'center' as const, width: playerColPct, minWidth: 80 }
+  const playerColStyle = { textAlign: 'center' as const, width: playerColPct, minWidth: 56 }
 
   const otherPlayers = session.players.filter((p) => p.id !== Number(winnerId))
-  const winnerIsDealer = winnerId && dealerId && winnerId === dealerId
+  const dealerId = String(gameState.dealerPlayerId)
+  const winnerIsDealer = winnerId && winnerId === dealerId
 
   const getScorePreview = (): string | null => {
     if (isRiichi) {
-      if (!fan || !fu || !dealerId) return null
+      if (!fan || !fu) return null
       const h = parseInt(fan),
         f = parseInt(fu)
       let basic: number
@@ -304,9 +269,9 @@ export default function SessionPage() {
       else basic = Math.min(f * Math.pow(2, 2 + h), 2000)
 
       const r100 = (v: number) => Math.ceil(v / 100) * 100
-      const honbaNum = parseInt(honba) || 0
+      const honbaNum = gameState.honba
       const honbaBonus = 100 * honbaNum
-      const kyoutakuNum = parseInt(kyoutaku) || 0
+      const kyoutakuNum = gameState.kyoutaku
 
       if (isSelfDraw) {
         if (winnerIsDealer) {
@@ -335,7 +300,7 @@ export default function SessionPage() {
     }
 
     if (isDongbei) {
-      if (!fan || !dealerId || !winnerId) return null
+      if (!fan || !winnerId) return null
       const fanNum = parseInt(fan)
       const bimenSet = new Set(bimenPlayerIds)
       const opponents = session.players.filter((p) => p.id !== Number(winnerId))
@@ -398,6 +363,7 @@ export default function SessionPage() {
       {session.status === 'IN_PROGRESS' && (
         <div className="card round-form-card">
           <div className="round-form">
+            <h3 className="round-form-title">添加 — {gameState.displayName}</h3>
             {isRiichi && (
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <label className="zimo-toggle">
@@ -445,6 +411,31 @@ export default function SessionPage() {
                         }`}
                   </span>
                 </div>
+                <div className="form-group">
+                  <label>选择立直玩家</label>
+                  <div className="player-chips">
+                    {session.players.map((p) => (
+                      <span
+                        key={p.id}
+                        className={`chip ${riichiPlayerIds.includes(p.id) ? 'selected' : ''}`}
+                        onClick={() =>
+                          setRiichiPlayerIds((prev) =>
+                            prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
+                          )
+                        }
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {p.userName}
+                        {riichiPlayerIds.includes(p.id) && ' ✓'}
+                      </span>
+                    ))}
+                  </div>
+                  {riichiPlayerIds.length > 0 && (
+                    <span className="field-hint">
+                      {riichiPlayerIds.length}人立直 → 各扣1000, 供托 +{riichiPlayerIds.length * 1000}
+                    </span>
+                  )}
+                </div>
                 <button className="btn btn-primary" onClick={handleAddRound} disabled={submitting}>
                   {submitting ? '提交中...' : '添加流局'}
                 </button>
@@ -453,27 +444,6 @@ export default function SessionPage() {
               <>
                 {isRiichi ? (
                   <div className="round-form-grid">
-                    <div className="form-group">
-                      <label>亲家</label>
-                      <select value={dealerId} onChange={(e) => setDealerId(e.target.value)}>
-                        <option value=""></option>
-                        {session.players.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.userName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>本场</label>
-                      <input
-                        type="number"
-                        value={honba}
-                        onChange={(e) => setHonba(e.target.value)}
-                        min="0"
-                        placeholder="0"
-                      />
-                    </div>
                     <div className="form-group">
                       <label>
                         番
@@ -517,33 +487,11 @@ export default function SessionPage() {
                         ))}
                       </select>
                     </div>
-                    <div className="form-group">
-                      <label>供托</label>
-                      <input
-                        type="number"
-                        value={kyoutaku}
-                        onChange={(e) => setKyoutaku(e.target.value)}
-                        min="0"
-                        step="1000"
-                        placeholder="0"
-                      />
-                    </div>
                   </div>
                 ) : null}
 
                 {isDongbei && (
                   <div className="round-form-grid">
-                    <div className="form-group">
-                      <label>庄家</label>
-                      <select value={dealerId} onChange={(e) => setDealerId(e.target.value)}>
-                        <option value=""></option>
-                        {session.players.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.userName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
                     <div className="form-group">
                       <label>番</label>
                       <input
@@ -557,7 +505,7 @@ export default function SessionPage() {
                   </div>
                 )}
 
-                <div className="quick-win-container" style={{ gridColumn: '1 / -1', marginBottom: '16px' }}>
+                <div className="quick-win-container">
                   <h2>算番器</h2>
                   <div className="quick-win-row">
                     {session.players.map((p, idx) => {
@@ -570,11 +518,10 @@ export default function SessionPage() {
                       return (
                         <button key={p.id} className={btnClass} onClick={() => handlePlayerClick(String(p.id))}>
                           <div className="btn-name">{p.userName}</div>
-                          {isGuobiao && (
-                            <div className="wind-badge small">
-                              {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, idx)) - 1]}
-                            </div>
-                          )}
+                          <div className={`btn-wind${p.id === gameState.dealerPlayerId ? ' btn-wind-dealer' : ''}`}>
+                            {getWindName(getPlayerMenfeng(getPlayerSeat(p, idx)))}
+                            {p.id === gameState.dealerPlayerId ? ' 庄' : ''}
+                          </div>
                         </button>
                       )
                     })}
@@ -608,10 +555,10 @@ export default function SessionPage() {
                     </div>
                     <div className="inline-calc-wrapper">
                       <GuobiaoCalculator
-                        key={`${gbWinds?.quanfeng || 1}-${winnerMenfeng}`}
+                        key={`${gameState.prevalentWind}-${winnerMenfeng}`}
                         onSelectScore={handleCalcScoreSelect}
                         initialOptions={{
-                          quanfeng: gbWinds?.quanfeng || 1,
+                          quanfeng: gameState.prevalentWind,
                           menfeng: winnerMenfeng,
                         }}
                         resetTrigger={calcResetCount}
@@ -662,7 +609,7 @@ export default function SessionPage() {
       <div className="card">
         <div className="flex-between" style={{ marginBottom: 16 }}>
           <h2 style={{ marginBottom: 0 }}>计分板</h2>
-          <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <span className="session-meta" style={{ margin: 0, fontSize: '0.85rem' }}>
               {session.gameModeDisplayName} &middot; {new Date(session.createdAt).toLocaleDateString()}
               &nbsp;
@@ -702,24 +649,9 @@ export default function SessionPage() {
                     <tr>
                       <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
                         <div className="round-info-cell">
-                          {(() => {
-                            const rw = getRoundWind(round)
-                            return rw ? (
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  gap: '2px',
-                                  width: '100%',
-                                }}
-                              >
-                                <span className="round-wind-tag">{rw.name}</span>
-                              </div>
-                            ) : (
-                              <strong>#{round.roundNumber}</strong>
-                            )
-                          })()}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', width: '100%' }}>
+                            <span className="round-wind-tag">{getRoundLabel(round)}</span>
+                          </div>
                         </div>
                       </td>
                       {session.players.map((p) => {

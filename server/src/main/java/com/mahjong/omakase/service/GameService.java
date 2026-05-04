@@ -326,6 +326,17 @@ public class GameService {
                     dealInName = playerNameMap.getOrDefault(round.getDealInPlayerId(), "?");
                   }
 
+                  List<Long> riichiIds = null;
+                  if (round.getRiichiPlayerIds() != null
+                      && !round.getRiichiPlayerIds().isBlank()) {
+                    riichiIds =
+                        Arrays.stream(round.getRiichiPlayerIds().split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .map(Long::valueOf)
+                            .toList();
+                  }
+
                   return new SessionDetailResponse.RoundInfo(
                       round.getRoundNumber(),
                       scores,
@@ -335,7 +346,8 @@ public class GameService {
                       round.getFanCount(),
                       round.getDealInPlayerId(),
                       dealInName,
-                      round.getPrevalentWind());
+                      round.getPrevalentWind(),
+                      riichiIds);
                 })
             .collect(Collectors.toList()));
 
@@ -410,7 +422,8 @@ public class GameService {
         request.getFanDetails(),
         request.getFanCount(),
         request.isSelfDraw() ? null : request.getDealInPlayerId(),
-        request.getPrevalentWind());
+        request.getPrevalentWind(),
+        request.getRiichiPlayerIds());
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -720,7 +733,8 @@ public class GameService {
       String fanDetails,
       Integer fanCount,
       Long dealInId,
-      Integer prevalentWind) {
+      Integer prevalentWind,
+      List<Long> riichiPlayerIds) {
     Round round = new Round();
     round.setGameSession(session);
     round.setRoundNumber(roundNumber);
@@ -730,6 +744,10 @@ public class GameService {
     round.setFanCount(fanCount);
     round.setDealInPlayerId(dealInId);
     round.setPrevalentWind(prevalentWind);
+    if (riichiPlayerIds != null && !riichiPlayerIds.isEmpty()) {
+      round.setRiichiPlayerIds(
+          riichiPlayerIds.stream().map(String::valueOf).collect(Collectors.joining(",")));
+    }
 
     round = roundRepo.save(round);
 

@@ -90,6 +90,7 @@ export default function DashboardPage() {
             gap: '8px',
             flex: 1,
             justifyContent: 'flex-end',
+            flexWrap: 'wrap',
           }}
         >
           <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">

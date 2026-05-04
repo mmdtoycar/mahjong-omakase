@@ -91,19 +91,18 @@ export default function HomePage() {
   return (
     <div className="home-hub">
       <div style={{ marginBottom: '40px', textAlign: 'center' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <img src="/logo-header.png" alt="" style={{ height: '64px', width: 'auto' }} />
+        </div>
         <Link
           to="/new-session"
-          className="btn btn-accent btn-hero-shine"
+          className="btn btn-accent btn-hero-shine home-start-btn"
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '12px',
             fontSize: '1.1rem',
             padding: '12px 24px',
             borderRadius: '50px',
           }}
         >
-          <img src="/logo-header.png" alt="" style={{ height: '24px', width: 'auto' }} />
           麻将，启动！
         </Link>
       </div>

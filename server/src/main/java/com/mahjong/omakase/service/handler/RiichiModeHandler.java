@@ -91,6 +91,13 @@ public class RiichiModeHandler implements GameModeHandler {
         }
       }
     }
+    // Riichi stick deductions: -1000 per declaring player
+    List<Long> riichiIds = request.getRiichiPlayerIds();
+    if (riichiIds != null) {
+      for (Long id : riichiIds) {
+        scores.merge(id, -1000, Integer::sum);
+      }
+    }
     return scores;
   }
 }

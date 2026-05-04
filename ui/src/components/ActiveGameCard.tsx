@@ -1,28 +1,15 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { SessionDetail } from '../types'
+import { deriveGameState, getWindName } from '../utils/gameState'
 
 interface Props {
   session: SessionDetail
 }
 
 export const ActiveGameCard: React.FC<Props> = ({ session }) => {
-  const getWindName = (w: number) => ['东', '南', '西', '北'][(w - 1) % 4]
+  const state = deriveGameState(session)
 
-  const nextRoundNum = session.rounds.length + 1
-  const lastRound = session.rounds.length > 0 ? session.rounds[session.rounds.length - 1] : null
-  let qf = (Math.floor((nextRoundNum - 1) / 4) % 4) + 1
-  if (lastRound?.prevalentWind != null) {
-    const nextGroup = Math.floor((nextRoundNum - 1) / 4)
-    const lastGroup = Math.floor((session.rounds.length - 1) / 4)
-    qf = ((lastRound.prevalentWind - 1 + (nextGroup - lastGroup)) % 4) + 1
-  }
-  const hand = ((nextRoundNum - 1) % 4) + 1
-  const roundStatus = `${getWindName(qf)}${hand}`
-
-  const dealerSeat = ((nextRoundNum - 1) % 4) + 1
-
-  // Compute stable standard ranks from scores
   const sortedScores = session.players.map((p) => session.totalScores[p.id] || 0).sort((a, b) => b - a)
   const getRank = (score: number) => sortedScores.indexOf(score) + 1
 
@@ -30,7 +17,7 @@ export const ActiveGameCard: React.FC<Props> = ({ session }) => {
     <Link to={`/session/${session.id}`} className="active-game-card">
       <div className="active-game-header">
         <span className="active-game-mode">{session.gameModeDisplayName}</span>
-        <span className="badge badge-progress">{roundStatus} 进行中</span>
+        <span className="badge badge-progress">{state.displayName} 进行中</span>
       </div>
       <div className="active-game-players">
         {[...session.players]
@@ -38,10 +25,9 @@ export const ActiveGameCard: React.FC<Props> = ({ session }) => {
           .map((p) => {
             const score = session.totalScores[p.id] || 0
             const rank = getRank(score)
-            const originalIdx = session.players.findIndex((op) => op.id === p.id)
-            const seat = p.seat ?? originalIdx + 1
-            const menfeng = ((seat - dealerSeat + 4) % 4) + 1
-            const isDealer = seat === dealerSeat
+            const seat = p.seat ?? session.players.findIndex((op) => op.id === p.id) + 1
+            const menfeng = ((seat - state.dealerSeat + state.playerCount) % state.playerCount) + 1
+            const isDealer = p.id === state.dealerPlayerId
             return (
               <div key={p.id} className="active-game-player-row">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

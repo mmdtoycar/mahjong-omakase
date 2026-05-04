@@ -215,7 +215,7 @@ const FanTablePage: React.FC = () => {
             placeholder="搜索番名、分数、描述或冠名玩家..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ flex: 1, minWidth: '200px' }}
+            style={{ flex: 1, minWidth: 0 }}
           />
           {activeTab === 'guobiao' && seasons.length > 0 && (
             <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">

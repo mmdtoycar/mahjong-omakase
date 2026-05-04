@@ -188,14 +188,14 @@ export default function AdminPage() {
         <h2>Settings</h2>
         <div className="form-group">
           <label>Participation Bonus (RP per game)</label>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <input
               type="number"
               value={bonus}
               onChange={(e) => setBonus(parseFloat(e.target.value) || 0)}
               step="0.1"
               min="0"
-              style={{ width: 120 }}
+              style={{ width: '100%', maxWidth: 120 }}
             />
             <button
               className="btn btn-primary btn-small"
@@ -229,18 +229,18 @@ export default function AdminPage() {
                   <td>{p.userName}</td>
                   <td>
                     {editingId === p.id ? (
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <input
                           value={editFirst}
                           onChange={(e) => setEditFirst(e.target.value)}
-                          style={{ width: 80 }}
+                          style={{ width: '100%', maxWidth: 80 }}
                           placeholder="First"
                           autoFocus
                         />
                         <input
                           value={editLast}
                           onChange={(e) => setEditLast(e.target.value)}
-                          style={{ width: 80 }}
+                          style={{ width: '100%', maxWidth: 80 }}
                           placeholder="Last"
                           onKeyDown={(e) => e.key === 'Enter' && handleSave(p.id)}
                         />

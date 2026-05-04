@@ -1489,6 +1489,11 @@ tr:hover td {
     letter-spacing: 2px;
   }
 
+  .home-start-btn {
+    width: auto;
+    display: inline-flex;
+  }
+
   .landing-features {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -1550,6 +1555,45 @@ tr:hover td {
 
   .options-grid.compact {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .fan-item-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .fan-item-name {
+    flex-wrap: wrap;
+  }
+
+  .ting-row-item {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ting-row-item .fan-list-mini {
+    width: 100%;
+  }
+
+  .tile-grid-compact {
+    grid-template-columns: repeat(9, 1fr);
+  }
+
+  .active-games-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .round-form .score-inline-group {
+    flex-wrap: wrap;
+  }
+
+  .options-grid.compact.cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .quick-win-container {
+    margin-bottom: 12px;
   }
 }
 
@@ -1772,7 +1816,7 @@ tr:hover td {
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
+  overflow-x: auto;
 }
 .calc-top-row {
   display: flex;
@@ -2283,6 +2327,11 @@ tr:hover td {
 }
 
 /* Quick Win Selection */
+.quick-win-container {
+  grid-column: 1 / -1;
+  margin-bottom: 16px;
+}
+
 .quick-win-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -2422,6 +2471,12 @@ tr:hover td {
   margin-top: 2px;
 }
 
+.quick-player-btn .btn-wind-dealer {
+  color: var(--danger);
+  font-weight: 600;
+  opacity: 1;
+}
+
 @media (max-width: 600px) {
   .quick-win-row {
     gap: 4px;
@@ -2550,14 +2605,13 @@ tr:hover td {
 /* Hall of Fame Styles */
 .hall-of-fame-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
   gap: 24px;
   margin-top: 16px;
 }
 
 @media (max-width: 600px) {
   .hall-of-fame-grid {
-    grid-template-columns: 1fr;
     gap: 16px;
   }
 }
@@ -2855,7 +2909,7 @@ tr:hover td {
   color: var(--danger);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .dashboard-sessions-list {
     padding: 16px;
     gap: 16px;
