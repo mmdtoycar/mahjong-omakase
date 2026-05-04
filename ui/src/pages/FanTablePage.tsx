@@ -126,10 +126,11 @@ const FanTablePage: React.FC = () => {
         return true
       // Also match against visible champion badges only (mirrors hasCurrent / hasPrev display logic)
       if (activeTab === 'guobiao' && seasonKey !== 'all') {
-        const currentChampion = discoveriesMap[item.name]?.playerName?.toLowerCase()
+        const currentDiscovery = discoveriesMap[item.name]
+        const currentChampion = currentDiscovery?.playerName?.toLowerCase()
         if (currentChampion?.includes(lowerSearch)) return true
-        // Only match prev champion if there is no current-season champion (i.e. prevDiscovery badge is visible)
-        if (!currentChampion) {
+        // Only match prev champion if there is no current-season champion discovery object
+        if (!currentDiscovery) {
           const prevChampion = prevDiscoveriesMap[item.name]?.playerName?.toLowerCase()
           if (prevChampion?.includes(lowerSearch)) return true
         }
