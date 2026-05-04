@@ -2861,6 +2861,31 @@ tr:hover td {
     gap: 16px;
     grid-template-columns: 1fr;
   }
+
+  main {
+    padding: 12px;
+  }
+
+  .fan-table-page .card {
+    padding: 12px;
+  }
+
+  .fan-item-card {
+    padding: 8px;
+  }
+
+  .fan-item-example-container,
+  .fan-item-example-real {
+    margin-top: 12px;
+  }
+
+  .fan-item-example {
+    padding: 12px 6px 6px 6px;
+  }
+
+  .fan-item-example-real {
+    padding: 12px 6px 6px 6px;
+  }
 }
 
 .pagination-container {
