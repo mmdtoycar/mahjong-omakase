@@ -311,9 +311,7 @@ const FanTablePage: React.FC = () => {
                         <MahjongHand
                           hand={(currentDiscovery?.exampleHand || prevDiscovery?.exampleHand) ?? undefined}
                         />
-                        <span className={`example-hint ${!currentDiscovery?.exampleHand ? 'prev' : ''}`}>
-                          {currentDiscovery?.exampleHand ? '实战例子' : '实战例子 (历史)'}
-                        </span>
+                        <span className={`example-hint ${!currentDiscovery?.exampleHand ? 'prev' : ''}`}>实战例子</span>
                       </div>
                     )}
                   </div>
