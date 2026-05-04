@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchSessions, fetchSessionDetail, fetchStats, fetchBestRounds } from '../api'
 import { GameSession, SessionDetail, PlayerStats, BestRound, GAME_MODES, getCurrentSeason } from '../types'
-import { ActiveGameCard } from '../components/ActiveGameCard'
+import { GameCard } from '../components/GameCard'
+import { deriveGameState, getWindName } from '../utils/gameState'
 
 export default function HomePage() {
   const [activeSessions, setActiveSessions] = useState<SessionDetail[]>([])
@@ -109,9 +110,36 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="active-games-grid">
-            {activeSessions.map((s) => (
-              <ActiveGameCard key={s.id} session={s} />
-            ))}
+            {activeSessions.map((s) => {
+              const state = deriveGameState(s)
+              const sortedPlayers = [...s.players].sort(
+                (a, b) => (s.totalScores[b.id] || 0) - (s.totalScores[a.id] || 0)
+              )
+              const sortedScores = sortedPlayers.map((p) => s.totalScores[p.id] || 0)
+              return (
+                <GameCard
+                  key={s.id}
+                  id={s.id}
+                  gameModeDisplayName={s.gameModeDisplayName}
+                  createdAt={s.createdAt}
+                  roundLabel={`${state.displayName} 进行中`}
+                  isActive={true}
+                  players={sortedPlayers.map((p) => {
+                    const score = s.totalScores[p.id] || 0
+                    const rank = sortedScores.indexOf(score) + 1
+                    const seat = p.seat ?? s.players.findIndex((op) => op.id === p.id) + 1
+                    const menfeng = ((seat - state.dealerSeat + state.playerCount) % state.playerCount) + 1
+                    return {
+                      rank,
+                      name: p.userName,
+                      score,
+                      wind: getWindName(menfeng),
+                      isDealer: p.id === state.dealerPlayerId,
+                    }
+                  })}
+                />
+              )
+            })}
           </div>
         )}
       </div>
