@@ -2242,7 +2242,7 @@ tr:hover td {
 
 .quick-player-btn {
   width: 100%;
-  padding: 10px 4px;
+  padding: 6px 4px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #fff;
@@ -2254,6 +2254,7 @@ tr:hover td {
   justify-content: center;
   box-shadow: var(--shadow);
   color: var(--text);
+  position: relative;
 }
 
 .quick-player-btn:hover:not(:disabled) {

@@ -572,7 +572,7 @@ export default function SessionPage() {
                         <button key={p.id} className={btnClass} onClick={() => handlePlayerClick(String(p.id))}>
                           <div className="btn-name">{p.userName}</div>
                           {isGuobiao && (
-                            <div className="btn-wind">
+                            <div className="wind-badge small">
                               {['东', '南', '西', '北'][getPlayerMenfeng(getPlayerSeat(p, idx)) - 1]}
                             </div>
                           )}
