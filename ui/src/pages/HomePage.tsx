@@ -84,7 +84,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="empty-state">
-        <p>加载枢纽数据中...</p>
+        <p>加载中...</p>
       </div>
     )
   }

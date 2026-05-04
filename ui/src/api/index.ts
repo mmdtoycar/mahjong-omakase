@@ -11,6 +11,30 @@ import {
 
 const API = '/api'
 
+const cache = new Map<string, { data: unknown; expiry: number }>()
+const CACHE_TTL = 10_000
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key)
+  if (entry && Date.now() < entry.expiry) return entry.data as T
+  cache.delete(key)
+  return null
+}
+
+function setCache(key: string, data: unknown) {
+  cache.set(key, { data, expiry: Date.now() + CACHE_TTL })
+}
+
+export function invalidateCache(prefix?: string) {
+  if (!prefix) {
+    cache.clear()
+    return
+  }
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) cache.delete(key)
+  }
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: '请求失败' }))
@@ -19,9 +43,17 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json()
 }
 
+async function cachedFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const cached = getCached<T>(url)
+  if (cached) return cached
+  const res = await fetch(url, signal ? { signal } : undefined)
+  const data = await handleResponse<T>(res)
+  setCache(url, data)
+  return data
+}
+
 export async function fetchPlayers(): Promise<Player[]> {
-  const res = await fetch(`${API}/players`)
-  return handleResponse(res)
+  return cachedFetch(`${API}/players`)
 }
 
 export async function createPlayer(userName: string, firstName: string, lastName: string): Promise<Player> {
@@ -40,8 +72,7 @@ export async function checkUserName(userName: string): Promise<boolean> {
 }
 
 export async function fetchSessions(): Promise<GameSession[]> {
-  const res = await fetch(`${API}/sessions`)
-  return handleResponse(res)
+  return cachedFetch(`${API}/sessions`)
 }
 
 export async function createSession(name: string, gameMode: string, playerIds: number[]): Promise<GameSession> {
@@ -50,12 +81,13 @@ export async function createSession(name: string, gameMode: string, playerIds: n
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, gameMode, playerIds }),
   })
-  return handleResponse(res)
+  const data = await handleResponse<GameSession>(res)
+  invalidateCache()
+  return data
 }
 
 export async function fetchSessionDetail(id: number): Promise<SessionDetail> {
-  const res = await fetch(`${API}/sessions/${id}`)
-  return handleResponse(res)
+  return cachedFetch(`${API}/sessions/${id}`)
 }
 
 export async function addRound(sessionId: number, data: AddRoundData): Promise<void> {
@@ -68,6 +100,7 @@ export async function addRound(sessionId: number, data: AddRoundData): Promise<v
     const error = await res.json().catch(() => ({ message: '添加失败' }))
     throw new Error(error.message || '添加失败')
   }
+  invalidateCache()
 }
 
 export async function deleteRound(sessionId: number, roundNumber: number): Promise<void> {
@@ -76,6 +109,7 @@ export async function deleteRound(sessionId: number, roundNumber: number): Promi
     const error = await res.json().catch(() => ({ message: '删除失败' }))
     throw new Error(error.message || '删除失败')
   }
+  invalidateCache()
 }
 
 export async function completeSession(id: number): Promise<void> {
@@ -84,11 +118,11 @@ export async function completeSession(id: number): Promise<void> {
     const error = await res.json().catch(() => ({ message: '操作失败' }))
     throw new Error(error.message || '操作失败')
   }
+  invalidateCache()
 }
 
 export async function fetchActiveSeasons(): Promise<{ year: number; month: number }[]> {
-  const res = await fetch(`${API}/stats/seasons`)
-  return handleResponse(res)
+  return cachedFetch(`${API}/stats/seasons`)
 }
 
 export async function fetchStats(gameMode?: string, year?: number, month?: number): Promise<PlayerStats[]> {
@@ -99,13 +133,11 @@ export async function fetchStats(gameMode?: string, year?: number, month?: numbe
     params.set('month', String(month))
   }
   const qs = params.toString()
-  const res = await fetch(`${API}/stats${qs ? `?${qs}` : ''}`)
-  return handleResponse(res)
+  return cachedFetch(`${API}/stats${qs ? `?${qs}` : ''}`)
 }
 
 export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {
-  const res = await fetch(`${API}/players/${id}/detail`)
-  return handleResponse(res)
+  return cachedFetch(`${API}/players/${id}/detail`)
 }
 
 export async function fetchBestRounds(
@@ -121,8 +153,7 @@ export async function fetchBestRounds(
     params.set('month', String(month))
   }
   const qs = params.toString()
-  const res = await fetch(`${API}/stats/best-rounds${qs ? `?${qs}` : ''}`, { signal })
-  return handleResponse<BestRound[]>(res)
+  return cachedFetch(`${API}/stats/best-rounds${qs ? `?${qs}` : ''}`, signal)
 }
 
 export async function fetchFanDiscoveries(
@@ -139,6 +170,5 @@ export async function fetchFanDiscoveries(
     params.set('month', String(month))
   }
   const qs = params.toString()
-  const res = await fetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`, { signal })
-  return handleResponse<FanDiscovery[]>(res)
+  return cachedFetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`, signal)
 }
