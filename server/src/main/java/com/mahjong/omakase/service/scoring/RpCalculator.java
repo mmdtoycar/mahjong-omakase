@@ -8,6 +8,7 @@ public final class RpCalculator {
   private RpCalculator() {}
 
   public static double calculateRp(int score, double factor, double avgUma) {
+    if (factor <= 0) throw new IllegalArgumentException("RP factor must be positive");
     return (score / factor) + avgUma;
   }
 
