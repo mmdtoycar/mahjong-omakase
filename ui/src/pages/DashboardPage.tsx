@@ -15,21 +15,37 @@ export default function DashboardPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    Promise.all([fetchSessions(), fetchActiveSeasons()])
-      .then(([sData, seasonsData]) => {
+    let mounted = true
+    setLoading(true)
+
+    fetchSessions()
+      .then((sData) => {
+        if (!mounted) return
         setSessions(sData)
+        // If sessions load successfully, we can already stop the main loading spinner
+        // once we also try to get the seasons.
+        return fetchActiveSeasons()
+      })
+      .then((seasonsData) => {
+        if (!mounted || !seasonsData) return
         const list = seasonsData.map((s) => ({
           year: s.year,
           month: s.month,
           label: getSeasonLabel(s.year, s.month),
         }))
         setSeasons(list)
-        setLoading(false)
       })
       .catch((e) => {
+        if (!mounted) return
         setError(e.message)
-        setLoading(false)
       })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+
+    return () => {
+      mounted = false
+    }
   }, [])
 
   // Reset to page 1 when season changes
@@ -82,9 +98,9 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {sessions.length === 0 ? (
+      {filteredSessions.length === 0 ? (
         <div className="empty-state" style={{ padding: '40px' }}>
-          <p>暂无对局记录。开始你的第一局吧！</p>
+          <p>{seasonKey === 'all' ? '暂无对局记录。开始你的第一局吧！' : '该赛季暂无对局记录。'}</p>
         </div>
       ) : (
         <div className="dashboard-sessions-list">
