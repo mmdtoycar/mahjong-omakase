@@ -49,7 +49,7 @@ export const fanTableData: FanItem[] = [
     fan: 88,
     name: '十三幺',
     description: '由3种序数牌的一、九牌，7种字牌及其中一对作将组成的和牌。不计五门齐、不求人、单钓将。',
-    example: '*Man1 | *Man9 | *Pin1 | *Pin9 | *Sou1 | *Sou9 | *Ton | *Nan | *Shaa | *Pei | *Haku | *Hatsu | *Chun Chun',
+    example: '*Man1 Man9 Pin1 Pin9 Sou1 Sou9 Ton Nan Shaa Pei Haku Hatsu Chun Chun',
   },
   {
     fan: 64,
