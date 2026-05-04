@@ -1679,7 +1679,7 @@ tr:hover td {
 
 .example-hint.prev {
   background: #a2cecd;
-  color: #046b6b;
+  color: white;
 }
 
 .badge-discovery {
@@ -1690,7 +1690,7 @@ tr:hover td {
 
 .badge-discovery-prev {
   background: #a2cecd;
-  color: #046b6b;
+  color: white;
   font-weight: 700;
 }
 
