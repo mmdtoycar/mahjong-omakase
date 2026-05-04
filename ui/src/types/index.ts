@@ -19,7 +19,7 @@ export const GAME_MODES: { key: GameModeKey; label: string; fanTableTitle: strin
     key: 'DONGBEI',
     label: '东北麻将',
     fanTableTitle: '东北麻将规则',
-    fanTableSubtitle: '学习和查询带有闭门、飘、手把一、旋风杠等浓密地方特色的沈阳穷胡规则。',
+    fanTableSubtitle: '学习和查询带有闭门、飘、手把一、旋风杠等浓厚地方特色的沈阳穷胡规则。',
   },
   {
     key: 'RIICHI',
