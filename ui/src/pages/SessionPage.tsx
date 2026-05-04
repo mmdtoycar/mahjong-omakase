@@ -419,8 +419,6 @@ export default function SessionPage() {
       {session.status === 'IN_PROGRESS' && (
         <div className="card round-form-card">
           <div className="round-form">
-            <h3 className="round-form-title">添加对局</h3>
-
             {isRiichi && (
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <label className="zimo-toggle">
@@ -617,17 +615,17 @@ export default function SessionPage() {
                 </div>
 
                 {!isRiichi && isGuobiao && (
-                  <div className="form-group">
+                  <div className="form-group score-inline-group">
                     <label>分数</label>
-                    <div className="score-input-row">
-                      <input
-                        type="number"
-                        value={score}
-                        onChange={(e) => setScore(e.target.value)}
-                        placeholder="输入分数"
-                        min="8"
-                      />
-                    </div>
+                    <input
+                      type="number"
+                      value={score}
+                      onChange={(e) => setScore(e.target.value)}
+                      placeholder="输入分数"
+                      min="8"
+                      className="score-input-compact"
+                    />
+                  </div>
                     <div className="inline-calc-wrapper">
                       <GuobiaoCalculator
                         key={`${gbWinds?.quanfeng || 1}-${winnerMenfeng}`}

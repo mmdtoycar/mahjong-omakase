@@ -2308,6 +2308,25 @@ tr:hover td {
   background: rgba(203, 75, 22, 0.08);
 }
 
+.score-inline-group {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px;
+  margin-bottom: 12px !important;
+}
+
+.score-inline-group label {
+  margin-bottom: 0 !important;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.score-input-compact {
+  max-width: 120px;
+  padding: 6px 10px !important;
+}
+
 .quick-player-btn .btn-name {
   font-size: 0.9rem;
 }
