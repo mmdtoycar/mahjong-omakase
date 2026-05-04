@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { scoreClass } from '../utils/format'
 
 interface PlayerEntry {
   rank: number
@@ -45,9 +46,7 @@ export const GameCard: React.FC<Props> = ({ id, gameModeDisplayName, createdAt, 
               {p.wind && <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>{p.wind}</span>}
               <span className="player-name">{p.name}</span>
             </div>
-            <span className={`player-score ${p.score > 0 ? 'score-positive' : p.score < 0 ? 'score-negative' : ''}`}>
-              {p.score > 0 ? `+${p.score}` : p.score}
-            </span>
+            <span className={`player-score ${scoreClass(p.score)}`}>{p.score > 0 ? `+${p.score}` : p.score}</span>
           </div>
         ))}
       </div>

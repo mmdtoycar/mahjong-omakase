@@ -4,6 +4,7 @@ import com.mahjong.omakase.dto.*;
 import com.mahjong.omakase.model.*;
 import com.mahjong.omakase.repository.*;
 import com.mahjong.omakase.service.handler.GameModeHandler;
+import com.mahjong.omakase.service.scoring.RpCalculator;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.*;
@@ -576,31 +577,21 @@ public class GameService {
         List<Object[]> sorted = new ArrayList<>(sessionScores);
         sorted.sort((a, b) -> ((Number) b[1]).intValue() - ((Number) a[1]).intValue());
 
-        int i = 0;
-        while (i < sorted.size()) {
-          int j = i;
-          int scoreAtI = ((Number) sorted.get(i)[1]).intValue();
-          while (j < sorted.size() && ((Number) sorted.get(j)[1]).intValue() == scoreAtI) {
-            j++;
+        Map<Long, Integer> scoreMap = new LinkedHashMap<>();
+        for (Object[] row : sorted) {
+          if (row[0] != null) {
+            scoreMap.put((Long) row[0], ((Number) row[1]).intValue());
           }
+        }
 
-          int groupSize = j - i;
-          double totalUma = 0;
-          double[] umaDist = session.getGameMode().getUmaDist(session.getPlayerCount());
-          for (int k = i; k < j; k++) {
-            totalUma += (k < umaDist.length ? umaDist[k] : 0);
-          }
-          double avgUma = totalUma / groupSize;
-          double factor = session.getGameMode().getRpFactor();
+        List<RpCalculator.RankEntry> ranked =
+            RpCalculator.rankPlayers(
+                scoreMap,
+                session.getGameMode().getRpFactor(),
+                session.getGameMode().getUmaDist(session.getPlayerCount()));
 
-          for (int k = i; k < j; k++) {
-            Long pid = (Long) sorted.get(k)[0];
-            if (pid == null) continue;
-            int raw = ((Number) sorted.get(k)[1]).intValue();
-            double rp = (raw / factor) + avgUma;
-            totalRP.merge(pid, rp, (a, b) -> a + b);
-          }
-          i = j;
+        for (var entry : ranked) {
+          totalRP.merge(entry.playerId(), entry.rp(), (a, b) -> a + b);
         }
 
         int topScore = ((Number) sorted.get(0)[1]).intValue();

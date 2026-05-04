@@ -7,6 +7,7 @@ import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
+import { scoreClass } from '../utils/format'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -756,7 +757,7 @@ export default function SessionPage() {
                       </td>
                       <td>{p.userName}</td>
                       <td
-                        className={`${val > 0 ? 'score-positive' : val < 0 ? 'score-negative' : ''}`}
+                        className={scoreClass(val)}
                         style={{
                           textAlign: 'right',
                           fontVariantNumeric: 'tabular-nums',

@@ -2,9 +2,9 @@ package com.mahjong.omakase.dto;
 
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.model.GameSession;
+import com.mahjong.omakase.service.scoring.RpCalculator;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class SessionSummaryResponse {
   private Long id;
@@ -59,46 +59,20 @@ public class SessionSummaryResponse {
     }
 
     GameMode mode = session.getGameMode();
-    double factor = mode.getRpFactor();
-    double[] umaDist = mode.getUmaDist(session.getPlayerCount());
-
-    List<Long> sortedIds =
-        totals.keySet().stream()
-            .sorted((a, b) -> totals.get(b).compareTo(totals.get(a)))
-            .collect(Collectors.toList());
+    List<RpCalculator.RankEntry> ranked =
+        RpCalculator.rankPlayers(
+            totals, mode.getRpFactor(), mode.getUmaDist(session.getPlayerCount()));
 
     List<PlayerPerformanceDTO> results = new ArrayList<>();
-    int i = 0;
-    while (i < sortedIds.size()) {
-      int j = i;
-      while (j < sortedIds.size()
-          && totals.get(sortedIds.get(j)).equals(totals.get(sortedIds.get(i)))) {
-        j++;
-      }
-
-      int groupSize = j - i;
-      int rank = i + 1;
-      double totalUma = 0;
-      for (int k = i; k < j; k++) {
-        totalUma += (k < umaDist.length) ? umaDist[k] : 0;
-      }
-      double avgUma = totalUma / groupSize;
-
-      for (int k = i; k < j; k++) {
-        Long pid = sortedIds.get(k);
-        int score = totals.get(pid);
-        double rp = (score / factor) + avgUma;
-        results.add(
-            PlayerPerformanceDTO.builder()
-                .userName(names.get(pid))
-                .totalScore(score)
-                .rp(rp)
-                .rank(rank)
-                .build());
-      }
-      i = j;
+    for (var entry : ranked) {
+      results.add(
+          PlayerPerformanceDTO.builder()
+              .userName(names.get(entry.playerId()))
+              .totalScore(entry.score())
+              .rp(entry.rp())
+              .rank(entry.rank())
+              .build());
     }
-
     return results;
   }
 
