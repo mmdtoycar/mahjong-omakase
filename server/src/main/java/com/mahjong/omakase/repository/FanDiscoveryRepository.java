@@ -10,5 +10,7 @@ import org.springframework.stereotype.Repository;
 public interface FanDiscoveryRepository extends JpaRepository<FanDiscovery, Long> {
   Optional<FanDiscovery> findBySeasonAndFanName(String season, String fanName);
 
+  Optional<FanDiscovery> findBySeasonAndFanNameAndPlayerBotFalse(String season, String fanName);
+
   List<FanDiscovery> findBySeason(String season);
 }

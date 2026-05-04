@@ -301,7 +301,7 @@ export default function StatsPage() {
               </div>
               {monthlyBestRoundsError && <p className="error-text">加载月度最高和牌失败: {monthlyBestRoundsError}</p>}
               {!monthlyBestRoundsError && monthlyBestRounds.length === 0 && (
-                <div className="empty-state" style={{ padding: '20px 0' }}>
+                <div className="empty-state empty-state-compact">
                   <p>本月无记录</p>
                 </div>
               )}

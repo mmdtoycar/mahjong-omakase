@@ -90,34 +90,22 @@ export default function HomePage() {
 
   return (
     <div className="home-hub">
-      <div style={{ marginBottom: '40px', textAlign: 'center' }}>
-        <div style={{ marginBottom: '16px' }}>
-          <img src="/logo-header.png" alt="" style={{ height: '64px', width: 'auto' }} />
-        </div>
-        <Link
-          to="/new-session"
-          className="btn btn-accent btn-hero-shine home-start-btn"
-          style={{
-            fontSize: '1.1rem',
-            padding: '12px 24px',
-            borderRadius: '50px',
-          }}
-        >
-          麻将，启动！
+      <div className="hero-section">
+        <Link to="/new-session" className="hero-logo-link">
+          <div className="hero-logo-ring">
+            <img src="/logo-header.png" alt="" className="hero-logo-img" />
+          </div>
+          <span className="hero-cta">
+            麻将，启动<span style={{ marginLeft: '-0.005em' }}>!</span>
+          </span>
         </Link>
       </div>
 
-      <div className="active-games-section">
+      <div className="card active-games-section">
         <h2 style={{ marginBottom: '16px' }}>正在进行的对局</h2>
         {activeSessions.length === 0 ? (
-          <div
-            className="empty-state"
-            style={{ background: 'white', borderRadius: '12px', padding: '40px', boxShadow: 'var(--shadow)' }}
-          >
-            <p style={{ color: 'var(--text-light)', marginBottom: '12px' }}>当前没有正在进行的对局</p>
-            <Link to="/new-session" style={{ color: 'var(--mj-green)', fontWeight: 'bold', textDecoration: 'none' }}>
-              + 开启一局新游戏
-            </Link>
+          <div className="empty-state">
+            <p>当前没有正在进行的对局</p>
           </div>
         ) : (
           <div className="active-games-grid">
@@ -128,7 +116,7 @@ export default function HomePage() {
         )}
       </div>
 
-      <div className="rankings-section" style={{ marginTop: '48px' }}>
+      <div className="card rankings-section">
         <h2 style={{ marginBottom: '16px' }}>本月荣誉殿堂</h2>
         <div className="hall-of-fame-grid">
           {GAME_MODES.map((mode) => {
@@ -138,9 +126,9 @@ export default function HomePage() {
                 <h3 className="mode-rank-title">{mode.label}</h3>
                 <div className="rank-list">
                   {!data || data.top.length === 0 ? (
-                    <p className="empty-state" style={{ padding: '20px 0' }}>
-                      暂无本月排名
-                    </p>
+                    <div className="empty-state empty-state-compact">
+                      <p>暂无本月排名</p>
+                    </div>
                   ) : (
                     data.top.map((player, idx) => (
                       <div key={player.playerId} className="rank-item">

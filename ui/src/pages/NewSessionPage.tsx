@@ -112,7 +112,7 @@ export default function NewSessionPage() {
         </div>
 
         {players.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
+          <div className="filter-bar">
             <input type="text" placeholder="搜索玩家..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         )}

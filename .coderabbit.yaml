@@ -3,6 +3,11 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+  path_instructions:
+    - path: "ui/src/**"
+      instructions: "Follow the audit rules defined in .claude/commands/audit.md."
+    - path: "server/src/**"
+      instructions: "Follow the audit rules defined in .claude/commands/audit.md."
   path_filters:
     - "!dist/**"
     - "!**/*.lock"
