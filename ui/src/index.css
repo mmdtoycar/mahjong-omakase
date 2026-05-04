@@ -2297,7 +2297,7 @@ tr:hover td {
 
 .quick-player-btn {
   width: 100%;
-  padding: 6px 4px;
+  padding: 6px 28px 6px 10px; /* Increased right padding to avoid badge overlap */
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #fff;
@@ -2310,6 +2310,7 @@ tr:hover td {
   box-shadow: var(--shadow);
   color: var(--text);
   position: relative;
+  min-height: 40px; /* Ensure enough height for centered badge */
 }
 
 .quick-player-btn:hover:not(:disabled) {
@@ -2361,26 +2362,26 @@ tr:hover td {
   background: rgba(203, 75, 22, 0.08);
 }
 
-.score-inline-group {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
+.round-form .score-inline-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 12px !important;
+  margin-bottom: 12px;
 }
 
-.score-inline-group label {
-  margin-bottom: 0 !important;
+.round-form .score-inline-group label {
+  margin-bottom: 0;
   white-space: nowrap;
   font-weight: 700;
 }
 
-.score-input-compact {
+.round-form .score-input-compact {
   max-width: 120px;
-  padding: 6px 10px !important;
+  padding: 6px 10px;
 }
 
-.form-section-title {
+.round-form .form-section-title {
   background: var(--sol-base3);
   font-size: 0.85rem;
   color: var(--text-light);
@@ -2393,10 +2394,10 @@ tr:hover td {
   display: inline-block;
 }
 
-.no-border-top {
-  border-top: none !important;
-  padding-top: 0 !important;
-  margin-top: 0 !important;
+.round-form .no-border-top {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
 }
 
 .quick-player-btn .wind-badge {
