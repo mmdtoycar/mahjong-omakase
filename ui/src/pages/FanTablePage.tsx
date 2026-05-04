@@ -5,6 +5,7 @@ import { shenyangFanTableData } from '../data/shenyangFanTableData'
 import { fetchFanDiscoveries, fetchActiveSeasons } from '../api'
 import { FanDiscovery, getCurrentSeason, getSeasonLabel, Season } from '../types'
 import { MahjongHand } from '../components/MahjongHand'
+import { nameFontSize } from '../utils/fontSize'
 
 type TabType = 'guobiao' | 'riichi' | 'shenyang'
 
@@ -247,12 +248,19 @@ const FanTablePage: React.FC = () => {
                 return (
                   <div key={item.name} className="fan-item-card">
                     <div className="fan-item-header">
-                      <span className="fan-item-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span
+                        className="fan-item-name"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}
+                      >
                         {item.name}
                         {hasCurrent && (
                           <span
                             className="badge badge-discovery"
-                            style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}
+                            style={{
+                              fontSize: nameFontSize(currentDiscovery.playerName),
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                            }}
                             title={`首位达成者: ${currentDiscovery.playerName}${
                               (currentDiscovery.bonusRp ?? 0) > 0 ? ` (+${currentDiscovery.bonusRp} RP)` : ''
                             }`}
@@ -264,7 +272,11 @@ const FanTablePage: React.FC = () => {
                         {hasPrev && (
                           <span
                             className="badge badge-discovery-prev"
-                            style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px' }}
+                            style={{
+                              fontSize: nameFontSize(prevDiscovery.playerName),
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                            }}
                             title={`历史冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
                           >
                             历史冠名: {prevDiscovery.playerName}

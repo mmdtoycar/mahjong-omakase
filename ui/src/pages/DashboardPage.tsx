@@ -82,8 +82,17 @@ export default function DashboardPage() {
         className="flex-between"
         style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: '12px' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <h2 style={{ margin: 0 }}>对局历史</h2>
+        <h2 style={{ margin: 0, whiteSpace: 'nowrap' }}>对局历史</h2>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            flex: 1,
+            justifyContent: 'flex-end',
+            flexWrap: 'wrap',
+          }}
+        >
           <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
             <option value="all">全部赛季</option>
             {seasons.map((s) => (
@@ -92,10 +101,10 @@ export default function DashboardPage() {
               </option>
             ))}
           </select>
+          <Link to="/new-session" className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
+            + 新建游戏
+          </Link>
         </div>
-        <Link to="/new-session" className="btn btn-primary">
-          + 新建游戏
-        </Link>
       </div>
 
       {filteredSessions.length === 0 ? (
