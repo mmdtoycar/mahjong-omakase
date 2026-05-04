@@ -17,7 +17,7 @@ Review PR comments from CodeRabbit and fix all issues, including nits.
    - Make the code changes
    - Run pre-flight checks:
      - `./gradlew spotlessApply` from project root
-     - `npx tsc --noEmit` from ui/
+     - `cd ui && npx tsc --noEmit` (MUST run from ui/, never from project root)
      - `./gradlew compileJava -q` from project root
    - Commit with a message referencing what was fixed
 

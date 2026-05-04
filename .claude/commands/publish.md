@@ -4,7 +4,7 @@ Commit all changes and create a PR. Do not include yourself as co-author or comm
 
 1. **Pre-flight checks**
    - Run `./gradlew spotlessApply` from project root to format Java code
-   - Run `npx tsc --noEmit` from ui/ to verify TypeScript compiles
+   - Run `cd ui && npx tsc --noEmit` to verify TypeScript compiles (MUST run from ui/, never from project root)
    - Run `./gradlew compileJava -q` from project root to verify Java compiles
    - If any check fails, stop and report the error. Do NOT create the PR.
 
