@@ -2345,8 +2345,9 @@ tr:hover td {
 }
 
 .quick-player-btn .wind-badge {
-  top: 2px;
-  right: 2px;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
 }
 
 .quick-player-btn .btn-name {
