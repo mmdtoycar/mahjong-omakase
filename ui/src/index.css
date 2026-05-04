@@ -2629,222 +2629,158 @@ tr:hover td {
   }
 }
 
-/* Dashboard V2 Table Styles */
-.dashboard-table-container {
-  width: 100%;
-  overflow-x: auto;
+/* Dashboard Card List Styles */
+.dashboard-sessions-list {
+  display: flex;
+  flex-direction: column;
 }
 
-.dashboard-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 800px;
-}
-
-.dashboard-table th,
-.dashboard-table td {
-  padding: 12px 16px;
+.session-history-card {
+  padding: 20px 24px;
   border-bottom: 1px solid var(--border);
-  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
 }
 
-.dashboard-table th {
-  background: var(--sol-base3);
-  font-size: 0.85rem;
-  color: var(--text-light);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+.session-history-card:last-child {
+  border-bottom: none;
 }
 
-.dashboard-table tr:hover td {
+.session-history-card:hover {
   background: rgba(33, 140, 116, 0.04);
 }
 
-.dashboard-table tr:focus-visible {
-  outline: 2px solid var(--mj-green);
-  outline-offset: -2px;
-}
-
-.dashboard-table tr:focus-visible td {
+.session-history-card:focus-visible {
   background: rgba(33, 140, 116, 0.08);
+  box-shadow: inset 4px 0 0 var(--mj-green);
 }
 
-.cell-rank {
-  min-width: 140px;
+.session-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
-.cell-player-box {
+.mode-text {
+  font-weight: 900;
+  color: var(--mj-gold);
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.session-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.session-card-date {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.session-status-tag {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-in_progress {
+  background: rgba(33, 140, 116, 0.15);
+  color: var(--mj-green);
+  border: 1px solid rgba(33, 140, 116, 0.2);
+}
+
+.status-completed {
+  background: var(--sol-base3);
+  color: var(--text-light);
+  border: 1px solid var(--border);
+}
+
+.session-card-players {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.player-rank-item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
-.cell-player-name {
+.player-rank-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rank-number {
+  font-weight: 900;
+  font-size: 0.8rem;
+  min-width: 20px;
+  opacity: 0.5;
+}
+
+.rank-1 .rank-number {
+  color: #b58900;
+  opacity: 1;
+}
+.rank-2 .rank-number {
+  color: #839496;
+  opacity: 1;
+}
+.rank-3 .rank-number {
+  color: #cb4b16;
+  opacity: 1;
+}
+
+.player-name {
   font-weight: 700;
   color: var(--primary);
   font-size: 0.95rem;
-}
-
-.cell-player-stats {
-  font-size: 0.75rem;
-  color: var(--text-light);
-}
-
-.cell-mode {
-  font-weight: 800;
-  color: var(--mj-gold);
-  font-size: 0.9rem;
-}
-
-.cell-date {
-  font-size: 0.8rem;
-  color: var(--text-light);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.cell-status-badge {
-  display: inline-block;
-  font-size: 0.7rem;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.score-positive {
-  color: var(--success) !important;
-}
-.score-negative {
-  color: var(--danger) !important;
-}
-
-.dashboard-table th.rank-tag-1 {
-  color: #b58900 !important;
-}
-.dashboard-table th.rank-tag-2 {
-  color: #839496 !important;
-}
-.dashboard-table th.rank-tag-3 {
-  color: #cb4b16 !important;
+.player-score {
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding-left: 28px;
 }
 
 @media (max-width: 850px) {
-  .dashboard-table,
-  .dashboard-table thead,
-  .dashboard-table tbody,
-  .dashboard-table th,
-  .dashboard-table td,
-  .dashboard-table tr {
-    display: block;
+  .session-card-header {
+    margin-bottom: 12px;
   }
 
-  .dashboard-table {
-    min-width: unset;
+  .session-card-players {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
-  .dashboard-table thead tr {
-    position: absolute;
-    top: -9999px;
-    left: -9999px;
-  }
-
-  .dashboard-table tr {
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 16px;
-    background: var(--card);
-    padding: 4px 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  .dashboard-table td {
-    border: none;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    position: relative;
-    padding-left: 50%;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-  }
-
-  .dashboard-table td.cell-rank {
-    width: 100%;
-    order: 4;
-  }
-
-  .dashboard-table td.cell-mode {
-    order: 1;
-    width: auto;
-    padding: 8px 16px;
-    border-bottom: none;
-    min-height: auto;
-  }
-
-  .dashboard-table td.cell-date {
-    order: 2;
-    width: auto;
-    margin-left: auto;
-    padding: 8px 8px 8px 0;
-    border-bottom: none;
-    min-height: auto;
-    font-size: 0.75rem;
-  }
-
-  .dashboard-table td.cell-status {
-    order: 3;
-    width: auto;
-    padding: 8px 16px 8px 0;
-    border-bottom: none;
-    min-height: auto;
-  }
-
-  .dashboard-table td:last-child {
-    border-bottom: none;
-  }
-
-  .dashboard-table td:before {
-    position: absolute;
-    left: 16px;
-    width: 40%;
-    white-space: nowrap;
-    font-weight: bold;
-    color: var(--text-light);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-  }
-
-  .dashboard-table td.cell-mode:before,
-  .dashboard-table td.cell-date:before,
-  .dashboard-table td.cell-status:before {
-    display: none;
-  }
-
-  .dashboard-table td:nth-of-type(2):before {
-    content: '#1';
-    color: #b58900;
-  }
-  .dashboard-table td:nth-of-type(3):before {
-    content: '#2';
-    color: #839496;
-  }
-  .dashboard-table td:nth-of-type(4):before {
-    content: '#3';
-    color: #cb4b16;
-  }
-  .dashboard-table td:nth-of-type(5):before {
-    content: '#4';
-  }
-
-  .cell-player-box {
+  .player-rank-item {
     flex-direction: row;
-    width: 100%;
     justify-content: space-between;
     align-items: center;
-    padding-right: 16px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
   }
 
-  .cell-player-stats {
-    font-size: 0.85rem;
-    font-weight: 600;
+  .player-rank-item:last-child {
+    border-bottom: none;
+  }
+
+  .player-score {
+    padding-left: 0;
+    font-size: 0.8rem;
   }
 }
