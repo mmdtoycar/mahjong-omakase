@@ -1720,11 +1720,10 @@ tr:hover td {
 }
 
 .mahjong-tile[src*='Back'] {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  border-color: #064e3b !important;
-  box-shadow: 0 2px 4px rgba(6, 78, 59, 0.3);
-  /* Replace the red image with transparency to show the gradient background */
-  content: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+  /* Use filter to transform the red SVG color into emerald green while keeping its original dimensions/aspect ratio */
+  filter: hue-rotate(140deg) saturate(1.6) brightness(0.8) contrast(1.1);
+  border-color: #065f46 !important;
+  box-shadow: 0 2px 4px rgba(6, 95, 70, 0.2);
 }
 
 .mahjong-tile:hover {
