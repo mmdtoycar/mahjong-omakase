@@ -95,7 +95,9 @@ export default function HomePage() {
           <div className="hero-logo-ring">
             <img src="/logo-header.png" alt="" className="hero-logo-img" />
           </div>
-          <span className="hero-cta">麻将，启动<span style={{ marginLeft: '-0.005em' }}>!</span></span>
+          <span className="hero-cta">
+            麻将，启动<span style={{ marginLeft: '-0.005em' }}>!</span>
+          </span>
         </Link>
       </div>
 

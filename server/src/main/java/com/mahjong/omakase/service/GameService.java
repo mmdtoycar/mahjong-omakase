@@ -747,8 +747,7 @@ public class GameService {
       if (trimmedPart.isEmpty()) continue;
 
       int bracketIdx = trimmedPart.indexOf('(');
-      String fanName =
-          bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
+      String fanName = bracketIdx != -1 ? trimmedPart.substring(0, bracketIdx).trim() : trimmedPart;
 
       if (fanDiscoveryRepo.findBySeasonAndFanNameAndPlayerBotFalse(season, fanName).isEmpty()) {
         try {
