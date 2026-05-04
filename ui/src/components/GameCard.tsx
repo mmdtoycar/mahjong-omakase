@@ -20,7 +20,7 @@ interface Props {
 
 export const GameCard: React.FC<Props> = ({ id, gameModeDisplayName, createdAt, roundLabel, isActive, players }) => {
   return (
-    <Link to={`/session/${id}`} className="session-history-card">
+    <Link to={`/session/${id}`} className="game-card">
       <div className="session-card-header">
         <div className="session-card-mode">
           <span className="mode-text">{gameModeDisplayName}</span>

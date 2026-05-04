@@ -2328,59 +2328,6 @@ tr:hover td {
   margin-top: 16px;
 }
 
-.active-game-card {
-  background: white !important;
-  border-radius: var(--radius);
-  padding: 20px;
-  text-decoration: none;
-  color: inherit;
-  box-shadow: var(--shadow);
-  transition: transform 0.2s, box-shadow 0.2s;
-  border: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-}
-
-.active-game-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--mj-green);
-}
-
-.active-game-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.active-game-mode {
-  font-weight: 700;
-  color: var(--mj-green);
-  font-size: 0.9rem;
-}
-
-.active-game-title {
-  font-size: 1.2rem;
-  margin-bottom: 16px;
-  font-weight: 700;
-}
-
-.active-game-players {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-  flex: 1;
-}
-
-.active-game-player-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  border-bottom: 1px dashed var(--border);
-}
-
 .player-name {
   font-weight: 500;
 }
@@ -2408,12 +2355,6 @@ tr:hover td {
   border-color: var(--mj-red);
   color: #fff;
   background-color: var(--mj-red);
-}
-
-.active-game-footer {
-  font-size: 0.8rem;
-  color: var(--text-light);
-  text-align: right;
 }
 
 /* Hall of Fame Styles */
@@ -2595,7 +2536,7 @@ tr:hover td {
   background: var(--sol-base2); /* Slightly darker background to make cards pop */
 }
 
-.session-history-card {
+.game-card {
   background: var(--card);
   padding: 20px;
   border: 1px solid var(--border);
@@ -2610,13 +2551,13 @@ tr:hover td {
   color: inherit;
 }
 
-.session-history-card:hover {
+.game-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
   border-color: var(--mj-green);
 }
 
-.session-history-card:focus-visible {
+.game-card:focus-visible {
   border-color: var(--mj-green);
   box-shadow: 0 0 0 3px rgba(33, 140, 116, 0.2);
 }
@@ -2631,7 +2572,7 @@ tr:hover td {
 }
 
 .mode-text {
-  font-weight: 900;
+  font-weight: 700;
   color: var(--mj-gold);
   font-size: 0.95rem;
   letter-spacing: 0.5px;
@@ -2663,7 +2604,7 @@ tr:hover td {
 }
 
 .player-rank-item:not(:last-child) {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.02);
+  border-bottom: 1px dashed var(--border);
   padding-bottom: 8px;
 }
 
@@ -2673,27 +2614,27 @@ tr:hover td {
   gap: 8px;
 }
 
-.session-history-card .rank-number {
+.game-card .rank-number {
   font-weight: 900;
   font-size: 0.75rem;
   min-width: 18px;
   opacity: 0.4;
 }
 
-.session-history-card .rank-1 .rank-number {
+.game-card .rank-1 .rank-number {
   color: #b58900;
   opacity: 1;
 }
-.session-history-card .rank-2 .rank-number {
+.game-card .rank-2 .rank-number {
   color: #839496;
   opacity: 1;
 }
-.session-history-card .rank-3 .rank-number {
+.game-card .rank-3 .rank-number {
   color: #cb4b16;
   opacity: 1;
 }
 
-.session-history-card .player-name {
+.game-card .player-name {
   font-weight: 600;
   color: var(--primary);
   font-size: 0.9rem;
@@ -2703,11 +2644,10 @@ tr:hover td {
   text-overflow: ellipsis;
 }
 
-.session-history-card .player-score {
+.game-card .player-score {
   font-size: 0.85rem;
   font-weight: 800;
 }
-
 
 @media (max-width: 640px) {
   .dashboard-sessions-list {
