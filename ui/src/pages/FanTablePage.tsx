@@ -117,13 +117,27 @@ const FanTablePage: React.FC = () => {
 
     if (!search.trim()) return data
     const lowerSearch = search.toLowerCase().trim()
-    return data.filter(
-      (item) =>
+    return data.filter((item) => {
+      if (
         item.name.toLowerCase().includes(lowerSearch) ||
         item.description.toLowerCase().includes(lowerSearch) ||
         item.fan.toString() === lowerSearch
-    )
-  }, [search, activeTab])
+      )
+        return true
+      // Also match against visible champion badges only (mirrors hasCurrent / hasPrev display logic)
+      if (activeTab === 'guobiao' && seasonKey !== 'all') {
+        const currentDiscovery = discoveriesMap[item.name]
+        const currentChampion = currentDiscovery?.playerName?.toLowerCase()
+        if (currentChampion?.includes(lowerSearch)) return true
+        // Only match prev champion if there is no current-season champion discovery object
+        if (!currentDiscovery) {
+          const prevChampion = prevDiscoveriesMap[item.name]?.playerName?.toLowerCase()
+          if (prevChampion?.includes(lowerSearch)) return true
+        }
+      }
+      return false
+    })
+  }, [search, activeTab, discoveriesMap, prevDiscoveriesMap, seasonKey])
 
   const groupedAndSortedFans = useMemo(() => {
     const grouped = filteredFanTable.reduce((acc, current) => {
@@ -197,7 +211,7 @@ const FanTablePage: React.FC = () => {
         <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
           <input
             type="text"
-            placeholder="搜索番名、分数或描述..."
+            placeholder="搜索番名、分数、描述或冠名玩家..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ flex: 1, minWidth: '200px' }}
