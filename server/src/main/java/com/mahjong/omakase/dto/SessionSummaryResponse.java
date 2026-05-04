@@ -50,10 +50,12 @@ public class SessionSummaryResponse {
       }
     }
 
-    for (var round : session.getRounds()) {
-      for (var rs : round.getScores()) {
-        if (rs.getPlayer() != null) {
-          totals.merge(rs.getPlayer().getId(), rs.getScore(), (a, b) -> a + b);
+    if (session.getRounds() != null) {
+      for (var round : session.getRounds()) {
+        for (var rs : round.getScores()) {
+          if (rs.getPlayer() != null) {
+            totals.merge(rs.getPlayer().getId(), rs.getScore(), (a, b) -> a + b);
+          }
         }
       }
     }

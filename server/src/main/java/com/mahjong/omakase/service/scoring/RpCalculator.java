@@ -24,7 +24,10 @@ public final class RpCalculator {
       Map<Long, Integer> scoresByPlayerId, double rpFactor, double[] umaDist) {
     List<Long> sortedIds =
         scoresByPlayerId.keySet().stream()
-            .sorted((a, b) -> scoresByPlayerId.get(b).compareTo(scoresByPlayerId.get(a)))
+            .sorted(
+                Comparator.<Long, Integer>comparing(
+                        scoresByPlayerId::get, Comparator.reverseOrder())
+                    .thenComparingLong(Long::longValue))
             .collect(Collectors.toList());
 
     List<RankEntry> results = new ArrayList<>();
