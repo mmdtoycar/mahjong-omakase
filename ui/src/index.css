@@ -406,11 +406,13 @@ tr:hover td {
   font-variant-numeric: tabular-nums;
 }
 
-.score-cell.score-positive {
+.score-cell.score-positive,
+.score-positive {
   color: var(--success);
 }
 
-.score-cell.score-negative {
+.score-cell.score-negative,
+.score-negative {
   color: var(--danger);
 }
 
@@ -971,6 +973,12 @@ tr:hover td {
   border-radius: 8px;
   font-size: 0.9rem;
   margin-bottom: 16px;
+}
+
+.error-text {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin: 8px 0;
 }
 
 .btn-signup {
@@ -2700,13 +2708,6 @@ tr:hover td {
   font-weight: 800;
 }
 
-.session-history-card .score-positive {
-  color: var(--success);
-}
-
-.session-history-card .score-negative {
-  color: var(--danger);
-}
 
 @media (max-width: 640px) {
   .dashboard-sessions-list {

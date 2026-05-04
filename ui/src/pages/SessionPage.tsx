@@ -589,7 +589,7 @@ export default function SessionPage() {
 
                 {preview && <div className="score-preview">{preview}</div>}
 
-                {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', margin: '8px 0' }}>{error}</p>}
+                {error && <p className="error-text">{error}</p>}
 
                 <button className="btn btn-primary" onClick={handleAddRound} disabled={!canSubmit || submitting}>
                   {submitting ? '提交中...' : '添加'}
@@ -756,10 +756,10 @@ export default function SessionPage() {
                       </td>
                       <td>{p.userName}</td>
                       <td
+                        className={`${val > 0 ? 'score-positive' : val < 0 ? 'score-negative' : ''}`}
                         style={{
                           textAlign: 'right',
                           fontVariantNumeric: 'tabular-nums',
-                          color: val > 0 ? 'var(--success)' : val < 0 ? 'var(--danger)' : undefined,
                         }}
                       >
                         {val > 0 ? `+${val}` : val}

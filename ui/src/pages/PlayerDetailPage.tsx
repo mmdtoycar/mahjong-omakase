@@ -80,10 +80,10 @@ export default function PlayerDetailPage() {
                       </span>
                     </td>
                     <td
+                      className={`${g.totalScore > 0 ? 'score-positive' : g.totalScore < 0 ? 'score-negative' : ''}`}
                       style={{
                         textAlign: 'right',
                         fontVariantNumeric: 'tabular-nums',
-                        color: g.totalScore > 0 ? 'var(--success)' : g.totalScore < 0 ? 'var(--danger)' : undefined,
                       }}
                     >
                       {g.totalScore > 0 ? `+${g.totalScore}` : g.totalScore}
