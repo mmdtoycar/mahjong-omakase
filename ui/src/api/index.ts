@@ -11,18 +11,15 @@ import {
 
 const API = '/api'
 
-const cache = new Map<string, { data: unknown; expiry: number }>()
-const CACHE_TTL = 10_000
+const cache = new Map<string, unknown>()
 
 function getCached<T>(key: string): T | null {
-  const entry = cache.get(key)
-  if (entry && Date.now() < entry.expiry) return entry.data as T
-  cache.delete(key)
+  if (cache.has(key)) return cache.get(key) as T
   return null
 }
 
 function setCache(key: string, data: unknown) {
-  cache.set(key, { data, expiry: Date.now() + CACHE_TTL })
+  cache.set(key, data)
 }
 
 export function invalidateCache(prefix?: string) {
