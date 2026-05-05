@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { GameSession, Season, getCurrentSeason, getSeasonLabel } from '../types'
 import { fetchSessions, fetchActiveSeasons } from '../api'
 import { GameCard } from '../components/GameCard'
+import { MSG } from '../constants'
 
 export default function DashboardPage() {
   const [sessions, setSessions] = useState<GameSession[]>([])
@@ -35,9 +36,9 @@ export default function DashboardPage() {
         }))
         setSeasons(list)
       })
-      .catch((e) => {
+      .catch((e: unknown) => {
         if (!mounted) return
-        setError(e.message)
+        setError(e instanceof Error ? e.message : MSG.ERROR)
       })
       .finally(() => {
         if (mounted) setLoading(false)
@@ -68,13 +69,13 @@ export default function DashboardPage() {
   if (loading)
     return (
       <div className="empty-state">
-        <p>加载中...</p>
+        <p>{MSG.LOADING}</p>
       </div>
     )
   if (error)
     return (
       <div className="empty-state">
-        <p>加载失败：{error}</p>
+        <p>{error}</p>
       </div>
     )
 

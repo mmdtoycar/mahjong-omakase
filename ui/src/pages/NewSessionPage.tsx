@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { fetchPlayers, createSession } from '../api'
 import { Player, GameModeKey, GAME_MODES } from '../types'
 import { cardFontSize } from '../utils/fontSize'
+import { MSG } from '../constants'
 import { abbrName } from '../utils/format'
 
 const MIN_PLAYERS = 3
@@ -24,7 +25,7 @@ export default function NewSessionPage() {
         setPlayers(p)
         setLoaded(true)
       })
-      .catch(() => setError('加载玩家失败'))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : MSG.ERROR))
   }, [])
 
   const togglePlayer = (id: number) => {
@@ -63,8 +64,8 @@ export default function NewSessionPage() {
       )}`
       const session = await createSession(defaultName, gameMode, selectedIds)
       navigate(`/session/${session.id}`)
-    } catch (e: any) {
-      setError(e.message || '创建游戏失败')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : MSG.ERROR)
       setCreating(false)
     }
   }
@@ -120,7 +121,7 @@ export default function NewSessionPage() {
         {error ? (
           <p className="error-text">{error}</p>
         ) : !loaded ? (
-          <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: 8 }}>加载中...</p>
+          <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: 8 }}>{MSG.LOADING}</p>
         ) : players.length > 0 ? (
           <div className="player-select-grid">
             {filteredPlayers.map((p) => {

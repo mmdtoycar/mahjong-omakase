@@ -8,6 +8,7 @@ import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
 import { scoreClass } from '../utils/format'
+import { MSG } from '../constants'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -50,13 +51,13 @@ export default function SessionPage() {
   }
 
   useEffect(() => {
-    load().catch((e) => setError(e.message))
+    load().catch((e: unknown) => setError(e instanceof Error ? e.message : MSG.ERROR))
   }, [id])
 
   if (!session)
     return (
       <div className="empty-state">
-        <p>{error || '加载中...'}</p>
+        <p>{error || MSG.LOADING}</p>
       </div>
     )
 
@@ -161,8 +162,8 @@ export default function SessionPage() {
 
       resetForm()
       await load()
-    } catch (e: any) {
-      setError(e.message || '操作失败')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : MSG.ERROR)
     } finally {
       setSubmitting(false)
     }
@@ -175,8 +176,8 @@ export default function SessionPage() {
     try {
       await deleteRound(session.id, roundNumber)
       await load()
-    } catch (e: any) {
-      setError(e.message || '删除失败')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : MSG.ERROR)
     } finally {
       setSubmitting(false)
     }
@@ -189,8 +190,8 @@ export default function SessionPage() {
     try {
       await completeSession(session.id)
       await load()
-    } catch (e: any) {
-      setError(e.message || '操作失败')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : MSG.ERROR)
     } finally {
       setSubmitting(false)
     }
@@ -432,7 +433,7 @@ export default function SessionPage() {
                   </span>
                 )}
                 <button className="btn btn-primary" onClick={handleAddRound} disabled={submitting}>
-                  {submitting ? '提交中...' : '添加流局'}
+                  {submitting ? MSG.SUBMITTING : '添加流局'}
                 </button>
               </>
             ) : (
@@ -593,7 +594,7 @@ export default function SessionPage() {
                 {error && <p className="error-text">{error}</p>}
 
                 <button className="btn btn-primary" onClick={handleAddRound} disabled={!canSubmit || submitting}>
-                  {submitting ? '提交中...' : '添加'}
+                  {submitting ? MSG.SUBMITTING : '添加'}
                 </button>
               </>
             )}

@@ -4,6 +4,7 @@ import { fetchSessions, fetchSessionDetail, fetchStats, fetchBestRounds } from '
 import { GameSession, SessionDetail, PlayerStats, BestRound, GAME_MODES, getCurrentSeason } from '../types'
 import { GameCard } from '../components/GameCard'
 import { deriveGameState, getWindName } from '../utils/gameState'
+import { MSG } from '../constants'
 
 export default function HomePage() {
   const [activeSessions, setActiveSessions] = useState<SessionDetail[]>([])
@@ -13,36 +14,28 @@ export default function HomePage() {
   const currentSeason = getCurrentSeason()
 
   useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval>
     let isActive = true
-    let inFlight = false
     const controller = new AbortController()
 
     async function loadData() {
-      if (inFlight) return
-      inFlight = true
-
       try {
-        // 1. Fetch sessions and filter for IN_PROGRESS
-        const sessions = await fetchSessions()
+        const sessions = await fetchSessions(controller.signal)
         const active = sessions.filter((s) => s.status === 'IN_PROGRESS')
 
-        // 2. Fetch details for active sessions (using allSettled to prevent single failure from crashing all)
-        const settledDetails = await Promise.allSettled(active.map((s) => fetchSessionDetail(s.id)))
+        const settledDetails = await Promise.allSettled(active.map((s) => fetchSessionDetail(s.id, controller.signal)))
         const details = settledDetails
           .filter((res): res is PromiseFulfilledResult<SessionDetail> => res.status === 'fulfilled')
           .map((res) => res.value)
 
         if (isActive) setActiveSessions(details)
 
-        // 3. Fetch stats for each mode
         const rankingData: Record<string, { top: PlayerStats[]; best: BestRound | null }> = {}
 
         await Promise.all(
           GAME_MODES.map(async (mode) => {
             try {
               const [stats, bestRounds] = await Promise.all([
-                fetchStats(mode.key, currentSeason.year, currentSeason.month),
+                fetchStats(mode.key, currentSeason.year, currentSeason.month, controller.signal),
                 fetchBestRounds(mode.key, currentSeason.year, currentSeason.month, controller.signal),
               ])
 
@@ -51,8 +44,8 @@ export default function HomePage() {
                 best:
                   bestRounds.length > 0 ? bestRounds.sort((a, b) => (b.fanCount || 0) - (a.fanCount || 0))[0] : null,
               }
-            } catch (err) {
-              if ((err as Error).name !== 'AbortError') {
+            } catch (err: unknown) {
+              if (err instanceof Error && err.name !== 'AbortError') {
                 console.error(`Failed to fetch stats for ${mode.key}:`, err)
               }
               rankingData[mode.key] = { top: [], best: null }
@@ -61,22 +54,17 @@ export default function HomePage() {
         )
 
         if (isActive) setRankings(rankingData)
-      } catch (e) {
-        if ((e as Error).name !== 'AbortError') console.error('Failed to load hub data:', e)
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name !== 'AbortError') console.error('Failed to load hub data:', e)
       } finally {
-        inFlight = false
-        if (isActive) {
-          setLoading(false)
-        }
+        if (isActive) setLoading(false)
       }
     }
 
     loadData()
-    intervalId = setInterval(loadData, 10000)
 
     return () => {
       isActive = false
-      clearInterval(intervalId)
       controller.abort()
     }
   }, [currentSeason.year, currentSeason.month])
@@ -84,7 +72,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="empty-state">
-        <p>加载枢纽数据中...</p>
+        <p>{MSG.LOADING}</p>
       </div>
     )
   }

@@ -19,6 +19,7 @@ const currentSeason = getCurrentSeason()
 
 import { statFontSize } from '../utils/fontSize'
 import { abbrName } from '../utils/format'
+import { MSG } from '../constants'
 
 export default function StatsPage() {
   const navigate = useNavigate()
@@ -53,8 +54,8 @@ export default function StatsPage() {
         setStats(s.sort((a, b) => b.totalRP - a.totalRP || b.totalScore - a.totalScore))
         setLoading(false)
       })
-      .catch((e) => {
-        setError(e.message)
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : MSG.ERROR)
         setLoading(false)
       })
   }
@@ -67,8 +68,8 @@ export default function StatsPage() {
         setPlayers(p)
         setLoading(false)
       })
-      .catch((e) => {
-        setError(e.message)
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : MSG.ERROR)
         setLoading(false)
       })
   }
@@ -86,9 +87,9 @@ export default function StatsPage() {
           )
         }
       })
-      .catch((e) => {
+      .catch((e: unknown) => {
         if (!mounted) return
-        setError(e.message)
+        setError(e instanceof Error ? e.message : MSG.ERROR)
       })
     return () => {
       mounted = false
@@ -111,8 +112,8 @@ export default function StatsPage() {
         .then((data) => {
           if (!controller.signal.aborted) setBestRounds(data)
         })
-        .catch((e) => {
-          if (!controller.signal.aborted) setBestRoundsError(e.message)
+        .catch((e: unknown) => {
+          if (!controller.signal.aborted) setBestRoundsError(e instanceof Error ? e.message : MSG.ERROR)
         })
     }
     return () => controller.abort()
@@ -128,9 +129,9 @@ export default function StatsPage() {
         .then((data) => {
           if (!controller.signal.aborted) setMonthlyBestRounds(data)
         })
-        .catch((e) => {
+        .catch((e: unknown) => {
           if (!controller.signal.aborted) {
-            setMonthlyBestRoundsError(e.message)
+            setMonthlyBestRoundsError(e instanceof Error ? e.message : MSG.ERROR)
             setMonthlyBestRounds([])
           }
         })
@@ -149,13 +150,13 @@ export default function StatsPage() {
   if (loading)
     return (
       <div className="empty-state">
-        <p>加载中...</p>
+        <p>{MSG.LOADING}</p>
       </div>
     )
   if (error)
     return (
       <div className="empty-state">
-        <p>加载失败：{error}</p>
+        <p>{error}</p>
       </div>
     )
 
@@ -299,7 +300,7 @@ export default function StatsPage() {
                 <span className="best-hand-crown">🌟</span>
                 <h2>{selectedSeason?.label}最高和牌</h2>
               </div>
-              {monthlyBestRoundsError && <p className="error-text">加载月度最高和牌失败: {monthlyBestRoundsError}</p>}
+              {monthlyBestRoundsError && <p className="error-text">{monthlyBestRoundsError}</p>}
               {!monthlyBestRoundsError && monthlyBestRounds.length === 0 && (
                 <div className="empty-state empty-state-compact">
                   <p>本月无记录</p>
@@ -333,7 +334,7 @@ export default function StatsPage() {
                 <span className="best-hand-crown">👑</span>
                 <h2>历史最高和牌</h2>
               </div>
-              {bestRoundsError && <p className="error-text">加载历史最高和牌失败: {bestRoundsError}</p>}
+              {bestRoundsError && <p className="error-text">{bestRoundsError}</p>}
               <div className="best-hand-list">
                 {bestRounds.map((round) => (
                   <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
