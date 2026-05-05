@@ -162,8 +162,8 @@ export default function SessionPage() {
 
       resetForm()
       await load()
-    } catch (e: any) {
-      setError(e.message || MSG.ERROR)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : MSG.ERROR)
     } finally {
       setSubmitting(false)
     }
@@ -176,8 +176,8 @@ export default function SessionPage() {
     try {
       await deleteRound(session.id, roundNumber)
       await load()
-    } catch (e: any) {
-      setError(e.message || MSG.ERROR)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : MSG.ERROR)
     } finally {
       setSubmitting(false)
     }
@@ -190,8 +190,8 @@ export default function SessionPage() {
     try {
       await completeSession(session.id)
       await load()
-    } catch (e: any) {
-      setError(e.message || MSG.ERROR)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : MSG.ERROR)
     } finally {
       setSubmitting(false)
     }

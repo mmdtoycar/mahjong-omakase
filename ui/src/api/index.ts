@@ -15,13 +15,15 @@ const API = '/api'
 const cache = new Map<string, { data: unknown; expiry: number }>()
 const CACHE_TTL = 30_000
 
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') cache.clear()
-})
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') cache.clear()
+  })
+}
 
 function getCached<T>(key: string): T | null {
   const entry = cache.get(key)
-  if (entry && Date.now() < entry.expiry) return entry.data as T
+  if (entry && Date.now() < entry.expiry) return structuredClone(entry.data) as T
   cache.delete(key)
   return null
 }
@@ -67,7 +69,9 @@ export async function createPlayer(userName: string, firstName: string, lastName
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userName, firstName, lastName }),
   })
-  return handleResponse(res)
+  const data = await handleResponse<Player>(res)
+  invalidateCache()
+  return data
 }
 
 export async function checkUserName(userName: string): Promise<boolean> {
