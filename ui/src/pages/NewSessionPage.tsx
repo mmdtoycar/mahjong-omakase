@@ -64,8 +64,8 @@ export default function NewSessionPage() {
       )}`
       const session = await createSession(defaultName, gameMode, selectedIds)
       navigate(`/session/${session.id}`)
-    } catch (e: any) {
-      setError(e.message || '创建游戏失败')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : MSG.ERROR)
       setCreating(false)
     }
   }

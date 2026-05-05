@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createPlayer, checkUserName } from '../api'
+import { MSG } from '../constants'
 
 export default function SignUpPage() {
   const navigate = useNavigate()
@@ -55,7 +56,7 @@ export default function SignUpPage() {
       await createPlayer(userName.trim(), firstName.trim(), lastName.trim())
       navigate('/')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : '注册失败')
+      setError(err instanceof Error ? err.message : MSG.ERROR)
       setSubmitting(false)
     }
   }

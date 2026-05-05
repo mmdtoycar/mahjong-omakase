@@ -52,8 +52,8 @@ export default function HomePage() {
                 best:
                   bestRounds.length > 0 ? bestRounds.sort((a, b) => (b.fanCount || 0) - (a.fanCount || 0))[0] : null,
               }
-            } catch (err) {
-              if ((err as Error).name !== 'AbortError') {
+            } catch (err: unknown) {
+              if (err instanceof Error && err.name !== 'AbortError') {
                 console.error(`Failed to fetch stats for ${mode.key}:`, err)
               }
               rankingData[mode.key] = { top: [], best: null }
@@ -62,8 +62,8 @@ export default function HomePage() {
         )
 
         if (isActive) setRankings(rankingData)
-      } catch (e) {
-        if ((e as Error).name !== 'AbortError') console.error('Failed to load hub data:', e)
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name !== 'AbortError') console.error('Failed to load hub data:', e)
       } finally {
         inFlight = false
         if (isActive) {
