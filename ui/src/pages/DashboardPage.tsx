@@ -75,9 +75,7 @@ export default function DashboardPage() {
   if (error)
     return (
       <div className="empty-state">
-        <p>
-          {MSG.LOAD_FAILED}：{error}
-        </p>
+        <p>{error}</p>
       </div>
     )
 

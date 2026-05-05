@@ -42,8 +42,8 @@ export function invalidateCache(prefix?: string) {
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: MSG.REQUEST_FAILED }))
-    throw new Error(error.message || `${MSG.REQUEST_FAILED} (${res.status})`)
+    const error = await res.json().catch(() => ({ message: MSG.ERROR }))
+    throw new Error(error.message || MSG.ERROR)
   }
   return res.json()
 }
@@ -102,8 +102,8 @@ export async function addRound(sessionId: number, data: AddRoundData): Promise<v
     body: JSON.stringify(data),
   })
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: MSG.ADD_FAILED }))
-    throw new Error(error.message || MSG.ADD_FAILED)
+    const error = await res.json().catch(() => ({ message: MSG.ERROR }))
+    throw new Error(error.message || MSG.ERROR)
   }
   invalidateCache()
 }
@@ -111,8 +111,8 @@ export async function addRound(sessionId: number, data: AddRoundData): Promise<v
 export async function deleteRound(sessionId: number, roundNumber: number): Promise<void> {
   const res = await fetch(`${API}/sessions/${sessionId}/rounds/${roundNumber}`, { method: 'DELETE' })
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: MSG.DELETE_FAILED }))
-    throw new Error(error.message || MSG.DELETE_FAILED)
+    const error = await res.json().catch(() => ({ message: MSG.ERROR }))
+    throw new Error(error.message || MSG.ERROR)
   }
   invalidateCache()
 }
@@ -120,8 +120,8 @@ export async function deleteRound(sessionId: number, roundNumber: number): Promi
 export async function completeSession(id: number): Promise<void> {
   const res = await fetch(`${API}/sessions/${id}/complete`, { method: 'PUT' })
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: MSG.ACTION_FAILED }))
-    throw new Error(error.message || MSG.ACTION_FAILED)
+    const error = await res.json().catch(() => ({ message: MSG.ERROR }))
+    throw new Error(error.message || MSG.ERROR)
   }
   invalidateCache()
 }

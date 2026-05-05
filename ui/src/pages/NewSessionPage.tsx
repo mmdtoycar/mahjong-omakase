@@ -25,7 +25,7 @@ export default function NewSessionPage() {
         setPlayers(p)
         setLoaded(true)
       })
-      .catch(() => setError(MSG.LOAD_FAILED))
+      .catch(() => setError(MSG.ERROR))
   }, [])
 
   const togglePlayer = (id: number) => {
