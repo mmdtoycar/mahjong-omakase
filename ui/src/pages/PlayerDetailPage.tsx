@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPlayerDetail } from '../api'
 import { PlayerDetail } from '../types'
 import { abbrName, scoreClass } from '../utils/format'
+import { MSG } from '../constants'
 
 export default function PlayerDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -29,7 +30,7 @@ export default function PlayerDetailPage() {
   if (loading)
     return (
       <div className="empty-state">
-        <p>加载中...</p>
+        <p>{MSG.LOADING}</p>
       </div>
     )
   if (error || !player)

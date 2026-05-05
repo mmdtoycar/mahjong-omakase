@@ -19,6 +19,7 @@ const currentSeason = getCurrentSeason()
 
 import { statFontSize } from '../utils/fontSize'
 import { abbrName } from '../utils/format'
+import { MSG } from '../constants'
 
 export default function StatsPage() {
   const navigate = useNavigate()
@@ -149,13 +150,15 @@ export default function StatsPage() {
   if (loading)
     return (
       <div className="empty-state">
-        <p>加载中...</p>
+        <p>{MSG.LOADING}</p>
       </div>
     )
   if (error)
     return (
       <div className="empty-state">
-        <p>加载失败：{error}</p>
+        <p>
+          {MSG.LOAD_FAILED}：{error}
+        </p>
       </div>
     )
 

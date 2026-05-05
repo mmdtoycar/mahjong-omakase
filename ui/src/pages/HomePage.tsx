@@ -4,6 +4,7 @@ import { fetchSessions, fetchSessionDetail, fetchStats, fetchBestRounds } from '
 import { GameSession, SessionDetail, PlayerStats, BestRound, GAME_MODES, getCurrentSeason } from '../types'
 import { GameCard } from '../components/GameCard'
 import { deriveGameState, getWindName } from '../utils/gameState'
+import { MSG } from '../constants'
 
 export default function HomePage() {
   const [activeSessions, setActiveSessions] = useState<SessionDetail[]>([])
@@ -84,7 +85,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="empty-state">
-        <p>加载中...</p>
+        <p>{MSG.LOADING}</p>
       </div>
     )
   }
