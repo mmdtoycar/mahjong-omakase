@@ -80,8 +80,8 @@ export async function checkUserName(userName: string): Promise<boolean> {
   return data.available
 }
 
-export async function fetchSessions(): Promise<GameSession[]> {
-  return cachedFetch(`${API}/sessions`)
+export async function fetchSessions(signal?: AbortSignal): Promise<GameSession[]> {
+  return cachedFetch(`${API}/sessions`, signal)
 }
 
 export async function createSession(name: string, gameMode: string, playerIds: number[]): Promise<GameSession> {
@@ -95,8 +95,8 @@ export async function createSession(name: string, gameMode: string, playerIds: n
   return data
 }
 
-export async function fetchSessionDetail(id: number): Promise<SessionDetail> {
-  return cachedFetch(`${API}/sessions/${id}`)
+export async function fetchSessionDetail(id: number, signal?: AbortSignal): Promise<SessionDetail> {
+  return cachedFetch(`${API}/sessions/${id}`, signal)
 }
 
 export async function addRound(sessionId: number, data: AddRoundData): Promise<void> {
@@ -134,7 +134,12 @@ export async function fetchActiveSeasons(): Promise<{ year: number; month: numbe
   return cachedFetch(`${API}/stats/seasons`)
 }
 
-export async function fetchStats(gameMode?: string, year?: number, month?: number): Promise<PlayerStats[]> {
+export async function fetchStats(
+  gameMode?: string,
+  year?: number,
+  month?: number,
+  signal?: AbortSignal
+): Promise<PlayerStats[]> {
   const params = new URLSearchParams()
   if (gameMode) params.set('gameMode', gameMode)
   if (year != null && month != null) {
@@ -142,7 +147,7 @@ export async function fetchStats(gameMode?: string, year?: number, month?: numbe
     params.set('month', String(month))
   }
   const qs = params.toString()
-  return cachedFetch(`${API}/stats${qs ? `?${qs}` : ''}`)
+  return cachedFetch(`${API}/stats${qs ? `?${qs}` : ''}`, signal)
 }
 
 export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {

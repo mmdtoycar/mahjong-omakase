@@ -36,9 +36,9 @@ export default function DashboardPage() {
         }))
         setSeasons(list)
       })
-      .catch((e) => {
+      .catch((e: unknown) => {
         if (!mounted) return
-        setError(e.message)
+        setError(e instanceof Error ? e.message : MSG.ERROR)
       })
       .finally(() => {
         if (mounted) setLoading(false)

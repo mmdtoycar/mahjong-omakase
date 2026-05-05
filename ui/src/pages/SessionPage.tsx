@@ -51,7 +51,7 @@ export default function SessionPage() {
   }
 
   useEffect(() => {
-    load().catch((e) => setError(e.message))
+    load().catch((e: unknown) => setError(e instanceof Error ? e.message : MSG.ERROR))
   }, [id])
 
   if (!session)

@@ -19,10 +19,10 @@ export default function HomePage() {
 
     async function loadData() {
       try {
-        const sessions = await fetchSessions()
+        const sessions = await fetchSessions(controller.signal)
         const active = sessions.filter((s) => s.status === 'IN_PROGRESS')
 
-        const settledDetails = await Promise.allSettled(active.map((s) => fetchSessionDetail(s.id)))
+        const settledDetails = await Promise.allSettled(active.map((s) => fetchSessionDetail(s.id, controller.signal)))
         const details = settledDetails
           .filter((res): res is PromiseFulfilledResult<SessionDetail> => res.status === 'fulfilled')
           .map((res) => res.value)
@@ -35,7 +35,7 @@ export default function HomePage() {
           GAME_MODES.map(async (mode) => {
             try {
               const [stats, bestRounds] = await Promise.all([
-                fetchStats(mode.key, currentSeason.year, currentSeason.month),
+                fetchStats(mode.key, currentSeason.year, currentSeason.month, controller.signal),
                 fetchBestRounds(mode.key, currentSeason.year, currentSeason.month, controller.signal),
               ])
 

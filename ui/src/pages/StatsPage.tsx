@@ -54,8 +54,8 @@ export default function StatsPage() {
         setStats(s.sort((a, b) => b.totalRP - a.totalRP || b.totalScore - a.totalScore))
         setLoading(false)
       })
-      .catch((e) => {
-        setError(e.message)
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : MSG.ERROR)
         setLoading(false)
       })
   }
@@ -68,8 +68,8 @@ export default function StatsPage() {
         setPlayers(p)
         setLoading(false)
       })
-      .catch((e) => {
-        setError(e.message)
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : MSG.ERROR)
         setLoading(false)
       })
   }
@@ -87,9 +87,9 @@ export default function StatsPage() {
           )
         }
       })
-      .catch((e) => {
+      .catch((e: unknown) => {
         if (!mounted) return
-        setError(e.message)
+        setError(e instanceof Error ? e.message : MSG.ERROR)
       })
     return () => {
       mounted = false
@@ -112,8 +112,8 @@ export default function StatsPage() {
         .then((data) => {
           if (!controller.signal.aborted) setBestRounds(data)
         })
-        .catch((e) => {
-          if (!controller.signal.aborted) setBestRoundsError(e.message)
+        .catch((e: unknown) => {
+          if (!controller.signal.aborted) setBestRoundsError(e instanceof Error ? e.message : MSG.ERROR)
         })
     }
     return () => controller.abort()
@@ -129,9 +129,9 @@ export default function StatsPage() {
         .then((data) => {
           if (!controller.signal.aborted) setMonthlyBestRounds(data)
         })
-        .catch((e) => {
+        .catch((e: unknown) => {
           if (!controller.signal.aborted) {
-            setMonthlyBestRoundsError(e.message)
+            setMonthlyBestRoundsError(e instanceof Error ? e.message : MSG.ERROR)
             setMonthlyBestRounds([])
           }
         })

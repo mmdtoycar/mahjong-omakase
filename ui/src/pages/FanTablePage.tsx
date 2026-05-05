@@ -45,7 +45,7 @@ const FanTablePage: React.FC = () => {
           )
         }
       })
-      .catch((e) => {
+      .catch((e: unknown) => {
         if (!mounted) return
         console.error(e)
       })

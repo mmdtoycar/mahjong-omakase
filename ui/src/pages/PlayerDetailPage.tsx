@@ -21,8 +21,8 @@ export default function PlayerDetailPage() {
         setPlayer(p)
         setLoading(false)
       })
-      .catch((e) => {
-        setError(e.message)
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : MSG.ERROR)
         setLoading(false)
       })
   }, [id])
