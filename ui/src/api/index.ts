@@ -14,6 +14,10 @@ const API = '/api'
 const cache = new Map<string, { data: unknown; expiry: number }>()
 const CACHE_TTL = 30_000
 
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') cache.clear()
+})
+
 function getCached<T>(key: string): T | null {
   const entry = cache.get(key)
   if (entry && Date.now() < entry.expiry) return entry.data as T
