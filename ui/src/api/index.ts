@@ -105,28 +105,19 @@ export async function addRound(sessionId: number, data: AddRoundData): Promise<v
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: MSG.ERROR }))
-    throw new Error(error.message || MSG.ERROR)
-  }
+  await handleResponse(res)
   invalidateCache()
 }
 
 export async function deleteRound(sessionId: number, roundNumber: number): Promise<void> {
   const res = await fetch(`${API}/sessions/${sessionId}/rounds/${roundNumber}`, { method: 'DELETE' })
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: MSG.ERROR }))
-    throw new Error(error.message || MSG.ERROR)
-  }
+  await handleResponse(res)
   invalidateCache()
 }
 
 export async function completeSession(id: number): Promise<void> {
   const res = await fetch(`${API}/sessions/${id}/complete`, { method: 'PUT' })
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: MSG.ERROR }))
-    throw new Error(error.message || MSG.ERROR)
-  }
+  await handleResponse(res)
   invalidateCache()
 }
 

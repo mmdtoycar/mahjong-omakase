@@ -300,7 +300,7 @@ export default function StatsPage() {
                 <span className="best-hand-crown">🌟</span>
                 <h2>{selectedSeason?.label}最高和牌</h2>
               </div>
-              {monthlyBestRoundsError && <p className="error-text">加载月度最高和牌失败: {monthlyBestRoundsError}</p>}
+              {monthlyBestRoundsError && <p className="error-text">{monthlyBestRoundsError}</p>}
               {!monthlyBestRoundsError && monthlyBestRounds.length === 0 && (
                 <div className="empty-state empty-state-compact">
                   <p>本月无记录</p>
@@ -334,7 +334,7 @@ export default function StatsPage() {
                 <span className="best-hand-crown">👑</span>
                 <h2>历史最高和牌</h2>
               </div>
-              {bestRoundsError && <p className="error-text">加载历史最高和牌失败: {bestRoundsError}</p>}
+              {bestRoundsError && <p className="error-text">{bestRoundsError}</p>}
               <div className="best-hand-list">
                 {bestRounds.map((round) => (
                   <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
