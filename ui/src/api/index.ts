@@ -48,7 +48,7 @@ async function handleResponse<T = void>(res: Response): Promise<T> {
     throw new Error(error.message || MSG.ERROR)
   }
   const text = await res.text()
-  if (!text) return undefined as T
+  if (!text.trim()) return undefined as T
   return JSON.parse(text)
 }
 
