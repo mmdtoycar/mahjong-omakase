@@ -42,11 +42,15 @@ export function invalidateCache(prefix?: string) {
   }
 }
 
-async function handleResponse<T>(res: Response): Promise<T> {
+async function checkResponse(res: Response): Promise<void> {
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: MSG.ERROR }))
     throw new Error(error.message || MSG.ERROR)
   }
+}
+
+async function handleResponse<T>(res: Response): Promise<T> {
+  await checkResponse(res)
   return res.json()
 }
 
@@ -105,19 +109,19 @@ export async function addRound(sessionId: number, data: AddRoundData): Promise<v
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  await handleResponse(res)
+  await checkResponse(res)
   invalidateCache()
 }
 
 export async function deleteRound(sessionId: number, roundNumber: number): Promise<void> {
   const res = await fetch(`${API}/sessions/${sessionId}/rounds/${roundNumber}`, { method: 'DELETE' })
-  await handleResponse(res)
+  await checkResponse(res)
   invalidateCache()
 }
 
 export async function completeSession(id: number): Promise<void> {
   const res = await fetch(`${API}/sessions/${id}/complete`, { method: 'PUT' })
-  await handleResponse(res)
+  await checkResponse(res)
   invalidateCache()
 }
 
