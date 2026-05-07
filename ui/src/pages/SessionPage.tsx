@@ -138,6 +138,7 @@ export default function SessionPage() {
           kyoutaku: gameState.kyoutaku,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
           fanCount: parseInt(fan),
+          riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
         })
       } else if (isDongbei) {
         await addRound(session.id, {
@@ -590,6 +591,32 @@ export default function SessionPage() {
                 )}
 
                 {preview && <div className="score-preview">{preview}</div>}
+
+                {isRiichi && !isRyuukyoku && (
+                  <div className="form-group">
+                    <label>本局立直</label>
+                    <div className="player-chips">
+                      {session.players.map((p) => (
+                        <span
+                          key={p.id}
+                          className={`chip ${riichiPlayerIds.includes(p.id) ? 'selected' : ''}`}
+                          onClick={() => {
+                            setRiichiPlayerIds((prev) =>
+                              prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
+                            )
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {p.userName}
+                          {riichiPlayerIds.includes(p.id) && ' ✓'}
+                        </span>
+                      ))}
+                    </div>
+                    {riichiPlayerIds.length > 0 && (
+                      <span className="field-hint">{riichiPlayerIds.length}人立直 → 各扣1000</span>
+                    )}
+                  </div>
+                )}
 
                 {error && <p className="error-text">{error}</p>}
 
