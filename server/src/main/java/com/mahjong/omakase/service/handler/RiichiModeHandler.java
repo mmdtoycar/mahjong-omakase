@@ -57,8 +57,12 @@ public class RiichiModeHandler implements GameModeHandler {
     params.put("honba", request.getHonba() != null ? request.getHonba() : 0);
     params.put("kyoutaku", request.getKyoutaku() != null ? request.getKyoutaku() : 0);
 
-    return calculator.calculate(
-        sessionPlayerIds, request.getWinnerId(), request.getDealInPlayerId(), params);
+    Map<Long, Integer> scores =
+        calculator.calculate(
+            sessionPlayerIds, request.getWinnerId(), request.getDealInPlayerId(), params);
+
+    applyRiichiSticks(request, sessionPlayerIds, scores);
+    return scores;
   }
 
   private Map<Long, Integer> calculateDrawnGame(
@@ -93,7 +97,12 @@ public class RiichiModeHandler implements GameModeHandler {
         }
       }
     }
-    // Riichi stick deductions: -1000 per declaring player
+    applyRiichiSticks(request, sessionPlayerIds, scores);
+    return scores;
+  }
+
+  private void applyRiichiSticks(
+      AddRoundRequest request, List<Long> sessionPlayerIds, Map<Long, Integer> scores) {
     List<Long> riichiIds = request.getRiichiPlayerIds();
     if (riichiIds != null) {
       Set<Long> uniqueRiichiIds = new HashSet<>(riichiIds);
@@ -104,6 +113,5 @@ public class RiichiModeHandler implements GameModeHandler {
         scores.merge(id, -1000, Integer::sum);
       }
     }
-    return scores;
   }
 }
