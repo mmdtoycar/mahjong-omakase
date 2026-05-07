@@ -15,10 +15,10 @@ Review PR comments from CodeRabbit and fix all issues, including nits.
 
 3. **Fix all actionable and nit comments**
    - Make the code changes
-   - Run pre-flight checks:
-     - `./gradlew spotlessApply` from project root
-     - `cd ui && npx tsc --noEmit` (MUST run from ui/, never from project root)
-     - `./gradlew compileJava -q` from project root
+   - Run pre-flight checks (ALL from project root):
+     - `./gradlew spotlessApply`
+     - `(cd ui && npx tsc --noEmit)`
+     - `./gradlew compileJava -q`
    - Commit with a message referencing what was fixed
 
 4. **Reply to every comment**

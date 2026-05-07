@@ -42,16 +42,14 @@ export function invalidateCache(prefix?: string) {
   }
 }
 
-async function checkResponse(res: Response): Promise<void> {
+async function handleResponse<T = void>(res: Response): Promise<T> {
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: MSG.ERROR }))
     throw new Error(error.message || MSG.ERROR)
   }
-}
-
-async function handleResponse<T>(res: Response): Promise<T> {
-  await checkResponse(res)
-  return res.json()
+  const text = await res.text()
+  if (!text.trim()) return undefined as T
+  return JSON.parse(text)
 }
 
 async function cachedFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -109,19 +107,19 @@ export async function addRound(sessionId: number, data: AddRoundData): Promise<v
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  await checkResponse(res)
+  await handleResponse(res)
   invalidateCache()
 }
 
 export async function deleteRound(sessionId: number, roundNumber: number): Promise<void> {
   const res = await fetch(`${API}/sessions/${sessionId}/rounds/${roundNumber}`, { method: 'DELETE' })
-  await checkResponse(res)
+  await handleResponse(res)
   invalidateCache()
 }
 
 export async function completeSession(id: number): Promise<void> {
   const res = await fetch(`${API}/sessions/${id}/complete`, { method: 'PUT' })
-  await checkResponse(res)
+  await handleResponse(res)
   invalidateCache()
 }
 
