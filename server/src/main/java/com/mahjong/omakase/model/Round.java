@@ -21,6 +21,9 @@ public class Round {
   @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<RoundScore> scores = new ArrayList<>();
 
+  @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<FanDiscovery> discoveries = new ArrayList<>();
+
   private Long winnerId;
 
   @Column(columnDefinition = "TEXT")
