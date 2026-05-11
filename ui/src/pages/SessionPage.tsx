@@ -271,9 +271,15 @@ export default function SessionPage() {
       const honbaNum = gameState.honba
       const honbaBonus = 100 * honbaNum
       const kyoutakuNum = gameState.kyoutaku
-      const riichiPool = riichiPlayerIds.length * 1000
-      const bonusPool = kyoutakuNum + riichiPool
-      const bonusLabel = [kyoutakuNum > 0 ? `供托${kyoutakuNum}` : '', riichiPool > 0 ? `立直棒${riichiPool}` : '']
+      const uniqueRiichiCount = new Set(riichiPlayerIds).size
+      const riichiPool = uniqueRiichiCount * 1000
+      const winnerDeclaredRiichi = riichiPlayerIds.includes(Number(winnerId))
+      const winnerRiichiNet = riichiPool - (winnerDeclaredRiichi ? 1000 : 0)
+      const bonusPool = kyoutakuNum + winnerRiichiNet
+      const bonusLabel = [
+        kyoutakuNum > 0 ? `供托${kyoutakuNum}` : '',
+        winnerRiichiNet > 0 ? `立直棒${winnerRiichiNet}` : '',
+      ]
         .filter(Boolean)
         .join('+')
 
