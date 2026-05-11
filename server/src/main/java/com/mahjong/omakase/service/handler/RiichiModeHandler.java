@@ -62,6 +62,13 @@ public class RiichiModeHandler implements GameModeHandler {
             sessionPlayerIds, request.getWinnerId(), request.getDealInPlayerId(), params);
 
     applyRiichiSticks(request, sessionPlayerIds, scores);
+
+    List<Long> riichiIds = request.getRiichiPlayerIds();
+    if (riichiIds != null && !riichiIds.isEmpty()) {
+      int riichiPool = new HashSet<>(riichiIds).size() * 1000;
+      scores.merge(request.getWinnerId(), riichiPool, Integer::sum);
+    }
+
     return scores;
   }
 

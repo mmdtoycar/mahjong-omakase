@@ -271,29 +271,34 @@ export default function SessionPage() {
       const honbaNum = gameState.honba
       const honbaBonus = 100 * honbaNum
       const kyoutakuNum = gameState.kyoutaku
+      const riichiPool = riichiPlayerIds.length * 1000
+      const bonusPool = kyoutakuNum + riichiPool
+      const bonusLabel = [kyoutakuNum > 0 ? `供托${kyoutakuNum}` : '', riichiPool > 0 ? `立直棒${riichiPool}` : '']
+        .filter(Boolean)
+        .join('+')
 
       if (isSelfDraw) {
         if (winnerIsDealer) {
           const each = r100(basic * 2) + honbaBonus
           const numOthers = session.playerCount - 1
-          const winnerTotal = each * numOthers + kyoutakuNum
+          const winnerTotal = each * numOthers + bonusPool
           return `自摸 (亲家): ${numOthers}人各付${each}${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
-            kyoutakuNum > 0 ? ` +供托${kyoutakuNum}` : ''
+            bonusPool > 0 ? ` +${bonusLabel}` : ''
           } → 共+${winnerTotal}`
         } else {
           const dealerPays = r100(basic * 2) + honbaBonus
           const otherPays = r100(basic) + honbaBonus
           const numNonDealers = session.playerCount - 2
-          const total = dealerPays + numNonDealers * otherPays + kyoutakuNum
+          const total = dealerPays + numNonDealers * otherPays + bonusPool
           return `自摸: 亲家付${dealerPays}, ${numNonDealers > 0 ? `其他各付${otherPays}, ` : ''}${
             honbaNum > 0 ? `(含${honbaNum}本场) ` : ''
-          }${kyoutakuNum > 0 ? `+供托${kyoutakuNum} ` : ''}共+${total}`
+          }${bonusPool > 0 ? `+${bonusLabel} ` : ''}共+${total}`
         }
       } else {
         const base = (winnerIsDealer ? r100(basic * 6) : r100(basic * 4)) + 300 * honbaNum
-        const total = base + kyoutakuNum
+        const total = base + bonusPool
         return `荣和${winnerIsDealer ? ' (亲家)' : ''}: ${base}点${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
-          kyoutakuNum > 0 ? ` +供托${kyoutakuNum}` : ''
+          bonusPool > 0 ? ` +${bonusLabel}` : ''
         } → 共+${total}`
       }
     }
@@ -613,7 +618,9 @@ export default function SessionPage() {
                       ))}
                     </div>
                     {riichiPlayerIds.length > 0 && (
-                      <span className="field-hint">{riichiPlayerIds.length}人立直 → 各扣1000</span>
+                      <span className="field-hint">
+                        {riichiPlayerIds.length}人立直 → 各扣1000, 胜者收立直棒+{riichiPlayerIds.length * 1000}
+                      </span>
                     )}
                   </div>
                 )}
