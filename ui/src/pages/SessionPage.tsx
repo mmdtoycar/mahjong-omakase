@@ -4,6 +4,7 @@ import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../a
 import { SessionDetail, PlayerInfo, RoundInfo, FAN_OPTIONS, FU_OPTIONS } from '../types'
 import { calculateRanks } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
+import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
@@ -43,6 +44,25 @@ export default function SessionPage() {
       setFanCount(0)
     }
   }, [])
+
+  const handleRiichiCalcSelect = useCallback(
+    (fanVal: number | null, fuVal: number | null, hand?: string, details?: string) => {
+      if (fanVal !== null && fuVal !== null) {
+        setFan(String(fanVal))
+        setFu(String(fuVal))
+        setWinHand(hand || '')
+        setFanDetails(details || '')
+        setFanCount(fanVal)
+      } else {
+        setFan('')
+        setFu('')
+        setWinHand('')
+        setFanDetails('')
+        setFanCount(0)
+      }
+    },
+    []
+  )
 
   const load = async () => {
     const detail = await fetchSessionDetail(Number(id))
@@ -138,6 +158,8 @@ export default function SessionPage() {
           kyoutaku: gameState.kyoutaku,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
           fanCount: parseInt(fan),
+          winHand,
+          fanDetails,
           riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
         })
       } else if (isDongbei) {
@@ -450,69 +472,6 @@ export default function SessionPage() {
               </>
             ) : (
               <>
-                {isRiichi ? (
-                  <div className="round-form-grid">
-                    <div className="form-group">
-                      <label>
-                        番
-                        <a
-                          href="https://linlexiao.com/maj/#/calculator"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="score-calc-link"
-                        >
-                          计算器
-                        </a>
-                      </label>
-                      <select value={fan} onChange={(e) => setFan(e.target.value)}>
-                        <option value=""></option>
-                        {FAN_OPTIONS.map((f) => (
-                          <option key={f} value={f}>
-                            {f}
-                            {f >= 5
-                              ? f >= 13
-                                ? ' (役満)'
-                                : f >= 11
-                                ? ' (三倍満)'
-                                : f >= 8
-                                ? ' (倍満)'
-                                : f >= 6
-                                ? ' (跳満)'
-                                : ' (満貫)'
-                              : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>符数</label>
-                      <select value={fu} onChange={(e) => setFu(e.target.value)}>
-                        <option value=""></option>
-                        {FU_OPTIONS.map((f) => (
-                          <option key={f} value={f}>
-                            {f}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                ) : null}
-
-                {isDongbei && (
-                  <div className="round-form-grid">
-                    <div className="form-group">
-                      <label>番</label>
-                      <input
-                        type="number"
-                        value={fan}
-                        onChange={(e) => setFan(e.target.value)}
-                        placeholder="输入番"
-                        min="0"
-                      />
-                    </div>
-                  </div>
-                )}
-
                 <div className="quick-win-container">
                   <h2>算番器</h2>
                   <div className="quick-win-row">
@@ -547,6 +506,74 @@ export default function SessionPage() {
                     </div>
                   </div>
                 </div>
+
+                {isRiichi && (
+                  <div className="form-group score-inline-group-container">
+                    <div className="round-form-grid">
+                      <div className="form-group">
+                        <label>番</label>
+                        <select value={fan} onChange={(e) => setFan(e.target.value)}>
+                          <option value=""></option>
+                          {FAN_OPTIONS.map((f) => (
+                            <option key={f} value={f}>
+                              {f}
+                              {f >= 5
+                                ? f >= 13
+                                  ? ' (役満)'
+                                  : f >= 11
+                                  ? ' (三倍満)'
+                                  : f >= 8
+                                  ? ' (倍満)'
+                                  : f >= 6
+                                  ? ' (跳満)'
+                                  : ' (満貫)'
+                                : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>符数</label>
+                        <select value={fu} onChange={(e) => setFu(e.target.value)}>
+                          <option value=""></option>
+                          {FU_OPTIONS.map((f) => (
+                            <option key={f} value={f}>
+                              {f}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="inline-calc-wrapper">
+                      <RiichiCalculator
+                        key={`riichi-${gameState.prevalentWind}-${winnerMenfeng}`}
+                        onSelectScore={handleRiichiCalcSelect}
+                        initialOptions={{
+                          bakaze: gameState.prevalentWind,
+                          jikaze: winnerMenfeng,
+                        }}
+                        resetTrigger={calcResetCount}
+                        isSelfDraw={isSelfDraw}
+                        onIsSelfDrawChange={setIsSelfDraw}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {isDongbei && (
+                  <div className="round-form-grid">
+                    <div className="form-group">
+                      <label>番</label>
+                      <input
+                        type="number"
+                        value={fan}
+                        onChange={(e) => setFan(e.target.value)}
+                        placeholder="输入番"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {!isRiichi && isGuobiao && (
                   <div className="form-group score-inline-group-container">

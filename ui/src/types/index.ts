@@ -150,21 +150,6 @@ export function getCurrentSeason(): Season {
   return { year: now.getFullYear(), month, label: getSeasonLabel(now.getFullYear(), month) }
 }
 
-export function getAvailableSeasons(startYear: number): Season[] {
-  const now = new Date()
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth() + 1
-  const seasons: Season[] = []
-
-  for (let year = currentYear; year >= startYear; year--) {
-    const endMonth = year === currentYear ? currentMonth : 12
-    for (let month = endMonth; month >= 1; month--) {
-      seasons.push({ year, month, label: getSeasonLabel(year, month) })
-    }
-  }
-  return seasons
-}
-
 export interface PlayerGameEntry {
   sessionId: number
   sessionName: string
