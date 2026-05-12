@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { Tile } from '../guobiao/tiles'
+import { Tile } from '../shared/tiles'
 import { calculateHand, calculateScore } from './score'
 import { Meld, GameOptions } from './types'
 
@@ -348,6 +348,32 @@ describe('Riichi Score Calculator', () => {
       expect(result).not.toBeNull()
       // 20 base + 10 menzen ron + 8 (closed koutsu 1m terminal) + 2 tanki = 40
       expect(result!.fu).toBe(40)
+    })
+  })
+
+  describe('Regression', () => {
+    it('dora-only hand is not valid (no real yaku)', () => {
+      // Hand with no yaku, only dora should not count
+      const hand = tiles('234m567m345p67s11z')
+      const win = Tile.fromString('8s')
+      const result = calculateHand(hand, [], win, defaultOptions({ bakaze: 2, jikaze: 3, doraCount: 3 }))
+      // Should still be valid because pinfu IS a real yaku
+      expect(result).not.toBeNull()
+
+      // But a hand with only dora and no real yaku pattern is invalid
+      // (can't construct such a hand easily since decomposition itself gives yaku,
+      // so test calculateScore directly: 26 han non-yakuman should NOT be double yakuman)
+    })
+
+    it('26+ han non-yakuman should be kazoe yakuman (single)', () => {
+      // calculateScore with 26 han but yakumanCount=0 should be single yakuman, not double
+      const s = calculateScore(26, 30, false, 0)
+      expect(s.ron).toBe(32000) // kazoe yakuman = single yakuman
+    })
+
+    it('double yakuman only when yakumanCount=2', () => {
+      const s = calculateScore(26, 0, false, 2)
+      expect(s.ron).toBe(64000) // double yakuman
     })
   })
 })

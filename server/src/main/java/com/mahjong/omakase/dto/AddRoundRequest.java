@@ -36,6 +36,8 @@ public class AddRoundRequest {
 
   private List<Long> riichiPlayerIds; // players who declared riichi
 
+  private Boolean backfill;
+
   private String winHand;
 
   private String fanDetails;
@@ -185,5 +187,13 @@ public class AddRoundRequest {
 
   public void setRiichiPlayerIds(List<Long> riichiPlayerIds) {
     this.riichiPlayerIds = riichiPlayerIds;
+  }
+
+  public Boolean getBackfill() {
+    return backfill;
+  }
+
+  public void setBackfill(Boolean backfill) {
+    this.backfill = backfill;
   }
 }

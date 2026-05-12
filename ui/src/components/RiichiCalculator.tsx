@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { Tile } from '../logic/guobiao/tiles'
+import { Tile } from '../logic/shared/tiles'
 import { Meld, GameOptions, CalcResult } from '../logic/riichi/types'
 import { calculateHand } from '../logic/riichi/score'
 import { TileComponent, isSequenceDisabled } from './shared/TileComponent'
@@ -71,7 +71,7 @@ const modes: Mode[] = [
 ]
 
 interface RiichiCalculatorProps {
-  onSelectScore: (fan: number | null, fu: number | null, hand?: string, fanDetails?: string) => void
+  onSelectScore: (score: number | null, hand?: string, fanDetails?: string, fanCount?: number) => void
   initialOptions?: Partial<GameOptions>
   resetTrigger?: number
   isSelfDraw: boolean
@@ -186,9 +186,19 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
 
       const fanDetailsStr = huResult.yakuList.map((y) => `${y.name}(${y.han})`).join(', ')
 
-      onSelectScore(huResult.han, huResult.fu, handStr, fanDetailsStr)
+      let outputScore: number
+      if (isSelfDraw) {
+        if (options.jikaze === 1) {
+          outputScore = huResult.score.tsumoNonDealer * 3
+        } else {
+          outputScore = huResult.score.tsumoDealer + huResult.score.tsumoNonDealer * 2
+        }
+      } else {
+        outputScore = huResult.score.ron
+      }
+      onSelectScore(outputScore, handStr, fanDetailsStr, huResult.han)
     } else {
-      onSelectScore(null, null)
+      onSelectScore(null)
     }
   }, [huResult, onSelectScore, currentCount, concealedTiles, melds, options.doraCount])
 
@@ -204,7 +214,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
   }, [concealedTiles, currentCount])
 
   return (
-    <div className="guobiao-inline-calculator">
+    <div className="inline-calculator">
       <div className="mode-selector-container">
         <div className="mode-group">
           {modes.map((m) => (

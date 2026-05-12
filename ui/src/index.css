@@ -413,7 +413,7 @@ tr:hover td {
   gap: 16px;
 }
 
-.zimo-toggle {
+.checkbox-toggle {
   display: flex !important;
   align-items: center;
   gap: 8px;
@@ -422,7 +422,7 @@ tr:hover td {
   color: var(--text) !important;
 }
 
-.zimo-toggle input[type='checkbox'] {
+.checkbox-toggle input[type='checkbox'] {
   width: 18px;
   height: 18px;
   accent-color: var(--primary);
@@ -463,7 +463,7 @@ tr:hover td {
   color: white;
 }
 
-.score-preview {
+.status-box {
   background: #e8f5e9;
   color: var(--primary);
   padding: 10px 14px;
@@ -471,6 +471,11 @@ tr:hover td {
   font-weight: 600;
   font-size: 0.95rem;
   margin-bottom: 12px;
+}
+
+.status-box.error {
+  background: rgba(220, 50, 47, 0.08);
+  color: var(--danger);
 }
 
 .stats-grid {
@@ -984,7 +989,7 @@ tr:hover td {
     justify-content: center;
   }
 
-  .score-preview {
+  .status-box {
     font-size: 0.85rem;
     word-break: break-word;
   }
@@ -1331,7 +1336,7 @@ tr:hover td {
 }
 
 /* Guobiao Inline Calculator Styles */
-.guobiao-inline-calculator {
+.inline-calculator {
   background: #fff;
   border: 2px solid var(--border);
   border-radius: 12px;
@@ -1884,7 +1889,7 @@ tr:hover td {
 }
 
 .round-form .score-input-compact {
-  max-width: 120px;
+  max-width: 180px;
   padding: 6px 10px;
 }
 

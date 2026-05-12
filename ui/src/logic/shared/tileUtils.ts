@@ -1,4 +1,4 @@
-import { Tile } from '../guobiao/tiles'
+import { Tile } from '../shared/tiles'
 
 export function sortTiles(tiles: Tile[]): Tile[] {
   return [...tiles].sort((a, b) => a.compareTo(b))

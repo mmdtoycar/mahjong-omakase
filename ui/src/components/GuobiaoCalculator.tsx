@@ -222,7 +222,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   }, [concealedTiles, currentCount])
 
   return (
-    <div className="guobiao-inline-calculator">
+    <div className="inline-calculator">
       <div className="mode-selector-container">
         <div className="mode-group">
           {modes.map((m) => (

@@ -305,7 +305,8 @@ public class GameService {
                       round.getDealInPlayerId(),
                       dealInName,
                       round.getPrevalentWind(),
-                      riichiIds);
+                      riichiIds,
+                      round.getBackfill());
                 })
             .collect(Collectors.toList()));
 
@@ -381,7 +382,8 @@ public class GameService {
         request.getFanCount(),
         request.isSelfDraw() ? null : request.getDealInPlayerId(),
         request.getPrevalentWind(),
-        request.getRiichiPlayerIds());
+        request.getRiichiPlayerIds(),
+        request.getBackfill());
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -682,7 +684,8 @@ public class GameService {
       Integer fanCount,
       Long dealInId,
       Integer prevalentWind,
-      List<Long> riichiPlayerIds) {
+      List<Long> riichiPlayerIds,
+      Boolean backfill) {
     Round round = new Round();
     round.setGameSession(session);
     round.setRoundNumber(roundNumber);
@@ -692,6 +695,7 @@ public class GameService {
     round.setFanCount(fanCount);
     round.setDealInPlayerId(dealInId);
     round.setPrevalentWind(prevalentWind);
+    round.setBackfill(Boolean.TRUE.equals(backfill) ? true : null);
     if (riichiPlayerIds != null && !riichiPlayerIds.isEmpty()) {
       round.setRiichiPlayerIds(
           riichiPlayerIds.stream().map(String::valueOf).collect(Collectors.joining(",")));

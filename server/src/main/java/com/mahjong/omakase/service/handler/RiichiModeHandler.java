@@ -34,15 +34,6 @@ public class RiichiModeHandler implements GameModeHandler {
   }
 
   private Map<Long, Integer> calculateWin(AddRoundRequest request, List<Long> sessionPlayerIds) {
-    if (request.getFan() == null || request.getFu() == null) {
-      throw new IllegalArgumentException("Fan and Fu are required for Riichi mode");
-    }
-    if (request.getFan() < 1) {
-      throw new IllegalArgumentException("Fan must be at least 1");
-    }
-    if (request.getFu() < 20) {
-      throw new IllegalArgumentException("Fu must be at least 20");
-    }
     if (request.getDealerId() == null) {
       throw new IllegalArgumentException("Dealer (親) is required for Riichi mode");
     }
@@ -50,16 +41,40 @@ public class RiichiModeHandler implements GameModeHandler {
       throw new IllegalArgumentException("Dealer is not in this session");
     }
 
-    Map<String, Object> params = new HashMap<>();
-    params.put("fan", request.getFan());
-    params.put("fu", request.getFu());
-    params.put("dealerId", request.getDealerId());
-    params.put("honba", request.getHonba() != null ? request.getHonba() : 0);
-    params.put("kyoutaku", request.getKyoutaku() != null ? request.getKyoutaku() : 0);
+    Map<Long, Integer> scores;
 
-    Map<Long, Integer> scores =
-        calculator.calculate(
-            sessionPlayerIds, request.getWinnerId(), request.getDealInPlayerId(), params);
+    if (request.getScore() != null) {
+      scores =
+          calculateDirectScore(
+              request.getScore(),
+              sessionPlayerIds,
+              request.getWinnerId(),
+              request.getDealInPlayerId(),
+              request.getDealerId(),
+              request.getHonba() != null ? request.getHonba() : 0,
+              request.getKyoutaku() != null ? request.getKyoutaku() : 0);
+    } else {
+      if (request.getFan() == null || request.getFu() == null) {
+        throw new IllegalArgumentException("Fan/Fu or Score is required for Riichi mode");
+      }
+      if (request.getFan() < 1) {
+        throw new IllegalArgumentException("Fan must be at least 1");
+      }
+      if (request.getFu() < 20) {
+        throw new IllegalArgumentException("Fu must be at least 20");
+      }
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("fan", request.getFan());
+      params.put("fu", request.getFu());
+      params.put("dealerId", request.getDealerId());
+      params.put("honba", request.getHonba() != null ? request.getHonba() : 0);
+      params.put("kyoutaku", request.getKyoutaku() != null ? request.getKyoutaku() : 0);
+
+      scores =
+          calculator.calculate(
+              sessionPlayerIds, request.getWinnerId(), request.getDealInPlayerId(), params);
+    }
 
     applyRiichiSticks(request, sessionPlayerIds, scores);
 
@@ -120,5 +135,40 @@ public class RiichiModeHandler implements GameModeHandler {
         scores.merge(id, -1000, Integer::sum);
       }
     }
+  }
+
+  private Map<Long, Integer> calculateDirectScore(
+      int score,
+      List<Long> playerIds,
+      Long winnerId,
+      Long dealInPlayerId,
+      Long dealerId,
+      int honba,
+      int kyoutaku) {
+    boolean selfDraw = dealInPlayerId == null;
+
+    Map<Long, Integer> result = new HashMap<>();
+    for (Long id : playerIds) {
+      result.put(id, 0);
+    }
+
+    if (selfDraw) {
+      int winnerGets = 0;
+      int numOthers = playerIds.size() - 1;
+      int eachPays = score / numOthers;
+      for (Long id : playerIds) {
+        if (!id.equals(winnerId)) {
+          result.put(id, -eachPays);
+          winnerGets += eachPays;
+        }
+      }
+      result.put(winnerId, winnerGets + kyoutaku);
+    } else {
+      int total = score + 300 * honba;
+      result.put(winnerId, total + kyoutaku);
+      result.put(dealInPlayerId, -total);
+    }
+
+    return result;
   }
 }

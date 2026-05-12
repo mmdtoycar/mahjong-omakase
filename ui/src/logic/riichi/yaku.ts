@@ -1,4 +1,4 @@
-import { Tile } from '../guobiao/tiles'
+import { Tile } from '../shared/tiles'
 import { Meld, HandCombination, GameOptions, YakuResult } from './types'
 import { determineWaitType } from './fu'
 

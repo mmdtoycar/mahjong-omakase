@@ -1,4 +1,4 @@
-import { Tile } from '../guobiao/tiles'
+import { Tile } from '../shared/tiles'
 import { Meld, HandCombination, sortTiles, countTiles, removeTilesOnce } from './types'
 
 export function findAllCombinations(concealedTiles: Tile[], exposedMelds: Meld[]): HandCombination[] {

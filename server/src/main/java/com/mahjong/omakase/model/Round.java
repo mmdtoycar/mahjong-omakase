@@ -40,6 +40,16 @@ public class Round {
   @Column(columnDefinition = "TEXT")
   private String riichiPlayerIds;
 
+  private Boolean backfill;
+
+  public Boolean getBackfill() {
+    return backfill;
+  }
+
+  public void setBackfill(Boolean backfill) {
+    this.backfill = backfill;
+  }
+
   public String getRiichiPlayerIds() {
     return riichiPlayerIds;
   }

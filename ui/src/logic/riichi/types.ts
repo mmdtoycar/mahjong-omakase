@@ -1,4 +1,4 @@
-import { Tile } from '../guobiao/tiles'
+import { Tile } from '../shared/tiles'
 export { sortTiles, countTiles, removeTilesOnce } from '../shared/tileUtils'
 
 export type MeldType = 'shuntsu' | 'koutsu' | 'kantsu' | 'jantai'

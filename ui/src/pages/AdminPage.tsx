@@ -12,8 +12,8 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editFirst, setEditFirst] = useState('')
   const [editLast, setEditLast] = useState('')
-  const [bonus, setBonus] = useState(5)
-  const [savedBonus, setSavedBonus] = useState(5)
+  const [bonus, setBonus] = useState('5')
+  const [savedBonus, setSavedBonus] = useState('5')
   const [savingSettings, setSavingSettings] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -55,8 +55,8 @@ export default function AdminPage() {
       if (data.participation_bonus !== undefined) {
         const val = parseFloat(data.participation_bonus)
         if (!isNaN(val)) {
-          setBonus(val)
-          setSavedBonus(val)
+          setBonus(String(val))
+          setSavedBonus(String(val))
         }
       }
     }
@@ -70,7 +70,8 @@ export default function AdminPage() {
   }, [authenticated])
 
   const handleSaveSettings = async () => {
-    if (isNaN(bonus) || bonus < 0) {
+    const bonusVal = parseFloat(bonus)
+    if (isNaN(bonusVal) || bonusVal < 0) {
       alert('请输入有效的非负数值')
       return
     }
@@ -81,7 +82,7 @@ export default function AdminPage() {
         'Content-Type': 'application/json',
         'X-Admin-Password': password,
       },
-      body: JSON.stringify({ participation_bonus: String(bonus) }),
+      body: JSON.stringify({ participation_bonus: bonus }),
     })
     if (res.ok) {
       setSavedBonus(bonus)
@@ -190,11 +191,10 @@ export default function AdminPage() {
           <label>Participation Bonus (RP per game)</label>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={bonus}
-              onChange={(e) => setBonus(parseFloat(e.target.value) || 0)}
-              step="0.1"
-              min="0"
+              onChange={(e) => setBonus(e.target.value)}
               style={{ width: '100%', maxWidth: 120 }}
             />
             <button

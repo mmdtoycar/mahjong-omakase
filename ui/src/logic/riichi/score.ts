@@ -1,4 +1,4 @@
-import { Tile } from '../guobiao/tiles'
+import { Tile } from '../shared/tiles'
 import { Meld, HandCombination, GameOptions, CalcResult, YakuResult } from './types'
 import { findAllCombinations } from './hu'
 import { calculateFu } from './fu'
@@ -7,11 +7,15 @@ import { detectYaku } from './yaku'
 export function calculateScore(
   han: number,
   fu: number,
-  isDealer: boolean
+  isDealer: boolean,
+  yakumanCount = 0
 ): { ron: number; tsumoDealer: number; tsumoNonDealer: number } {
-  if (han >= 13) {
-    const yakumanCount = Math.floor(han / 13)
+  if (yakumanCount > 0) {
     const base = 8000 * yakumanCount
+    return dealerCalc(base, isDealer)
+  }
+  if (han >= 13) {
+    const base = 8000
     return dealerCalc(base, isDealer)
   }
   if (han >= 11) {
@@ -69,7 +73,8 @@ export function calculateHand(
 
   for (const combo of combinations) {
     const yakuList = detectYaku(combo, allTiles, winTile, options)
-    if (yakuList.length === 0) continue
+    const hasRealYaku = yakuList.some((y) => y.name !== '宝牌')
+    if (!hasRealYaku) continue
 
     const isYakuman = yakuList.some((y) => y.isYakuman)
     const yakumanCount = yakuList.filter((y) => y.isYakuman).length
@@ -90,7 +95,7 @@ export function calculateHand(
     }
 
     const isDealer = options.jikaze === 1
-    const score = calculateScore(han, fu, isDealer)
+    const score = calculateScore(han, fu, isDealer, isYakuman ? yakumanCount : 0)
     const basePoints = isYakuman ? 8000 * yakumanCount : Math.min(fu * Math.pow(2, 2 + han), 2000)
 
     const result: CalcResult = {

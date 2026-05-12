@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
-import { SessionDetail, PlayerInfo, RoundInfo, FAN_OPTIONS, FU_OPTIONS } from '../types'
+import { SessionDetail, PlayerInfo, RoundInfo } from '../types'
 import { calculateRanks } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { RiichiCalculator } from '../components/RiichiCalculator'
@@ -17,7 +17,6 @@ export default function SessionPage() {
   const [winnerId, setWinnerId] = useState<string>('')
   const [score, setScore] = useState('')
   const [fan, setFan] = useState<string>('')
-  const [fu, setFu] = useState<string>('')
   const [isSelfDraw, setIsSelfDraw] = useState(false)
   const [dealInPlayerId, setDealInPlayerId] = useState<string>('')
   const [bimenPlayerIds, setBimenPlayerIds] = useState<number[]>([])
@@ -29,6 +28,7 @@ export default function SessionPage() {
   const [winHand, setWinHand] = useState<string>('')
   const [fanDetails, setFanDetails] = useState<string>('')
   const [fanCount, setFanCount] = useState<number>(0)
+  const [isBackfill, setIsBackfill] = useState(false)
   const [error, setError] = useState('')
 
   const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
@@ -45,24 +45,19 @@ export default function SessionPage() {
     }
   }, [])
 
-  const handleRiichiCalcSelect = useCallback(
-    (fanVal: number | null, fuVal: number | null, hand?: string, details?: string) => {
-      if (fanVal !== null && fuVal !== null) {
-        setFan(String(fanVal))
-        setFu(String(fuVal))
-        setWinHand(hand || '')
-        setFanDetails(details || '')
-        setFanCount(fanVal)
-      } else {
-        setFan('')
-        setFu('')
-        setWinHand('')
-        setFanDetails('')
-        setFanCount(0)
-      }
-    },
-    []
-  )
+  const handleRiichiCalcSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
+    if (s !== null) {
+      setScore(String(s))
+      setWinHand(hand || '')
+      setFanDetails(details || '')
+      setFanCount(fCount || 0)
+    } else {
+      setScore('')
+      setWinHand('')
+      setFanDetails('')
+      setFanCount(0)
+    }
+  }, [])
 
   const load = async () => {
     const detail = await fetchSessionDetail(Number(id))
@@ -89,7 +84,6 @@ export default function SessionPage() {
     setWinnerId('')
     setScore('')
     setFan('')
-    setFu('')
     setBimenPlayerIds([])
     setIsSelfDraw(false)
     setDealInPlayerId('')
@@ -99,6 +93,7 @@ export default function SessionPage() {
     setWinHand('')
     setFanDetails('')
     setFanCount(0)
+    setIsBackfill(false)
     setCalcResetCount((prev) => prev + 1)
   }
 
@@ -129,12 +124,29 @@ export default function SessionPage() {
   }
 
   const canSubmit =
-    winnerId &&
-    (isRiichi ? fan && fu : isDongbei ? fan : score && parseInt(score) >= (isGuobiao ? 8 : 1)) &&
-    (isSelfDraw || dealInPlayerId)
+    winnerId && (isDongbei ? fan : score && parseInt(score) >= (isGuobiao ? 8 : 100)) && (isSelfDraw || dealInPlayerId)
+
+  const getValidationHint = (): string | null => {
+    if (!winnerId) return '请选择赢家'
+    if (!isSelfDraw && !dealInPlayerId) return '请选择点炮玩家，或切换为自摸'
+    if (isDongbei) {
+      if (!fan) return '请输入番数'
+      if (isNaN(parseInt(fan))) return '番数必须是数字'
+      return null
+    }
+    if (!score) return '请输入分数'
+    if (isNaN(parseInt(score))) return '请输入有效数字'
+    if (isRiichi && parseInt(score) < 100) return '分数必须 ≥ 100'
+    if (isRiichi && parseInt(score) % 100 !== 0) return '分数必须是100的倍数'
+    if (isGuobiao && parseInt(score) < 8) return '分数必须 ≥ 8'
+    return null
+  }
+
+  const validationHint = getValidationHint()
 
   const handleAddRound = async () => {
     setError('')
+    if (validationHint && !isRyuukyoku) return
     setSubmitting(true)
     try {
       if (isRyuukyoku) {
@@ -149,18 +161,19 @@ export default function SessionPage() {
       }
       if (!canSubmit) return
       if (isRiichi) {
+        const scoreVal = parseInt(score)
         await addRound(session.id, {
           winnerId: Number(winnerId),
-          fan: parseInt(fan),
-          fu: parseInt(fu),
+          score: scoreVal,
           dealerId: gameState.dealerPlayerId,
           honba: gameState.honba,
           kyoutaku: gameState.kyoutaku,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
-          fanCount: parseInt(fan),
+          fanCount: fanCount || scoreVal,
           winHand,
           fanDetails,
           riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
+          backfill: isBackfill || undefined,
         })
       } else if (isDongbei) {
         await addRound(session.id, {
@@ -278,20 +291,11 @@ export default function SessionPage() {
 
   const getScorePreview = (): string | null => {
     if (isRiichi) {
-      if (!fan || !fu) return null
-      const h = parseInt(fan),
-        f = parseInt(fu)
-      let basic: number
-      if (h >= 13) basic = 8000
-      else if (h >= 11) basic = 6000
-      else if (h >= 8) basic = 4000
-      else if (h >= 6) basic = 3000
-      else if (h >= 5 || (h === 4 && f >= 30) || (h === 3 && f >= 60)) basic = 2000
-      else basic = Math.min(f * Math.pow(2, 2 + h), 2000)
+      if (!score) return null
+      const scoreVal = parseInt(score)
+      if (scoreVal % 100 !== 0) return '分数必须是100的倍数'
 
-      const r100 = (v: number) => Math.ceil(v / 100) * 100
       const honbaNum = gameState.honba
-      const honbaBonus = 100 * honbaNum
       const kyoutakuNum = gameState.kyoutaku
       const uniqueRiichiCount = new Set(riichiPlayerIds).size
       const riichiPool = uniqueRiichiCount * 1000
@@ -306,28 +310,17 @@ export default function SessionPage() {
         .join('+')
 
       if (isSelfDraw) {
-        if (winnerIsDealer) {
-          const each = r100(basic * 2) + honbaBonus
-          const numOthers = session.playerCount - 1
-          const winnerTotal = each * numOthers + bonusPool
-          return `自摸 (亲家): ${numOthers}人各付${each}${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
-            bonusPool > 0 ? ` +${bonusLabel}` : ''
-          } → 共+${winnerTotal}`
-        } else {
-          const dealerPays = r100(basic * 2) + honbaBonus
-          const otherPays = r100(basic) + honbaBonus
-          const numNonDealers = session.playerCount - 2
-          const total = dealerPays + numNonDealers * otherPays + bonusPool
-          return `自摸: 亲家付${dealerPays}, ${numNonDealers > 0 ? `其他各付${otherPays}, ` : ''}${
-            honbaNum > 0 ? `(含${honbaNum}本场) ` : ''
-          }${bonusPool > 0 ? `+${bonusLabel} ` : ''}共+${total}`
-        }
-      } else {
-        const base = (winnerIsDealer ? r100(basic * 6) : r100(basic * 4)) + 300 * honbaNum
-        const total = base + bonusPool
-        return `荣和${winnerIsDealer ? ' (亲家)' : ''}: ${base}点${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
+        const numOthers = session.playerCount - 1
+        const eachPays = Math.round(scoreVal / numOthers)
+        const total = scoreVal + bonusPool
+        return `自摸: ${numOthers}人各付${eachPays}${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
           bonusPool > 0 ? ` +${bonusLabel}` : ''
         } → 共+${total}`
+      } else {
+        const total = scoreVal + 300 * honbaNum + bonusPool
+        return `荣和${winnerIsDealer ? ' (亲家)' : ''}: ${scoreVal}点${
+          honbaNum > 0 ? ` +${300 * honbaNum}(${honbaNum}本场)` : ''
+        }${bonusPool > 0 ? ` +${bonusLabel}` : ''} → 共+${total}`
       }
     }
 
@@ -398,7 +391,7 @@ export default function SessionPage() {
             <h3 className="round-form-title">添加 — {gameState.displayName}</h3>
             {isRiichi && (
               <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="zimo-toggle">
+                <label className="checkbox-toggle">
                   <input
                     type="checkbox"
                     checked={isRyuukyoku}
@@ -509,40 +502,20 @@ export default function SessionPage() {
 
                 {isRiichi && (
                   <div className="form-group score-inline-group-container">
-                    <div className="round-form-grid">
-                      <div className="form-group">
-                        <label>番</label>
-                        <select value={fan} onChange={(e) => setFan(e.target.value)}>
-                          <option value=""></option>
-                          {FAN_OPTIONS.map((f) => (
-                            <option key={f} value={f}>
-                              {f}
-                              {f >= 5
-                                ? f >= 13
-                                  ? ' (役満)'
-                                  : f >= 11
-                                  ? ' (三倍満)'
-                                  : f >= 8
-                                  ? ' (倍満)'
-                                  : f >= 6
-                                  ? ' (跳満)'
-                                  : ' (満貫)'
-                                : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>符数</label>
-                        <select value={fu} onChange={(e) => setFu(e.target.value)}>
-                          <option value=""></option>
-                          {FU_OPTIONS.map((f) => (
-                            <option key={f} value={f}>
-                              {f}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                    <div className="score-inline-group">
+                      <label>分数</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={score}
+                        onChange={(e) => setScore(e.target.value)}
+                        placeholder="输入分数 (100的倍数)"
+                        className="score-input-compact"
+                      />
+                      <label className="checkbox-toggle">
+                        <input type="checkbox" checked={isBackfill} onChange={(e) => setIsBackfill(e.target.checked)} />
+                        <span>补录 (不计入局数)</span>
+                      </label>
                     </div>
                     <div className="inline-calc-wrapper">
                       <RiichiCalculator
@@ -565,11 +538,11 @@ export default function SessionPage() {
                     <div className="form-group">
                       <label>番</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         value={fan}
                         onChange={(e) => setFan(e.target.value)}
                         placeholder="输入番"
-                        min="0"
                       />
                     </div>
                   </div>
@@ -580,11 +553,11 @@ export default function SessionPage() {
                     <div className="score-inline-group">
                       <label>分数</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         value={score}
                         onChange={(e) => setScore(e.target.value)}
                         placeholder="输入分数"
-                        min="8"
                         className="score-input-compact"
                       />
                     </div>
@@ -628,7 +601,10 @@ export default function SessionPage() {
                   </div>
                 )}
 
-                {preview && <div className="score-preview">{preview}</div>}
+                {preview && !error && !validationHint && <div className="status-box">{preview}</div>}
+                {(error || (!isRyuukyoku && validationHint)) && (
+                  <div className="status-box error">{error || validationHint}</div>
+                )}
 
                 {isRiichi && !isRyuukyoku && (
                   <div className="form-group">
@@ -657,8 +633,6 @@ export default function SessionPage() {
                     )}
                   </div>
                 )}
-
-                {error && <p className="error-text">{error}</p>}
 
                 <button className="btn btn-primary" onClick={handleAddRound} disabled={!canSubmit || submitting}>
                   {submitting ? MSG.SUBMITTING : '添加'}

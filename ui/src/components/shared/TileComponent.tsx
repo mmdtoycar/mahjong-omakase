@@ -1,5 +1,5 @@
 import React from 'react'
-import { Tile } from '../../logic/guobiao/tiles'
+import { Tile } from '../../logic/shared/tiles'
 
 export const getTileKey = (tile: Tile): string => {
   if (tile.suit === 'm') return `Man${tile.rank}`

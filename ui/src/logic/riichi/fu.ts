@@ -1,4 +1,4 @@
-import { Tile } from '../guobiao/tiles'
+import { Tile } from '../shared/tiles'
 import { Meld, HandCombination, GameOptions, FuDetail } from './types'
 
 export function calculateFu(
@@ -108,8 +108,6 @@ export function determineWaitType(combination: HandCombination, winTile: Tile): 
 
   // Tanki (pair wait)
   if (pair.tiles[0].equals(winTile)) {
-    const completesGroup = groups.some((m) => !m.isOpen && m.tiles.some((t) => t.equals(winTile)))
-    if (!completesGroup) return 'tanki'
     return 'tanki'
   }
 
