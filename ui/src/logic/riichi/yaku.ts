@@ -67,7 +67,7 @@ function detectStandardYaku(
 
   // 1-han yaku
   if (isMenzen && options.isTsumo) yaku.push({ name: '门前清自摸和', han: 1 })
-  addRiichiYaku(yaku, options)
+  addRiichiYaku(yaku, options, isMenzen)
 
   if (isMenzen && checkPinfu(combination, winTile, options)) {
     yaku.push({ name: '平和', han: 1 })
@@ -94,7 +94,8 @@ function detectStandardYaku(
     yaku.push({ name: '混全带幺九', han: isMenzen ? 2 : 1 })
   }
   if (checkToitoi(groups)) yaku.push({ name: '对对和', han: 2 })
-  if (checkSanankou(koutsuMelds, groups, winTile, options.isTsumo)) {
+  const waitType = determineWaitType(combination, winTile)
+  if (checkSanankou(koutsuMelds, winTile, options.isTsumo, waitType)) {
     yaku.push({ name: '三暗刻', han: 2 })
   }
   if (checkSanshokuDoukou(koutsuMelds)) yaku.push({ name: '三色同刻', han: 2 })
@@ -260,15 +261,14 @@ function checkToitoi(groups: Meld[]): boolean {
   return groups.every((m) => m.type === 'koutsu' || m.type === 'kantsu')
 }
 
-function checkSanankou(koutsuMelds: Meld[], groups: Meld[], winTile: Tile, isTsumo: boolean): boolean {
+function checkSanankou(koutsuMelds: Meld[], winTile: Tile, isTsumo: boolean, waitType: string): boolean {
   let closedKoutsu = 0
+  let ronTargetCounted = false
   for (const m of koutsuMelds) {
     if (m.isOpen) continue
-    // If ron and the win tile completes this koutsu, it's open
-    if (!isTsumo && m.tiles[0].equals(winTile)) {
-      // Check if this is a shanpon wait - if so, the completed set is considered open
-      const shanponPossible = koutsuMelds.filter((k) => !k.isOpen && k.tiles[0].equals(winTile)).length > 0
-      if (shanponPossible) continue
+    if (!isTsumo && waitType === 'shanpon' && !ronTargetCounted && m.tiles[0].equals(winTile)) {
+      ronTargetCounted = true
+      continue
     }
     closedKoutsu++
   }
@@ -380,7 +380,8 @@ function checkSuukantsu(koutsuMelds: Meld[]): boolean {
 
 // --- Helpers ---
 
-function addRiichiYaku(yaku: YakuResult[], options: GameOptions): void {
+function addRiichiYaku(yaku: YakuResult[], options: GameOptions, isMenzen = true): void {
+  if (!isMenzen) return
   const hasRiichi = options.isDoubleRiichi || options.isRiichi
   if (options.isDoubleRiichi) {
     yaku.push({ name: '两立直', han: 2 })
@@ -409,8 +410,9 @@ function addSituationalYakuman(yaku: YakuResult[], options: GameOptions): void {
 }
 
 function addDoraYaku(yaku: YakuResult[], options: GameOptions): void {
+  const hasRiichi = options.isDoubleRiichi || options.isRiichi
   if (options.doraCount > 0) yaku.push({ name: '宝牌', han: options.doraCount })
-  if (options.uraDoraCount > 0) yaku.push({ name: '里宝牌', han: options.uraDoraCount })
+  if (hasRiichi && options.uraDoraCount > 0) yaku.push({ name: '里宝牌', han: options.uraDoraCount })
   if (options.akaDoraCount > 0) yaku.push({ name: '赤宝牌', han: options.akaDoraCount })
 }
 
