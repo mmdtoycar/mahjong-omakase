@@ -78,12 +78,7 @@ function checkChiitoitsu(tiles: Tile[]): HandCombination | null {
   for (const c of counts.values()) {
     if (c !== 2) return null
   }
-  const pairs: Meld[] = []
-  for (const [tStr] of Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
-    const t = Tile.fromString(tStr)
-    pairs.push({ type: 'jantai', tiles: [t, t], isOpen: false })
-  }
-  return { melds: pairs, isChiitoitsu: true }
+  return { melds: [], isChiitoitsu: true }
 }
 
 function checkKokushi(tiles: Tile[]): HandCombination | null {
@@ -92,7 +87,6 @@ function checkKokushi(tiles: Tile[]): HandCombination | null {
   for (const y of yaoTiles) {
     if (!counts.has(y.toString())) return null
   }
-  // Exactly one duplicate among the 13 yao tiles
   let hasDuplicate = false
   for (const y of yaoTiles) {
     if ((counts.get(y.toString()) || 0) >= 2) {
@@ -102,7 +96,7 @@ function checkKokushi(tiles: Tile[]): HandCombination | null {
   }
   if (!hasDuplicate) return null
   return {
-    melds: tiles.map((t) => ({ type: 'jantai' as const, tiles: [t], isOpen: false })),
+    melds: [],
     isKokushi: true,
   }
 }
