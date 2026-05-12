@@ -32,8 +32,6 @@ export interface GameOptions {
   isTenhou: boolean // dealer first draw
   isChiihou: boolean // non-dealer first draw
   doraCount: number
-  uraDoraCount: number
-  akaDoraCount: number
 }
 
 export interface YakuResult {

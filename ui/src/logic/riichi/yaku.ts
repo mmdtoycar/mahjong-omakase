@@ -410,10 +410,7 @@ function addSituationalYakuman(yaku: YakuResult[], options: GameOptions): void {
 }
 
 function addDoraYaku(yaku: YakuResult[], options: GameOptions): void {
-  const hasRiichi = options.isDoubleRiichi || options.isRiichi
   if (options.doraCount > 0) yaku.push({ name: '宝牌', han: options.doraCount })
-  if (hasRiichi && options.uraDoraCount > 0) yaku.push({ name: '里宝牌', han: options.uraDoraCount })
-  if (options.akaDoraCount > 0) yaku.push({ name: '赤宝牌', han: options.akaDoraCount })
 }
 
 function meldsIdentical(a: Meld, b: Meld): boolean {

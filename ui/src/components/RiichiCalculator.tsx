@@ -101,8 +101,6 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
     isTenhou: false,
     isChiihou: false,
     doraCount: 0,
-    uraDoraCount: 0,
-    akaDoraCount: 0,
     ...initialOptions,
   })
 
@@ -124,8 +122,6 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       isTenhou: false,
       isChiihou: false,
       doraCount: 0,
-      uraDoraCount: 0,
-      akaDoraCount: 0,
     }))
     setMode(modes[0])
   }, [])

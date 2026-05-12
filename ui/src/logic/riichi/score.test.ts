@@ -31,8 +31,6 @@ function defaultOptions(overrides: Partial<GameOptions> = {}): GameOptions {
     isTenhou: false,
     isChiihou: false,
     doraCount: 0,
-    uraDoraCount: 0,
-    akaDoraCount: 0,
     ...overrides,
   }
 }
