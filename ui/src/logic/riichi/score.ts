@@ -10,8 +10,8 @@ export function calculateScore(
   isDealer: boolean
 ): { ron: number; tsumoDealer: number; tsumoNonDealer: number } {
   if (han >= 13) {
-    // Yakuman
-    const base = 8000
+    const yakumanCount = Math.floor(han / 13)
+    const base = 8000 * yakumanCount
     return dealerCalc(base, isDealer)
   }
   if (han >= 11) {

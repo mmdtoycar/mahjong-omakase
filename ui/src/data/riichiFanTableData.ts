@@ -67,7 +67,7 @@ export const riichiFanTableData: RiichiFanItem[] = [
   { fan: 1, name: '岭上开花', description: '摸岭上牌和牌。', example: '' },
   { fan: 1, name: '海底摸月', description: '摸取海底牌和牌。', example: '' },
   { fan: 1, name: '河底捞鱼', description: '别人打出局中的最后一张牌时荣和。', example: '' },
-  { fan: 1, name: ';枪杠', description: '和别人加杠的牌。国士无双可抢暗杠。', example: '' },
+  { fan: 1, name: '枪杠', description: '和别人加杠的牌。国士无双可抢暗杠。', example: '' },
   {
     fan: 1,
     name: '宝牌',

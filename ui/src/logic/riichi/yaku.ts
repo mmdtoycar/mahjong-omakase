@@ -381,19 +381,26 @@ function checkSuukantsu(koutsuMelds: Meld[]): boolean {
 // --- Helpers ---
 
 function addRiichiYaku(yaku: YakuResult[], options: GameOptions): void {
+  const hasRiichi = options.isDoubleRiichi || options.isRiichi
   if (options.isDoubleRiichi) {
     yaku.push({ name: '两立直', han: 2 })
   } else if (options.isRiichi) {
     yaku.push({ name: '立直', han: 1 })
   }
-  if (options.isIppatsu) yaku.push({ name: '一发', han: 1 })
+  if (hasRiichi && options.isIppatsu) yaku.push({ name: '一发', han: 1 })
 }
 
 function addHaiteiYaku(yaku: YakuResult[], options: GameOptions): void {
-  if (options.isTsumo && options.isHaitei) yaku.push({ name: '海底摸月', han: 1 })
-  if (!options.isTsumo && options.isHaitei) yaku.push({ name: '河底捞鱼', han: 1 })
-  if (options.isTsumo && options.isRinshan) yaku.push({ name: '岭上开花', han: 1 })
-  if (!options.isTsumo && options.isChankan) yaku.push({ name: '抢杠', han: 1 })
+  if (options.isTsumo && options.isRinshan) {
+    yaku.push({ name: '岭上开花', han: 1 })
+  } else if (options.isTsumo && options.isHaitei) {
+    yaku.push({ name: '海底摸月', han: 1 })
+  }
+  if (!options.isTsumo && options.isChankan) {
+    yaku.push({ name: '抢杠', han: 1 })
+  } else if (!options.isTsumo && options.isHaitei) {
+    yaku.push({ name: '河底捞鱼', han: 1 })
+  }
 }
 
 function addSituationalYakuman(yaku: YakuResult[], options: GameOptions): void {
