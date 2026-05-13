@@ -62,27 +62,6 @@ function seatWindToNumber(seatWind: string): number {
   return 1
 }
 
-function countDora(hand: Tile[], melds: Meld[], doraIndicators: string[]): number {
-  const doraTiles = doraIndicators
-    .map((d) => {
-      const t = parseTileStr(d)[0]
-      if (!t) return null
-      if (t.suit === 'z') {
-        if (t.rank <= 4) return new Tile('z', (t.rank % 4) + 1)
-        return new Tile('z', t.rank === 7 ? 5 : t.rank + 1)
-      }
-      return new Tile(t.suit, (t.rank % 9) + 1)
-    })
-    .filter(Boolean) as Tile[]
-
-  const allTiles = [...hand, ...melds.flatMap((m) => m.tiles)]
-  let count = 0
-  for (const dora of doraTiles) {
-    count += allTiles.filter((t) => t.equals(dora)).length
-  }
-  return count
-}
-
 describe('Tenhou reference hands (1000 cases)', () => {
   const hands = tenhouHands
 
@@ -96,7 +75,6 @@ describe('Tenhou reference hands (1000 cases)', () => {
         const concealedWithoutWin: Tile[] = [...handTiles]
         const winIdx = concealedWithoutWin.findIndex((t) => t.equals(winTile))
         if (winIdx !== -1) concealedWithoutWin.splice(winIdx, 1)
-        const doraCount = countDora([...handTiles, winTile], melds, h.doraIndicators)
 
         const options: GameOptions = {
           isTsumo: h.isTsumo,
