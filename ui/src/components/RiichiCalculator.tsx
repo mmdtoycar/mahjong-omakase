@@ -71,7 +71,14 @@ const modes: Mode[] = [
 ]
 
 interface RiichiCalculatorProps {
-  onSelectScore: (score: number | null, hand?: string, fanDetails?: string, fanCount?: number) => void
+  onSelectScore: (
+    score: number | null,
+    hand?: string,
+    fanDetails?: string,
+    fanCount?: number,
+    tsumoDetail?: { dealer: number; nonDealer: number } | null
+  ) => void
+  onError?: (msg: string | null) => void
   initialOptions?: Partial<GameOptions>
   resetTrigger?: number
   isSelfDraw: boolean
@@ -80,6 +87,7 @@ interface RiichiCalculatorProps {
 
 export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
   onSelectScore,
+  onError,
   initialOptions,
   resetTrigger,
   isSelfDraw,
@@ -187,6 +195,9 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       const fanDetailsStr = huResult.yakuList.map((y) => `${y.name}(${y.han})`).join(', ')
 
       let outputScore: number
+      const tsumoInfo = isSelfDraw
+        ? { dealer: huResult.score.tsumoDealer, nonDealer: huResult.score.tsumoNonDealer }
+        : null
       if (isSelfDraw) {
         if (options.jikaze === 1) {
           outputScore = huResult.score.tsumoNonDealer * 3
@@ -196,11 +207,16 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       } else {
         outputScore = huResult.score.ron
       }
-      onSelectScore(outputScore, handStr, fanDetailsStr, huResult.han)
+      onSelectScore(outputScore, handStr, fanDetailsStr, huResult.han, tsumoInfo)
+      onError?.(null)
+    } else if (currentCount === 14) {
+      onSelectScore(null)
+      onError?.('和了不成立 — 无役')
     } else {
       onSelectScore(null)
+      onError?.(null)
     }
-  }, [huResult, onSelectScore, currentCount, concealedTiles, melds, options.doraCount])
+  }, [huResult, onSelectScore, onError, currentCount, concealedTiles, melds, options.doraCount])
 
   const displayConcealed = useMemo(() => {
     const sorted = [...concealedTiles].sort((a, b) => a.compareTo(b))
@@ -347,12 +363,6 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {currentCount === 14 && !huResult && (
-        <div className="result-preview-mini error">
-          <div className="score-warning-text">和了不成立 — 无役</div>
         </div>
       )}
     </div>

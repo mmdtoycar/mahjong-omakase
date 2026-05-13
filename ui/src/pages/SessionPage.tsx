@@ -28,7 +28,9 @@ export default function SessionPage() {
   const [winHand, setWinHand] = useState<string>('')
   const [fanDetails, setFanDetails] = useState<string>('')
   const [fanCount, setFanCount] = useState<number>(0)
+  const [tsumoDetail, setTsumoDetail] = useState<{ dealer: number; nonDealer: number } | null>(null)
   const [isBackfill, setIsBackfill] = useState(false)
+  const [calcError, setCalcError] = useState('')
   const [error, setError] = useState('')
 
   const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
@@ -45,19 +47,30 @@ export default function SessionPage() {
     }
   }, [])
 
-  const handleRiichiCalcSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
-    if (s !== null) {
-      setScore(String(s))
-      setWinHand(hand || '')
-      setFanDetails(details || '')
-      setFanCount(fCount || 0)
-    } else {
-      setScore('')
-      setWinHand('')
-      setFanDetails('')
-      setFanCount(0)
-    }
-  }, [])
+  const handleRiichiCalcSelect = useCallback(
+    (
+      s: number | null,
+      hand?: string,
+      details?: string,
+      fCount?: number,
+      tsumo?: { dealer: number; nonDealer: number } | null
+    ) => {
+      if (s !== null) {
+        setScore(String(s))
+        setWinHand(hand || '')
+        setFanDetails(details || '')
+        setFanCount(fCount || 0)
+        setTsumoDetail(tsumo || null)
+      } else {
+        setScore('')
+        setWinHand('')
+        setFanDetails('')
+        setFanCount(0)
+        setTsumoDetail(null)
+      }
+    },
+    []
+  )
 
   const load = async () => {
     const detail = await fetchSessionDetail(Number(id))
@@ -93,7 +106,9 @@ export default function SessionPage() {
     setWinHand('')
     setFanDetails('')
     setFanCount(0)
+    setTsumoDetail(null)
     setIsBackfill(false)
+    setCalcError('')
     setCalcResetCount((prev) => prev + 1)
   }
 
@@ -134,7 +149,7 @@ export default function SessionPage() {
       if (isNaN(parseInt(fan))) return '番数必须是数字'
       return null
     }
-    if (!score) return '请输入分数'
+    if (!score) return '请输入分数或手牌'
     if (isNaN(parseInt(score))) return '请输入有效数字'
     if (isRiichi && parseInt(score) < 100) return '分数必须 ≥ 100'
     if (isRiichi && parseInt(score) % 100 !== 0) return '分数必须是100的倍数'
@@ -293,7 +308,7 @@ export default function SessionPage() {
     if (isRiichi) {
       if (!score) return null
       const scoreVal = parseInt(score)
-      if (scoreVal % 100 !== 0) return '分数必须是100的倍数'
+      if (isNaN(scoreVal) || scoreVal < 100 || scoreVal % 100 !== 0) return null
 
       const honbaNum = gameState.honba
       const kyoutakuNum = gameState.kyoutaku
@@ -310,12 +325,27 @@ export default function SessionPage() {
         .join('+')
 
       if (isSelfDraw) {
-        const numOthers = session.playerCount - 1
-        const eachPays = Math.round(scoreVal / numOthers)
+        const honbaBonus = 100 * honbaNum
+        if (tsumoDetail) {
+          if (winnerIsDealer) {
+            const each = tsumoDetail.nonDealer + honbaBonus
+            const numOthers = session.playerCount - 1
+            const winnerTotal = each * numOthers + bonusPool
+            return `自摸 (亲家): ${numOthers}人各付${each}${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
+              bonusPool > 0 ? ` +${bonusLabel}` : ''
+            } → 共+${winnerTotal}`
+          } else {
+            const dealerPays = tsumoDetail.dealer + honbaBonus
+            const otherPays = tsumoDetail.nonDealer + honbaBonus
+            const numNonDealers = session.playerCount - 2
+            const total = dealerPays + numNonDealers * otherPays + bonusPool
+            return `自摸: 亲家付${dealerPays}, ${numNonDealers > 0 ? `其他各付${otherPays}, ` : ''}${
+              honbaNum > 0 ? `(含${honbaNum}本场) ` : ''
+            }${bonusPool > 0 ? `+${bonusLabel} ` : ''}共+${total}`
+          }
+        }
         const total = scoreVal + bonusPool
-        return `自摸: ${numOthers}人各付${eachPays}${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
-          bonusPool > 0 ? ` +${bonusLabel}` : ''
-        } → 共+${total}`
+        return `自摸: 共+${scoreVal}${bonusPool > 0 ? ` +${bonusLabel}` : ''} → 共+${total}`
       } else {
         const total = scoreVal + 300 * honbaNum + bonusPool
         return `荣和${winnerIsDealer ? ' (亲家)' : ''}: ${scoreVal}点${
@@ -382,6 +412,16 @@ export default function SessionPage() {
   }
 
   const preview = getScorePreview()
+
+  const getStatusMessage = (): { text: string; isError: boolean } | null => {
+    if (error) return { text: error, isError: true }
+    if (calcError) return { text: calcError, isError: true }
+    if (!isRyuukyoku && validationHint) return { text: validationHint, isError: true }
+    if (preview) return { text: preview, isError: false }
+    return null
+  }
+
+  const statusMessage = getStatusMessage()
 
   return (
     <>
@@ -508,8 +548,11 @@ export default function SessionPage() {
                         type="text"
                         inputMode="numeric"
                         value={score}
-                        onChange={(e) => setScore(e.target.value)}
-                        placeholder="输入分数 (100的倍数)"
+                        onChange={(e) => {
+                          setScore(e.target.value)
+                          setTsumoDetail(null)
+                        }}
+                        placeholder="输入分数"
                         className="score-input-compact"
                       />
                       <label className="checkbox-toggle">
@@ -521,6 +564,7 @@ export default function SessionPage() {
                       <RiichiCalculator
                         key={`riichi-${gameState.prevalentWind}-${winnerMenfeng}`}
                         onSelectScore={handleRiichiCalcSelect}
+                        onError={(msg) => setCalcError(msg || '')}
                         initialOptions={{
                           bakaze: gameState.prevalentWind,
                           jikaze: winnerMenfeng,
@@ -601,9 +645,8 @@ export default function SessionPage() {
                   </div>
                 )}
 
-                {preview && !error && !validationHint && <div className="status-box">{preview}</div>}
-                {(error || (!isRyuukyoku && validationHint)) && (
-                  <div className="status-box error">{error || validationHint}</div>
+                {statusMessage && (
+                  <div className={`status-box${statusMessage.isError ? ' error' : ''}`}>{statusMessage.text}</div>
                 )}
 
                 {isRiichi && !isRyuukyoku && (
