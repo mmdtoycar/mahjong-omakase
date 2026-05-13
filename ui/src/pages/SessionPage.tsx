@@ -347,10 +347,11 @@ export default function SessionPage() {
         const total = scoreVal + bonusPool
         return `自摸: 共+${scoreVal}${bonusPool > 0 ? ` +${bonusLabel}` : ''} → 共+${total}`
       } else {
-        const total = scoreVal + 300 * honbaNum + bonusPool
-        return `荣和${winnerIsDealer ? ' (亲家)' : ''}: ${scoreVal}点${
-          honbaNum > 0 ? ` +${300 * honbaNum}(${honbaNum}本场)` : ''
-        }${bonusPool > 0 ? ` +${bonusLabel}` : ''} → 共+${total}`
+        const base = scoreVal + 300 * honbaNum
+        const total = base + bonusPool
+        return `荣和${winnerIsDealer ? ' (亲家)' : ''}: ${base}点${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
+          bonusPool > 0 ? ` +${bonusLabel}` : ''
+        } → 共+${total}`
       }
     }
 
