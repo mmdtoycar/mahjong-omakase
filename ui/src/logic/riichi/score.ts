@@ -87,7 +87,7 @@ export function calculateHand(
 
       const result: CalcResult = { han, fu, yakuList, fuDetails, isYakuman, yakumanCount, score }
 
-      if (!bestResult || compareResults(result, bestResult) > 0) {
+      if (!bestResult || isBetterResult(result, bestResult)) {
         bestResult = result
       }
     }
@@ -120,8 +120,8 @@ function generateTries(combo: HandCombination, winTile: Tile): HandCombination[]
   })
 }
 
-function compareResults(a: CalcResult, b: CalcResult): number {
-  if (a.score.ron !== b.score.ron) return a.score.ron - b.score.ron
-  if (a.han !== b.han) return a.han - b.han
-  return b.fu - a.fu
+function isBetterResult(candidate: CalcResult, current: CalcResult): boolean {
+  if (candidate.score.ron !== current.score.ron) return candidate.score.ron > current.score.ron
+  if (candidate.han !== current.han) return candidate.han > current.han
+  return candidate.fu > current.fu
 }
