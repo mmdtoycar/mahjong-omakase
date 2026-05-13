@@ -84,6 +84,7 @@ describe('Score Calculation', () => {
       const hand = tiles('19m19p19s1234567z')
       const win = Tile.fromString('1m')
       const result = calculateHand(hand, [], win, defaultOptions())
+      expect(result).not.toBeNull()
       expect(result!.score.ron).toBe(32000)
     })
 
@@ -91,6 +92,7 @@ describe('Score Calculation', () => {
       const hand = tiles('19m19p19s1234567z')
       const win = Tile.fromString('1m')
       const result = calculateHand(hand, [], win, defaultOptions({ zifeng: 1 }))
+      expect(result).not.toBeNull()
       expect(result!.score.ron).toBe(48000)
     })
   })

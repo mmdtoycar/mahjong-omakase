@@ -102,12 +102,12 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
     zifeng: 1,
     isRiichi: false,
     isDoubleRiichi: false,
-    isIppatsu: false,
-    isChankan: false,
-    isRinshan: false,
-    isHaitei: false,
-    isTenhou: false,
-    isChiihou: false,
+    isYifa: false,
+    isQianggang: false,
+    isLingshang: false,
+    isHaidi: false,
+    isTianhu: false,
+    isDihu: false,
     doraCount: 0,
     ...initialOptions,
   })
@@ -123,12 +123,12 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       ...prev,
       isRiichi: false,
       isDoubleRiichi: false,
-      isIppatsu: false,
-      isChankan: false,
-      isRinshan: false,
-      isHaitei: false,
-      isTenhou: false,
-      isChiihou: false,
+      isYifa: false,
+      isQianggang: false,
+      isLingshang: false,
+      isHaidi: false,
+      isTianhu: false,
+      isDihu: false,
       doraCount: 0,
     }))
     setMode(modes[0])
@@ -309,26 +309,26 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
             立直
           </button>
           <button
-            className={`opt-btn ${options.isIppatsu ? 'active' : ''}`}
-            onClick={() => setOptions({ ...options, isIppatsu: !options.isIppatsu })}
+            className={`opt-btn ${options.isYifa ? 'active' : ''}`}
+            onClick={() => setOptions({ ...options, isYifa: !options.isYifa })}
           >
             一发
           </button>
           <button
-            className={`opt-btn ${options.isHaitei ? 'active' : ''}`}
-            onClick={() => setOptions({ ...options, isHaitei: !options.isHaitei })}
+            className={`opt-btn ${options.isHaidi ? 'active' : ''}`}
+            onClick={() => setOptions({ ...options, isHaidi: !options.isHaidi })}
           >
             {isSelfDraw ? '海底' : '河底'}
           </button>
           <button
-            className={`opt-btn ${options.isRinshan ? 'active' : ''}`}
-            onClick={() => setOptions({ ...options, isRinshan: !options.isRinshan })}
+            className={`opt-btn ${options.isLingshang ? 'active' : ''}`}
+            onClick={() => setOptions({ ...options, isLingshang: !options.isLingshang })}
           >
             岭上
           </button>
           <button
-            className={`opt-btn ${options.isChankan ? 'active' : ''}`}
-            onClick={() => setOptions({ ...options, isChankan: !options.isChankan })}
+            className={`opt-btn ${options.isQianggang ? 'active' : ''}`}
+            onClick={() => setOptions({ ...options, isQianggang: !options.isQianggang })}
           >
             抢杠
           </button>

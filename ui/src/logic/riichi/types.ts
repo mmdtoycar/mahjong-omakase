@@ -26,12 +26,12 @@ export interface GameOptions {
   zifeng: number // seat wind
   isRiichi: boolean
   isDoubleRiichi: boolean
-  isIppatsu: boolean
-  isChankan: boolean // robbing a kong
-  isRinshan: boolean // after a kong
-  isHaitei: boolean // last tile draw/discard
-  isTenhou: boolean // dealer first draw
-  isChiihou: boolean // non-dealer first draw
+  isYifa: boolean
+  isQianggang: boolean // robbing a kong
+  isLingshang: boolean // after a kong
+  isHaidi: boolean // last tile draw/discard
+  isTianhu: boolean // dealer first draw
+  isDihu: boolean // non-dealer first draw
   doraCount: number
 }
 

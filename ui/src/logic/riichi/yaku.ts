@@ -133,7 +133,7 @@ function detectYakuman(
   const keziMelds = groups.filter((m) => m.type === 'kezi' || m.type === 'gangzi')
   const isMenqing = groups.every((m) => !m.isOpen)
 
-  if (isMenqing && checkSuuankou(keziMelds, winTile, options.isTsumo, groups)) {
+  if (isMenqing && checkSuuankou(keziMelds, winTile, options.isTsumo)) {
     yaku.push({ name: '四暗刻', han: 13, isYakuman: true })
   }
   if (checkDaisangen(keziMelds)) yaku.push({ name: '大三元', han: 13, isYakuman: true })
@@ -320,7 +320,7 @@ function checkChinitsu(allTiles: Tile[]): boolean {
 
 // --- Yakuman helpers ---
 
-function checkSuuankou(keziMelds: Meld[], winTile: Tile, isTsumo: boolean, groups: Meld[]): boolean {
+function checkSuuankou(keziMelds: Meld[], winTile: Tile, isTsumo: boolean): boolean {
   if (keziMelds.length !== 4) return false
   if (isTsumo) return keziMelds.every((m) => !m.isOpen)
   // Ron: the kezi completed by the win tile counts as open (duipeng wait)
@@ -388,25 +388,25 @@ function addRiichiYaku(yaku: YakuResult[], options: GameOptions, isMenqing = tru
   } else if (options.isRiichi) {
     yaku.push({ name: '立直', han: 1 })
   }
-  if (hasRiichi && options.isIppatsu) yaku.push({ name: '一发', han: 1 })
+  if (hasRiichi && options.isYifa) yaku.push({ name: '一发', han: 1 })
 }
 
 function addHaiteiYaku(yaku: YakuResult[], options: GameOptions): void {
-  if (options.isTsumo && options.isRinshan) {
+  if (options.isTsumo && options.isLingshang) {
     yaku.push({ name: '岭上开花', han: 1 })
-  } else if (options.isTsumo && options.isHaitei) {
+  } else if (options.isTsumo && options.isHaidi) {
     yaku.push({ name: '海底摸月', han: 1 })
   }
-  if (!options.isTsumo && options.isChankan) {
+  if (!options.isTsumo && options.isQianggang) {
     yaku.push({ name: '抢杠', han: 1 })
-  } else if (!options.isTsumo && options.isHaitei) {
+  } else if (!options.isTsumo && options.isHaidi) {
     yaku.push({ name: '河底捞鱼', han: 1 })
   }
 }
 
 function addSituationalYakuman(yaku: YakuResult[], options: GameOptions): void {
-  if (options.isTenhou) yaku.push({ name: '天和', han: 13, isYakuman: true })
-  if (options.isChiihou) yaku.push({ name: '地和', han: 13, isYakuman: true })
+  if (options.isTianhu) yaku.push({ name: '天和', han: 13, isYakuman: true })
+  if (options.isDihu) yaku.push({ name: '地和', han: 13, isYakuman: true })
 }
 
 function addDoraYaku(yaku: YakuResult[], options: GameOptions): void {

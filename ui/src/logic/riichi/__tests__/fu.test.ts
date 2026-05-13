@@ -9,6 +9,7 @@ describe('Fu Calculation', () => {
     const hand = tiles('1133m2277p4488s6z')
     const win = Tile.fromString('6z')
     const result = calculateHand(hand, [], win, defaultOptions())
+    expect(result).not.toBeNull()
     expect(result!.fu).toBe(25)
   })
 
