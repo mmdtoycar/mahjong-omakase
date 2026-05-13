@@ -634,7 +634,11 @@ export default function SessionPage() {
                   </div>
                 )}
 
-                <button className="btn btn-primary" onClick={handleAddRound} disabled={!canSubmit || submitting}>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleAddRound}
+                  disabled={!canSubmit || submitting || !!validationHint}
+                >
                   {submitting ? MSG.SUBMITTING : '添加'}
                 </button>
               </>

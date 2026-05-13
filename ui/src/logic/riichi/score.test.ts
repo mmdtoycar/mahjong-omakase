@@ -197,12 +197,10 @@ describe('Riichi Score Calculator', () => {
     })
 
     it('daisangen (big three dragons)', () => {
-      // 555z 666z 777z 123m pair 11p
-      const hand = tiles('123m11p555666777z') // 13 tiles — wait, that's 3+2+3+3+3=14!
-      // Let me fix: 123m 555z 666z 777z pair 1p — tanki
-      const hand2 = tiles('123m555666777z1p') // 13 tiles: 3+3+3+3+1=13
+      // 123m 555z 666z 777z pair 1p — tanki
+      const hand = tiles('123m555666777z1p') // 13 tiles
       const win = Tile.fromString('1p')
-      const result = calculateHand(hand2, [], win, defaultOptions())
+      const result = calculateHand(hand, [], win, defaultOptions())
       expect(result).not.toBeNull()
       expect(result!.isYakuman).toBe(true)
       expect(result!.yakuList.map((y) => y.name)).toContain('大三元')
@@ -352,17 +350,12 @@ describe('Riichi Score Calculator', () => {
   })
 
   describe('Regression', () => {
-    it('dora-only hand is not valid (no real yaku)', () => {
-      // Hand with no yaku, only dora should not count
+    it('pinfu with dora is still valid', () => {
       const hand = tiles('234m567m345p67s11z')
       const win = Tile.fromString('8s')
       const result = calculateHand(hand, [], win, defaultOptions({ bakaze: 2, jikaze: 3, doraCount: 3 }))
-      // Should still be valid because pinfu IS a real yaku
       expect(result).not.toBeNull()
-
-      // But a hand with only dora and no real yaku pattern is invalid
-      // (can't construct such a hand easily since decomposition itself gives yaku,
-      // so test calculateScore directly: 26 han non-yakuman should NOT be double yakuman)
+      expect(result!.yakuList.some((y) => y.name !== '宝牌')).toBe(true)
     })
 
     it('26+ han non-yakuman should be kazoe yakuman (single)', () => {

@@ -109,7 +109,7 @@ export function calculateHand(
       score,
     }
 
-    if (!bestResult || comparResults(result, bestResult) > 0) {
+    if (!bestResult || compareResults(result, bestResult) > 0) {
       bestResult = result
     }
   }
@@ -117,7 +117,7 @@ export function calculateHand(
   return bestResult
 }
 
-function comparResults(a: CalcResult, b: CalcResult): number {
+function compareResults(a: CalcResult, b: CalcResult): number {
   // Prefer higher score
   if (a.score.ron !== b.score.ron) return a.score.ron - b.score.ron
   // If same score, prefer more han

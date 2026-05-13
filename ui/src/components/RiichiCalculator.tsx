@@ -140,7 +140,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         jikaze: initialOptions.jikaze ?? prev.jikaze,
       }))
     }
-  }, [JSON.stringify(initialOptions)])
+  }, [initialOptions?.bakaze, initialOptions?.jikaze])
 
   const currentCount = concealedTiles.length + melds.length * 3
 

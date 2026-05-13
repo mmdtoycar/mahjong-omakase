@@ -155,11 +155,16 @@ public class RiichiModeHandler implements GameModeHandler {
     if (selfDraw) {
       int winnerGets = 0;
       int numOthers = playerIds.size() - 1;
-      int eachPays = score / numOthers;
+      int honbaPerPlayer = 100 * honba;
+      int base = score / numOthers;
+      int remainder = score % numOthers;
+      int idx = 0;
       for (Long id : playerIds) {
         if (!id.equals(winnerId)) {
-          result.put(id, -eachPays);
-          winnerGets += eachPays;
+          int pays = base + (idx < remainder ? 1 : 0) + honbaPerPlayer;
+          result.put(id, -pays);
+          winnerGets += pays;
+          idx++;
         }
       }
       result.put(winnerId, winnerGets + kyoutaku);

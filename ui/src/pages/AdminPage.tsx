@@ -70,8 +70,12 @@ export default function AdminPage() {
   }, [authenticated])
 
   const handleSaveSettings = async () => {
+    if (!/^\d+(\.\d+)?$/.test(bonus.trim())) {
+      alert('请输入有效的非负数值')
+      return
+    }
     const bonusVal = parseFloat(bonus)
-    if (isNaN(bonusVal) || bonusVal < 0) {
+    if (bonusVal < 0) {
       alert('请输入有效的非负数值')
       return
     }
