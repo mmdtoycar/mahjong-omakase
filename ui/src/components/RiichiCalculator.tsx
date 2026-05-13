@@ -43,7 +43,7 @@ const modes: Mode[] = [
       concealed: c,
       mings: [
         ...m,
-        { type: 'shuntsu', tiles: [t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], isOpen: true },
+        { type: 'shunzi', tiles: [t, new Tile(t.suit, t.rank + 1), new Tile(t.suit, t.rank + 2)], isOpen: true },
       ],
     }),
   },
@@ -52,21 +52,21 @@ const modes: Mode[] = [
     label: '碰',
     canUse: (c, m) => c.length + m.length * 3 <= 11,
     isDisabled: (c, m, t) => [...c, ...m.flatMap((x) => x.tiles)].filter((x) => x.equals(t)).length >= 2,
-    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'koutsu', tiles: [t, t, t], isOpen: true }] }),
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'kezi', tiles: [t, t, t], isOpen: true }] }),
   },
   {
     name: 'ming-kan',
     label: '明杠',
     canUse: (c, m) => c.length + m.length * 3 <= 10,
     isDisabled: (c, m, t) => [...c, ...m.flatMap((x) => x.tiles)].filter((x) => x.equals(t)).length >= 1,
-    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'kantsu', tiles: [t, t, t, t], isOpen: true }] }),
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'gangzi', tiles: [t, t, t, t], isOpen: true }] }),
   },
   {
     name: 'an-kan',
     label: '暗杠',
     canUse: (c, m) => c.length + m.length * 3 <= 10,
     isDisabled: (c, m, t) => [...c, ...m.flatMap((x) => x.tiles)].filter((x) => x.equals(t)).length >= 1,
-    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'kantsu', tiles: [t, t, t, t], isOpen: false }] }),
+    add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'gangzi', tiles: [t, t, t, t], isOpen: false }] }),
   },
 ]
 
@@ -98,16 +98,16 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
   const [mode, setMode] = useState(modes[0])
   const [options, setOptions] = useState<GameOptions>({
     isTsumo: isSelfDraw,
-    bakaze: 1,
-    jikaze: 1,
+    changfeng: 1,
+    zifeng: 1,
     isRiichi: false,
     isDoubleRiichi: false,
-    isIppatsu: false,
-    isChankan: false,
-    isRinshan: false,
-    isHaitei: false,
-    isTenhou: false,
-    isChiihou: false,
+    isYifa: false,
+    isQianggang: false,
+    isLingshang: false,
+    isHaidi: false,
+    isTianhu: false,
+    isDihu: false,
     doraCount: 0,
     ...initialOptions,
   })
@@ -123,12 +123,12 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       ...prev,
       isRiichi: false,
       isDoubleRiichi: false,
-      isIppatsu: false,
-      isChankan: false,
-      isRinshan: false,
-      isHaitei: false,
-      isTenhou: false,
-      isChiihou: false,
+      isYifa: false,
+      isQianggang: false,
+      isLingshang: false,
+      isHaidi: false,
+      isTianhu: false,
+      isDihu: false,
       doraCount: 0,
     }))
     setMode(modes[0])
@@ -144,11 +144,11 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
     if (initialOptions) {
       setOptions((prev) => ({
         ...prev,
-        bakaze: initialOptions.bakaze ?? prev.bakaze,
-        jikaze: initialOptions.jikaze ?? prev.jikaze,
+        changfeng: initialOptions.changfeng ?? prev.changfeng,
+        zifeng: initialOptions.zifeng ?? prev.zifeng,
       }))
     }
-  }, [initialOptions?.bakaze, initialOptions?.jikaze])
+  }, [initialOptions?.changfeng, initialOptions?.zifeng])
 
   const currentCount = concealedTiles.length + melds.length * 3
 
@@ -199,7 +199,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         ? { dealer: huResult.score.tsumoDealer, nonDealer: huResult.score.tsumoNonDealer }
         : null
       if (isSelfDraw) {
-        if (options.jikaze === 1) {
+        if (options.zifeng === 1) {
           outputScore = huResult.score.tsumoNonDealer * 3
         } else {
           outputScore = huResult.score.tsumoDealer + huResult.score.tsumoNonDealer * 2
@@ -269,7 +269,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
               <TileComponent
                 key={ti}
                 tile={t}
-                isBack={m.type === 'kantsu' && !m.isOpen && (ti === 1 || ti === 2)}
+                isBack={m.type === 'gangzi' && !m.isOpen && (ti === 1 || ti === 2)}
                 size="small"
               />
             ))}
@@ -309,26 +309,26 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
             立直
           </button>
           <button
-            className={`opt-btn ${options.isIppatsu ? 'active' : ''}`}
-            onClick={() => setOptions({ ...options, isIppatsu: !options.isIppatsu })}
+            className={`opt-btn ${options.isYifa ? 'active' : ''}`}
+            onClick={() => setOptions({ ...options, isYifa: !options.isYifa })}
           >
             一发
           </button>
           <button
-            className={`opt-btn ${options.isHaitei ? 'active' : ''}`}
-            onClick={() => setOptions({ ...options, isHaitei: !options.isHaitei })}
+            className={`opt-btn ${options.isHaidi ? 'active' : ''}`}
+            onClick={() => setOptions({ ...options, isHaidi: !options.isHaidi })}
           >
             {isSelfDraw ? '海底' : '河底'}
           </button>
           <button
-            className={`opt-btn ${options.isRinshan ? 'active' : ''}`}
-            onClick={() => setOptions({ ...options, isRinshan: !options.isRinshan })}
+            className={`opt-btn ${options.isLingshang ? 'active' : ''}`}
+            onClick={() => setOptions({ ...options, isLingshang: !options.isLingshang })}
           >
             岭上
           </button>
           <button
-            className={`opt-btn ${options.isChankan ? 'active' : ''}`}
-            onClick={() => setOptions({ ...options, isChankan: !options.isChankan })}
+            className={`opt-btn ${options.isQianggang ? 'active' : ''}`}
+            onClick={() => setOptions({ ...options, isQianggang: !options.isQianggang })}
           >
             抢杠
           </button>

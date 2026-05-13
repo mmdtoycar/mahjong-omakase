@@ -1,7 +1,7 @@
 import { test, expect, describe } from 'vitest'
-import { Tile } from './tiles'
-import { calculateBestScore } from './fan'
-import { GameOptions, CalcResult, Meld } from './types'
+import { Tile } from '../tiles'
+import { calculateBestScore } from '../fan'
+import { GameOptions, CalcResult, Meld } from '../types'
 
 function parseHand(
   handStr: string,

@@ -1,8 +1,8 @@
 import { test, expect, describe } from 'vitest'
-import { Tile, TileSuit } from './tiles'
-import { Meld, GameOptions, CalcResult } from './types'
-import { calculateBestScore } from './fan'
-import { findAllCombinations } from './hu'
+import { Tile, TileSuit } from '../tiles'
+import { Meld, GameOptions, CalcResult } from '../types'
+import { calculateBestScore } from '../fan'
+import { findAllCombinations } from '../hu'
 
 /**
  * Comprehensive test suite for Guobiao Mahjong Logic.

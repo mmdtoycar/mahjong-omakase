@@ -1,8 +1,30 @@
 import { Tile } from '../shared/tiles'
-import { Meld, HandCombination, GameOptions, CalcResult, YakuResult } from './types'
+import { Meld, HandCombination, GameOptions, CalcResult } from './types'
 import { findAllCombinations } from './hu'
 import { calculateFu } from './fu'
 import { detectYaku } from './yaku'
+
+const MANGAN = 2000
+const HANEMAN = 3000
+const BAIMAN = 4000
+const SANBAIMAN = 6000
+const YAKUMAN = 8000
+
+function getBasePoints(han: number, fu: number, yakumanCount: number): number {
+  if (yakumanCount > 0) return YAKUMAN * yakumanCount
+  if (han >= 13) return YAKUMAN
+  if (han >= 11) return SANBAIMAN
+  if (han >= 8) return BAIMAN
+  if (han >= 6) return HANEMAN
+  if (han >= 5) return MANGAN
+  if (han === 4 && fu >= 30) return MANGAN
+  if (han === 3 && fu >= 60) return MANGAN
+  return Math.min(fu * Math.pow(2, 2 + han), MANGAN)
+}
+
+function roundUp100(v: number): number {
+  return Math.ceil(v / 100) * 100
+}
 
 export function calculateScore(
   han: number,
@@ -10,45 +32,15 @@ export function calculateScore(
   isDealer: boolean,
   yakumanCount = 0
 ): { ron: number; tsumoDealer: number; tsumoNonDealer: number } {
-  if (yakumanCount > 0) {
-    const base = 8000 * yakumanCount
-    return dealerCalc(base, isDealer)
-  }
-  if (han >= 13) {
-    const base = 8000
-    return dealerCalc(base, isDealer)
-  }
-  if (han >= 11) {
-    const base = 6000 // Sanbaiman
-    return dealerCalc(base, isDealer)
-  }
-  if (han >= 8) {
-    const base = 4000 // Baiman
-    return dealerCalc(base, isDealer)
-  }
-  if (han >= 6) {
-    const base = 3000 // Haneman
-    return dealerCalc(base, isDealer)
-  }
-  if (han >= 5) {
-    const base = 2000 // Mangan
-    return dealerCalc(base, isDealer)
-  }
-
-  const base = Math.min(fu * Math.pow(2, 2 + han), 2000)
-  return dealerCalc(base, isDealer)
-}
-
-function dealerCalc(base: number, isDealer: boolean): { ron: number; tsumoDealer: number; tsumoNonDealer: number } {
-  const r100 = (v: number) => Math.ceil(v / 100) * 100
+  const base = getBasePoints(han, fu, yakumanCount)
   if (isDealer) {
-    const ron = r100(base * 6)
-    const tsumo = r100(base * 2)
+    const ron = roundUp100(base * 6)
+    const tsumo = roundUp100(base * 2)
     return { ron, tsumoDealer: tsumo, tsumoNonDealer: tsumo }
   }
-  const ron = r100(base * 4)
-  const tsumoDealer = r100(base * 2)
-  const tsumoNonDealer = r100(base)
+  const ron = roundUp100(base * 4)
+  const tsumoDealer = roundUp100(base * 2)
+  const tsumoNonDealer = roundUp100(base)
   return { ron, tsumoDealer, tsumoNonDealer }
 }
 
@@ -58,7 +50,6 @@ export function calculateHand(
   winTile: Tile,
   options: GameOptions
 ): CalcResult | null {
-  // Win tile is added to concealed for decomposition
   const fullConcealed = [...concealedTiles, winTile]
   const allTiles = [...fullConcealed, ...exposedMelds.flatMap((m) => m.tiles)]
   const combinations = findAllCombinations(fullConcealed, exposedMelds)
@@ -68,56 +59,69 @@ export function calculateHand(
   let bestResult: CalcResult | null = null
 
   for (const combo of combinations) {
-    const yakuList = detectYaku(combo, allTiles, winTile, options)
-    const hasRealYaku = yakuList.some((y) => y.name !== '宝牌')
-    if (!hasRealYaku) continue
+    const tries = generateTries(combo, winTile)
 
-    const isYakuman = yakuList.some((y) => y.isYakuman)
-    const yakumanCount = yakuList.filter((y) => y.isYakuman).length
+    for (const trial of tries) {
+      const yakuList = detectYaku(trial, allTiles, winTile, options)
+      if (!yakuList.some((y) => y.name !== '宝牌')) continue
 
-    let han: number
-    let fu: number
-    let fuDetails: { reason: string; fu: number }[] = []
+      const isYakuman = yakuList.some((y) => y.isYakuman)
+      const yakumanCount = yakuList.filter((y) => y.isYakuman).length
 
-    if (isYakuman) {
-      han = yakumanCount * 13
-      fu = 0
-      fuDetails = []
-    } else {
-      han = yakuList.reduce((sum, y) => sum + y.han, 0)
-      const fuResult = calculateFu(combo, winTile, options)
-      fu = fuResult.fu
-      fuDetails = fuResult.details
-    }
+      let han: number
+      let fu: number
+      let fuDetails: { reason: string; fu: number }[] = []
 
-    const isDealer = options.jikaze === 1
-    const score = calculateScore(han, fu, isDealer, isYakuman ? yakumanCount : 0)
-    const basePoints = isYakuman ? 8000 * yakumanCount : Math.min(fu * Math.pow(2, 2 + han), 2000)
+      if (isYakuman) {
+        han = yakumanCount * 13
+        fu = 0
+      } else {
+        han = yakuList.reduce((sum, y) => sum + y.han, 0)
+        const fuResult = calculateFu(trial, winTile, options)
+        fu = fuResult.fu
+        fuDetails = fuResult.details
+      }
 
-    const result: CalcResult = {
-      han,
-      fu,
-      yakuList,
-      fuDetails,
-      basePoints,
-      isYakuman,
-      yakumanCount,
-      score,
-    }
+      const isDealer = options.zifeng === 1
+      const score = calculateScore(han, fu, isDealer, isYakuman ? yakumanCount : 0)
 
-    if (!bestResult || compareResults(result, bestResult) > 0) {
-      bestResult = result
+      const result: CalcResult = { han, fu, yakuList, fuDetails, isYakuman, yakumanCount, score }
+
+      if (!bestResult || compareResults(result, bestResult) > 0) {
+        bestResult = result
+      }
     }
   }
 
   return bestResult
 }
 
+function generateTries(combo: HandCombination, winTile: Tile): HandCombination[] {
+  if (combo.isKokushi || combo.isChiitoitsu) return [combo]
+
+  const matchingIndices: number[] = []
+  combo.melds.forEach((m, idx) => {
+    if (!m.isOpen && m.tiles.some((t) => t.equals(winTile))) {
+      matchingIndices.push(idx)
+    }
+  })
+
+  if (matchingIndices.length <= 1) {
+    if (matchingIndices.length === 1) {
+      const melds = combo.melds.map((m, i) => (i === matchingIndices[0] ? { ...m, completedByWin: true } : m))
+      return [{ ...combo, melds }]
+    }
+    return [combo]
+  }
+
+  return matchingIndices.map((idx) => {
+    const melds = combo.melds.map((m, i) => (i === idx ? { ...m, completedByWin: true } : m))
+    return { ...combo, melds }
+  })
+}
+
 function compareResults(a: CalcResult, b: CalcResult): number {
-  // Prefer higher score
   if (a.score.ron !== b.score.ron) return a.score.ron - b.score.ron
-  // If same score, prefer more han
   if (a.han !== b.han) return a.han - b.han
-  // If same han, prefer lower fu (shows more yaku)
   return b.fu - a.fu
 }

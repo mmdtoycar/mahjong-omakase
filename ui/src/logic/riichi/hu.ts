@@ -46,26 +46,26 @@ function decomposeHand(
   // Try pair (only one allowed)
   if (!hasPair && (counts.get(first.toString()) || 0) >= 2) {
     const next = removeTilesOnce(remaining, [first, first])
-    current.push({ type: 'jantai', tiles: [first, first], isOpen: false })
+    current.push({ type: 'duizi', tiles: [first, first], isOpen: false })
     decomposeHand(next, current, results, targetGroups - 1, true)
     current.pop()
   }
 
-  // Try triplet (koutsu)
+  // Try triplet (kezi)
   if ((counts.get(first.toString()) || 0) >= 3) {
     const next = removeTilesOnce(remaining, [first, first, first])
-    current.push({ type: 'koutsu', tiles: [first, first, first], isOpen: false })
+    current.push({ type: 'kezi', tiles: [first, first, first], isOpen: false })
     decomposeHand(next, current, results, targetGroups - 1, hasPair)
     current.pop()
   }
 
-  // Try sequence (shuntsu) — numbered tiles only, rank <= 7
+  // Try sequence (shunzi) — numbered tiles only, rank <= 7
   if (first.isNumber && first.rank <= 7) {
     const t2 = new Tile(first.suit, first.rank + 1)
     const t3 = new Tile(first.suit, first.rank + 2)
     if (counts.has(t2.toString()) && counts.has(t3.toString())) {
       const next = removeTilesOnce(remaining, [first, t2, t3])
-      current.push({ type: 'shuntsu', tiles: [first, t2, t3], isOpen: false })
+      current.push({ type: 'shunzi', tiles: [first, t2, t3], isOpen: false })
       decomposeHand(next, current, results, targetGroups - 1, hasPair)
       current.pop()
     }
