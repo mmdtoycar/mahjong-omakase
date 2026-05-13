@@ -552,6 +552,9 @@ export default function SessionPage() {
                         onChange={(e) => {
                           setScore(e.target.value)
                           setTsumoDetail(null)
+                          setWinHand('')
+                          setFanDetails('')
+                          setFanCount(0)
                         }}
                         placeholder="输入分数"
                         className="score-input-compact"
@@ -601,7 +604,12 @@ export default function SessionPage() {
                         type="text"
                         inputMode="numeric"
                         value={score}
-                        onChange={(e) => setScore(e.target.value)}
+                        onChange={(e) => {
+                          setScore(e.target.value)
+                          setWinHand('')
+                          setFanDetails('')
+                          setFanCount(0)
+                        }}
                         placeholder="输入分数"
                         className="score-input-compact"
                       />

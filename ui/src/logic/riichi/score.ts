@@ -35,11 +35,7 @@ export function calculateScore(
     return dealerCalc(base, isDealer)
   }
 
-  // Normal calculation
   const base = Math.min(fu * Math.pow(2, 2 + han), 2000)
-  if (base >= 2000) {
-    return dealerCalc(2000, isDealer) // Mangan
-  }
   return dealerCalc(base, isDealer)
 }
 

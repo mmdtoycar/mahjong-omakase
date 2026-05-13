@@ -86,10 +86,12 @@ export default function AdminPage() {
         'Content-Type': 'application/json',
         'X-Admin-Password': password,
       },
-      body: JSON.stringify({ participation_bonus: bonus }),
+      body: JSON.stringify({ participation_bonus: bonusVal }),
     })
     if (res.ok) {
-      setSavedBonus(bonus)
+      const persisted = String(bonusVal)
+      setBonus(persisted)
+      setSavedBonus(persisted)
     } else {
       alert('Failed to save settings')
     }
