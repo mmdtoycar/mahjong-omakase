@@ -3,6 +3,7 @@ import { Tile } from '../logic/guobiao/tiles'
 import { Meld, GameOptions, CalcResult } from '../logic/guobiao/types'
 import { calculateBestScore } from '../logic/guobiao/fan'
 import { checkTing } from '../logic/guobiao/ting'
+import { TileComponent, isSequenceDisabled } from './shared/TileComponent'
 
 type Mode = {
   name: string
@@ -10,34 +11,6 @@ type Mode = {
   add: (concealed: Tile[], mings: Meld[], tile: Tile) => { concealed: Tile[]; mings: Meld[] }
   canUse: (concealed: Tile[], mings: Meld[]) => boolean
   isDisabled: (concealed: Tile[], mings: Meld[], tile: Tile) => boolean
-}
-
-const getTileKey = (tile: Tile): string => {
-  if (tile.suit === 'm') return `Man${tile.rank}`
-  if (tile.suit === 'p') return `Pin${tile.rank}`
-  if (tile.suit === 's') return `Sou${tile.rank}`
-  if (tile.suit === 'z') {
-    if (tile.rank <= 4) return ['Ton', 'Nan', 'Shaa', 'Pei'][tile.rank - 1]
-    return ['Chun', 'Hatsu', 'Haku'][tile.rank - 5]
-  }
-  return 'Back'
-}
-
-const getTileName = (tile: Tile): string => {
-  if (tile.suit === 'm') return `${tile.rank}万`
-  if (tile.suit === 'p') return `${tile.rank}饼`
-  if (tile.suit === 's') return `${tile.rank}条`
-  if (tile.suit === 'z') {
-    if (tile.rank <= 4) return ['东', '南', '西', '北'][tile.rank - 1] + '风'
-    return ['中', '发', '白'][tile.rank - 5]
-  }
-  return '未知'
-}
-
-const isSequenceDisabled = (c: Tile[], m: Meld[], t: Tile): boolean => {
-  if (t.suit === 'z' || t.rank >= 8) return true
-  const all = [...c, ...m.flatMap((x) => x.tiles)]
-  return [0, 1, 2].some((offset) => all.filter((x) => x.equals(new Tile(t.suit, t.rank + offset))).length >= 4)
 }
 
 const modes: Mode[] = [
@@ -97,29 +70,6 @@ const modes: Mode[] = [
     add: (c, m, t) => ({ concealed: c, mings: [...m, { type: 'gang', tiles: [t, t, t, t], isOpen: false }] }),
   },
 ]
-
-const TileComponent: React.FC<{
-  tile: Tile
-  onClick?: () => void
-  isWinning?: boolean
-  isBack?: boolean
-  disabled?: boolean
-  size?: 'normal' | 'small'
-}> = ({ tile, onClick, isWinning, isBack, disabled, size = 'normal' }) => {
-  const tileKey = isBack ? 'Back' : getTileKey(tile)
-  return (
-    <div
-      className={`calc-tile-container ${size} ${!disabled ? 'selectable' : 'disabled'}`}
-      onClick={!disabled ? onClick : undefined}
-    >
-      <img
-        src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${tileKey}.svg`}
-        alt={isBack ? 'Back' : getTileName(tile)}
-        className={`calc-tile ${isWinning ? 'highlighted-tile' : ''} ${isBack ? 'back-tile-svg' : ''}`}
-      />
-    </div>
-  )
-}
 
 interface GuobiaoCalculatorProps {
   onSelectScore: (score: number | null, hand?: string, fanDetails?: string, fanCount?: number) => void
@@ -272,34 +222,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   }, [concealedTiles, currentCount])
 
   return (
-    <div className="guobiao-inline-calculator">
-      <div className="calc-top-row">
-        <div className="mini-option">
-          <span className="mini-opt-label">圈:</span>
-          {[1, 2, 3, 4].map((v) => (
-            <button
-              key={v}
-              className={`micro-btn ${options.quanfeng === v ? 'active' : ''}`}
-              onClick={() => setOptions({ ...options, quanfeng: v })}
-            >
-              {['东', '南', '西', '北'][v - 1]}
-            </button>
-          ))}
-        </div>
-        <div className="mini-option">
-          <span className="mini-opt-label">门:</span>
-          {[1, 2, 3, 4].map((v) => (
-            <button
-              key={v}
-              className={`micro-btn ${options.menfeng === v ? 'active' : ''}`}
-              onClick={() => setOptions({ ...options, menfeng: v })}
-            >
-              {['东', '南', '西', '北'][v - 1]}
-            </button>
-          ))}
-        </div>
-      </div>
-
+    <div className="inline-calculator">
       <div className="mode-selector-container">
         <div className="mode-group">
           {modes.map((m) => (

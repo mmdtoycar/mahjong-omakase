@@ -68,6 +68,7 @@ export interface RoundInfo {
   dealInPlayerName?: string | null
   prevalentWind?: number
   riichiPlayerIds?: number[]
+  backfill?: boolean
 }
 
 export interface SessionDetail {
@@ -103,10 +104,8 @@ export interface AddRoundData {
   fanDetails?: string
   fanCount?: number
   prevalentWind?: number
+  backfill?: boolean
 }
-
-export const FAN_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-export const FU_OPTIONS = [20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 110]
 
 export interface PlayerStats {
   playerId: number
@@ -148,21 +147,6 @@ export function getCurrentSeason(): Season {
   const now = new Date()
   const month = now.getMonth() + 1
   return { year: now.getFullYear(), month, label: getSeasonLabel(now.getFullYear(), month) }
-}
-
-export function getAvailableSeasons(startYear: number): Season[] {
-  const now = new Date()
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth() + 1
-  const seasons: Season[] = []
-
-  for (let year = currentYear; year >= startYear; year--) {
-    const endMonth = year === currentYear ? currentMonth : 12
-    for (let month = endMonth; month >= 1; month--) {
-      seasons.push({ year, month, label: getSeasonLabel(year, month) })
-    }
-  }
-  return seasons
 }
 
 export interface PlayerGameEntry {

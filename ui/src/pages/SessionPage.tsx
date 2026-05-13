@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
-import { SessionDetail, PlayerInfo, RoundInfo, FAN_OPTIONS, FU_OPTIONS } from '../types'
+import { SessionDetail, PlayerInfo, RoundInfo } from '../types'
 import { calculateRanks } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
+import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
@@ -16,7 +17,6 @@ export default function SessionPage() {
   const [winnerId, setWinnerId] = useState<string>('')
   const [score, setScore] = useState('')
   const [fan, setFan] = useState<string>('')
-  const [fu, setFu] = useState<string>('')
   const [isSelfDraw, setIsSelfDraw] = useState(false)
   const [dealInPlayerId, setDealInPlayerId] = useState<string>('')
   const [bimenPlayerIds, setBimenPlayerIds] = useState<number[]>([])
@@ -28,6 +28,9 @@ export default function SessionPage() {
   const [winHand, setWinHand] = useState<string>('')
   const [fanDetails, setFanDetails] = useState<string>('')
   const [fanCount, setFanCount] = useState<number>(0)
+  const [tsumoDetail, setTsumoDetail] = useState<{ dealer: number; nonDealer: number } | null>(null)
+  const [isBackfill, setIsBackfill] = useState(false)
+  const [calcError, setCalcError] = useState('')
   const [error, setError] = useState('')
 
   const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
@@ -43,6 +46,31 @@ export default function SessionPage() {
       setFanCount(0)
     }
   }, [])
+
+  const handleRiichiCalcSelect = useCallback(
+    (
+      s: number | null,
+      hand?: string,
+      details?: string,
+      fCount?: number,
+      tsumo?: { dealer: number; nonDealer: number } | null
+    ) => {
+      if (s !== null) {
+        setScore(String(s))
+        setWinHand(hand || '')
+        setFanDetails(details || '')
+        setFanCount(fCount || 0)
+        setTsumoDetail(tsumo || null)
+      } else {
+        setScore('')
+        setWinHand('')
+        setFanDetails('')
+        setFanCount(0)
+        setTsumoDetail(null)
+      }
+    },
+    []
+  )
 
   const load = async () => {
     const detail = await fetchSessionDetail(Number(id))
@@ -69,7 +97,6 @@ export default function SessionPage() {
     setWinnerId('')
     setScore('')
     setFan('')
-    setFu('')
     setBimenPlayerIds([])
     setIsSelfDraw(false)
     setDealInPlayerId('')
@@ -79,6 +106,9 @@ export default function SessionPage() {
     setWinHand('')
     setFanDetails('')
     setFanCount(0)
+    setTsumoDetail(null)
+    setIsBackfill(false)
+    setCalcError('')
     setCalcResetCount((prev) => prev + 1)
   }
 
@@ -109,12 +139,29 @@ export default function SessionPage() {
   }
 
   const canSubmit =
-    winnerId &&
-    (isRiichi ? fan && fu : isDongbei ? fan : score && parseInt(score) >= (isGuobiao ? 8 : 1)) &&
-    (isSelfDraw || dealInPlayerId)
+    winnerId && (isDongbei ? fan : score && parseInt(score) >= (isGuobiao ? 8 : 100)) && (isSelfDraw || dealInPlayerId)
+
+  const getValidationHint = (): string | null => {
+    if (!winnerId) return '请选择赢家'
+    if (!isSelfDraw && !dealInPlayerId) return '请选择点炮玩家，或切换为自摸'
+    if (isDongbei) {
+      if (!fan) return '请输入番数'
+      if (isNaN(parseInt(fan))) return '番数必须是数字'
+      return null
+    }
+    if (!score) return '请输入分数或手牌'
+    if (isNaN(parseInt(score))) return '请输入有效数字'
+    if (isRiichi && parseInt(score) < 100) return '分数必须 ≥ 100'
+    if (isRiichi && parseInt(score) % 100 !== 0) return '分数必须是100的倍数'
+    if (isGuobiao && parseInt(score) < 8) return '分数必须 ≥ 8'
+    return null
+  }
+
+  const validationHint = getValidationHint()
 
   const handleAddRound = async () => {
     setError('')
+    if (validationHint && !isRyuukyoku) return
     setSubmitting(true)
     try {
       if (isRyuukyoku) {
@@ -129,16 +176,19 @@ export default function SessionPage() {
       }
       if (!canSubmit) return
       if (isRiichi) {
+        const scoreVal = parseInt(score)
         await addRound(session.id, {
           winnerId: Number(winnerId),
-          fan: parseInt(fan),
-          fu: parseInt(fu),
+          score: scoreVal,
           dealerId: gameState.dealerPlayerId,
           honba: gameState.honba,
           kyoutaku: gameState.kyoutaku,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
-          fanCount: parseInt(fan),
+          fanCount: fanCount || scoreVal,
+          winHand,
+          fanDetails,
           riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
+          backfill: isBackfill || undefined,
         })
       } else if (isDongbei) {
         await addRound(session.id, {
@@ -256,20 +306,11 @@ export default function SessionPage() {
 
   const getScorePreview = (): string | null => {
     if (isRiichi) {
-      if (!fan || !fu) return null
-      const h = parseInt(fan),
-        f = parseInt(fu)
-      let basic: number
-      if (h >= 13) basic = 8000
-      else if (h >= 11) basic = 6000
-      else if (h >= 8) basic = 4000
-      else if (h >= 6) basic = 3000
-      else if (h >= 5 || (h === 4 && f >= 30) || (h === 3 && f >= 60)) basic = 2000
-      else basic = Math.min(f * Math.pow(2, 2 + h), 2000)
+      if (!score) return null
+      const scoreVal = parseInt(score)
+      if (isNaN(scoreVal) || scoreVal < 100 || scoreVal % 100 !== 0) return null
 
-      const r100 = (v: number) => Math.ceil(v / 100) * 100
       const honbaNum = gameState.honba
-      const honbaBonus = 100 * honbaNum
       const kyoutakuNum = gameState.kyoutaku
       const uniqueRiichiCount = new Set(riichiPlayerIds).size
       const riichiPool = uniqueRiichiCount * 1000
@@ -284,24 +325,29 @@ export default function SessionPage() {
         .join('+')
 
       if (isSelfDraw) {
-        if (winnerIsDealer) {
-          const each = r100(basic * 2) + honbaBonus
-          const numOthers = session.playerCount - 1
-          const winnerTotal = each * numOthers + bonusPool
-          return `自摸 (亲家): ${numOthers}人各付${each}${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
-            bonusPool > 0 ? ` +${bonusLabel}` : ''
-          } → 共+${winnerTotal}`
-        } else {
-          const dealerPays = r100(basic * 2) + honbaBonus
-          const otherPays = r100(basic) + honbaBonus
-          const numNonDealers = session.playerCount - 2
-          const total = dealerPays + numNonDealers * otherPays + bonusPool
-          return `自摸: 亲家付${dealerPays}, ${numNonDealers > 0 ? `其他各付${otherPays}, ` : ''}${
-            honbaNum > 0 ? `(含${honbaNum}本场) ` : ''
-          }${bonusPool > 0 ? `+${bonusLabel} ` : ''}共+${total}`
+        const honbaBonus = 100 * honbaNum
+        if (tsumoDetail) {
+          if (winnerIsDealer) {
+            const each = tsumoDetail.nonDealer + honbaBonus
+            const numOthers = session.playerCount - 1
+            const winnerTotal = each * numOthers + bonusPool
+            return `自摸 (亲家): ${numOthers}人各付${each}${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
+              bonusPool > 0 ? ` +${bonusLabel}` : ''
+            } → 共+${winnerTotal}`
+          } else {
+            const dealerPays = tsumoDetail.dealer + honbaBonus
+            const otherPays = tsumoDetail.nonDealer + honbaBonus
+            const numNonDealers = session.playerCount - 2
+            const total = dealerPays + numNonDealers * otherPays + bonusPool
+            return `自摸: 亲家付${dealerPays}, ${numNonDealers > 0 ? `其他各付${otherPays}, ` : ''}${
+              honbaNum > 0 ? `(含${honbaNum}本场) ` : ''
+            }${bonusPool > 0 ? `+${bonusLabel} ` : ''}共+${total}`
+          }
         }
+        const total = scoreVal + bonusPool
+        return `自摸: 共+${scoreVal}${bonusPool > 0 ? ` +${bonusLabel}` : ''} → 共+${total}`
       } else {
-        const base = (winnerIsDealer ? r100(basic * 6) : r100(basic * 4)) + 300 * honbaNum
+        const base = scoreVal + 300 * honbaNum
         const total = base + bonusPool
         return `荣和${winnerIsDealer ? ' (亲家)' : ''}: ${base}点${honbaNum > 0 ? ` (含${honbaNum}本场)` : ''}${
           bonusPool > 0 ? ` +${bonusLabel}` : ''
@@ -368,6 +414,16 @@ export default function SessionPage() {
 
   const preview = getScorePreview()
 
+  const getStatusMessage = (): { text: string; isError: boolean } | null => {
+    if (error) return { text: error, isError: true }
+    if (calcError) return { text: calcError, isError: true }
+    if (!isRyuukyoku && validationHint) return { text: validationHint, isError: true }
+    if (preview) return { text: preview, isError: false }
+    return null
+  }
+
+  const statusMessage = getStatusMessage()
+
   return (
     <>
       {session.status === 'IN_PROGRESS' && (
@@ -376,7 +432,7 @@ export default function SessionPage() {
             <h3 className="round-form-title">添加 — {gameState.displayName}</h3>
             {isRiichi && (
               <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="zimo-toggle">
+                <label className="checkbox-toggle">
                   <input
                     type="checkbox"
                     checked={isRyuukyoku}
@@ -450,69 +506,6 @@ export default function SessionPage() {
               </>
             ) : (
               <>
-                {isRiichi ? (
-                  <div className="round-form-grid">
-                    <div className="form-group">
-                      <label>
-                        番
-                        <a
-                          href="https://linlexiao.com/maj/#/calculator"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="score-calc-link"
-                        >
-                          计算器
-                        </a>
-                      </label>
-                      <select value={fan} onChange={(e) => setFan(e.target.value)}>
-                        <option value=""></option>
-                        {FAN_OPTIONS.map((f) => (
-                          <option key={f} value={f}>
-                            {f}
-                            {f >= 5
-                              ? f >= 13
-                                ? ' (役満)'
-                                : f >= 11
-                                ? ' (三倍満)'
-                                : f >= 8
-                                ? ' (倍満)'
-                                : f >= 6
-                                ? ' (跳満)'
-                                : ' (満貫)'
-                              : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>符数</label>
-                      <select value={fu} onChange={(e) => setFu(e.target.value)}>
-                        <option value=""></option>
-                        {FU_OPTIONS.map((f) => (
-                          <option key={f} value={f}>
-                            {f}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                ) : null}
-
-                {isDongbei && (
-                  <div className="round-form-grid">
-                    <div className="form-group">
-                      <label>番</label>
-                      <input
-                        type="number"
-                        value={fan}
-                        onChange={(e) => setFan(e.target.value)}
-                        placeholder="输入番"
-                        min="0"
-                      />
-                    </div>
-                  </div>
-                )}
-
                 <div className="quick-win-container">
                   <h2>算番器</h2>
                   <div className="quick-win-row">
@@ -548,16 +541,76 @@ export default function SessionPage() {
                   </div>
                 </div>
 
+                {isRiichi && (
+                  <div className="form-group score-inline-group-container">
+                    <div className="score-inline-group">
+                      <label>分数</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={score}
+                        onChange={(e) => {
+                          setScore(e.target.value)
+                          setTsumoDetail(null)
+                          setWinHand('')
+                          setFanDetails('')
+                          setFanCount(0)
+                        }}
+                        placeholder="输入分数"
+                        className="score-input-compact"
+                      />
+                      <label className="checkbox-toggle">
+                        <input type="checkbox" checked={isBackfill} onChange={(e) => setIsBackfill(e.target.checked)} />
+                        <span>补录 (不计入局数)</span>
+                      </label>
+                    </div>
+                    <div className="inline-calc-wrapper">
+                      <RiichiCalculator
+                        key={`riichi-${gameState.prevalentWind}-${winnerMenfeng}`}
+                        onSelectScore={handleRiichiCalcSelect}
+                        onError={(msg) => setCalcError(msg || '')}
+                        initialOptions={{
+                          bakaze: gameState.prevalentWind,
+                          jikaze: winnerMenfeng,
+                        }}
+                        resetTrigger={calcResetCount}
+                        isSelfDraw={isSelfDraw}
+                        onIsSelfDrawChange={setIsSelfDraw}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {isDongbei && (
+                  <div className="round-form-grid">
+                    <div className="form-group">
+                      <label>番</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={fan}
+                        onChange={(e) => setFan(e.target.value)}
+                        placeholder="输入番"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {!isRiichi && isGuobiao && (
                   <div className="form-group score-inline-group-container">
                     <div className="score-inline-group">
                       <label>分数</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         value={score}
-                        onChange={(e) => setScore(e.target.value)}
+                        onChange={(e) => {
+                          setScore(e.target.value)
+                          setWinHand('')
+                          setFanDetails('')
+                          setFanCount(0)
+                        }}
                         placeholder="输入分数"
-                        min="8"
                         className="score-input-compact"
                       />
                     </div>
@@ -601,7 +654,9 @@ export default function SessionPage() {
                   </div>
                 )}
 
-                {preview && <div className="score-preview">{preview}</div>}
+                {statusMessage && (
+                  <div className={`status-box${statusMessage.isError ? ' error' : ''}`}>{statusMessage.text}</div>
+                )}
 
                 {isRiichi && !isRyuukyoku && (
                   <div className="form-group">
@@ -631,9 +686,11 @@ export default function SessionPage() {
                   </div>
                 )}
 
-                {error && <p className="error-text">{error}</p>}
-
-                <button className="btn btn-primary" onClick={handleAddRound} disabled={!canSubmit || submitting}>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleAddRound}
+                  disabled={!canSubmit || submitting || !!validationHint}
+                >
                   {submitting ? MSG.SUBMITTING : '添加'}
                 </button>
               </>

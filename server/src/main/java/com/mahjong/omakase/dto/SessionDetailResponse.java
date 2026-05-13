@@ -71,6 +71,7 @@ public class SessionDetailResponse {
     private String dealInPlayerName;
     private Integer prevalentWind;
     private List<Long> riichiPlayerIds;
+    private Boolean backfill;
 
     public RoundInfo(
         int roundNumber,
@@ -82,7 +83,8 @@ public class SessionDetailResponse {
         Long dealInPlayerId,
         String dealInPlayerName,
         Integer prevalentWind,
-        List<Long> riichiPlayerIds) {
+        List<Long> riichiPlayerIds,
+        Boolean backfill) {
       this.roundNumber = roundNumber;
       this.scores = scores;
       this.winnerId = winnerId;
@@ -93,6 +95,7 @@ public class SessionDetailResponse {
       this.dealInPlayerName = dealInPlayerName;
       this.prevalentWind = prevalentWind;
       this.riichiPlayerIds = riichiPlayerIds;
+      this.backfill = backfill;
     }
 
     public int getRoundNumber() {
@@ -133,6 +136,10 @@ public class SessionDetailResponse {
 
     public List<Long> getRiichiPlayerIds() {
       return riichiPlayerIds;
+    }
+
+    public Boolean getBackfill() {
+      return backfill;
     }
   }
 

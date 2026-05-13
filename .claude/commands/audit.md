@@ -8,7 +8,6 @@ Check every file in ui/src/pages/ and ui/src/App.tsx for user-visible English te
 Exceptions (do NOT flag):
 - SignUpPage.tsx English tagline, AdminPage.tsx (all English), game session default names
 - App.tsx "Mahjong Omakase" (branding), HomePage.tsx footer (intentional)
-- Japanese Riichi terms (役満, 三倍満, 倍満, 跳満, 満貫) in SessionPage
 - Non-visible text (alt, title attributes, comments, console logs, variable names)
 
 ## Part 2: Mobile Responsiveness
