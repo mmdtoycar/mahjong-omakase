@@ -21,14 +21,14 @@ function detectKokushiYaku(_allTiles: Tile[], _winTile: Tile, options: GameOptio
 
 function detectChiitoitsuYaku(combination: HandCombination, allTiles: Tile[], options: GameOptions): YakuResult[] {
   const yaku: YakuResult[] = [{ name: '七对子', han: 2 }]
-  const isMenzen = true
+  const isMenqing = true
 
   if (options.isTsumo) yaku.push({ name: '门前清自摸和', han: 1 })
   addRiichiYaku(yaku, options)
   if (checkTanyao(allTiles)) yaku.push({ name: '断幺九', han: 1 })
   if (checkHonroutou(allTiles)) yaku.push({ name: '混老头', han: 2 })
-  if (checkHonitsu(allTiles)) yaku.push({ name: '混一色', han: isMenzen ? 3 : 2 })
-  if (checkChinitsu(allTiles)) yaku.push({ name: '清一色', han: isMenzen ? 6 : 5 })
+  if (checkHonitsu(allTiles)) yaku.push({ name: '混一色', han: isMenqing ? 3 : 2 })
+  if (checkChinitsu(allTiles)) yaku.push({ name: '清一色', han: isMenqing ? 6 : 5 })
 
   // Yakuman checks
   const yakuman = detectChiitoitsuYakuman(allTiles, options)
@@ -59,57 +59,57 @@ function detectStandardYaku(
 
   const yaku: YakuResult[] = []
   const melds = combination.melds
-  const pair = melds.find((m) => m.type === 'jantai')!
-  const groups = melds.filter((m) => m.type !== 'jantai')
-  const isMenzen = groups.every((m) => !m.isOpen)
-  const shuntsuMelds = groups.filter((m) => m.type === 'shuntsu')
-  const koutsuMelds = groups.filter((m) => m.type === 'koutsu' || m.type === 'kantsu')
+  const pair = melds.find((m) => m.type === 'duizi')!
+  const groups = melds.filter((m) => m.type !== 'duizi')
+  const isMenqing = groups.every((m) => !m.isOpen)
+  const shunziMelds = groups.filter((m) => m.type === 'shunzi')
+  const keziMelds = groups.filter((m) => m.type === 'kezi' || m.type === 'gangzi')
 
   // 1-han yaku
-  if (isMenzen && options.isTsumo) yaku.push({ name: '门前清自摸和', han: 1 })
-  addRiichiYaku(yaku, options, isMenzen)
+  if (isMenqing && options.isTsumo) yaku.push({ name: '门前清自摸和', han: 1 })
+  addRiichiYaku(yaku, options, isMenqing)
 
-  if (isMenzen && checkPinfu(combination, winTile, options)) {
+  if (isMenqing && checkPinfu(combination, winTile, options)) {
     yaku.push({ name: '平和', han: 1 })
   }
 
   if (checkTanyao(allTiles)) yaku.push({ name: '断幺九', han: 1 })
 
-  if (isMenzen && checkIipeiko(shuntsuMelds) && !checkRyanpeiko(shuntsuMelds)) {
+  if (isMenqing && checkIipeiko(shunziMelds) && !checkRyanpeiko(shunziMelds)) {
     yaku.push({ name: '一杯口', han: 1 })
   }
 
   // Yakuhai
-  const yakuhaiList = checkYakuhai(koutsuMelds, options)
+  const yakuhaiList = checkYakuhai(keziMelds, options)
   for (const y of yakuhaiList) yaku.push(y)
 
   // 2-han yaku
-  if (checkSanshokuDoujun(shuntsuMelds)) {
-    yaku.push({ name: '三色同顺', han: isMenzen ? 2 : 1 })
+  if (checkSanshokuDoujun(shunziMelds)) {
+    yaku.push({ name: '三色同顺', han: isMenqing ? 2 : 1 })
   }
-  if (checkIttsu(shuntsuMelds)) {
-    yaku.push({ name: '一气通贯', han: isMenzen ? 2 : 1 })
+  if (checkIttsu(shunziMelds)) {
+    yaku.push({ name: '一气通贯', han: isMenqing ? 2 : 1 })
   }
   if (checkChanta(melds)) {
-    yaku.push({ name: '混全带幺九', han: isMenzen ? 2 : 1 })
+    yaku.push({ name: '混全带幺九', han: isMenqing ? 2 : 1 })
   }
   if (checkToitoi(groups)) yaku.push({ name: '对对和', han: 2 })
   const waitType = determineWaitType(combination, winTile)
-  if (checkSanankou(koutsuMelds, winTile, options.isTsumo, waitType)) {
+  if (checkSanankou(keziMelds, winTile, options.isTsumo, waitType)) {
     yaku.push({ name: '三暗刻', han: 2 })
   }
-  if (checkSanshokuDoukou(koutsuMelds)) yaku.push({ name: '三色同刻', han: 2 })
+  if (checkSanshokuDoukou(keziMelds)) yaku.push({ name: '三色同刻', han: 2 })
   if (checkHonroutou(allTiles)) yaku.push({ name: '混老头', han: 2 })
-  if (checkSankantsu(koutsuMelds)) yaku.push({ name: '三杠子', han: 2 })
-  if (checkShousangen(koutsuMelds, pair)) yaku.push({ name: '小三元', han: 2 })
+  if (checkSangangzi(keziMelds)) yaku.push({ name: '三杠子', han: 2 })
+  if (checkShousangen(keziMelds, pair)) yaku.push({ name: '小三元', han: 2 })
 
   // 3-han yaku
-  if (isMenzen && checkRyanpeiko(shuntsuMelds)) yaku.push({ name: '二杯口', han: 3 })
-  if (checkHonitsu(allTiles)) yaku.push({ name: '混一色', han: isMenzen ? 3 : 2 })
-  if (checkJunchan(melds)) yaku.push({ name: '纯全带幺九', han: isMenzen ? 3 : 2 })
+  if (isMenqing && checkRyanpeiko(shunziMelds)) yaku.push({ name: '二杯口', han: 3 })
+  if (checkHonitsu(allTiles)) yaku.push({ name: '混一色', han: isMenqing ? 3 : 2 })
+  if (checkJunchan(melds)) yaku.push({ name: '纯全带幺九', han: isMenqing ? 3 : 2 })
 
   // 6-han yaku
-  if (checkChinitsu(allTiles)) yaku.push({ name: '清一色', han: isMenzen ? 6 : 5 })
+  if (checkChinitsu(allTiles)) yaku.push({ name: '清一色', han: isMenqing ? 6 : 5 })
 
   addHaiteiYaku(yaku, options)
   addDoraYaku(yaku, options)
@@ -128,22 +128,22 @@ function detectYakuman(
 ): YakuResult[] {
   const yaku: YakuResult[] = []
   const melds = combination.melds
-  const pair = melds.find((m) => m.type === 'jantai')!
-  const groups = melds.filter((m) => m.type !== 'jantai')
-  const koutsuMelds = groups.filter((m) => m.type === 'koutsu' || m.type === 'kantsu')
-  const isMenzen = groups.every((m) => !m.isOpen)
+  const pair = melds.find((m) => m.type === 'duizi')!
+  const groups = melds.filter((m) => m.type !== 'duizi')
+  const keziMelds = groups.filter((m) => m.type === 'kezi' || m.type === 'gangzi')
+  const isMenqing = groups.every((m) => !m.isOpen)
 
-  if (isMenzen && checkSuuankou(koutsuMelds, winTile, options.isTsumo, groups)) {
+  if (isMenqing && checkSuuankou(keziMelds, winTile, options.isTsumo, groups)) {
     yaku.push({ name: '四暗刻', han: 13, isYakuman: true })
   }
-  if (checkDaisangen(koutsuMelds)) yaku.push({ name: '大三元', han: 13, isYakuman: true })
-  if (checkShousuushii(koutsuMelds, pair)) yaku.push({ name: '小四喜', han: 13, isYakuman: true })
-  if (checkDaisuushii(koutsuMelds)) yaku.push({ name: '大四喜', han: 13, isYakuman: true })
+  if (checkDaisangen(keziMelds)) yaku.push({ name: '大三元', han: 13, isYakuman: true })
+  if (checkShousuushii(keziMelds, pair)) yaku.push({ name: '小四喜', han: 13, isYakuman: true })
+  if (checkDaisuushii(keziMelds)) yaku.push({ name: '大四喜', han: 13, isYakuman: true })
   if (checkTsuuiisou(allTiles)) yaku.push({ name: '字一色', han: 13, isYakuman: true })
   if (checkRyuuiisou(allTiles)) yaku.push({ name: '绿一色', han: 13, isYakuman: true })
   if (checkChinroutou(allTiles)) yaku.push({ name: '清老头', han: 13, isYakuman: true })
-  if (isMenzen && checkChuuren(allTiles)) yaku.push({ name: '九莲宝灯', han: 13, isYakuman: true })
-  if (checkSuukantsu(koutsuMelds)) yaku.push({ name: '四杠子', han: 13, isYakuman: true })
+  if (isMenqing && checkChuuren(allTiles)) yaku.push({ name: '九莲宝灯', han: 13, isYakuman: true })
+  if (checkSuugangzi(keziMelds)) yaku.push({ name: '四杠子', han: 13, isYakuman: true })
 
   addSituationalYakuman(yaku, options)
 
@@ -154,45 +154,45 @@ function detectYakuman(
 
 function checkPinfu(combination: HandCombination, winTile: Tile, options: GameOptions): boolean {
   const melds = combination.melds
-  const groups = melds.filter((m) => m.type !== 'jantai')
-  const pair = melds.find((m) => m.type === 'jantai')!
+  const groups = melds.filter((m) => m.type !== 'duizi')
+  const pair = melds.find((m) => m.type === 'duizi')!
 
-  // All groups must be shuntsu
-  if (!groups.every((m) => m.type === 'shuntsu')) return false
+  // All groups must be shunzi
+  if (!groups.every((m) => m.type === 'shunzi')) return false
 
   // Pair must not be yakuhai
   const pairTile = pair.tiles[0]
   if (pairTile.isDragon) return false
-  if (pairTile.isWind && pairTile.rank === options.bakaze) return false
-  if (pairTile.isWind && pairTile.rank === options.jikaze) return false
+  if (pairTile.isWind && pairTile.rank === options.changfeng) return false
+  if (pairTile.isWind && pairTile.rank === options.zifeng) return false
 
-  // Must be ryanmen (two-sided) wait
+  // Must be liangmian (two-sided) wait
   const waitType = determineWaitType(combination, winTile)
-  return waitType === 'ryanmen'
+  return waitType === 'liangmian'
 }
 
 function checkTanyao(allTiles: Tile[]): boolean {
   return allTiles.every((t) => t.isNumber && t.rank >= 2 && t.rank <= 8)
 }
 
-function checkIipeiko(shuntsuMelds: Meld[]): boolean {
-  for (let i = 0; i < shuntsuMelds.length; i++) {
-    for (let j = i + 1; j < shuntsuMelds.length; j++) {
-      if (meldsIdentical(shuntsuMelds[i], shuntsuMelds[j])) return true
+function checkIipeiko(shunziMelds: Meld[]): boolean {
+  for (let i = 0; i < shunziMelds.length; i++) {
+    for (let j = i + 1; j < shunziMelds.length; j++) {
+      if (meldsIdentical(shunziMelds[i], shunziMelds[j])) return true
     }
   }
   return false
 }
 
-function checkRyanpeiko(shuntsuMelds: Meld[]): boolean {
-  if (shuntsuMelds.length < 4) return false
+function checkRyanpeiko(shunziMelds: Meld[]): boolean {
+  if (shunziMelds.length < 4) return false
   let pairs = 0
   const used = new Set<number>()
-  for (let i = 0; i < shuntsuMelds.length; i++) {
+  for (let i = 0; i < shunziMelds.length; i++) {
     if (used.has(i)) continue
-    for (let j = i + 1; j < shuntsuMelds.length; j++) {
+    for (let j = i + 1; j < shunziMelds.length; j++) {
       if (used.has(j)) continue
-      if (meldsIdentical(shuntsuMelds[i], shuntsuMelds[j])) {
+      if (meldsIdentical(shunziMelds[i], shunziMelds[j])) {
         pairs++
         used.add(i)
         used.add(j)
@@ -203,36 +203,36 @@ function checkRyanpeiko(shuntsuMelds: Meld[]): boolean {
   return pairs >= 2
 }
 
-function checkYakuhai(koutsuMelds: Meld[], options: GameOptions): YakuResult[] {
+function checkYakuhai(keziMelds: Meld[], options: GameOptions): YakuResult[] {
   const results: YakuResult[] = []
-  for (const m of koutsuMelds) {
+  for (const m of keziMelds) {
     const t = m.tiles[0]
     if (t.isDragon) {
       const names: Record<number, string> = { 5: '役牌:中', 6: '役牌:发', 7: '役牌:白' }
       results.push({ name: names[t.rank], han: 1 })
     }
-    if (t.isWind && t.rank === options.bakaze) {
+    if (t.isWind && t.rank === options.changfeng) {
       results.push({ name: '役牌:场风牌', han: 1 })
     }
-    if (t.isWind && t.rank === options.jikaze) {
+    if (t.isWind && t.rank === options.zifeng) {
       results.push({ name: '役牌:自风牌', han: 1 })
     }
   }
   return results
 }
 
-function checkSanshokuDoujun(shuntsuMelds: Meld[]): boolean {
-  for (const m of shuntsuMelds) {
+function checkSanshokuDoujun(shunziMelds: Meld[]): boolean {
+  for (const m of shunziMelds) {
     const rank = m.tiles[0].rank
-    const suits = new Set(shuntsuMelds.filter((s) => s.tiles[0].rank === rank).map((s) => s.tiles[0].suit))
+    const suits = new Set(shunziMelds.filter((s) => s.tiles[0].rank === rank).map((s) => s.tiles[0].suit))
     if (suits.size >= 3 && suits.has('m') && suits.has('p') && suits.has('s')) return true
   }
   return false
 }
 
-function checkIttsu(shuntsuMelds: Meld[]): boolean {
+function checkIttsu(shunziMelds: Meld[]): boolean {
   for (const suit of ['m', 'p', 's'] as const) {
-    const suitMelds = shuntsuMelds.filter((m) => m.tiles[0].suit === suit)
+    const suitMelds = shunziMelds.filter((m) => m.tiles[0].suit === suit)
     const starts = new Set(suitMelds.map((m) => m.tiles[0].rank))
     if (starts.has(1) && starts.has(4) && starts.has(7)) return true
   }
@@ -241,8 +241,8 @@ function checkIttsu(shuntsuMelds: Meld[]): boolean {
 
 function checkChanta(melds: Meld[]): boolean {
   // All groups (including pair) must contain a terminal or honor
-  // At least one group must be a shuntsu (otherwise it's honroutou or toitoi)
-  const hasShuntsu = melds.some((m) => m.type === 'shuntsu')
+  // At least one group must be a shunzi (otherwise it's honroutou or toitoi)
+  const hasShuntsu = melds.some((m) => m.type === 'shunzi')
   if (!hasShuntsu) return false
   const hasHonor = melds.some((m) => m.tiles.some((t) => t.isHonor))
   if (!hasHonor) return false
@@ -250,7 +250,7 @@ function checkChanta(melds: Meld[]): boolean {
 }
 
 function checkJunchan(melds: Meld[]): boolean {
-  const hasShuntsu = melds.some((m) => m.type === 'shuntsu')
+  const hasShuntsu = melds.some((m) => m.type === 'shunzi')
   if (!hasShuntsu) return false
   // No honors allowed
   if (melds.some((m) => m.tiles.some((t) => t.isHonor))) return false
@@ -258,15 +258,15 @@ function checkJunchan(melds: Meld[]): boolean {
 }
 
 function checkToitoi(groups: Meld[]): boolean {
-  return groups.every((m) => m.type === 'koutsu' || m.type === 'kantsu')
+  return groups.every((m) => m.type === 'kezi' || m.type === 'gangzi')
 }
 
-function checkSanankou(koutsuMelds: Meld[], winTile: Tile, isTsumo: boolean, waitType: string): boolean {
+function checkSanankou(keziMelds: Meld[], winTile: Tile, isTsumo: boolean, waitType: string): boolean {
   let closedKoutsu = 0
   let ronTargetCounted = false
-  for (const m of koutsuMelds) {
+  for (const m of keziMelds) {
     if (m.isOpen) continue
-    if (!isTsumo && waitType === 'shanpon' && !ronTargetCounted && m.tiles[0].equals(winTile)) {
+    if (!isTsumo && waitType === 'duipeng' && !ronTargetCounted && m.tiles[0].equals(winTile)) {
       ronTargetCounted = true
       continue
     }
@@ -275,12 +275,12 @@ function checkSanankou(koutsuMelds: Meld[], winTile: Tile, isTsumo: boolean, wai
   return closedKoutsu === 3
 }
 
-function checkSanshokuDoukou(koutsuMelds: Meld[]): boolean {
-  for (const m of koutsuMelds) {
+function checkSanshokuDoukou(keziMelds: Meld[]): boolean {
+  for (const m of keziMelds) {
     const t = m.tiles[0]
     if (!t.isNumber) continue
     const suits = new Set(
-      koutsuMelds.filter((k) => k.tiles[0].isNumber && k.tiles[0].rank === t.rank).map((k) => k.tiles[0].suit)
+      keziMelds.filter((k) => k.tiles[0].isNumber && k.tiles[0].rank === t.rank).map((k) => k.tiles[0].suit)
     )
     if (suits.size >= 3) return true
   }
@@ -293,12 +293,12 @@ function checkHonroutou(allTiles: Tile[]): boolean {
   return hasTerminal && hasHonor && allTiles.every((t) => t.isTerminalOrHonor)
 }
 
-function checkSankantsu(koutsuMelds: Meld[]): boolean {
-  return koutsuMelds.filter((m) => m.type === 'kantsu').length === 3
+function checkSangangzi(keziMelds: Meld[]): boolean {
+  return keziMelds.filter((m) => m.type === 'gangzi').length === 3
 }
 
-function checkShousangen(koutsuMelds: Meld[], pair: Meld): boolean {
-  const dragonKoutsu = koutsuMelds.filter((m) => m.tiles[0].isDragon).length
+function checkShousangen(keziMelds: Meld[], pair: Meld): boolean {
+  const dragonKoutsu = keziMelds.filter((m) => m.tiles[0].isDragon).length
   const dragonPair = pair.tiles[0].isDragon
   return dragonKoutsu === 2 && dragonPair
 }
@@ -320,12 +320,12 @@ function checkChinitsu(allTiles: Tile[]): boolean {
 
 // --- Yakuman helpers ---
 
-function checkSuuankou(koutsuMelds: Meld[], winTile: Tile, isTsumo: boolean, groups: Meld[]): boolean {
-  if (koutsuMelds.length !== 4) return false
-  if (isTsumo) return koutsuMelds.every((m) => !m.isOpen)
-  // Ron: the koutsu completed by the win tile counts as open (shanpon wait)
+function checkSuuankou(keziMelds: Meld[], winTile: Tile, isTsumo: boolean, groups: Meld[]): boolean {
+  if (keziMelds.length !== 4) return false
+  if (isTsumo) return keziMelds.every((m) => !m.isOpen)
+  // Ron: the kezi completed by the win tile counts as open (duipeng wait)
   let closedCount = 0
-  for (const m of koutsuMelds) {
+  for (const m of keziMelds) {
     if (m.isOpen) continue
     if (m.tiles[0].equals(winTile)) continue // This one completed by ron = open
     closedCount++
@@ -333,18 +333,18 @@ function checkSuuankou(koutsuMelds: Meld[], winTile: Tile, isTsumo: boolean, gro
   return closedCount === 4 // Only possible if win tile was for the pair (tanki)
 }
 
-function checkDaisangen(koutsuMelds: Meld[]): boolean {
-  return koutsuMelds.filter((m) => m.tiles[0].isDragon).length === 3
+function checkDaisangen(keziMelds: Meld[]): boolean {
+  return keziMelds.filter((m) => m.tiles[0].isDragon).length === 3
 }
 
-function checkShousuushii(koutsuMelds: Meld[], pair: Meld): boolean {
-  const windKoutsu = koutsuMelds.filter((m) => m.tiles[0].isWind).length
+function checkShousuushii(keziMelds: Meld[], pair: Meld): boolean {
+  const windKoutsu = keziMelds.filter((m) => m.tiles[0].isWind).length
   const windPair = pair.tiles[0].isWind
   return windKoutsu === 3 && windPair
 }
 
-function checkDaisuushii(koutsuMelds: Meld[]): boolean {
-  return koutsuMelds.filter((m) => m.tiles[0].isWind).length === 4
+function checkDaisuushii(keziMelds: Meld[]): boolean {
+  return keziMelds.filter((m) => m.tiles[0].isWind).length === 4
 }
 
 function checkTsuuiisou(allTiles: Tile[]): boolean {
@@ -374,14 +374,14 @@ function checkChuuren(allTiles: Tile[]): boolean {
   return true
 }
 
-function checkSuukantsu(koutsuMelds: Meld[]): boolean {
-  return koutsuMelds.filter((m) => m.type === 'kantsu').length === 4
+function checkSuugangzi(keziMelds: Meld[]): boolean {
+  return keziMelds.filter((m) => m.type === 'gangzi').length === 4
 }
 
 // --- Helpers ---
 
-function addRiichiYaku(yaku: YakuResult[], options: GameOptions, isMenzen = true): void {
-  if (!isMenzen) return
+function addRiichiYaku(yaku: YakuResult[], options: GameOptions, isMenqing = true): void {
+  if (!isMenqing) return
   const hasRiichi = options.isDoubleRiichi || options.isRiichi
   if (options.isDoubleRiichi) {
     yaku.push({ name: '两立直', han: 2 })

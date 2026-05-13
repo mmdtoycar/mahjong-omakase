@@ -1,7 +1,7 @@
 import { test, expect, describe } from 'vitest'
-import { Tile, TileSuit } from './tiles'
-import { Meld, GameOptions } from './types'
-import { calculateBestScore, calculateAllBestScores, getTingTiles } from './fan'
+import { Tile, TileSuit } from '../tiles'
+import { Meld, GameOptions } from '../types'
+import { calculateBestScore, calculateAllBestScores, getTingTiles } from '../fan'
 
 /**
  * Hand String Format Parser based on GB-Mahjong (zheng-fan)

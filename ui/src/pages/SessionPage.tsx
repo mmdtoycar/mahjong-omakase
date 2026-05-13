@@ -570,8 +570,8 @@ export default function SessionPage() {
                         onSelectScore={handleRiichiCalcSelect}
                         onError={(msg) => setCalcError(msg || '')}
                         initialOptions={{
-                          bakaze: gameState.prevalentWind,
-                          jikaze: winnerMenfeng,
+                          changfeng: gameState.prevalentWind,
+                          zifeng: winnerMenfeng,
                         }}
                         resetTrigger={calcResetCount}
                         isSelfDraw={isSelfDraw}
