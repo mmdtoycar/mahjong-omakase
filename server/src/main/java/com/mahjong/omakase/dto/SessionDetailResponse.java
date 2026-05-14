@@ -1,6 +1,7 @@
 package com.mahjong.omakase.dto;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -19,7 +20,7 @@ public class SessionDetailResponse {
   private double rpOrigin;
   private double[] umaDist;
   private Double participationBonus;
-  private Map<Long, Double> playerBonuses;
+  private Map<Long, Double> playerBonuses = Collections.emptyMap();
 
   public static class PlayerInfo {
     private Long id;

@@ -354,10 +354,12 @@ public class GameService {
             .toList();
 
     Map<Long, Integer> gameIndexUpToHere = new HashMap<>();
-    for (GameSession s : seasonSessions) {
-      List<Object[]> sessScores = roundScoreRepo.getTotalScoresBySession(s.getId());
-      for (Object[] row : sessScores) {
-        if (row[0] != null) gameIndexUpToHere.merge((Long) row[0], 1, Integer::sum);
+    if (!seasonSessions.isEmpty()) {
+      List<Long> seasonSessionIds = seasonSessions.stream().map(GameSession::getId).toList();
+      for (Object[] row : roundScoreRepo.getGamesPlayedPerPlayerInSessions(seasonSessionIds)) {
+        if (row[0] != null) {
+          gameIndexUpToHere.put((Long) row[0], ((Number) row[1]).intValue());
+        }
       }
     }
     boolean currentIncluded =
