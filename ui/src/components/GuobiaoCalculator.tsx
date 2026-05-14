@@ -341,9 +341,9 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
                     <span className="score-unit">番</span>
                   </div>
                 </div>
-                <div className="fan-list-mini">
+                <div className="pattern-list">
                   {r.fans.map((f, fi) => (
-                    <span key={fi} className="mini-fan-tag">
+                    <span key={fi} className="pattern-tag">
                       {f.name}
                       {f.count && f.count > 1 ? ` x${f.count}` : ''} +{f.score}
                     </span>
@@ -363,9 +363,9 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
               <span className="score-num">{huResult.totalScore}</span>
               <span className="score-unit">番</span>
             </div>
-            <div className="fan-list-mini">
+            <div className="pattern-list">
               {huResult.fans.map((f, i) => (
-                <span key={i} className="mini-fan-tag">
+                <span key={i} className="pattern-tag">
                   {f.name}
                   {f.count && f.count > 1 ? ` x${f.count}` : ''} +{f.score}
                 </span>
