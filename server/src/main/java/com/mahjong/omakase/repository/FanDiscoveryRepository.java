@@ -13,4 +13,6 @@ public interface FanDiscoveryRepository extends JpaRepository<FanDiscovery, Long
   Optional<FanDiscovery> findBySeasonAndFanNameAndPlayerBotFalse(String season, String fanName);
 
   List<FanDiscovery> findBySeason(String season);
+
+  List<FanDiscovery> findByRoundGameSessionId(Long sessionId);
 }

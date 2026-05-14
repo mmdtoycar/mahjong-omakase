@@ -85,6 +85,7 @@ export interface SessionDetail {
   rpFactor: number
   rpOrigin: number
   umaDist: number[]
+  playerBonuses?: Record<number, number>
 }
 
 export interface AddRoundData {
@@ -114,6 +115,10 @@ export interface PlayerStats {
   gamesPlayed: number
   totalScore: number
   totalRP: number
+  baseRP: number
+  tieredBonus: number
+  adminBonus: number
+  fanDiscoveryBonus: number
   avgScore: number
   wins: number
 }

@@ -9,6 +9,10 @@ public class PlayerStatsResponse {
   private double avgScore;
   private int wins;
   private double totalRP;
+  private double baseRP;
+  private double tieredBonus;
+  private double adminBonus;
+  private double fanDiscoveryBonus;
 
   public Long getPlayerId() {
     return playerId;
@@ -72,5 +76,37 @@ public class PlayerStatsResponse {
 
   public void setTotalRP(double totalRP) {
     this.totalRP = totalRP;
+  }
+
+  public double getBaseRP() {
+    return baseRP;
+  }
+
+  public void setBaseRP(double baseRP) {
+    this.baseRP = baseRP;
+  }
+
+  public double getTieredBonus() {
+    return tieredBonus;
+  }
+
+  public void setTieredBonus(double tieredBonus) {
+    this.tieredBonus = tieredBonus;
+  }
+
+  public double getAdminBonus() {
+    return adminBonus;
+  }
+
+  public void setAdminBonus(double adminBonus) {
+    this.adminBonus = adminBonus;
+  }
+
+  public double getFanDiscoveryBonus() {
+    return fanDiscoveryBonus;
+  }
+
+  public void setFanDiscoveryBonus(double fanDiscoveryBonus) {
+    this.fanDiscoveryBonus = fanDiscoveryBonus;
   }
 }

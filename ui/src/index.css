@@ -893,6 +893,13 @@ tr:hover td {
   opacity: 0.7;
 }
 
+.rp-bonus {
+  color: var(--accent, #ff9800);
+  font-weight: 500;
+  font-size: 0.85em;
+  margin-left: 4px;
+}
+
 /* ===== Mobile responsive ===== */
 @media (max-width: 640px) {
   .app-header {

@@ -14,6 +14,11 @@ public interface RoundScoreRepository extends JpaRepository<RoundScore, Long> {
           + "WHERE rs.round.gameSession.id = :sessionId GROUP BY rs.player.id")
   List<Object[]> getTotalScoresBySession(Long sessionId);
 
+  @Query(
+      "SELECT rs.player.id, COUNT(DISTINCT rs.round.gameSession.id) FROM RoundScore rs "
+          + "WHERE rs.round.gameSession.id IN :sessionIds GROUP BY rs.player.id")
+  List<Object[]> getGamesPlayedPerPlayerInSessions(List<Long> sessionIds);
+
   @Query("SELECT rs.player.id, SUM(rs.score) FROM RoundScore rs GROUP BY rs.player.id")
   List<Object[]> getTotalScoresAllTime();
 

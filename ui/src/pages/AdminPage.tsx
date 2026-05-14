@@ -12,8 +12,8 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editFirst, setEditFirst] = useState('')
   const [editLast, setEditLast] = useState('')
-  const [bonus, setBonus] = useState('5')
-  const [savedBonus, setSavedBonus] = useState('5')
+  const [bonus, setBonus] = useState('0')
+  const [savedBonus, setSavedBonus] = useState('0')
   const [savingSettings, setSavingSettings] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
