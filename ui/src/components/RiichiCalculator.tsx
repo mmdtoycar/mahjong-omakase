@@ -345,22 +345,32 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
 
       {huResult && (
         <div className={`result-preview-mini ${huResult.yakuList.length === 0 ? 'error' : ''}`}>
-          <div className="fan-list-mini">
-            <strong>{huResult.han} 番:</strong>
-            {huResult.yakuList.map((y, i) => (
-              <span key={i} className="mini-fan-tag">
-                {y.name} {y.isYakuman ? '役满' : `${y.han}番`}
-              </span>
-            ))}
-          </div>
-          {huResult.fuDetails.length > 0 && (
-            <div className="fan-list-mini">
-              <strong>{huResult.fu} 符:</strong>
-              {huResult.fuDetails.map((f, i) => (
-                <span key={i} className="mini-fan-tag">
-                  {f.reason} {f.fu}符
+          <div className="result-main-row">
+            <div className="score-badge small">
+              <span className="score-num">{huResult.han}</span>
+              <span className="score-unit">番</span>
+            </div>
+            <div className="pattern-list">
+              {huResult.yakuList.map((y, i) => (
+                <span key={i} className="pattern-tag">
+                  {y.name} {y.isYakuman ? '役满' : `${y.han}番`}
                 </span>
               ))}
+            </div>
+          </div>
+          {huResult.fuDetails.length > 0 && (
+            <div className="result-main-row">
+              <div className="score-badge small">
+                <span className="score-num">{huResult.fu}</span>
+                <span className="score-unit">符</span>
+              </div>
+              <div className="pattern-list">
+                {huResult.fuDetails.map((f, i) => (
+                  <span key={i} className="pattern-tag">
+                    {f.reason} {f.fu}符
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -61,8 +61,6 @@
   color: var(--sol-base01);
 }
 
-/* Rank Circles (Legacy, will remove if unused) */
-
 html {
   scroll-behavior: smooth;
 }
@@ -1111,7 +1109,7 @@ tr:hover td {
     gap: 6px;
   }
 
-  .ting-row-item .fan-list-mini {
+  .ting-row-item .pattern-list {
     width: 100%;
   }
 
@@ -1553,27 +1551,23 @@ tr:hover td {
   gap: 12px;
 }
 
-.fan-list-mini {
+.pattern-list {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 4px;
-}
-
-.fan-list-mini.subtle {
-  margin-top: 2px;
-  opacity: 0.7;
 }
 
 .winning-options-section {
   margin-top: 8px;
 }
 
-.ting-row-item .fan-list-mini {
+.ting-row-item .pattern-list {
   max-width: 200px;
 }
 
-.mini-fan-tag {
-  font-size: 0.65rem;
+.pattern-tag {
+  font-size: 0.7rem;
   font-weight: 600;
   background: white;
   border: 1px solid var(--border);
@@ -2218,15 +2212,15 @@ tr:hover td {
 }
 
 .game-card .rank-1 .rank-number {
-  color: #b58900;
+  color: var(--sol-yellow);
   opacity: 1;
 }
 .game-card .rank-2 .rank-number {
-  color: #839496;
+  color: var(--sol-base0);
   opacity: 1;
 }
 .game-card .rank-3 .rank-number {
-  color: #cb4b16;
+  color: var(--sol-orange);
   opacity: 1;
 }
 
