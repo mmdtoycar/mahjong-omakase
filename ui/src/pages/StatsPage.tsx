@@ -256,10 +256,7 @@ export default function StatsPage() {
                       <th>玩家</th>
                       <th style={{ textAlign: 'right' }}>场次</th>
                       <th style={{ textAlign: 'right' }}>胜场</th>
-                      <th style={{ textAlign: 'right' }}>
-                        积分(RP)
-                        <div className="th-subtitle">含局数奖励</div>
-                      </th>
+                      <th style={{ textAlign: 'right' }}>积分(RP)</th>
                     </tr>
                   </thead>
                   <tbody>

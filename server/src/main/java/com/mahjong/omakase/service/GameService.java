@@ -119,10 +119,10 @@ public class GameService {
                 return Double.parseDouble(s.getValue());
               } catch (NumberFormatException e) {
                 log.warn("Invalid participation_bonus value '{}', using default", s.getValue());
-                return 5.0;
+                return 0.0;
               }
             })
-        .orElse(5.0);
+        .orElse(0.0);
   }
 
   public List<Player> getAllPlayers() {
@@ -324,8 +324,66 @@ public class GameService {
     resp.setUmaDist(session.getGameMode().getUmaDist(session.getPlayerCount()));
     resp.setParticipationBonus(
         session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0);
+    resp.setPlayerBonuses(computeSessionPlayerBonuses(session));
 
     return resp;
+  }
+
+  /**
+   * Computes per-player bonus contributed by this one session = tieredBonus + adminBonus +
+   * fanDiscoveryBonus. Matches what getPlayerStats aggregates across all sessions. Returns empty
+   * for sessions with no round scores (no bonus for empty sessions).
+   */
+  private Map<Long, Double> computeSessionPlayerBonuses(GameSession session) {
+    Map<Long, Double> bonuses = new HashMap<>();
+
+    List<Object[]> currentSessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
+    if (currentSessionScores.isEmpty()) {
+      return bonuses;
+    }
+
+    String season = getSeasonString(session.getCreatedAt());
+
+    List<GameSession> seasonSessions =
+        sessionRepo.findAll().stream()
+            .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
+            .filter(s -> s.getGameMode() == session.getGameMode())
+            .filter(s -> getSeasonString(s.getCreatedAt()).equals(season))
+            .filter(s -> !s.getCreatedAt().isAfter(session.getCreatedAt()))
+            .sorted(Comparator.comparing(GameSession::getCreatedAt))
+            .toList();
+
+    Map<Long, Integer> gameIndexUpToHere = new HashMap<>();
+    for (GameSession s : seasonSessions) {
+      List<Object[]> sessScores = roundScoreRepo.getTotalScoresBySession(s.getId());
+      for (Object[] row : sessScores) {
+        if (row[0] != null) gameIndexUpToHere.merge((Long) row[0], 1, Integer::sum);
+      }
+    }
+    boolean currentIncluded =
+        seasonSessions.stream().anyMatch(s -> s.getId().equals(session.getId()));
+
+    double adminBonus =
+        session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
+
+    for (Object[] row : currentSessionScores) {
+      if (row[0] == null) continue;
+      Long pid = (Long) row[0];
+      int idx = gameIndexUpToHere.getOrDefault(pid, 0);
+      if (!currentIncluded) idx += 1;
+      double tiered = idx <= 10 ? 10.0 : idx <= 20 ? 5.0 : 0.0;
+      bonuses.merge(pid, tiered + adminBonus, Double::sum);
+    }
+
+    if (session.getGameMode() == GameMode.GUOBIAO) {
+      for (FanDiscovery fd : fanDiscoveryRepo.findByRoundGameSessionId(session.getId())) {
+        if (fd.getBonusRp() > 0 && fd.getPlayer() != null) {
+          bonuses.merge(fd.getPlayer().getId(), fd.getBonusRp(), Double::sum);
+        }
+      }
+    }
+
+    return bonuses;
   }
 
   public void addRound(Long sessionId, AddRoundRequest request) {
@@ -534,7 +592,9 @@ public class GameService {
 
     Map<Long, Integer> wins = new HashMap<>();
     Map<Long, Double> totalRP = new HashMap<>();
-    Map<Long, Double> totalBonusPerPlayer = new HashMap<>();
+    Map<Long, Double> tieredBonusPerPlayer = new HashMap<>();
+    Map<Long, Double> adminBonusPerPlayer = new HashMap<>();
+    Map<Long, Double> fanBonusPerPlayer = new HashMap<>();
     List<GameSession> completedSessions =
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
@@ -543,7 +603,12 @@ public class GameService {
                 s ->
                     !hasDateRange
                         || (!s.getCreatedAt().isBefore(start) && s.getCreatedAt().isBefore(end)))
+            .sorted(Comparator.comparing(GameSession::getCreatedAt))
             .toList();
+
+    // Tracks chronological game count per (season, mode, player) for tiered bonus.
+    // Keyed separately by mode so each game mode has its own 20-game tier per season.
+    Map<String, Map<Long, Integer>> gameIndexBySeasonModePlayer = new HashMap<>();
 
     // Add Fan Discovery Bonuses (GUOBIAO only)
     if (gameMode == null || gameMode == GameMode.GUOBIAO) {
@@ -552,7 +617,7 @@ public class GameService {
         List<FanDiscovery> discoveries = fanDiscoveryRepo.findBySeason(season);
         for (FanDiscovery fd : discoveries) {
           if (fd.getBonusRp() > 0) {
-            totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
+            fanBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
           }
         }
       } else {
@@ -560,7 +625,7 @@ public class GameService {
         List<FanDiscovery> allDiscoveries = fanDiscoveryRepo.findAll();
         for (FanDiscovery fd : allDiscoveries) {
           if (fd.getBonusRp() > 0) {
-            totalBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
+            fanBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
           }
         }
       }
@@ -569,11 +634,26 @@ public class GameService {
     for (GameSession session : completedSessions) {
       List<Object[]> sessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
       if (!sessionScores.isEmpty()) {
+        String season = getSeasonString(session.getCreatedAt());
+        String seasonModeKey = season + ":" + session.getGameMode().name();
+        Map<Long, Integer> seasonCounts =
+            gameIndexBySeasonModePlayer.computeIfAbsent(seasonModeKey, k -> new HashMap<>());
+        double adminBonus =
+            session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
         for (Object[] row : sessionScores) {
           if (row[0] != null) {
-            double bonus =
-                session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
-            totalBonusPerPlayer.merge((Long) row[0], bonus, (a, b) -> a + b);
+            Long playerId = (Long) row[0];
+            int gameIndex = seasonCounts.merge(playerId, 1, Integer::sum);
+            double tieredBonus;
+            if (gameIndex <= 10) {
+              tieredBonus = 10.0;
+            } else if (gameIndex <= 20) {
+              tieredBonus = 5.0;
+            } else {
+              tieredBonus = 0.0;
+            }
+            tieredBonusPerPlayer.merge(playerId, tieredBonus, (a, b) -> a + b);
+            adminBonusPerPlayer.merge(playerId, adminBonus, (a, b) -> a + b);
           }
         }
         List<Object[]> sorted = new ArrayList<>(sessionScores);
@@ -616,10 +696,17 @@ public class GameService {
               stat.setTotalScore(totalScores.getOrDefault(p.getId(), 0));
               stat.setWins(wins.getOrDefault(p.getId(), 0));
               double baseRP = totalRP.getOrDefault(p.getId(), 0.0);
-              double bonusRP = totalBonusPerPlayer.getOrDefault(p.getId(), 0.0);
-              stat.setTotalRP(baseRP + bonusRP);
+              double tieredBonus = tieredBonusPerPlayer.getOrDefault(p.getId(), 0.0);
+              double adminBonus = adminBonusPerPlayer.getOrDefault(p.getId(), 0.0);
+              double fanBonus = fanBonusPerPlayer.getOrDefault(p.getId(), 0.0);
+              double total = baseRP + tieredBonus + adminBonus + fanBonus;
+              stat.setBaseRP(baseRP);
+              stat.setTieredBonus(tieredBonus);
+              stat.setAdminBonus(adminBonus);
+              stat.setFanDiscoveryBonus(fanBonus);
+              stat.setTotalRP(total);
               int games = gamesPlayed.getOrDefault(p.getId(), 0);
-              stat.setAvgScore(games > 0 ? (baseRP + bonusRP) / games : 0);
+              stat.setAvgScore(games > 0 ? total / games : 0);
               return stat;
             })
         .collect(Collectors.toList());

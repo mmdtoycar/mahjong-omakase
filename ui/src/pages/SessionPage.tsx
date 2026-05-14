@@ -813,8 +813,16 @@ export default function SessionPage() {
                         <div className="total-val">{displayVal}</div>
                         {session.rounds.length > 0 &&
                           (() => {
-                            const rp = rankMap[p.id]?.rp ?? 0
-                            return <div className="rp-val">{rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)} RP</div>
+                            const baseRp = rankMap[p.id]?.rp ?? 0
+                            const bonus = session.playerBonuses?.[p.id] ?? 0
+                            return (
+                              <div className="rp-val">
+                                {baseRp > 0 ? `+${baseRp.toFixed(1)}` : baseRp.toFixed(1)} RP
+                                {bonus > 0 && (
+                                  <span className="rp-bonus">(+{bonus.toFixed(bonus % 1 === 0 ? 0 : 1)})</span>
+                                )}
+                              </div>
+                            )
                           })()}
                       </div>
                     </td>
@@ -837,16 +845,14 @@ export default function SessionPage() {
                   <th>名次</th>
                   <th>玩家</th>
                   <th style={{ textAlign: 'right' }}>分数</th>
-                  <th style={{ textAlign: 'right' }}>
-                    积分(RP)
-                    <div className="th-subtitle">含局数奖励</div>
-                  </th>
+                  <th style={{ textAlign: 'right' }}>积分(RP)</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedPlayers.map((p, i) => {
                   const val = session.totalScores[p.id] || 0
-                  const rp = rankMap[p.id]?.rp ?? 0
+                  const baseRp = rankMap[p.id]?.rp ?? 0
+                  const bonus = session.playerBonuses?.[p.id] ?? 0
                   const rank = rankMap[p.id]?.rank ?? i + 1
                   return (
                     <tr key={p.id}>
@@ -871,7 +877,8 @@ export default function SessionPage() {
                           color: 'var(--primary)',
                         }}
                       >
-                        {rp > 0 ? `+${rp.toFixed(1)}` : rp.toFixed(1)}
+                        {baseRp > 0 ? `+${baseRp.toFixed(1)}` : baseRp.toFixed(1)}
+                        {bonus > 0 && <span className="rp-bonus">(+{bonus.toFixed(bonus % 1 === 0 ? 0 : 1)})</span>}
                       </td>
                     </tr>
                   )

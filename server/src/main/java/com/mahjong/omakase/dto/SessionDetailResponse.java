@@ -19,6 +19,7 @@ public class SessionDetailResponse {
   private double rpOrigin;
   private double[] umaDist;
   private Double participationBonus;
+  private Map<Long, Double> playerBonuses;
 
   public static class PlayerInfo {
     private Long id;
@@ -253,5 +254,13 @@ public class SessionDetailResponse {
 
   public void setParticipationBonus(Double participationBonus) {
     this.participationBonus = participationBonus;
+  }
+
+  public Map<Long, Double> getPlayerBonuses() {
+    return playerBonuses;
+  }
+
+  public void setPlayerBonuses(Map<Long, Double> playerBonuses) {
+    this.playerBonuses = playerBonuses;
   }
 }
