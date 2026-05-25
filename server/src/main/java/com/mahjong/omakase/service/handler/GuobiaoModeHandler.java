@@ -63,10 +63,13 @@ public class GuobiaoModeHandler implements GameModeHandler {
     if (Boolean.TRUE.equals(request.getChombo())) {
       return true;
     }
+    if (request.getScore() == null) {
+      return false;
+    }
     if (request.getFanDetails() == null || request.getFanDetails().isEmpty()) {
       return false;
     }
-    int totalScore = request.getScore() != null ? request.getScore() : 0;
+    int totalScore = request.getScore();
     int flowerScore = parseFlowerScore(request.getFanDetails());
     int scoreWithoutFlowers = totalScore - flowerScore;
     return scoreWithoutFlowers < 8 && flowerScore > 0;

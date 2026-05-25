@@ -123,4 +123,26 @@ public class GuobiaoModeHandlerTest {
 
     verifyNoInteractions(calculator);
   }
+
+  @Test
+  public void testNullScoreThrowsExceptionEvenWithFlowers() {
+    AddRoundRequest request = new AddRoundRequest();
+    request.setRoundType("WIN");
+    request.setWinnerId(1L);
+    request.setDealInPlayerId(null);
+    request.setScore(null);
+    request.setFanDetails("花牌(2)");
+
+    List<Long> sessionPlayerIds = Arrays.asList(1L, 2L, 3L, 4L);
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+              handler.calculateRoundScores(request, sessionPlayerIds);
+            });
+
+    assertEquals("Score is required", exception.getMessage());
+    verifyNoInteractions(calculator);
+  }
 }
