@@ -77,7 +77,6 @@ interface GuobiaoCalculatorProps {
   resetTrigger?: number
   isSelfDraw: boolean
   onIsSelfDrawChange: (val: boolean) => void
-  onClose: () => void
 }
 
 export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
@@ -86,7 +85,6 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   resetTrigger,
   isSelfDraw,
   onIsSelfDrawChange,
-  onClose,
 }) => {
   const [concealedTiles, setConcealedTiles] = useState<Tile[]>([])
   const [melds, setMelds] = useState<Meld[]>([])
@@ -175,6 +173,14 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
     const res = calculateBestScore(concealedTiles, melds, options, lastTile)
     return res
   }, [concealedTiles, melds, options, currentCount])
+
+  const chomboInfo = useMemo(() => {
+    if (!huResult) return null
+    const scoringFans = huResult.fans.filter((f) => f.name !== '花牌')
+    const baseScore = scoringFans.reduce((sum, f) => sum + f.score, 0)
+    const isChombo = baseScore < 8 && huResult.totalScore >= 8
+    return { isChombo, baseScore }
+  }, [huResult])
 
   useEffect(() => {
     if (currentCount === 14 && huResult && huResult.totalScore >= 8) {
@@ -375,9 +381,14 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
           {huResult.totalScore < 8 ? (
             <div className="score-warning-text">⚠️ 状态无效：当前组合仅 {huResult.totalScore} 番，不足 8 番起和。</div>
           ) : (
-            <button className="btn btn-primary use-score-btn" onClick={onClose}>
-              收起算番器 (当前 {huResult.totalScore} 番)
-            </button>
+            chomboInfo?.isChombo && (
+              <div
+                className="score-warning-text chombo-warning"
+                style={{ color: '#e74c3c', marginTop: '4px', textAlign: 'left' }}
+              >
+                ⚠️ 诈胡预警：当前基本番仅 {chomboInfo.baseScore} 番（花牌不计入起和番数），和牌将判定为【诈胡】！
+              </div>
+            )
           )}
         </div>
       )}

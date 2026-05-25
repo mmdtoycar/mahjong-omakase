@@ -196,4 +196,14 @@ public class AddRoundRequest {
   public void setBackfill(Boolean backfill) {
     this.backfill = backfill;
   }
+
+  private Boolean chombo;
+
+  public Boolean getChombo() {
+    return chombo;
+  }
+
+  public void setChombo(Boolean chombo) {
+    this.chombo = chombo;
+  }
 }
