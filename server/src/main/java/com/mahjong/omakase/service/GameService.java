@@ -804,15 +804,18 @@ public class GameService {
       roundScoreRepo.save(rs);
     }
 
-    // Process Fan Discoveries (GUOBIAO only, skip BOT winners)
+    // Process Fan Discoveries (GUOBIAO only, skip BOT winners, skip chombo)
     if (winnerId != null
         && fanDetails != null
         && !fanDetails.isBlank()
         && session.getGameMode() == GameMode.GUOBIAO) {
-      Player winner = playerRepo.findById(winnerId).orElse(null);
-      if (winner != null && !winner.isBot()) {
-        String season = getSeasonString(session.getCreatedAt());
-        processFanDiscoveries(fanDetails, season, winner, round, winHand, session.getCreatedAt());
+      Integer winnerScoreChange = computedScores.get(winnerId);
+      if (winnerScoreChange != null && winnerScoreChange > 0) {
+        Player winner = playerRepo.findById(winnerId).orElse(null);
+        if (winner != null && !winner.isBot()) {
+          String season = getSeasonString(session.getCreatedAt());
+          processFanDiscoveries(fanDetails, season, winner, round, winHand, session.getCreatedAt());
+        }
       }
     }
   }

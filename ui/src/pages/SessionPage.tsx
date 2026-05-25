@@ -30,6 +30,7 @@ export default function SessionPage() {
   const [fanCount, setFanCount] = useState<number>(0)
   const [tsumoDetail, setTsumoDetail] = useState<{ dealer: number; nonDealer: number } | null>(null)
   const [isBackfill, setIsBackfill] = useState(false)
+  const [isChomboManual, setIsChomboManual] = useState(false)
   const [calcError, setCalcError] = useState('')
   const [error, setError] = useState('')
 
@@ -108,6 +109,7 @@ export default function SessionPage() {
     setFanCount(0)
     setTsumoDetail(null)
     setIsBackfill(false)
+    setIsChomboManual(false)
     setCalcError('')
     setCalcResetCount((prev) => prev + 1)
   }
@@ -139,10 +141,13 @@ export default function SessionPage() {
   }
 
   const canSubmit =
-    winnerId && (isDongbei ? fan : score && parseInt(score) >= (isGuobiao ? 8 : 100)) && (isSelfDraw || dealInPlayerId)
+    winnerId &&
+    (isChomboManual || (isDongbei ? fan : score && parseInt(score) >= (isGuobiao ? 8 : 100))) &&
+    (isChomboManual || isSelfDraw || dealInPlayerId)
 
   const getValidationHint = (): string | null => {
-    if (!winnerId) return '请选择赢家'
+    if (!winnerId) return isChomboManual ? '请选择诈胡玩家' : '请选择赢家'
+    if (isChomboManual) return null
     if (!isSelfDraw && !dealInPlayerId) return '请选择点炮玩家，或切换为自摸'
     if (isDongbei) {
       if (!fan) return '请输入番数'
@@ -202,12 +207,13 @@ export default function SessionPage() {
       } else {
         await addRound(session.id, {
           winnerId: Number(winnerId),
-          score: parseInt(score),
-          dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
+          score: isChomboManual ? undefined : parseInt(score),
+          dealInPlayerId: isChomboManual ? null : isSelfDraw ? null : Number(dealInPlayerId),
           winHand,
-          fanDetails,
-          fanCount: fanCount || parseInt(score),
+          fanDetails: isChomboManual ? '【诈胡惩罚】' : fanDetails,
+          fanCount: isChomboManual ? 0 : fanCount || parseInt(score),
           prevalentWind: gameState.prevalentWind,
+          chombo: isChomboManual || undefined,
         })
       }
 
@@ -507,14 +513,16 @@ export default function SessionPage() {
             ) : (
               <>
                 <div className="quick-win-container">
-                  <h2>算番器</h2>
+                  <h2>{isChomboManual ? '登记诈胡' : '算番器'}</h2>
                   <div className="quick-win-row">
                     {session.players.map((p, idx) => {
                       const isWinner = winnerId === String(p.id)
                       const isLoser = dealInPlayerId === String(p.id)
                       let btnClass = 'quick-player-btn'
-                      if (isWinner) btnClass += ' winner'
-                      if (isLoser) btnClass += ' loser'
+                      if (isWinner) {
+                        btnClass += isChomboManual ? ' chombo-offender' : ' winner'
+                      }
+                      if (isLoser && !isChomboManual && !isSelfDraw) btnClass += ' loser'
 
                       return (
                         <button key={p.id} className={btnClass} onClick={() => handlePlayerClick(String(p.id))}>
@@ -526,17 +534,51 @@ export default function SessionPage() {
                         </button>
                       )
                     })}
-                    <div className="win-action-row">
+                    <div
+                      className="win-action-row"
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: isGuobiao ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
+                        gap: '8px',
+                        width: '100%',
+                      }}
+                    >
                       <button
-                        className={`quick-player-btn win-type-btn ${isSelfDraw ? 'zimo' : 'dianpao'}`}
-                        onClick={handleWinTypeToggle}
-                        disabled={!winnerId}
+                        type="button"
+                        className={`quick-player-btn win-type-btn dianpao ${
+                          !isSelfDraw && !isChomboManual ? 'active' : ''
+                        }`}
+                        onClick={() => {
+                          setIsSelfDraw(false)
+                          setIsChomboManual(false)
+                        }}
                       >
-                        {isSelfDraw ? '自摸' : '点炮'}
+                        点炮
                       </button>
-                      <button className="quick-player-btn win-type-btn reset-btn" onClick={resetForm}>
-                        重置
+                      <button
+                        type="button"
+                        className={`quick-player-btn win-type-btn zimo ${
+                          isSelfDraw && !isChomboManual ? 'active' : ''
+                        }`}
+                        onClick={() => {
+                          setIsSelfDraw(true)
+                          setIsChomboManual(false)
+                        }}
+                      >
+                        自摸
                       </button>
+                      {isGuobiao && (
+                        <button
+                          type="button"
+                          className={`quick-player-btn win-type-btn chombo ${isChomboManual ? 'active' : ''}`}
+                          onClick={() => {
+                            setIsSelfDraw(false)
+                            setIsChomboManual(true)
+                          }}
+                        >
+                          诈胡
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -559,6 +601,9 @@ export default function SessionPage() {
                         placeholder="输入分数"
                         className="score-input-compact"
                       />
+                      <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
+                        重置
+                      </button>
                       <label className="checkbox-toggle">
                         <input type="checkbox" checked={isBackfill} onChange={(e) => setIsBackfill(e.target.checked)} />
                         <span>补录 (不计入局数)</span>
@@ -566,7 +611,7 @@ export default function SessionPage() {
                     </div>
                     <div className="inline-calc-wrapper">
                       <RiichiCalculator
-                        key={`riichi-${gameState.prevalentWind}-${winnerMenfeng}`}
+                        key="riichi-calc"
                         onSelectScore={handleRiichiCalcSelect}
                         onError={(msg) => setCalcError(msg || '')}
                         initialOptions={{
@@ -585,13 +630,19 @@ export default function SessionPage() {
                   <div className="round-form-grid">
                     <div className="form-group">
                       <label>番</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={fan}
-                        onChange={(e) => setFan(e.target.value)}
-                        placeholder="输入番"
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={fan}
+                          onChange={(e) => setFan(e.target.value)}
+                          placeholder="输入番"
+                          style={{ flex: 1 }}
+                        />
+                        <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
+                          重置
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -610,13 +661,17 @@ export default function SessionPage() {
                           setFanDetails('')
                           setFanCount(0)
                         }}
-                        placeholder="输入分数"
+                        placeholder={isChomboManual ? '诈胡免输分数' : '输入分数'}
                         className="score-input-compact"
+                        disabled={isChomboManual}
                       />
+                      <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
+                        重置
+                      </button>
                     </div>
-                    <div className="inline-calc-wrapper">
+                    <div className="inline-calc-wrapper" style={{ display: isChomboManual ? 'none' : 'block' }}>
                       <GuobiaoCalculator
-                        key={`${gameState.prevalentWind}-${winnerMenfeng}`}
+                        key="guobiao-calc"
                         onSelectScore={handleCalcScoreSelect}
                         initialOptions={{
                           quanfeng: gameState.prevalentWind,
@@ -625,7 +680,6 @@ export default function SessionPage() {
                         resetTrigger={calcResetCount}
                         isSelfDraw={isSelfDraw}
                         onIsSelfDrawChange={setIsSelfDraw}
-                        onClose={() => {}}
                       />
                     </div>
                   </div>
@@ -737,6 +791,7 @@ export default function SessionPage() {
             </thead>
             <tbody>
               {session.rounds.map((round) => {
+                const isChombo = round.winnerId && (round.scores[round.winnerId] || 0) < 0
                 return (
                   <React.Fragment key={round.roundNumber}>
                     <tr>
@@ -752,20 +807,28 @@ export default function SessionPage() {
                             }}
                           >
                             <span className="round-wind-tag">{getRoundLabel(round)}</span>
+                            {isChombo && <span className="chombo-badge">诈胡</span>}
                           </div>
                         </div>
                       </td>
                       {session.players.map((p) => {
                         const val = round.scores[p.id] || 0
                         const isWinner = round.winnerId === p.id
+
+                        let cellClass = 'score-cell'
+                        if (val > 0) cellClass += ' score-positive'
+                        else if (val < 0) cellClass += ' score-negative'
+
+                        if (isWinner) {
+                          if (isChombo) {
+                            cellClass += ' score-chombo'
+                          } else {
+                            cellClass += ' score-winner'
+                          }
+                        }
+
                         return (
-                          <td
-                            key={p.id}
-                            className={`score-cell${val > 0 ? ' score-positive' : val < 0 ? ' score-negative' : ''}${
-                              isWinner ? ' score-winner' : ''
-                            }`}
-                            style={{ textAlign: 'center' }}
-                          >
+                          <td key={p.id} className={cellClass} style={{ textAlign: 'center' }}>
                             {val > 0 ? `+${val}` : val}
                           </td>
                         )

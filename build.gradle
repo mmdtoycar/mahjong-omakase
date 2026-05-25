@@ -46,6 +46,7 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 // ==========================================================================
@@ -97,7 +98,7 @@ spotless {
     encoding 'UTF-8'
 
     java {
-        target fileTree('server/src/main/java') { include '**/*.java' }
+        target fileTree('server/src') { include 'main/java/**/*.java', 'test/java/**/*.java' }
         toggleOffOn()
         removeUnusedImports()
         googleJavaFormat('1.17.0')

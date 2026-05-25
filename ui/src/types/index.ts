@@ -106,6 +106,7 @@ export interface AddRoundData {
   fanCount?: number
   prevalentWind?: number
   backfill?: boolean
+  chombo?: boolean
 }
 
 export interface PlayerStats {
