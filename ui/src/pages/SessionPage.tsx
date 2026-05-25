@@ -621,6 +621,7 @@ export default function SessionPage() {
                         resetTrigger={calcResetCount}
                         isSelfDraw={isSelfDraw}
                         onIsSelfDrawChange={setIsSelfDraw}
+                        playerCount={session.playerCount}
                       />
                     </div>
                   </div>

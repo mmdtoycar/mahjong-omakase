@@ -83,6 +83,7 @@ interface RiichiCalculatorProps {
   resetTrigger?: number
   isSelfDraw: boolean
   onIsSelfDrawChange: (val: boolean) => void
+  playerCount?: number
 }
 
 export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
@@ -92,6 +93,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
   resetTrigger,
   isSelfDraw,
   onIsSelfDrawChange,
+  playerCount = 4,
 }) => {
   const [concealedTiles, setConcealedTiles] = useState<Tile[]>([])
   const [melds, setMelds] = useState<Meld[]>([])
@@ -200,9 +202,9 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         : null
       if (isSelfDraw) {
         if (options.zifeng === 1) {
-          outputScore = huResult.score.tsumoNonDealer * 3
+          outputScore = huResult.score.tsumoNonDealer * (playerCount - 1)
         } else {
-          outputScore = huResult.score.tsumoDealer + huResult.score.tsumoNonDealer * 2
+          outputScore = huResult.score.tsumoDealer + huResult.score.tsumoNonDealer * (playerCount - 2)
         }
       } else {
         outputScore = huResult.score.ron
@@ -216,7 +218,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       onSelectScore(null)
       onError?.(null)
     }
-  }, [huResult, onSelectScore, onError, currentCount, concealedTiles, melds, options.doraCount])
+  }, [huResult, onSelectScore, onError, currentCount, concealedTiles, melds, options.doraCount, playerCount])
 
   const displayConcealed = useMemo(() => {
     const sorted = [...concealedTiles].sort((a, b) => a.compareTo(b))

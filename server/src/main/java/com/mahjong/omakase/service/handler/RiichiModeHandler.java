@@ -156,15 +156,55 @@ public class RiichiModeHandler implements GameModeHandler {
       int winnerGets = 0;
       int numOthers = playerIds.size() - 1;
       int honbaPerPlayer = 100 * honba;
-      int base = score / numOthers;
-      int remainder = score % numOthers;
-      int idx = 0;
-      for (Long id : playerIds) {
-        if (!id.equals(winnerId)) {
-          int pays = base + (idx < remainder ? 1 : 0) + honbaPerPlayer;
-          result.put(id, -pays);
-          winnerGets += pays;
+      boolean winnerIsDealer = dealerId != null && dealerId.equals(winnerId);
+
+      if (winnerIsDealer) {
+        int base = score / numOthers;
+        int remainder = score % numOthers;
+        int idx = 0;
+        for (Long id : playerIds) {
+          if (!id.equals(winnerId)) {
+            int pays = base + (idx < remainder ? 1 : 0) + honbaPerPlayer;
+            result.put(id, -pays);
+            winnerGets += pays;
+            idx++;
+          }
+        }
+      } else {
+        int totalShares = numOthers + 1; // dealer pays 2 shares, each other non-dealer pays 1 share
+        int baseShare = score / totalShares;
+        int remainder = score % totalShares;
+
+        Map<Long, Integer> playerShares = new HashMap<>();
+        for (Long id : playerIds) {
+          if (id.equals(winnerId)) continue;
+          if (id.equals(dealerId)) {
+            playerShares.put(id, 2);
+          } else {
+            playerShares.put(id, 1);
+          }
+        }
+
+        if (remainder > 0 && dealerId != null && playerShares.containsKey(dealerId)) {
+          int toDealer = Math.min(remainder, 2);
+          playerShares.put(dealerId, playerShares.get(dealerId) * baseShare + toDealer);
+          remainder -= toDealer;
+        } else if (dealerId != null && playerShares.containsKey(dealerId)) {
+          playerShares.put(dealerId, playerShares.get(dealerId) * baseShare);
+        }
+
+        int idx = 0;
+        for (Long id : playerIds) {
+          if (id.equals(winnerId) || id.equals(dealerId)) continue;
+          int extra = (idx < remainder) ? 1 : 0;
+          playerShares.put(id, baseShare + extra);
           idx++;
+        }
+
+        for (Map.Entry<Long, Integer> entry : playerShares.entrySet()) {
+          int pays = entry.getValue() + honbaPerPlayer;
+          result.put(entry.getKey(), -pays);
+          winnerGets += pays;
         }
       }
       result.put(winnerId, winnerGets + kyoutaku);
