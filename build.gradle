@@ -49,6 +49,10 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
 // ==========================================================================
 // UI (ui/) — React app built with Vite, output copied into Spring Boot jar
 // ==========================================================================
