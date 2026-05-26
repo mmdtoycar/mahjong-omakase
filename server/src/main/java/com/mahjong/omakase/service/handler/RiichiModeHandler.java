@@ -159,12 +159,22 @@ public class RiichiModeHandler implements GameModeHandler {
       boolean winnerIsDealer = dealerId != null && dealerId.equals(winnerId);
 
       if (winnerIsDealer) {
-        int base = score / numOthers;
-        int remainder = score % numOthers;
+        int base = (int) Math.round((double) score / numOthers / 100.0) * 100;
+        int remainder = score - base * numOthers;
+        int remainderSticks = remainder / 100;
+
         int idx = 0;
         for (Long id : playerIds) {
           if (!id.equals(winnerId)) {
-            int pays = base + (idx < remainder ? 1 : 0) + honbaPerPlayer;
+            int extra = 0;
+            if (remainderSticks > 0) {
+              extra = 100;
+              remainderSticks--;
+            } else if (remainderSticks < 0) {
+              extra = -100;
+              remainderSticks++;
+            }
+            int pays = base + extra + honbaPerPlayer;
             result.put(id, -pays);
             winnerGets += pays;
             idx++;
@@ -172,32 +182,47 @@ public class RiichiModeHandler implements GameModeHandler {
         }
       } else {
         int totalShares = numOthers + 1; // dealer pays 2 shares, each other non-dealer pays 1 share
-        int baseShare = score / totalShares;
-        int remainder = score % totalShares;
+        int baseShare = (int) Math.round((double) score / totalShares / 100.0) * 100;
+        int dealerBase = baseShare * 2;
+        int nonDealerBase = baseShare;
+
+        int remainder = score - (dealerBase + nonDealerBase * (numOthers - 1));
+        int remainderSticks = remainder / 100;
 
         Map<Long, Integer> playerShares = new HashMap<>();
         for (Long id : playerIds) {
           if (id.equals(winnerId)) continue;
           if (id.equals(dealerId)) {
-            playerShares.put(id, 2);
+            playerShares.put(id, dealerBase);
           } else {
-            playerShares.put(id, 1);
+            playerShares.put(id, nonDealerBase);
           }
         }
 
-        if (remainder > 0 && dealerId != null && playerShares.containsKey(dealerId)) {
-          int toDealer = Math.min(remainder, 2);
-          playerShares.put(dealerId, playerShares.get(dealerId) * baseShare + toDealer);
-          remainder -= toDealer;
-        } else if (dealerId != null && playerShares.containsKey(dealerId)) {
-          playerShares.put(dealerId, playerShares.get(dealerId) * baseShare);
+        if (remainderSticks != 0 && dealerId != null && playerShares.containsKey(dealerId)) {
+          int extra = 0;
+          if (remainderSticks > 0) {
+            extra = Math.min(remainderSticks, 2) * 100;
+            remainderSticks -= extra / 100;
+          } else {
+            extra = Math.max(remainderSticks, -2) * 100;
+            remainderSticks -= extra / 100;
+          }
+          playerShares.put(dealerId, playerShares.get(dealerId) + extra);
         }
 
         int idx = 0;
         for (Long id : playerIds) {
           if (id.equals(winnerId) || id.equals(dealerId)) continue;
-          int extra = (idx < remainder) ? 1 : 0;
-          playerShares.put(id, baseShare + extra);
+          int extra = 0;
+          if (remainderSticks > 0) {
+            extra = 100;
+            remainderSticks--;
+          } else if (remainderSticks < 0) {
+            extra = -100;
+            remainderSticks++;
+          }
+          playerShares.put(id, playerShares.get(id) + extra);
           idx++;
         }
 

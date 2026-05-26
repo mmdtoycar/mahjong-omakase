@@ -141,4 +141,27 @@ public class RiichiModeHandlerTest {
     // Player 4L pays 1/4 of 8000 = 2000
     assertEquals(-2000, scores.get(4L));
   }
+
+  @Test
+  public void testDirectScoreNonDealerTsumoWithPinfu3Han() {
+    // Yonma: 4 players. 1L is winner, 2L is dealer.
+    // Non-dealer Tsumo Pinfu 3 Han (2700 total: 1300 from dealer, 700 from each other non-dealer).
+    AddRoundRequest request = new AddRoundRequest();
+    request.setRoundType("WIN");
+    request.setWinnerId(1L);
+    request.setDealerId(2L);
+    request.setDealInPlayerId(null);
+    request.setScore(2700);
+    request.setHonba(0);
+    request.setKyoutaku(0);
+
+    List<Long> sessionPlayerIds = Arrays.asList(1L, 2L, 3L, 4L);
+
+    Map<Long, Integer> scores = handler.calculateRoundScores(request, sessionPlayerIds);
+
+    assertEquals(2700, scores.get(1L));
+    assertEquals(-1300, scores.get(2L)); // Dealer pays 1300
+    assertEquals(-700, scores.get(3L)); // Non-dealer pays 700
+    assertEquals(-700, scores.get(4L)); // Non-dealer pays 700
+  }
 }
