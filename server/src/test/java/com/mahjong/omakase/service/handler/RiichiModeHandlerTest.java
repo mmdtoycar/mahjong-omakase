@@ -71,6 +71,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-1000, scores.get(2L));
     assertEquals(-1000, scores.get(3L));
     assertEquals(-1000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -81,6 +82,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-1300, scores.get(2L));
     assertEquals(-1300, scores.get(3L));
     assertEquals(-1300, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -92,6 +94,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-3900, scores.get(2L));
     assertEquals(-3900, scores.get(3L));
     assertEquals(-3900, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -101,6 +104,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-4000, scores.get(2L));
     assertEquals(-4000, scores.get(3L));
     assertEquals(-4000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -110,6 +114,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-6000, scores.get(2L));
     assertEquals(-6000, scores.get(3L));
     assertEquals(-6000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -119,6 +124,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-8000, scores.get(2L));
     assertEquals(-8000, scores.get(3L));
     assertEquals(-8000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -128,6 +134,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-12000, scores.get(2L));
     assertEquals(-12000, scores.get(3L));
     assertEquals(-12000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -137,6 +144,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-16000, scores.get(2L));
     assertEquals(-16000, scores.get(3L));
     assertEquals(-16000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   // ====================================================================
@@ -151,6 +159,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-500, scores.get(2L));
     assertEquals(-300, scores.get(3L));
     assertEquals(-300, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -161,6 +170,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-700, scores.get(2L));
     assertEquals(-400, scores.get(3L));
     assertEquals(-400, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -171,6 +181,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-1000, scores.get(2L));
     assertEquals(-500, scores.get(3L));
     assertEquals(-500, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -181,6 +192,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-1300, scores.get(2L));
     assertEquals(-700, scores.get(3L));
     assertEquals(-700, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -191,6 +203,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-2000, scores.get(2L));
     assertEquals(-1000, scores.get(3L));
     assertEquals(-1000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -201,6 +214,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-2600, scores.get(2L));
     assertEquals(-1300, scores.get(3L));
     assertEquals(-1300, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -211,6 +225,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-3900, scores.get(2L));
     assertEquals(-2000, scores.get(3L));
     assertEquals(-2000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -220,6 +235,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-4000, scores.get(2L));
     assertEquals(-2000, scores.get(3L));
     assertEquals(-2000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -229,6 +245,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-6000, scores.get(2L));
     assertEquals(-3000, scores.get(3L));
     assertEquals(-3000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -238,6 +255,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-8000, scores.get(2L));
     assertEquals(-4000, scores.get(3L));
     assertEquals(-4000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -247,6 +265,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-12000, scores.get(2L));
     assertEquals(-6000, scores.get(3L));
     assertEquals(-6000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -256,6 +275,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-16000, scores.get(2L));
     assertEquals(-8000, scores.get(3L));
     assertEquals(-8000, scores.get(4L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -268,6 +288,7 @@ public class RiichiModeHandlerTest {
     assertEquals(-700, scores.get(2L));
     assertEquals(-700, scores.get(3L));
     assertEquals(-1300, scores.get(4L)); // dealer
+    assertZeroSum(scores, 0);
   }
 
   // ====================================================================
@@ -281,6 +302,7 @@ public class RiichiModeHandlerTest {
     assertEquals(2600, scores.get(1L));
     assertEquals(-1300, scores.get(2L));
     assertEquals(-1300, scores.get(3L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -289,6 +311,7 @@ public class RiichiModeHandlerTest {
     assertEquals(8000, scores.get(1L));
     assertEquals(-4000, scores.get(2L));
     assertEquals(-4000, scores.get(3L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -297,6 +320,7 @@ public class RiichiModeHandlerTest {
     assertEquals(12000, scores.get(1L));
     assertEquals(-6000, scores.get(2L));
     assertEquals(-6000, scores.get(3L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -305,6 +329,7 @@ public class RiichiModeHandlerTest {
     assertEquals(16000, scores.get(1L));
     assertEquals(-8000, scores.get(2L));
     assertEquals(-8000, scores.get(3L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -313,6 +338,7 @@ public class RiichiModeHandlerTest {
     assertEquals(32000, scores.get(1L));
     assertEquals(-16000, scores.get(2L));
     assertEquals(-16000, scores.get(3L));
+    assertZeroSum(scores, 0);
   }
 
   // ====================================================================
@@ -326,6 +352,7 @@ public class RiichiModeHandlerTest {
     assertEquals(2000, scores.get(1L));
     assertEquals(-1300, scores.get(2L));
     assertEquals(-700, scores.get(3L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -335,6 +362,7 @@ public class RiichiModeHandlerTest {
     assertEquals(2000, scores.get(1L));
     assertEquals(-700, scores.get(2L));
     assertEquals(-1300, scores.get(3L)); // dealer
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -344,6 +372,7 @@ public class RiichiModeHandlerTest {
     assertEquals(6000, scores.get(1L));
     assertEquals(-4000, scores.get(2L));
     assertEquals(-2000, scores.get(3L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -353,6 +382,7 @@ public class RiichiModeHandlerTest {
     assertEquals(9000, scores.get(1L));
     assertEquals(-6000, scores.get(2L));
     assertEquals(-3000, scores.get(3L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -362,6 +392,7 @@ public class RiichiModeHandlerTest {
     assertEquals(12000, scores.get(1L));
     assertEquals(-8000, scores.get(2L));
     assertEquals(-4000, scores.get(3L));
+    assertZeroSum(scores, 0);
   }
 
   @Test
@@ -371,6 +402,7 @@ public class RiichiModeHandlerTest {
     assertEquals(24000, scores.get(1L));
     assertEquals(-16000, scores.get(2L));
     assertEquals(-8000, scores.get(3L));
+    assertZeroSum(scores, 0);
   }
 
   // ====================================================================
