@@ -88,21 +88,13 @@ public class GuobiaoModeHandler implements GameModeHandler {
         int closeParen = part.indexOf(')');
         if (openParen != -1 && closeParen != -1 && closeParen > openParen + 1) {
           String content = part.substring(openParen + 1, closeParen);
-          if (content.contains("x")) {
-            String[] mult = content.split("x");
-            try {
-              int val = Integer.parseInt(mult[0].trim());
-              int count = Integer.parseInt(mult[1].trim());
-              flowerScore += val * count;
-            } catch (NumberFormatException e) {
-              // ignore
-            }
-          } else {
-            try {
-              flowerScore += Integer.parseInt(content.trim());
-            } catch (NumberFormatException e) {
-              // ignore
-            }
+          // Format: "花牌(N)" when count == 1, or "花牌(NxC)" when count > 1.
+          // N is the already-summed total score; C is the count and is informational only.
+          String totalPart = content.contains("x") ? content.split("x")[0] : content;
+          try {
+            flowerScore += Integer.parseInt(totalPart.trim());
+          } catch (NumberFormatException e) {
+            // ignore
           }
         }
       }
