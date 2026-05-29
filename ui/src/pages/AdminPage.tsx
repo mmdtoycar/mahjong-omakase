@@ -320,10 +320,10 @@ export default function AdminPage() {
       </div>
 
       <div className="card">
-        <h2>Sessions ({sessions.length})</h2>
+        <h2>Completed Sessions ({sessions.length})</h2>
         <p className="page-subtitle">
           Deleting a session permanently removes all of its rounds, round scores, and fan discoveries (achievements).
-          This cannot be undone.
+          This cannot be undone. In-progress sessions are not shown.
         </p>
         <div className="score-table">
           <table>
@@ -332,7 +332,6 @@ export default function AdminPage() {
                 <th>ID</th>
                 <th>Name</th>
                 <th>Mode</th>
-                <th>Status</th>
                 <th>Rounds</th>
                 <th>Created</th>
                 <th></th>
@@ -344,7 +343,6 @@ export default function AdminPage() {
                   <td>{s.id}</td>
                   <td>{s.name}</td>
                   <td>{s.gameModeDisplayName}</td>
-                  <td>{s.status}</td>
                   <td>{s.roundCount}</td>
                   <td>{new Date(s.createdAt).toLocaleDateString()}</td>
                   <td>

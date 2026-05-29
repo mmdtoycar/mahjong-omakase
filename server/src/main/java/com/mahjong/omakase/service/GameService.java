@@ -482,13 +482,43 @@ public class GameService {
   public void deleteSession(Long sessionId) {
     GameSession session =
         sessionRepo
-            .findById(java.util.Objects.requireNonNull(sessionId))
+            .findByIdForUpdate(java.util.Objects.requireNonNull(sessionId))
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
+    if (session.getStatus() == SessionStatus.IN_PROGRESS) {
+      log.warn("Cannot delete in-progress session id={}", sessionId);
+      throw new IllegalStateException("Cannot delete an in-progress session; complete it first");
+    }
+    GameMode mode = session.getGameMode();
+    LocalDateTime sessionTime = session.getCreatedAt();
     sessionRepo.delete(session);
     log.info("Deleted session id={}", sessionId);
-    // A deleted session may have held first-of-season fan discoveries; re-derive from remaining
-    // rounds.
-    initializeDiscoveries();
+    // A deleted session may have held first-of-season fan discoveries; re-derive scoped to
+    // the affected season + mode so unaffected history isn't re-scanned.
+    rederiveDiscoveriesForSeason(mode, sessionTime);
+  }
+
+  private void rederiveDiscoveriesForSeason(GameMode mode, LocalDateTime sessionTime) {
+    if (mode != GameMode.GUOBIAO) return;
+    YearMonth ym = YearMonth.from(sessionTime);
+    LocalDateTime start = ym.atDay(1).atStartOfDay();
+    LocalDateTime end = ym.plusMonths(1).atDay(1).atStartOfDay();
+    String season = ym.toString();
+    int rederived = 0;
+    for (Round round : roundRepo.findByGameModeAndSessionDateRangeOrderByTime(mode, start, end)) {
+      if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
+      Player winner =
+          playerRepo.findById(java.util.Objects.requireNonNull(round.getWinnerId())).orElse(null);
+      if (winner == null || winner.isBot()) continue;
+      rederived +=
+          processFanDiscoveries(
+              round.getFanDetails(),
+              season,
+              winner,
+              round,
+              round.getWinHand(),
+              round.getGameSession().getCreatedAt());
+    }
+    log.info("Re-derived {} fan discoveries for season '{}' mode={}", rederived, season, mode);
   }
 
   public List<BestRoundResponse> getBestRounds(

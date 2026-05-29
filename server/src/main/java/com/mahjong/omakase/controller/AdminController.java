@@ -75,7 +75,9 @@ public class AdminController {
   public List<SessionSummaryResponse> listSessions(
       @RequestHeader("X-Admin-Password") String password) {
     checkPassword(password);
-    return gameService.getAllSessionSummaries();
+    return gameService.getAllSessionSummaries().stream()
+        .filter(s -> "COMPLETED".equals(s.getStatus()))
+        .toList();
   }
 
   @DeleteMapping("/sessions/{id}")
