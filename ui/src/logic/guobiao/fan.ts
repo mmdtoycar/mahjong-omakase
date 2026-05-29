@@ -1048,6 +1048,9 @@ export function scoreCombination(
     removeFan('喜相逢')
     removeFan('老少副')
   }
+  if (hasFan('三色三同顺')) {
+    removeFan('喜相逢')
+  }
   if (hasFan('推不倒')) {
     removeFan('缺一门')
   }
@@ -1055,6 +1058,10 @@ export function scoreCombination(
     removeFan('无字')
   }
   if (hasFan('断幺')) {
+    removeFan('无字')
+  }
+  if (hasFan('全中')) {
+    removeFan('断幺')
     removeFan('无字')
   }
   if (hasFan('全带五')) {

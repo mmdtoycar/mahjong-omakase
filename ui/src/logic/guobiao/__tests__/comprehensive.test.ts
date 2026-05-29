@@ -180,4 +180,13 @@ describe('Guobiao Logic External Engine Compliance', () => {
     expect(names).toContain('四暗刻')
     expect(names).not.toContain('门前清')
   })
+
+  test('Case 22: User Query (34 Fans)', () => {
+    const r = calcHu('chi:s456 pung:s4 m456 p45 s55 p6', { isSelfDraw: false })
+    expect(r).not.toBeNull()
+    expect(r!.totalScore).toBe(34)
+    const names = r!.fans.map((f: any) => f.name)
+    expect(names).toEqual(['全中', '三色三同顺', '四归一'])
+  })
 })
+
