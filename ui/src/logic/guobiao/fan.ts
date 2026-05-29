@@ -588,7 +588,7 @@ export function scoreCombination(
         const sorted = [...triple].sort((a, b) => a.rank - b.rank)
         if (new Set(sorted.map((t) => t.suit)).size === 3) {
           const d = sorted[1].rank - sorted[0].rank
-          if (d >= 1 && d <= 2 && sorted[2].rank - sorted[1].rank === d) {
+          if (d === 1 && sorted[2].rank - sorted[1].rank === 1) {
             addFan('三色三步高', 6)
             break
           }

@@ -188,4 +188,12 @@ describe('Guobiao Logic External Engine Compliance', () => {
     const names = r!.fans.map((f: any) => f.name)
     expect(names).toEqual(['全中', '三色三同顺', '四归一'])
   })
+
+  test('Case 23: Mixed Three-Step Chows must have step = 1 (bugfix)', () => {
+    // User hand: "123s 345m 567p 99s 777m"
+    // Since step is 2 (123, 345, 567), it should NOT be scored as Mixed Three-Step Chows (三色三步高).
+    // Total base score is only 1 fan (无字). Under 8-fan minimum, this hand cannot Hu.
+    const r = calcHu('s123 m345 p567 s99 m777', { isSelfDraw: false })
+    expect(r).toBeNull()
+  })
 })
