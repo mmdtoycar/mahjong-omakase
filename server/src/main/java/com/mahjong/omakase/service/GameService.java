@@ -482,18 +482,12 @@ public class GameService {
   public void deleteSession(Long sessionId) {
     GameSession session =
         sessionRepo
-            .findByIdForUpdate(java.util.Objects.requireNonNull(sessionId))
+            .findById(java.util.Objects.requireNonNull(sessionId))
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
-    if (session.getStatus() == SessionStatus.IN_PROGRESS) {
-      log.warn("Cannot delete in-progress session id={}", sessionId);
-      throw new IllegalStateException("Cannot delete an in-progress session; complete it first");
-    }
     GameMode mode = session.getGameMode();
     LocalDateTime sessionTime = session.getCreatedAt();
     sessionRepo.delete(session);
     log.info("Deleted session id={}", sessionId);
-    // A deleted session may have held first-of-season fan discoveries; re-derive scoped to
-    // the affected season + mode so unaffected history isn't re-scanned.
     rederiveDiscoveriesForSeason(mode, sessionTime);
   }
 
