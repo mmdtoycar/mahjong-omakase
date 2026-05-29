@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Player } from '../types'
+import { Player, GameSession } from '../types'
 
 const API = '/api/admin'
 
@@ -8,6 +8,7 @@ export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false)
   const [error, setError] = useState('')
   const [players, setPlayers] = useState<Player[]>([])
+  const [sessions, setSessions] = useState<GameSession[]>([])
   const [loading, setLoading] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editFirst, setEditFirst] = useState('')
@@ -15,6 +16,7 @@ export default function AdminPage() {
   const [bonus, setBonus] = useState('0')
   const [savedBonus, setSavedBonus] = useState('0')
   const [savingSettings, setSavingSettings] = useState(false)
+  const [deletingSessionId, setDeletingSessionId] = useState<number | null>(null)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,6 +48,15 @@ export default function AdminPage() {
     setLoading(false)
   }
 
+  const loadSessions = async () => {
+    const res = await fetch(`${API}/sessions`, {
+      headers: { 'X-Admin-Password': password },
+    })
+    if (res.ok) {
+      setSessions(await res.json())
+    }
+  }
+
   const loadSettings = async () => {
     const res = await fetch(`${API}/settings`, {
       headers: { 'X-Admin-Password': password },
@@ -65,6 +76,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (authenticated) {
       loadPlayers()
+      loadSessions()
       loadSettings()
     }
   }, [authenticated])
@@ -115,6 +127,27 @@ export default function AdminPage() {
       const data = await res.json().catch(() => ({ message: 'Delete failed' }))
       alert(data.message || 'Delete failed')
     }
+  }
+
+  const handleDeleteSession = async (id: number, name: string) => {
+    if (
+      !confirm(
+        `Delete session "${name}"? This cannot be undone. All rounds, scores, and fan discoveries from this session will be permanently removed.`
+      )
+    )
+      return
+    setDeletingSessionId(id)
+    const res = await fetch(`${API}/sessions/${id}`, {
+      method: 'DELETE',
+      headers: { 'X-Admin-Password': password },
+    })
+    if (res.ok) {
+      setSessions(sessions.filter((s) => s.id !== id))
+    } else {
+      const data = await res.json().catch(() => ({ message: 'Delete failed' }))
+      alert(data.message || 'Delete failed')
+    }
+    setDeletingSessionId(null)
   }
 
   const startEdit = (p: Player) => {
@@ -278,6 +311,50 @@ export default function AdminPage() {
                         </button>
                       </div>
                     )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Sessions ({sessions.length})</h2>
+        <p className="page-subtitle">
+          Deleting a session permanently removes all of its rounds, round scores, and fan discoveries (achievements).
+          This cannot be undone.
+        </p>
+        <div className="score-table">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Mode</th>
+                <th>Status</th>
+                <th>Rounds</th>
+                <th>Created</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessions.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.id}</td>
+                  <td>{s.name}</td>
+                  <td>{s.gameModeDisplayName}</td>
+                  <td>{s.status}</td>
+                  <td>{s.roundCount}</td>
+                  <td>{new Date(s.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <button
+                      className="btn btn-danger btn-small"
+                      onClick={() => handleDeleteSession(s.id, s.name)}
+                      disabled={deletingSessionId === s.id}
+                    >
+                      {deletingSessionId === s.id ? 'Deleting...' : 'Delete'}
+                    </button>
                   </td>
                 </tr>
               ))}

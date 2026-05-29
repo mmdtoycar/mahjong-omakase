@@ -479,6 +479,18 @@ public class GameService {
     log.info("Completed session id={}", sessionId);
   }
 
+  public void deleteSession(Long sessionId) {
+    GameSession session =
+        sessionRepo
+            .findById(java.util.Objects.requireNonNull(sessionId))
+            .orElseThrow(() -> new NoSuchElementException("Session not found"));
+    sessionRepo.delete(session);
+    log.info("Deleted session id={}", sessionId);
+    // A deleted session may have held first-of-season fan discoveries; re-derive from remaining
+    // rounds.
+    initializeDiscoveries();
+  }
+
   public List<BestRoundResponse> getBestRounds(
       GameMode gameMode, LocalDateTime start, LocalDateTime end) {
     boolean hasMode = gameMode != null;

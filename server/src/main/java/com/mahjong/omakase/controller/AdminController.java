@@ -1,5 +1,6 @@
 package com.mahjong.omakase.controller;
 
+import com.mahjong.omakase.dto.SessionSummaryResponse;
 import com.mahjong.omakase.model.AppSetting;
 import com.mahjong.omakase.model.Player;
 import com.mahjong.omakase.repository.AppSettingRepository;
@@ -68,6 +69,22 @@ public class AdminController {
     Player updated = gameService.updatePlayer(id, body.get("firstName"), body.get("lastName"));
     log.info("Admin updated player id={}", id);
     return updated;
+  }
+
+  @GetMapping("/sessions")
+  public List<SessionSummaryResponse> listSessions(
+      @RequestHeader("X-Admin-Password") String password) {
+    checkPassword(password);
+    return gameService.getAllSessionSummaries();
+  }
+
+  @DeleteMapping("/sessions/{id}")
+  public Map<String, String> deleteSession(
+      @PathVariable Long id, @RequestHeader("X-Admin-Password") String password) {
+    checkPassword(password);
+    gameService.deleteSession(id);
+    log.info("Admin deleted session id={}", id);
+    return Map.of("message", "Session deleted");
   }
 
   @GetMapping("/settings")
