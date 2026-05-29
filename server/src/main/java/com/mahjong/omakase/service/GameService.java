@@ -84,7 +84,7 @@ public class GameService {
         if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
         if (round.getGameSession().getGameMode() != GameMode.GUOBIAO) continue;
         Player winner =
-            playerRepo.findById(java.util.Objects.requireNonNull(round.getWinnerId())).orElse(null);
+            playerRepo.findById(Objects.requireNonNull(round.getWinnerId())).orElse(null);
         if (winner == null || winner.isBot()) continue;
 
         String season = getSeasonString(round.getGameSession().getCreatedAt());
@@ -159,7 +159,7 @@ public class GameService {
   public Player updatePlayer(Long id, String firstName, String lastName) {
     Player player =
         playerRepo
-            .findById(java.util.Objects.requireNonNull(id))
+            .findById(Objects.requireNonNull(id))
             .orElseThrow(() -> new IllegalArgumentException("Player not found"));
     if (firstName != null && !firstName.isBlank()) {
       player.setFirstName(firstName.trim());
@@ -186,7 +186,7 @@ public class GameService {
 
     roundScoreRepo.nullifyPlayerScores(id);
     gameSessionPlayerRepo.deleteByPlayerId(id);
-    playerRepo.deleteById(java.util.Objects.requireNonNull(id));
+    playerRepo.deleteById(Objects.requireNonNull(id));
   }
 
   @org.springframework.transaction.annotation.Transactional(readOnly = true)
@@ -202,8 +202,7 @@ public class GameService {
 
   public GameSession createSession(CreateSessionRequest request) {
     Map<Long, Player> playerMap = new HashMap<>();
-    for (Player p :
-        playerRepo.findAllById(java.util.Objects.requireNonNull(request.getPlayerIds()))) {
+    for (Player p : playerRepo.findAllById(Objects.requireNonNull(request.getPlayerIds()))) {
       playerMap.put(p.getId(), p);
     }
     if (playerMap.size() != request.getPlayerIds().size()) {
@@ -238,7 +237,7 @@ public class GameService {
   public SessionDetailResponse getSessionDetail(Long sessionId) {
     GameSession session =
         sessionRepo
-            .findById(java.util.Objects.requireNonNull(sessionId))
+            .findById(Objects.requireNonNull(sessionId))
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
 
     SessionDetailResponse resp = new SessionDetailResponse();
@@ -460,7 +459,7 @@ public class GameService {
             .orElseThrow(() -> new NoSuchElementException("Round not found"));
 
     session.getRounds().remove(round);
-    roundRepo.delete(java.util.Objects.requireNonNull(round));
+    roundRepo.delete(Objects.requireNonNull(round));
 
     int num = 1;
     for (Round r : session.getRounds()) {
@@ -477,6 +476,41 @@ public class GameService {
     session.setStatus(SessionStatus.COMPLETED);
     sessionRepo.save(session);
     log.info("Completed session id={}", sessionId);
+  }
+
+  public void deleteSession(Long sessionId) {
+    GameSession session =
+        sessionRepo
+            .findById(Objects.requireNonNull(sessionId))
+            .orElseThrow(() -> new NoSuchElementException("Session not found"));
+    GameMode mode = session.getGameMode();
+    LocalDateTime sessionTime = session.getCreatedAt();
+    sessionRepo.delete(session);
+    log.info("Deleted session id={}", sessionId);
+    rederiveDiscoveriesForSeason(mode, sessionTime);
+  }
+
+  private void rederiveDiscoveriesForSeason(GameMode mode, LocalDateTime sessionTime) {
+    if (mode != GameMode.GUOBIAO) return;
+    YearMonth ym = YearMonth.from(sessionTime);
+    LocalDateTime start = ym.atDay(1).atStartOfDay();
+    LocalDateTime end = ym.plusMonths(1).atDay(1).atStartOfDay();
+    String season = ym.toString();
+    int rederived = 0;
+    for (Round round : roundRepo.findByGameModeAndSessionDateRangeOrderByTime(mode, start, end)) {
+      if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
+      Player winner = playerRepo.findById(Objects.requireNonNull(round.getWinnerId())).orElse(null);
+      if (winner == null || winner.isBot()) continue;
+      rederived +=
+          processFanDiscoveries(
+              round.getFanDetails(),
+              season,
+              winner,
+              round,
+              round.getWinHand(),
+              round.getGameSession().getCreatedAt());
+    }
+    log.info("Re-derived {} fan discoveries for season '{}' mode={}", rederived, season, mode);
   }
 
   public List<BestRoundResponse> getBestRounds(
@@ -520,7 +554,7 @@ public class GameService {
               String winnerName =
                   round.getWinnerId() != null
                       ? playerRepo
-                          .findById(java.util.Objects.requireNonNull(round.getWinnerId()))
+                          .findById(Objects.requireNonNull(round.getWinnerId()))
                           .map(Player::getUserName)
                           .orElse("?")
                       : null;
@@ -717,7 +751,7 @@ public class GameService {
   public PlayerDetailResponse getPlayerDetail(Long playerId) {
     Player player =
         playerRepo
-            .findById(java.util.Objects.requireNonNull(playerId))
+            .findById(Objects.requireNonNull(playerId))
             .orElseThrow(() -> new NoSuchElementException("Player not found"));
 
     List<GameSession> sessions = sessionRepo.findByPlayersPlayerIdOrderByCreatedAtDesc(playerId);
@@ -795,7 +829,7 @@ public class GameService {
     for (Map.Entry<Long, Integer> entry : computedScores.entrySet()) {
       Player player =
           playerRepo
-              .findById(java.util.Objects.requireNonNull(entry.getKey()))
+              .findById(Objects.requireNonNull(entry.getKey()))
               .orElseThrow(() -> new NoSuchElementException("Player not found: " + entry.getKey()));
       RoundScore rs = new RoundScore();
       rs.setRound(round);
