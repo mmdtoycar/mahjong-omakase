@@ -189,4 +189,3 @@ describe('Guobiao Logic External Engine Compliance', () => {
     expect(names).toEqual(['全中', '三色三同顺', '四归一'])
   })
 })
-
