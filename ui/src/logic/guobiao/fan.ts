@@ -1062,7 +1062,6 @@ export function scoreCombination(
   }
   if (hasFan('全中')) {
     removeFan('断幺')
-    removeFan('无字')
   }
   if (hasFan('全带五')) {
     removeFan('断幺')
