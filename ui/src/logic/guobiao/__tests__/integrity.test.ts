@@ -2,6 +2,14 @@ import { test, expect, describe } from 'vitest'
 import { fanTableData } from '../../../data/fanTableData'
 import { Tile } from '../tiles'
 import { calculateBestScore } from '../fan'
+declare module 'fs' {
+  export function readFileSync(path: string, options: string): string
+}
+declare module 'path' {
+  export function join(...paths: string[]): string
+}
+declare const __dirname: string
+
 import fs from 'fs'
 import path from 'path'
 
@@ -13,6 +21,7 @@ describe('Guobiao Test Integrity Check', () => {
 
     // 2. Read other test files in the same directory
     const testDir = __dirname
+
     const testFiles = [
       'rules.test.ts',
       'comprehensive.test.ts',
