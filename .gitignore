@@ -1,6 +1,6 @@
 # Build output
 build/
-data/
+/data/
 
 # Gradle
 .gradle/
