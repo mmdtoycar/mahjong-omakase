@@ -105,7 +105,7 @@ const CalculatorPage: React.FC = () => {
             margin: '0 8px',
           }}
         >
-          🇨🇳 国标麻将算番器
+          国标算番器
         </button>
         <button
           className={`tab-btn ${activeTab === 'RIICHI' ? 'active' : ''}`}
@@ -123,7 +123,7 @@ const CalculatorPage: React.FC = () => {
             margin: '0 8px',
           }}
         >
-          🇯🇵 日本麻将算番器
+          立直算番器
         </button>
       </div>
 
@@ -145,9 +145,7 @@ const CalculatorPage: React.FC = () => {
           {activeTab === 'GUOBIAO' ? (
             <div>
               <div className="flex-between" style={{ marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.8rem' }}>🀄</span> 国标规则设置
-                </h2>
+                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>国标规则设置</h2>
                 <button
                   className="btn btn-secondary btn-small"
                   onClick={handleGbReset}
@@ -280,9 +278,7 @@ const CalculatorPage: React.FC = () => {
           ) : (
             <div>
               <div className="flex-between" style={{ marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.8rem' }}>🎌</span> 日麻规则设置
-                </h2>
+                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>立直规则设置</h2>
                 <button
                   className="btn btn-secondary btn-small"
                   onClick={handleRiichiReset}
@@ -529,7 +525,6 @@ const CalculatorPage: React.FC = () => {
                 </div>
               ) : (
                 <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)' }}>
-                  <span style={{ fontSize: '3rem', display: 'block', marginBottom: '12px' }}>🀄</span>
                   <p style={{ margin: 0, fontWeight: 600 }}>手牌张数不足 14 张</p>
                   <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>
                     请在左侧点击麻将牌组成你的胡牌组合，即可在此处查看精准的番数解析。
@@ -665,7 +660,6 @@ const CalculatorPage: React.FC = () => {
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)' }}>
-                <span style={{ fontSize: '3rem', display: 'block', marginBottom: '12px' }}>🎌</span>
                 <p style={{ margin: 0, fontWeight: 600 }}>{riichiError || '手牌张数不足 14 张'}</p>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>
                   {riichiError
@@ -703,7 +697,7 @@ const CalculatorPage: React.FC = () => {
                 <strong>风位设定</strong>：更改圈风和门风，可以测试自己是否记住了对应的圈风刻（2番）与门风刻（2番）。
               </li>
               <li>
-                <strong>起和限制</strong>：国标麻将规则最低需要 <strong>8 番</strong> 方可起和；日本麻将必须至少包含{' '}
+                <strong>起和限制</strong>：国标麻将规则最低需要 <strong>8 番</strong> 方可起和；立直麻将必须至少包含{' '}
                 <strong>1 役</strong>（且无役不能和牌）。
               </li>
               <li>
