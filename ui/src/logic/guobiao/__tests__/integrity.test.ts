@@ -4,6 +4,7 @@ import { Tile } from '../tiles'
 import { calculateBestScore } from '../fan'
 declare module 'fs' {
   export function readFileSync(path: string, options: string): string
+  export function readdirSync(path: string): string[]
 }
 declare module 'path' {
   export function join(...paths: string[]): string
@@ -19,16 +20,13 @@ describe('Guobiao Test Integrity Check', () => {
     const fanNames = fanTableData.map((f) => f.name)
     expect(fanNames.length).toBe(81)
 
-    // 2. Read other test files in the same directory
+    // 2. Discover and read other test files in the same directory dynamically
     const testDir = __dirname
+    const testFiles = fs
+      .readdirSync(testDir)
+      .filter((file) => file.endsWith('.test.ts') && file !== 'integrity.test.ts')
 
-    const testFiles = [
-      'rules.test.ts',
-      'comprehensive.test.ts',
-      'reference.test.ts',
-      'bugfix.test.ts',
-      'benchmark.test.ts',
-    ]
+    expect(testFiles.length, 'No other test files discovered for integrity check').toBeGreaterThan(0)
 
     const testContents = testFiles
       .map((file) => {
@@ -37,10 +35,17 @@ describe('Guobiao Test Integrity Check', () => {
       })
       .join('\n')
 
-    // 3. Check for coverage of each fan name
+    // 3. Check for coverage of each fan name using quote/delimiter boundaries to prevent substring false positives
     const missing: string[] = []
     for (const name of fanNames) {
-      if (!testContents.includes(name)) {
+      const singleQuoted = `'${name}'`
+      const doubleQuoted = `"${name}"`
+      const backtickQuoted = `\`${name}\``
+      if (
+        !testContents.includes(singleQuoted) &&
+        !testContents.includes(doubleQuoted) &&
+        !testContents.includes(backtickQuoted)
+      ) {
         missing.push(name)
       }
     }
