@@ -201,4 +201,12 @@ describe('Guobiao Logic External Engine Compliance', () => {
     expect(names).toContain('门前清')
     expect(names).toContain('无字')
   })
+
+  test('Case 24: Seven Pairs Zimo (29 Fans)', () => {
+    const r = calcHu('s11224499 p5588 m33', { isSelfDraw: true })
+    expect(r).not.toBeNull()
+    expect(r!.totalScore).toBe(29)
+    const names = r!.fans.map((f: any) => f.name)
+    expect(names).toEqual(['七对', '无字', '不求人'])
+  })
 })
