@@ -60,6 +60,34 @@ public class GameService {
   @EventListener(ApplicationReadyEvent.class)
   public void init() {
     initializeDiscoveries();
+    backfillRemoveLegacyBonus();
+  }
+
+  public void backfillRemoveLegacyBonus() {
+    log.info("Running backfill to remove legacy participation bonuses...");
+    appSettingRepo.findById("participation_bonus").ifPresent(s -> {
+      if (!"0.0".equals(s.getValue())) {
+        s.setValue("0.0");
+        appSettingRepo.save(s);
+        log.info("Global participation_bonus setting reset to 0.0.");
+      }
+    });
+    this.participationBonus = 0.0;
+
+    List<GameSession> sessions = sessionRepo.findAll();
+    boolean updated = false;
+    for (GameSession session : sessions) {
+      if (session.getParticipationBonus() != null && session.getParticipationBonus() > 0.0) {
+        session.setParticipationBonus(0.0);
+        updated = true;
+      }
+    }
+    if (updated) {
+      sessionRepo.saveAll(sessions);
+      log.info("Database backfill complete. Historical participation bonuses reset to 0.0.");
+    } else {
+      log.info("No historical participation bonuses found to backfill.");
+    }
   }
 
   public void initializeDiscoveries() {
@@ -213,7 +241,7 @@ public class GameService {
     session.setName(request.getName());
     session.setGameMode(GameMode.valueOf(request.getGameMode()));
     session.setPlayerCount(request.getPlayerIds().size());
-    session.setParticipationBonus(this.participationBonus);
+    session.setParticipationBonus(0.0);
     session = sessionRepo.save(session);
 
     int seat = 1;
@@ -364,8 +392,7 @@ public class GameService {
     boolean currentIncluded =
         seasonSessions.stream().anyMatch(s -> s.getId().equals(session.getId()));
 
-    double adminBonus =
-        session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
+    double adminBonus = 0.0;
 
     for (Object[] row : currentSessionScores) {
       if (row[0] == null) continue;
@@ -674,8 +701,7 @@ public class GameService {
         String seasonModeKey = season + ":" + session.getGameMode().name();
         Map<Long, Integer> seasonCounts =
             gameIndexBySeasonModePlayer.computeIfAbsent(seasonModeKey, k -> new HashMap<>());
-        double adminBonus =
-            session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
+        double adminBonus = 0.0;
         for (Object[] row : sessionScores) {
           if (row[0] != null) {
             Long playerId = (Long) row[0];
