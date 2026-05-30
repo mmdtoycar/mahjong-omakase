@@ -1,5 +1,7 @@
 import { test, expect, describe } from 'vitest'
 import { fanTableData } from '../../../data/fanTableData'
+import { Tile } from '../tiles'
+import { calculateBestScore } from '../fan'
 import fs from 'fs'
 import path from 'path'
 
