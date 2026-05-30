@@ -312,12 +312,6 @@ export const fanTableData: FanItem[] = [
   { fan: 6, name: '全求人', description: '四副牌组全是吃、碰（明杠），和他家打出的牌。不计单调将分。', example: '' },
   {
     fan: 6,
-    name: '双暗杠',
-    description: '和牌中，有两副暗杠。',
-    example: '*Back Man1 Man1 Back | *Back Pin4 Pin4 Back | Sou7 Sou8 Sou9 | Ton Ton Ton | Nan Nan',
-  },
-  {
-    fan: 6,
     name: '双箭刻',
     description: '和牌中，有两副箭刻（杠）。',
     example: '*Chun Chun Chun | *Hatsu Hatsu Hatsu | Man1 Man2 Man3 | Pin4 Pin5 Pin6 | Nan Nan',
@@ -458,7 +452,7 @@ export const fanTableData: FanItem[] = [
   },
   {
     fan: 1,
-    name: '单调将',
+    name: '单钓将',
     description: '调单张牌作将和牌。',
     example: 'Man1 Man2 Man3 | Pin4 Pin5 Pin6 | Sou7 Sou8 Sou9 | Ton Ton Ton | ^Nan Nan',
   },
