@@ -201,7 +201,7 @@ export const fanTableData: FanItem[] = [
     fan: 16,
     name: '三同刻',
     description: '和牌中，有三副序数相同的刻子（杠）。',
-    example: '*Man2 Man2 Man2 | *Pin2 Pin2 Pin2 | Pin6 Pin7 Pin8 | Ton Ton',
+    example: '*Man2 Man2 Man2 | *Pin2 Pin2 Pin2 | *Sou2 Sou2 Sou2 | Pin6 Pin7 Pin8 | Ton Ton',
   },
   {
     fan: 16,
