@@ -59,24 +59,57 @@ const CalculatorPage: React.FC = () => {
   }
 
   return (
-    <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px' }}>
-      <div className="page-header" style={{ marginBottom: '24px', textAlign: 'center' }}>
-        <h1
-          style={{
-            fontSize: '2.5rem',
-            fontWeight: 800,
-            background: 'linear-gradient(135deg, var(--primary) 0%, #2980b9 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            marginBottom: '8px',
-          }}
-        >
-          专业麻将算番器
-        </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
-          无需创建房间，即可随时模拟与测试手牌番数，是锤炼和牌判断力的绝佳利器。
-        </p>
-      </div>
+    <div className="container calc-page-wrapper" style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+      {/* Dynamic Responsive Styles */}
+      <style>{`
+        .calc-split-container {
+          display: grid;
+          grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+          gap: 24px;
+          align-items: start;
+        }
+        .calc-left-col {
+          order: 1;
+        }
+        .calc-right-col {
+          order: 2;
+        }
+        .calc-config-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+          .calc-page-wrapper {
+            padding: 8px !important;
+          }
+          .calc-split-container {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .calc-left-col {
+            order: 2 !important;
+          }
+          .calc-right-col {
+            order: 1 !important;
+          }
+          .tab-btn {
+            font-size: 1rem !important;
+            padding: 8px 16px !important;
+            margin: 0 4px !important;
+          }
+          .calc-config-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+            margin-bottom: 16px !important;
+          }
+          .card {
+            padding: 16px !important;
+          }
+        }
+      `}</style>
 
       {/* Mode Tabs */}
       <div
@@ -84,7 +117,7 @@ const CalculatorPage: React.FC = () => {
         style={{
           display: 'flex',
           justifyContent: 'center',
-          marginBottom: '32px',
+          marginBottom: '20px',
           borderBottom: '2px solid var(--border)',
           paddingBottom: '2px',
         }}
@@ -128,41 +161,31 @@ const CalculatorPage: React.FC = () => {
       </div>
 
       {/* Main Panel Split */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)',
-          gap: '32px',
-          alignItems: 'start',
-        }}
-        className="calc-split-container"
-      >
+      <div className="calc-split-container">
         {/* Left Column: Interactive Calculator UI */}
         <div
-          className="card"
+          className="card calc-left-col"
           style={{ padding: '24px', boxShadow: '0 8px 30px rgba(0,0,0,0.06)', borderRadius: '16px' }}
         >
           {activeTab === 'GUOBIAO' ? (
             <div>
               <div className="flex-between" style={{ marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>国标规则设置</h2>
+                <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700 }}>国标规则设置</h2>
                 <button
                   className="btn btn-secondary btn-small"
                   onClick={handleGbReset}
                   style={{ borderRadius: '8px', padding: '6px 16px', fontWeight: 'bold' }}
                 >
-                  🧹 清空手牌
+                  清空手牌
                 </button>
               </div>
 
               {/* Hand configurations */}
-              <div
-                style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}
-              >
+              <div className="calc-config-grid">
                 <div className="form-group" style={{ margin: 0 }}>
                   <label
                     style={{
-                      fontSize: '0.9rem',
+                      fontSize: '0.85rem',
                       fontWeight: 600,
                       color: 'var(--text-muted)',
                       marginBottom: '6px',
@@ -194,7 +217,7 @@ const CalculatorPage: React.FC = () => {
                 <div className="form-group" style={{ margin: 0 }}>
                   <label
                     style={{
-                      fontSize: '0.9rem',
+                      fontSize: '0.85rem',
                       fontWeight: 600,
                       color: 'var(--text-muted)',
                       marginBottom: '6px',
@@ -227,7 +250,7 @@ const CalculatorPage: React.FC = () => {
                 <div className="form-group" style={{ margin: 0 }}>
                   <label
                     style={{
-                      fontSize: '0.9rem',
+                      fontSize: '0.85rem',
                       fontWeight: 600,
                       color: 'var(--text-muted)',
                       marginBottom: '6px',
@@ -278,24 +301,22 @@ const CalculatorPage: React.FC = () => {
           ) : (
             <div>
               <div className="flex-between" style={{ marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>立直规则设置</h2>
+                <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700 }}>立直规则设置</h2>
                 <button
                   className="btn btn-secondary btn-small"
                   onClick={handleRiichiReset}
                   style={{ borderRadius: '8px', padding: '6px 16px', fontWeight: 'bold' }}
                 >
-                  🧹 清空手牌
+                  清空手牌
                 </button>
               </div>
 
               {/* Hand configurations */}
-              <div
-                style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}
-              >
+              <div className="calc-config-grid">
                 <div className="form-group" style={{ margin: 0 }}>
                   <label
                     style={{
-                      fontSize: '0.9rem',
+                      fontSize: '0.85rem',
                       fontWeight: 600,
                       color: 'var(--text-muted)',
                       marginBottom: '6px',
@@ -327,7 +348,7 @@ const CalculatorPage: React.FC = () => {
                 <div className="form-group" style={{ margin: 0 }}>
                   <label
                     style={{
-                      fontSize: '0.9rem',
+                      fontSize: '0.85rem',
                       fontWeight: 600,
                       color: 'var(--text-muted)',
                       marginBottom: '6px',
@@ -360,7 +381,7 @@ const CalculatorPage: React.FC = () => {
                 <div className="form-group" style={{ margin: 0 }}>
                   <label
                     style={{
-                      fontSize: '0.9rem',
+                      fontSize: '0.85rem',
                       fontWeight: 600,
                       color: 'var(--text-muted)',
                       marginBottom: '6px',
@@ -414,13 +435,21 @@ const CalculatorPage: React.FC = () => {
         </div>
 
         {/* Right Column: Dynamic Hand & Breakdown Output */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className="calc-right-col" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* Active Hand Result Display */}
           <div
             className="card"
             style={{ padding: '24px', boxShadow: '0 8px 30px rgba(0,0,0,0.06)', borderRadius: '16px' }}
           >
-            <h3 style={{ margin: '0 0 16px 0', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+            <h3
+              style={{
+                margin: '0 0 16px 0',
+                borderBottom: '1px solid var(--border)',
+                paddingBottom: '12px',
+                fontSize: '1.2rem',
+                fontWeight: 700,
+              }}
+            >
               📊 实时测算结果
             </h3>
 
@@ -524,10 +553,10 @@ const CalculatorPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)' }}>
+                <div style={{ textAlign: 'center', padding: '16px 8px', color: 'var(--text-muted)' }}>
                   <p style={{ margin: 0, fontWeight: 600 }}>手牌张数不足 14 张</p>
                   <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>
-                    请在左侧点击麻将牌组成你的胡牌组合，即可在此处查看精准的番数解析。
+                    请在下方点击麻将牌组成你的胡牌组合，即可在此处查看精准的番数解析。
                   </p>
                 </div>
               )
@@ -659,53 +688,15 @@ const CalculatorPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)' }}>
+              <div style={{ textAlign: 'center', padding: '16px 8px', color: 'var(--text-muted)' }}>
                 <p style={{ margin: 0, fontWeight: 600 }}>{riichiError || '手牌张数不足 14 张'}</p>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>
                   {riichiError
                     ? '你的手牌虽然组成 14 张但无法和牌。请调整组合，必须至少拥有一种“起和役”！'
-                    : '请在左侧点击麻将牌组成你的胡牌组合，即可在此处查看精准的番数与点数解析。'}
+                    : '请在下方点击麻将牌组成你的胡牌组合，即可在此处查看精准的番数与点数解析。'}
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Educational Quick Reference Card */}
-          <div
-            className="card"
-            style={{
-              padding: '20px',
-              borderRadius: '16px',
-              background: 'var(--bg-muted)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '1rem', fontWeight: 700 }}>💡 算番测试指南</h4>
-            <ul
-              style={{
-                paddingLeft: '16px',
-                margin: 0,
-                fontSize: '0.85rem',
-                color: 'var(--text-muted)',
-                lineHeight: 1.6,
-              }}
-            >
-              <li>
-                <strong>自摸与点炮</strong>：和牌方式会直接影响“不求人”或“门前清”等番种的有效判定。
-              </li>
-              <li>
-                <strong>风位设定</strong>：更改圈风和门风，可以测试自己是否记住了对应的圈风刻（2番）与门风刻（2番）。
-              </li>
-              <li>
-                <strong>起和限制</strong>：国标麻将规则最低需要 <strong>8 番</strong> 方可起和；立直麻将必须至少包含{' '}
-                <strong>1 役</strong>（且无役不能和牌）。
-              </li>
-              <li>
-                <strong>实时逻辑一致性</strong>
-                ：本算番器与对局记分板使用完全相同的核心计算引擎，保证所有判定结果在当前及未来的所有版本中
-                <strong>永久一致</strong>。
-              </li>
-            </ul>
           </div>
         </div>
       </div>
