@@ -25,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class GameService {
 
+  private static final java.time.ZoneId ZONE_UTC = java.time.ZoneId.of("UTC");
+  private static final java.time.ZoneId ZONE_PACIFIC = java.time.ZoneId.of("America/Los_Angeles");
+
   private final PlayerRepository playerRepo;
   private final GameSessionRepository sessionRepo;
   private final RoundRepository roundRepo;
@@ -87,7 +90,7 @@ public class GameService {
             playerRepo.findById(Objects.requireNonNull(round.getWinnerId())).orElse(null);
         if (winner == null || winner.isBot()) continue;
 
-        String season = getSeasonString(round.getGameSession().getCreatedAt());
+        String season = getSeasonStringFromUtc(round.getGameSession().getCreatedAt());
         newDiscoveries +=
             processFanDiscoveries(
                 round.getFanDetails(),
@@ -102,8 +105,24 @@ public class GameService {
     log.info("Fan discoveries initialization complete. Found {} new discoveries.", newDiscoveries);
   }
 
-  private String getSeasonString(LocalDateTime time) {
-    return YearMonth.from(time).toString();
+  private LocalDateTime toUtcTime(LocalDateTime pacificTime) {
+    if (pacificTime == null) return null;
+    return pacificTime.atZone(ZONE_PACIFIC).withZoneSameInstant(ZONE_UTC).toLocalDateTime();
+  }
+
+  private LocalDateTime toPacificTime(LocalDateTime utcTime) {
+    if (utcTime == null) return null;
+    return utcTime.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDateTime();
+  }
+
+  private String getSeasonStringFromUtc(LocalDateTime utcTime) {
+    if (utcTime == null) return null;
+    return getSeasonStringFromPacific(toPacificTime(utcTime));
+  }
+
+  private String getSeasonStringFromPacific(LocalDateTime pacificTime) {
+    if (pacificTime == null) return null;
+    return YearMonth.from(pacificTime).toString();
   }
 
   public void reloadSettings() {
@@ -341,13 +360,13 @@ public class GameService {
       return bonuses;
     }
 
-    String season = getSeasonString(session.getCreatedAt());
+    String season = getSeasonStringFromUtc(session.getCreatedAt());
 
     List<GameSession> seasonSessions =
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
             .filter(s -> s.getGameMode() == session.getGameMode())
-            .filter(s -> getSeasonString(s.getCreatedAt()).equals(season))
+            .filter(s -> getSeasonStringFromUtc(s.getCreatedAt()).equals(season))
             .filter(s -> !s.getCreatedAt().isAfter(session.getCreatedAt()))
             .sorted(Comparator.comparing(GameSession::getCreatedAt))
             .toList();
@@ -492,12 +511,16 @@ public class GameService {
 
   private void rederiveDiscoveriesForSeason(GameMode mode, LocalDateTime sessionTime) {
     if (mode != GameMode.GUOBIAO) return;
-    YearMonth ym = YearMonth.from(sessionTime);
-    LocalDateTime start = ym.atDay(1).atStartOfDay();
-    LocalDateTime end = ym.plusMonths(1).atDay(1).atStartOfDay();
+    LocalDateTime pacificTime = toPacificTime(sessionTime);
+    YearMonth ym = YearMonth.from(pacificTime);
+    LocalDateTime startPacific = ym.atDay(1).atStartOfDay();
+    LocalDateTime endPacific = ym.plusMonths(1).atDay(1).atStartOfDay();
+    LocalDateTime startUtc = toUtcTime(startPacific);
+    LocalDateTime endUtc = toUtcTime(endPacific);
     String season = ym.toString();
     int rederived = 0;
-    for (Round round : roundRepo.findByGameModeAndSessionDateRangeOrderByTime(mode, start, end)) {
+    for (Round round :
+        roundRepo.findByGameModeAndSessionDateRangeOrderByTime(mode, startUtc, endUtc)) {
       if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
       Player winner = playerRepo.findById(Objects.requireNonNull(round.getWinnerId())).orElse(null);
       if (winner == null || winner.isBot()) continue;
@@ -513,18 +536,30 @@ public class GameService {
     log.info("Re-derived {} fan discoveries for season '{}' mode={}", rederived, season, mode);
   }
 
+  /**
+   * Retrieves the best rounds for the specified game mode and date range.
+   *
+   * @param gameMode the game mode to filter by, or null for all
+   * @param start the start date-time, expected in Pacific timezone (or UTC with Pacific conversion)
+   * @param end the end date-time, expected in Pacific timezone (or UTC with Pacific conversion)
+   * @return the list of best round responses
+   *     <p>Note: Callers must supply start/end in Pacific timezone. If start/end are null, it falls
+   *     back to searching all-time best rounds without date range filters.
+   */
   public List<BestRoundResponse> getBestRounds(
       GameMode gameMode, LocalDateTime start, LocalDateTime end) {
     boolean hasMode = gameMode != null;
     boolean hasDate = start != null && end != null;
+    LocalDateTime startUtc = toUtcTime(start);
+    LocalDateTime endUtc = toUtcTime(end);
 
     Integer maxFan;
     if (hasMode && hasDate) {
-      maxFan = roundRepo.findMaxFanCountByModeAndDateRange(gameMode, start, end);
+      maxFan = roundRepo.findMaxFanCountByModeAndDateRange(gameMode, startUtc, endUtc);
     } else if (hasMode) {
       maxFan = roundRepo.findMaxFanCountByMode(gameMode);
     } else if (hasDate) {
-      maxFan = roundRepo.findMaxFanCountByDateRange(start, end);
+      maxFan = roundRepo.findMaxFanCountByDateRange(startUtc, endUtc);
     } else {
       maxFan = roundRepo.findMaxFanCount();
     }
@@ -533,11 +568,11 @@ public class GameService {
 
     List<Round> bestRounds;
     if (hasMode && hasDate) {
-      bestRounds = roundRepo.findByFanCountAndModeAndDateRange(maxFan, gameMode, start, end);
+      bestRounds = roundRepo.findByFanCountAndModeAndDateRange(maxFan, gameMode, startUtc, endUtc);
     } else if (hasMode) {
       bestRounds = roundRepo.findByFanCountAndMode(maxFan, gameMode);
     } else if (hasDate) {
-      bestRounds = roundRepo.findByFanCountAndDateRange(maxFan, start, end);
+      bestRounds = roundRepo.findByFanCountAndDateRange(maxFan, startUtc, endUtc);
     } else {
       bestRounds = roundRepo.findByFanCount(maxFan);
     }
@@ -583,26 +618,45 @@ public class GameService {
   }
 
   public List<Map<String, Integer>> getActiveSeasons() {
-    return sessionRepo.findDistinctSeasons().stream()
+    List<LocalDateTime> creationTimes = sessionRepo.findSessionCreationTimesWithRounds();
+    Set<YearMonth> seasons = new TreeSet<>(Comparator.reverseOrder());
+    for (LocalDateTime time : creationTimes) {
+      seasons.add(YearMonth.from(toPacificTime(time)));
+    }
+
+    return seasons.stream()
         .map(
-            row -> {
+            ym -> {
               Map<String, Integer> m = new LinkedHashMap<>();
-              m.put("year", ((Number) row[0]).intValue());
-              m.put("month", ((Number) row[1]).intValue());
+              m.put("year", ym.getYear());
+              m.put("month", ym.getMonthValue());
               return m;
             })
         .collect(Collectors.toList());
   }
 
+  /**
+   * Retrieves player stats for the specified game mode and date range.
+   *
+   * @param gameMode the game mode (e.g. GUOBIAO) to filter by, or null for all
+   * @param start the start date-time, expected in Pacific timezone (or UTC with Pacific conversion)
+   * @param end the end date-time, expected in Pacific timezone (or UTC with Pacific conversion)
+   * @return the list of player stats responses
+   *     <p>Note: Callers must supply start/end in Pacific timezone. If start/end are null, it falls
+   *     back to returning all-time statistics. The season string is derived consistently using
+   *     getSeasonStringFromUtc.
+   */
   public List<PlayerStatsResponse> getPlayerStats(
       GameMode gameMode, LocalDateTime start, LocalDateTime end) {
     List<Player> players = playerRepo.findAll();
     boolean hasDateRange = start != null && end != null;
+    LocalDateTime startUtc = toUtcTime(start);
+    LocalDateTime endUtc = toUtcTime(end);
 
     Map<Long, Integer> totalScores = new HashMap<>();
     List<Object[]> scoreRows;
     if (gameMode != null && hasDateRange) {
-      scoreRows = roundScoreRepo.getTotalScoresByGameModeAndDateRange(gameMode, start, end);
+      scoreRows = roundScoreRepo.getTotalScoresByGameModeAndDateRange(gameMode, startUtc, endUtc);
     } else if (gameMode != null) {
       scoreRows = roundScoreRepo.getTotalScoresByGameMode(gameMode);
     } else {
@@ -616,7 +670,7 @@ public class GameService {
     List<Object[]> gamesRows;
     if (gameMode != null && hasDateRange) {
       gamesRows =
-          roundScoreRepo.getGamesPlayedPerPlayerByGameModeAndDateRange(gameMode, start, end);
+          roundScoreRepo.getGamesPlayedPerPlayerByGameModeAndDateRange(gameMode, startUtc, endUtc);
     } else if (gameMode != null) {
       gamesRows = roundScoreRepo.getGamesPlayedPerPlayerByGameMode(gameMode);
     } else {
@@ -638,7 +692,8 @@ public class GameService {
             .filter(
                 s ->
                     !hasDateRange
-                        || (!s.getCreatedAt().isBefore(start) && s.getCreatedAt().isBefore(end)))
+                        || (!s.getCreatedAt().isBefore(startUtc)
+                            && s.getCreatedAt().isBefore(endUtc)))
             .sorted(Comparator.comparing(GameSession::getCreatedAt))
             .toList();
 
@@ -649,7 +704,8 @@ public class GameService {
     // Add Fan Discovery Bonuses (GUOBIAO only)
     if (gameMode == null || gameMode == GameMode.GUOBIAO) {
       if (hasDateRange) {
-        String season = getSeasonString(start);
+        // Callers supply start in Pacific timezone; convert to UTC to consistently derive season
+        String season = getSeasonStringFromUtc(startUtc);
         List<FanDiscovery> discoveries = fanDiscoveryRepo.findBySeason(season);
         for (FanDiscovery fd : discoveries) {
           if (fd.getBonusRp() > 0) {
@@ -670,7 +726,7 @@ public class GameService {
     for (GameSession session : completedSessions) {
       List<Object[]> sessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
       if (!sessionScores.isEmpty()) {
-        String season = getSeasonString(session.getCreatedAt());
+        String season = getSeasonStringFromUtc(session.getCreatedAt());
         String seasonModeKey = season + ":" + session.getGameMode().name();
         Map<Long, Integer> seasonCounts =
             gameIndexBySeasonModePlayer.computeIfAbsent(seasonModeKey, k -> new HashMap<>());
@@ -847,7 +903,7 @@ public class GameService {
       if (winnerScoreChange != null && winnerScoreChange > 0) {
         Player winner = playerRepo.findById(winnerId).orElse(null);
         if (winner != null && !winner.isBot()) {
-          String season = getSeasonString(session.getCreatedAt());
+          String season = getSeasonStringFromUtc(session.getCreatedAt());
           processFanDiscoveries(fanDetails, season, winner, round, winHand, session.getCreatedAt());
         }
       }
@@ -904,10 +960,24 @@ public class GameService {
     return count;
   }
 
+  /**
+   * Retrieves fan discoveries for the specified season range derived from start and end.
+   *
+   * @param start the start date-time of the season range, expected in Pacific timezone (or UTC with
+   *     Pacific conversion)
+   * @param end the end date-time of the season range, expected in Pacific timezone (or UTC with
+   *     Pacific conversion)
+   * @return the list of fan discovery responses
+   *     <p>Note: Callers must supply start/end in Pacific timezone. Under the hood,
+   *     getSeasonStringFromUtc (which converts UTC to Pacific time and calls
+   *     getSeasonStringFromPacific) is used to derive the season from the converted start
+   *     date-time. If start/end are null, it falls back to retrieving all fan discoveries
+   *     (findAll).
+   */
   public List<FanDiscoveryResponse> getFanDiscoveries(LocalDateTime start, LocalDateTime end) {
     List<FanDiscovery> discoveries;
     if (start != null && end != null) {
-      String season = getSeasonString(start);
+      String season = getSeasonStringFromUtc(toUtcTime(start));
       discoveries = fanDiscoveryRepo.findBySeason(season);
     } else {
       discoveries = fanDiscoveryRepo.findAll();

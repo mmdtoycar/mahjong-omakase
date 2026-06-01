@@ -22,4 +22,7 @@ public interface GameSessionRepository extends JpaRepository<GameSession, Long> 
       "SELECT DISTINCT YEAR(s.createdAt) AS y, MONTH(s.createdAt) AS m"
           + " FROM GameSession s WHERE s.rounds IS NOT EMPTY ORDER BY y DESC, m DESC")
   List<Object[]> findDistinctSeasons();
+
+  @Query("SELECT s.createdAt FROM GameSession s WHERE s.rounds IS NOT EMPTY")
+  List<java.time.LocalDateTime> findSessionCreationTimesWithRounds();
 }
