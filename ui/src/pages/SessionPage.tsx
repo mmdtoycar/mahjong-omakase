@@ -759,7 +759,8 @@ export default function SessionPage() {
           <h2 style={{ marginBottom: 0 }}>计分板</h2>
           <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <span className="session-meta" style={{ margin: 0, fontSize: '0.85rem' }}>
-              {session.gameModeDisplayName} &middot; {new Date(session.createdAt).toLocaleDateString()}
+              {session.gameModeDisplayName} &middot;{' '}
+              {new Date(session.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}
               &nbsp;
               <span className={`badge ${session.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
                 {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
