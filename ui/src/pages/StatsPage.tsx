@@ -38,8 +38,9 @@ export default function StatsPage() {
 
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
+  const [isOnline, setIsOnline] = useState<boolean>(false)
 
-  const loadStats = (mode: GameModeKey, sKey: string) => {
+  const loadStats = (mode: GameModeKey, sKey: string, online: boolean) => {
     setError('')
     setLoading(true)
     let year: number | undefined
@@ -49,7 +50,7 @@ export default function StatsPage() {
       year = y
       month = m
     }
-    fetchStats(mode, year, month)
+    fetchStats(mode, year, month, online)
       .then((s) => {
         setStats(s.sort((a, b) => b.totalRP - a.totalRP || b.totalScore - a.totalScore))
         setLoading(false)
@@ -98,11 +99,11 @@ export default function StatsPage() {
 
   useEffect(() => {
     if (tab === 'games') {
-      loadStats(gameMode, seasonKey)
+      loadStats(gameMode, seasonKey, isOnline)
     } else {
       loadPlayers()
     }
-  }, [gameMode, seasonKey, tab])
+  }, [gameMode, seasonKey, tab, isOnline])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -209,6 +210,20 @@ export default function StatsPage() {
                     {m.label}
                   </option>
                 ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="flex-between">
+              <h2>对局类型</h2>
+              <select
+                value={isOnline ? 'online' : 'offline'}
+                onChange={(e) => setIsOnline(e.target.value === 'online')}
+                className="select-inline"
+              >
+                <option value="offline">线下正式赛</option>
+                <option value="online">线上练习赛</option>
               </select>
             </div>
           </div>

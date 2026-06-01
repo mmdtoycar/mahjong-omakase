@@ -16,6 +16,8 @@ public class CreateSessionRequest {
   @Size(min = 3, max = 4, message = "Game requires 3 or 4 players")
   private List<Long> playerIds;
 
+  private Boolean isOnline;
+
   public String getName() {
     return name;
   }
@@ -38,5 +40,13 @@ public class CreateSessionRequest {
 
   public void setPlayerIds(List<Long> playerIds) {
     this.playerIds = playerIds;
+  }
+
+  public Boolean getIsOnline() {
+    return isOnline;
+  }
+
+  public void setIsOnline(Boolean isOnline) {
+    this.isOnline = isOnline;
   }
 }

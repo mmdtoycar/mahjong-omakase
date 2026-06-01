@@ -233,6 +233,7 @@ public class GameService {
     session.setGameMode(GameMode.valueOf(request.getGameMode()));
     session.setPlayerCount(request.getPlayerIds().size());
     session.setParticipationBonus(this.participationBonus);
+    session.setIsOnline(request.getIsOnline() != null ? request.getIsOnline() : false);
     session = sessionRepo.save(session);
 
     int seat = 1;
@@ -267,6 +268,7 @@ public class GameService {
     resp.setPlayerCount(session.getPlayerCount());
     resp.setStatus(session.getStatus().name());
     resp.setCreatedAt(session.getCreatedAt());
+    resp.setIsOnline(session.getIsOnline());
 
     resp.setPlayers(
         session.getPlayers().stream()
@@ -647,48 +649,27 @@ public class GameService {
    *     getSeasonStringFromUtc.
    */
   public List<PlayerStatsResponse> getPlayerStats(
-      GameMode gameMode, LocalDateTime start, LocalDateTime end) {
+      GameMode gameMode, LocalDateTime start, LocalDateTime end, Boolean isOnline) {
     List<Player> players = playerRepo.findAll();
     boolean hasDateRange = start != null && end != null;
     LocalDateTime startUtc = toUtcTime(start);
     LocalDateTime endUtc = toUtcTime(end);
 
     Map<Long, Integer> totalScores = new HashMap<>();
-    List<Object[]> scoreRows;
-    if (gameMode != null && hasDateRange) {
-      scoreRows = roundScoreRepo.getTotalScoresByGameModeAndDateRange(gameMode, startUtc, endUtc);
-    } else if (gameMode != null) {
-      scoreRows = roundScoreRepo.getTotalScoresByGameMode(gameMode);
-    } else {
-      scoreRows = roundScoreRepo.getTotalScoresAllTime();
-    }
-    for (Object[] row : scoreRows) {
-      if (row[0] != null) totalScores.put((Long) row[0], ((Number) row[1]).intValue());
-    }
-
     Map<Long, Integer> gamesPlayed = new HashMap<>();
-    List<Object[]> gamesRows;
-    if (gameMode != null && hasDateRange) {
-      gamesRows =
-          roundScoreRepo.getGamesPlayedPerPlayerByGameModeAndDateRange(gameMode, startUtc, endUtc);
-    } else if (gameMode != null) {
-      gamesRows = roundScoreRepo.getGamesPlayedPerPlayerByGameMode(gameMode);
-    } else {
-      gamesRows = roundScoreRepo.getGamesPlayedPerPlayer();
-    }
-    for (Object[] row : gamesRows) {
-      if (row[0] != null) gamesPlayed.put((Long) row[0], ((Number) row[1]).intValue());
-    }
-
     Map<Long, Integer> wins = new HashMap<>();
     Map<Long, Double> totalRP = new HashMap<>();
     Map<Long, Double> tieredBonusPerPlayer = new HashMap<>();
     Map<Long, Double> adminBonusPerPlayer = new HashMap<>();
     Map<Long, Double> fanBonusPerPlayer = new HashMap<>();
+
+    boolean targetOnline = Boolean.TRUE.equals(isOnline);
+
     List<GameSession> completedSessions =
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
             .filter(s -> gameMode == null || s.getGameMode() == gameMode)
+            .filter(s -> targetOnline == Boolean.TRUE.equals(s.getIsOnline()))
             .filter(
                 s ->
                     !hasDateRange
@@ -701,8 +682,8 @@ public class GameService {
     // Keyed separately by mode so each game mode has its own 20-game tier per season.
     Map<String, Map<Long, Integer>> gameIndexBySeasonModePlayer = new HashMap<>();
 
-    // Add Fan Discovery Bonuses (GUOBIAO only)
-    if (gameMode == null || gameMode == GameMode.GUOBIAO) {
+    // Add Fan Discovery Bonuses (GUOBIAO only, offline only)
+    if (!targetOnline && (gameMode == null || gameMode == GameMode.GUOBIAO)) {
       if (hasDateRange) {
         // Callers supply start in Pacific timezone; convert to UTC to consistently derive season
         String season = getSeasonStringFromUtc(startUtc);
@@ -730,19 +711,30 @@ public class GameService {
         String seasonModeKey = season + ":" + session.getGameMode().name();
         Map<Long, Integer> seasonCounts =
             gameIndexBySeasonModePlayer.computeIfAbsent(seasonModeKey, k -> new HashMap<>());
+
+        boolean isSessionOnline = Boolean.TRUE.equals(session.getIsOnline());
         double adminBonus =
-            session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
+            (!isSessionOnline && session.getParticipationBonus() != null)
+                ? session.getParticipationBonus()
+                : 0.0;
+
         for (Object[] row : sessionScores) {
           if (row[0] != null) {
             Long playerId = (Long) row[0];
+            int score = ((Number) row[1]).intValue();
+
+            // Accumulate gamesPlayed and totalScores dynamically for accurate filter
+            gamesPlayed.merge(playerId, 1, Integer::sum);
+            totalScores.merge(playerId, score, Integer::sum);
+
             int gameIndex = seasonCounts.merge(playerId, 1, Integer::sum);
-            double tieredBonus;
-            if (gameIndex <= 10) {
-              tieredBonus = 10.0;
-            } else if (gameIndex <= 20) {
-              tieredBonus = 5.0;
-            } else {
-              tieredBonus = 0.0;
+            double tieredBonus = 0.0;
+            if (!isSessionOnline) {
+              if (gameIndex <= 10) {
+                tieredBonus = 10.0;
+              } else if (gameIndex <= 20) {
+                tieredBonus = 5.0;
+              }
             }
             tieredBonusPerPlayer.merge(playerId, tieredBonus, (a, b) -> a + b);
             adminBonusPerPlayer.merge(playerId, adminBonus, (a, b) -> a + b);
@@ -894,11 +886,12 @@ public class GameService {
       roundScoreRepo.save(rs);
     }
 
-    // Process Fan Discoveries (GUOBIAO only, skip BOT winners, skip chombo)
+    // Process Fan Discoveries (GUOBIAO only, skip BOT winners, skip chombo, skip online sessions)
     if (winnerId != null
         && fanDetails != null
         && !fanDetails.isBlank()
-        && session.getGameMode() == GameMode.GUOBIAO) {
+        && session.getGameMode() == GameMode.GUOBIAO
+        && !Boolean.TRUE.equals(session.getIsOnline())) {
       Integer winnerScoreChange = computedScores.get(winnerId);
       if (winnerScoreChange != null && winnerScoreChange > 0) {
         Player winner = playerRepo.findById(winnerId).orElse(null);
