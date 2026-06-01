@@ -24,7 +24,7 @@ export default function LoginPage() {
     try {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
-          client_id: '123456-dummy.apps.googleusercontent.com',
+          client_id: '471645797225-qtqf1nlv8l807tblfhpa9d36p5q456l3.apps.googleusercontent.com',
           callback: handleGoogleResponse,
           auto_select: false,
           cancel_on_tap_outside: true,
