@@ -576,7 +576,8 @@ public class GameService {
 
     List<Round> bestRounds;
     if (hasMode && hasDate) {
-      bestRounds = roundRepo.findByFanCountAndModeAndDateRange(maxFan, gameMode, startUtc, endUtc, false);
+      bestRounds =
+          roundRepo.findByFanCountAndModeAndDateRange(maxFan, gameMode, startUtc, endUtc, false);
     } else if (hasMode) {
       bestRounds = roundRepo.findByFanCountAndMode(maxFan, gameMode, false);
     } else if (hasDate) {
