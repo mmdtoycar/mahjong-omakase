@@ -19,6 +19,17 @@ export default function ProfilePage() {
   const formattedDate = me.createdAt ? new Date(me.createdAt).toLocaleString('zh-CN') : '未知时间'
   const displayName = me.firstName ? `${me.firstName} ${me.lastName}`.trim() : me.userName
 
+  // 计算玩家名字首字母缩写的辅助函数
+  const getUserInitial = (player: any) => {
+    if (!player) return '👤'
+    if (player.firstName) {
+      const f = player.firstName.charAt(0).toUpperCase()
+      const l = player.lastName ? player.lastName.charAt(0).toUpperCase() : ''
+      return f + l
+    }
+    return player.userName.charAt(0).toUpperCase()
+  }
+
   return (
     <div
       style={{
@@ -60,21 +71,24 @@ export default function ProfilePage() {
               }}
             />
           ) : (
+            /* 没有 Google 头像时，渲染大号名字首字母缩写圆形徽章，保持高档次 */
             <div
               style={{
                 width: '100px',
                 height: '100px',
                 borderRadius: '50%',
-                background: '#eee',
+                background: 'linear-gradient(135deg, #1d976c, #11998e)',
+                color: '#ffffff',
                 border: '4px solid #ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '48px',
+                fontSize: '36px',
+                fontWeight: 'bold',
                 boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
               }}
             >
-              👤
+              {getUserInitial(me)}
             </div>
           )}
           <h2 style={{ margin: '15px 0 5px 0', fontSize: '22px', color: '#1a1a1a' }}>{displayName}</h2>

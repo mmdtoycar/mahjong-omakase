@@ -17,8 +17,18 @@ function App() {
   const rawMe = sessionStorage.getItem('mahjong_me')
   const me = rawMe ? JSON.parse(rawMe) : null
 
-  // 优雅修复后端反序列化缺失 displayName 的问题：优先显示 Google 姓名，降级为系统用户名
   const userDisplayName = me ? (me.firstName ? `${me.firstName} ${me.lastName}`.trim() : me.userName) : ''
+
+  // 计算玩家名字首字母缩写 (Initial) 的辅助函数
+  const getUserInitial = (player: any) => {
+    if (!player) return '👤'
+    if (player.firstName) {
+      const f = player.firstName.charAt(0).toUpperCase()
+      const l = player.lastName ? player.lastName.charAt(0).toUpperCase() : ''
+      return f + l
+    }
+    return player.userName.charAt(0).toUpperCase()
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('mahjong_token')
@@ -40,18 +50,20 @@ function App() {
           <Link to="/calculator">算番器</Link>
           <Link to="/fan-table">番表</Link>
           {token && me ? (
+            /* 升级为精美的磨砂胶囊盒 (Capsule Box)，提供完美的视觉区隔 */
             <div
-              className="user-profile"
+              className="user-profile-capsule"
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
+                gap: '8px',
                 marginLeft: '15px',
-                borderLeft: '1px solid #eee',
-                paddingLeft: '15px',
+                border: '1px solid rgba(0, 0, 0, 0.08)',
+                background: 'rgba(0, 0, 0, 0.03)',
+                padding: '5px 12px',
+                borderRadius: '20px',
               }}
             >
-              {/* 点击头像或姓名可直接无缝路由进入个人中心个人资料页 */}
               <Link
                 to="/profile"
                 style={{
@@ -62,26 +74,59 @@ function App() {
                   color: 'inherit',
                 }}
               >
-                {me.pictureUrl && (
+                {me.pictureUrl ? (
                   <img
                     src={me.pictureUrl}
                     alt={userDisplayName}
-                    style={{ width: '32px', height: '32px', borderRadius: '50%' }}
+                    style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
                   />
+                ) : (
+                  /* 无头像时降级渲染精致的名字缩写 (Initial)，确保绝不溢出 */
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      background: '#1d976c',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {getUserInitial(me)}
+                  </div>
                 )}
-                <span style={{ fontSize: '14px', color: '#333', fontWeight: 500 }}>{userDisplayName}</span>
+                {/* 增加 CSS 截断，最大宽度 80px，超长自动 ellipsis 缩略，彻底防止溢出 */}
+                <span
+                  style={{
+                    fontSize: '13px',
+                    color: '#1a1a1a',
+                    fontWeight: 600,
+                    maxWidth: '80px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {userDisplayName}
+                </span>
               </Link>
               <button
                 onClick={handleLogout}
                 style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #ccc',
-                  background: 'none',
-                  fontSize: '12px',
+                  padding: '3px 8px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(0, 0, 0, 0.15)',
+                  background: '#ffffff',
+                  fontSize: '11px',
                   cursor: 'pointer',
                   color: '#666',
-                  marginLeft: '10px',
+                  marginLeft: '4px',
+                  fontWeight: 500,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 }}
               >
                 退出
