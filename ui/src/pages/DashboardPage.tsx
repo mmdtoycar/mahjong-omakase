@@ -59,7 +59,15 @@ export default function DashboardPage() {
     .filter((s) => {
       if (seasonKey === 'all') return true
       const d = new Date(s.createdAt)
-      const key = `${d.getFullYear()}-${d.getMonth() + 1}`
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles',
+        year: 'numeric',
+        month: 'numeric',
+      })
+      const parts = formatter.formatToParts(d)
+      const year = parts.find((p) => p.type === 'year')?.value
+      const month = parts.find((p) => p.type === 'month')?.value
+      const key = `${year}-${month}`
       return key === seasonKey
     })
 

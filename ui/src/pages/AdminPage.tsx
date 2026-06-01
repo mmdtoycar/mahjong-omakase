@@ -290,7 +290,7 @@ export default function AdminPage() {
                       </>
                     )}
                   </td>
-                  <td>{new Date(p.createdAt).toLocaleDateString()}</td>
+                  <td>{new Date(p.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
                   <td>
                     {editingId === p.id ? (
                       <div style={{ display: 'flex', gap: 4 }}>
@@ -344,7 +344,7 @@ export default function AdminPage() {
                   <td>{s.name}</td>
                   <td>{s.gameModeDisplayName}</td>
                   <td>{s.roundCount}</td>
-                  <td>{new Date(s.createdAt).toLocaleDateString()}</td>
+                  <td>{new Date(s.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
                   <td>
                     <button
                       className="btn btn-danger btn-small"

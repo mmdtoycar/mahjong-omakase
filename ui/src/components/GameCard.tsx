@@ -43,6 +43,7 @@ export const GameCard: React.FC<Props> = ({
         <div className="session-card-meta">
           <span className="session-card-date">
             {new Date(createdAt).toLocaleString([], {
+              timeZone: 'America/Los_Angeles',
               month: '2-digit',
               day: '2-digit',
               hour: '2-digit',
