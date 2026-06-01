@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -30,6 +31,13 @@ public class AuthController {
     this.playerRepo = playerRepo;
   }
 
+  private String redactEmail(String email) {
+    if (email == null) return null;
+    int atIdx = email.indexOf('@');
+    if (atIdx <= 1) return "***";
+    return email.substring(0, 1) + "***" + email.substring(atIdx);
+  }
+
   @PostMapping("/google")
   public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> request) {
     String idTokenString = request.get("credential");
@@ -41,41 +49,28 @@ public class AuthController {
     String name = null;
     String pictureUrl = null;
 
-    // 1. 本地开发 Mock 模式 (以 dev_ 开头的 credential 直接认定校验成功)
-    if (idTokenString.startsWith("dev_")) {
-      String mockEmail = idTokenString.substring(4);
-      if (mockEmail.contains("@") && mockEmail.endsWith(".com")) {
-        email = mockEmail;
-        name = mockEmail.split("@")[0];
-        pictureUrl = "https://lh3.googleusercontent.com/a/default-user";
-        log.info("Google Auth Mock Mode triggered for email={}", email);
-      }
-    }
+    // 正常校验模式 (Google Sign-In JWT Verification)
+    try {
+      GoogleIdTokenVerifier verifier =
+          new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+              .setAudience(Collections.singletonList(googleClientId))
+              .build();
 
-    // 2. 正常校验模式 (Google Sign-In JWT Verification)
-    if (email == null) {
-      try {
-        GoogleIdTokenVerifier verifier =
-            new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-                .setAudience(Collections.singletonList(googleClientId))
-                .build();
-
-        GoogleIdToken idToken = verifier.verify(idTokenString);
-        if (idToken != null) {
-          GoogleIdToken.Payload payload = idToken.getPayload();
-          email = payload.getEmail();
-          name = (String) payload.get("name");
-          pictureUrl = (String) payload.get("picture");
-          log.info("Google Auth verified successfully for email={}", email);
-        } else {
-          return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-              .body(Map.of("error", "Invalid ID Token"));
-        }
-      } catch (Exception e) {
-        log.error("Failed to verify Google ID Token", e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(Map.of("error", "Verification failed: " + e.getMessage()));
+      GoogleIdToken idToken = verifier.verify(idTokenString);
+      if (idToken != null) {
+        GoogleIdToken.Payload payload = idToken.getPayload();
+        email = payload.getEmail();
+        name = (String) payload.get("name");
+        pictureUrl = (String) payload.get("picture");
+        log.info("Google Auth verified successfully for email={}", redactEmail(email));
+      } else {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(Map.of("error", "Invalid ID Token"));
       }
+    } catch (Exception e) {
+      log.error("Failed to verify Google ID Token", e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Verification failed: " + e.getMessage()));
     }
 
     // 3. 匹配已有账号或自动创建新账号
@@ -98,38 +93,23 @@ public class AuthController {
         player.setPictureUrl(pictureUrl);
       }
     } else {
-      // 降级防御：若已有老账号未绑定 Email，但 userName 与 Email 前缀一致，自动安全关联
       String preferredUserName = email.split("@")[0];
-      Optional<Player> existingByUserName =
-          playerRepo.findAll().stream()
-              .filter(p -> p.getUserName().equalsIgnoreCase(preferredUserName))
-              .findFirst();
+      // 创建全新玩家
+      String firstName = name != null ? name.split(" ", 2)[0] : preferredUserName;
+      String lastName = (name != null && name.contains(" ")) ? name.split(" ", 2)[1] : "";
 
-      if (existingByUserName.isPresent() && existingByUserName.get().getEmail() == null) {
-        player = existingByUserName.get();
-        player.setEmail(email);
-        if (pictureUrl != null) {
-          player.setPictureUrl(pictureUrl);
-        }
-        log.info("Auto-bound Google login for existing player with userName={}", preferredUserName);
-      } else {
-        // 创建全新玩家
-        String firstName = name != null ? name.split(" ", 2)[0] : preferredUserName;
-        String lastName = (name != null && name.contains(" ")) ? name.split(" ", 2)[1] : "";
-
-        // 保证唯一的唯一用户名
-        String uniqueUserName = preferredUserName;
-        int suffix = 1;
-        while (playerRepo.existsByUserName(uniqueUserName)) {
-          uniqueUserName = preferredUserName + suffix;
-          suffix++;
-        }
-
-        player = new Player(uniqueUserName, firstName, lastName);
-        player.setEmail(email);
-        player.setPictureUrl(pictureUrl);
-        log.info("Created new Google Player userName={}", uniqueUserName);
+      // 保证唯一的唯一用户名
+      String uniqueUserName = preferredUserName;
+      int suffix = 1;
+      while (playerRepo.existsByUserName(uniqueUserName)) {
+        uniqueUserName = preferredUserName + suffix;
+        suffix++;
       }
+
+      player = new Player(uniqueUserName, firstName, lastName);
+      player.setEmail(email);
+      player.setPictureUrl(pictureUrl);
+      log.info("Created new Google Player userName={}", uniqueUserName);
     }
 
     // 4. 分配会话 Token 并更新数据库
@@ -155,6 +135,7 @@ public class AuthController {
         .body(Map.of("error", "Invalid or expired token"));
   }
 
+  @Transactional
   @PostMapping("/claim")
   public ResponseEntity<?> claimAccount(
       @RequestHeader(value = "Authorization", required = false) String authHeader,

@@ -14,20 +14,20 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
   int countByGameSessionId(Long gameSessionId);
 
   @Query(
-      "SELECT MAX(r.fanCount) FROM Round r WHERE :isOnline IS NULL OR r.gameSession.isOnline = :isOnline")
+      "SELECT MAX(r.fanCount) FROM Round r WHERE :isOnline IS NULL OR COALESCE(r.gameSession.isOnline, false) = :isOnline")
   Integer findMaxFanCount(@Param("isOnline") Boolean isOnline);
 
   @Query(
-      "SELECT MAX(r.fanCount) FROM Round r WHERE r.gameSession.gameMode = :mode AND (:isOnline IS NULL OR r.gameSession.isOnline = :isOnline)")
+      "SELECT MAX(r.fanCount) FROM Round r WHERE r.gameSession.gameMode = :mode AND (:isOnline IS NULL OR COALESCE(r.gameSession.isOnline, false) = :isOnline)")
   Integer findMaxFanCountByMode(@Param("mode") GameMode mode, @Param("isOnline") Boolean isOnline);
 
   @Query(
-      "SELECT r FROM Round r WHERE r.fanCount = :fanCount AND (:isOnline IS NULL OR r.gameSession.isOnline = :isOnline)")
+      "SELECT r FROM Round r WHERE r.fanCount = :fanCount AND (:isOnline IS NULL OR COALESCE(r.gameSession.isOnline, false) = :isOnline)")
   List<Round> findByFanCount(
       @Param("fanCount") Integer fanCount, @Param("isOnline") Boolean isOnline);
 
   @Query(
-      "SELECT r FROM Round r WHERE r.fanCount = :fanCount AND r.gameSession.gameMode = :mode AND (:isOnline IS NULL OR r.gameSession.isOnline = :isOnline)")
+      "SELECT r FROM Round r WHERE r.fanCount = :fanCount AND r.gameSession.gameMode = :mode AND (:isOnline IS NULL OR COALESCE(r.gameSession.isOnline, false) = :isOnline)")
   List<Round> findByFanCountAndMode(
       @Param("fanCount") Integer fanCount,
       @Param("mode") GameMode mode,
@@ -35,7 +35,7 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
 
   @Query(
       "SELECT MAX(r.fanCount) FROM Round r JOIN r.gameSession s"
-          + " WHERE s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR s.isOnline = :isOnline)")
+          + " WHERE s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR COALESCE(s.isOnline, false) = :isOnline)")
   Integer findMaxFanCountByDateRange(
       @Param("start") LocalDateTime start,
       @Param("end") LocalDateTime end,
@@ -43,7 +43,7 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
 
   @Query(
       "SELECT MAX(r.fanCount) FROM Round r JOIN r.gameSession s"
-          + " WHERE s.gameMode = :mode AND s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR s.isOnline = :isOnline)")
+          + " WHERE s.gameMode = :mode AND s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR COALESCE(s.isOnline, false) = :isOnline)")
   Integer findMaxFanCountByModeAndDateRange(
       @Param("mode") GameMode mode,
       @Param("start") LocalDateTime start,
@@ -52,7 +52,7 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
 
   @Query(
       "SELECT r FROM Round r JOIN r.gameSession s"
-          + " WHERE r.fanCount = :fanCount AND s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR s.isOnline = :isOnline)")
+          + " WHERE r.fanCount = :fanCount AND s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR COALESCE(s.isOnline, false) = :isOnline)")
   List<Round> findByFanCountAndDateRange(
       @Param("fanCount") Integer fanCount,
       @Param("start") LocalDateTime start,
@@ -62,7 +62,7 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
   @Query(
       "SELECT r FROM Round r JOIN r.gameSession s"
           + " WHERE r.fanCount = :fanCount AND s.gameMode = :mode"
-          + " AND s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR s.isOnline = :isOnline)")
+          + " AND s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR COALESCE(s.isOnline, false) = :isOnline)")
   List<Round> findByFanCountAndModeAndDateRange(
       @Param("fanCount") Integer fanCount,
       @Param("mode") GameMode mode,
@@ -72,15 +72,15 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
 
   @Query(
       value =
-          "SELECT r FROM Round r JOIN FETCH r.gameSession s WHERE (:isOnline IS NULL OR s.isOnline = :isOnline) ORDER BY s.createdAt ASC, r.roundNumber ASC",
+          "SELECT r FROM Round r JOIN FETCH r.gameSession s WHERE (:isOnline IS NULL OR COALESCE(s.isOnline, false) = :isOnline) ORDER BY s.createdAt ASC, r.roundNumber ASC",
       countQuery =
-          "SELECT count(r) FROM Round r JOIN r.gameSession s WHERE (:isOnline IS NULL OR s.isOnline = :isOnline)")
+          "SELECT count(r) FROM Round r JOIN r.gameSession s WHERE (:isOnline IS NULL OR COALESCE(s.isOnline, false) = :isOnline)")
   Page<Round> findAllOrderByTime(@Param("isOnline") Boolean isOnline, Pageable pageable);
 
   @Query(
       "SELECT r FROM Round r JOIN FETCH r.gameSession s"
           + " WHERE s.gameMode = :mode AND s.createdAt >= :start AND s.createdAt < :end"
-          + " AND (:isOnline IS NULL OR s.isOnline = :isOnline)"
+          + " AND (:isOnline IS NULL OR COALESCE(s.isOnline, false) = :isOnline)"
           + " ORDER BY s.createdAt ASC, r.roundNumber ASC")
   List<Round> findByGameModeAndSessionDateRangeOrderByTime(
       @Param("mode") GameMode mode,

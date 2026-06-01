@@ -12,6 +12,8 @@ import FanTablePage from './pages/FanTablePage'
 import CalculatorPage from './pages/CalculatorPage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
+import { fetchCurrentUser } from './api'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   const navigate = useNavigate()
@@ -30,23 +32,30 @@ function App() {
     }
 
     window.addEventListener('auth-change', handleAuthChange)
+
+    const storedToken = localStorage.getItem('mahjong_token')
+    if (storedToken && !me) {
+      fetchCurrentUser()
+        .then((player) => {
+          sessionStorage.setItem('mahjong_me', JSON.stringify(player))
+          setMe(player)
+          window.dispatchEvent(new Event('auth-change'))
+        })
+        .catch(() => {
+          localStorage.removeItem('mahjong_token')
+          sessionStorage.removeItem('mahjong_me')
+          setToken(null)
+          setMe(null)
+          window.dispatchEvent(new Event('auth-change'))
+        })
+    }
+
     return () => {
       window.removeEventListener('auth-change', handleAuthChange)
     }
   }, [])
 
   const userDisplayName = me ? (me.firstName ? `${me.firstName} ${me.lastName}`.trim() : me.userName) : ''
-
-  // 计算玩家名字首字母缩写 (Initial) 的辅助函数
-  const getUserInitial = (player: any) => {
-    if (!player) return '👤'
-    if (player.firstName) {
-      const f = player.firstName.charAt(0).toUpperCase()
-      const l = player.lastName ? player.lastName.charAt(0).toUpperCase() : ''
-      return f + l
-    }
-    return player.userName.charAt(0).toUpperCase()
-  }
 
   const handleLogout = () => {
     localStorage.removeItem('mahjong_token')
@@ -167,17 +176,52 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/home" element={<HomePage />} />
-          <Route path="/game" element={<DashboardPage />} />
+          <Route
+            path="/game"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/new-session" element={<NewSessionPage />} />
+          <Route
+            path="/new-session"
+            element={
+              <ProtectedRoute>
+                <NewSessionPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/session/:id" element={<SessionPage />} />
-          <Route path="/stats" element={<StatsPage />} />
+          <Route
+            path="/stats"
+            element={
+              <ProtectedRoute>
+                <StatsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/fan-table" element={<FanTablePage />} />
           <Route path="/calculator" element={<CalculatorPage />} />
           <Route path="/player/:id" element={<PlayerDetailPage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="*"
             element={
