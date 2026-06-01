@@ -113,36 +113,10 @@ export default function ProfilePage() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 paddingBottom: '12px',
-                borderBottom: '1px solid #f5f5f5',
               }}
             >
               <span style={{ fontSize: '14px', color: '#888' }}>注册时间</span>
               <span style={{ fontSize: '14px', color: '#333', fontWeight: 500 }}>{formattedDate}</span>
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                paddingBottom: '12px',
-              }}
-            >
-              <span style={{ fontSize: '14px', color: '#888' }}>系统临时 Access Token</span>
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: '#0f730c',
-                  background: '#f0f9f0',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  wordBreak: 'break-all',
-                  fontFamily: 'monospace',
-                  border: '1px solid #d4ecd4',
-                }}
-              >
-                {me.token || '无会话Token'}
-              </span>
             </div>
           </div>
 
