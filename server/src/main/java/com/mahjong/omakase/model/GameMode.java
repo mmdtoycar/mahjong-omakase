@@ -5,7 +5,7 @@ public enum GameMode {
   RIICHI("立直麻将", 2000.0, 25000.0),
   GUOBIAO("国标麻将", 10.0, 0.0);
 
-  private static final double[] UMA_3P = {15.0, 0.0, -15.0};
+  private static final double[] UMA_3P = {15.0, 5.0, -5.0};
   private static final double[] UMA_4P = {15.0, 5.0, -5.0, -15.0};
 
   private final String displayName;
