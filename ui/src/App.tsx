@@ -79,20 +79,8 @@ function App() {
                 marginLeft: '15px',
               }}
             >
-              {/* 保留老注册功能，并在样式上与新登录按钮进行差异化并排排列 */}
-              <Link
-                to="/signup"
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #ccc',
-                  color: '#666',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  textDecoration: 'none',
-                  background: 'none',
-                }}
-              >
+              {/* 注册与登录均直接使用统一的 btn-signup 类，达成完全一致的色彩和视觉质感 */}
+              <Link to="/signup" className="btn-signup">
                 注册
               </Link>
               <Link to="/login" className="btn-signup">
