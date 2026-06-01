@@ -23,18 +23,23 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
 
   @Query(
       "SELECT r FROM Round r WHERE r.fanCount = :fanCount AND (:isOnline IS NULL OR r.gameSession.isOnline = :isOnline)")
-  List<Round> findByFanCount(@Param("fanCount") Integer fanCount, @Param("isOnline") Boolean isOnline);
+  List<Round> findByFanCount(
+      @Param("fanCount") Integer fanCount, @Param("isOnline") Boolean isOnline);
 
   @Query(
       "SELECT r FROM Round r WHERE r.fanCount = :fanCount AND r.gameSession.gameMode = :mode AND (:isOnline IS NULL OR r.gameSession.isOnline = :isOnline)")
   List<Round> findByFanCountAndMode(
-      @Param("fanCount") Integer fanCount, @Param("mode") GameMode mode, @Param("isOnline") Boolean isOnline);
+      @Param("fanCount") Integer fanCount,
+      @Param("mode") GameMode mode,
+      @Param("isOnline") Boolean isOnline);
 
   @Query(
       "SELECT MAX(r.fanCount) FROM Round r JOIN r.gameSession s"
           + " WHERE s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR s.isOnline = :isOnline)")
   Integer findMaxFanCountByDateRange(
-      @Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("isOnline") Boolean isOnline);
+      @Param("start") LocalDateTime start,
+      @Param("end") LocalDateTime end,
+      @Param("isOnline") Boolean isOnline);
 
   @Query(
       "SELECT MAX(r.fanCount) FROM Round r JOIN r.gameSession s"
