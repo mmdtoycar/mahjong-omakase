@@ -71,9 +71,34 @@ function App() {
               </button>
             </div>
           ) : (
-            <Link to="/login" className="btn-signup" style={{ marginLeft: '15px' }}>
-              测试登录
-            </Link>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                marginLeft: '15px',
+              }}
+            >
+              {/* 保留老注册功能，并在样式上与新登录按钮进行差异化并排排列 */}
+              <Link
+                to="/signup"
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #ccc',
+                  color: '#666',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  background: 'none',
+                }}
+              >
+                注册
+              </Link>
+              <Link to="/login" className="btn-signup">
+                登录
+              </Link>
+            </div>
           )}
         </nav>
       </header>
@@ -81,7 +106,6 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="/login" element={<LoginPage />} />
-          {/* 暂时移除 ProtectedRoute 包装，保持原有路由完全免密访问，降低重构割接风险 */}
           <Route path="/home" element={<HomePage />} />
           <Route path="/game" element={<DashboardPage />} />
           <Route path="/signup" element={<SignUpPage />} />
