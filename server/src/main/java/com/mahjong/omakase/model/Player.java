@@ -110,11 +110,22 @@ public class Player {
     this.pictureUrl = pictureUrl;
   }
 
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private boolean merged = false;
+
   public String getToken() {
     return token;
   }
 
   public void setToken(String token) {
     this.token = token;
+  }
+
+  public boolean isMerged() {
+    return merged;
+  }
+
+  public void setMerged(boolean merged) {
+    this.merged = merged;
   }
 }

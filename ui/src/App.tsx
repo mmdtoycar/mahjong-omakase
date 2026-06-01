@@ -1,4 +1,5 @@
-import { Routes, Route, Link, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import DashboardPage from './pages/DashboardPage'
 import NewSessionPage from './pages/NewSessionPage'
@@ -13,9 +14,26 @@ import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 
 function App() {
-  const token = localStorage.getItem('mahjong_token')
-  const rawMe = sessionStorage.getItem('mahjong_me')
-  const me = rawMe ? JSON.parse(rawMe) : null
+  const navigate = useNavigate()
+
+  const [token, setToken] = useState<string | null>(localStorage.getItem('mahjong_token'))
+  const [me, setMe] = useState<any>(() => {
+    const rawMe = sessionStorage.getItem('mahjong_me')
+    return rawMe ? JSON.parse(rawMe) : null
+  })
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setToken(localStorage.getItem('mahjong_token'))
+      const rawMe = sessionStorage.getItem('mahjong_me')
+      setMe(rawMe ? JSON.parse(rawMe) : null)
+    }
+
+    window.addEventListener('auth-change', handleAuthChange)
+    return () => {
+      window.removeEventListener('auth-change', handleAuthChange)
+    }
+  }, [])
 
   const userDisplayName = me ? (me.firstName ? `${me.firstName} ${me.lastName}`.trim() : me.userName) : ''
 
@@ -33,7 +51,8 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('mahjong_token')
     sessionStorage.removeItem('mahjong_me')
-    window.location.href = '/login'
+    window.dispatchEvent(new Event('auth-change'))
+    navigate('/login')
   }
 
   return (
@@ -50,7 +69,7 @@ function App() {
           <Link to="/calculator">算番器</Link>
           <Link to="/fan-table">番表</Link>
           {token && me ? (
-            /* 升级为精美的磨砂胶囊盒 (Capsule Box)，提供完美的视觉区隔 */
+            /* 升级为高度清晰、对比强烈的用户身份栏，使用与登录按钮完全一致的金色品牌底色 */
             <div
               className="user-profile-capsule"
               style={{
@@ -58,10 +77,11 @@ function App() {
                 alignItems: 'center',
                 gap: '8px',
                 marginLeft: '15px',
-                border: '1px solid rgba(0, 0, 0, 0.08)',
-                background: 'rgba(0, 0, 0, 0.03)',
+                background: 'var(--accent)',
                 padding: '5px 12px',
-                borderRadius: '20px',
+                borderRadius: '6px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'background-color 0.2s',
               }}
             >
               <Link
@@ -69,41 +89,15 @@ function App() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
                   textDecoration: 'none',
-                  color: 'inherit',
+                  color: '#ffffff',
                 }}
               >
-                {me.pictureUrl ? (
-                  <img
-                    src={me.pictureUrl}
-                    alt={userDisplayName}
-                    style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  /* 无头像时降级渲染精致的名字缩写 (Initial)，确保绝不溢出 */
-                  <div
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      background: '#1d976c',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    {getUserInitial(me)}
-                  </div>
-                )}
-                {/* 增加 CSS 截断，最大宽度 80px，超长自动 ellipsis 缩略，彻底防止溢出 */}
+                {/* 使用极佳白字对比度，增加 CSS 截断防止溢出，彻底移除圆形头像/缩写以保持绝对扁平极简 */}
                 <span
                   style={{
                     fontSize: '13px',
-                    color: '#1a1a1a',
+                    color: '#ffffff',
                     fontWeight: 600,
                     maxWidth: '80px',
                     overflow: 'hidden',
@@ -118,15 +112,21 @@ function App() {
                 onClick={handleLogout}
                 style={{
                   padding: '3px 8px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0, 0, 0, 0.15)',
-                  background: '#ffffff',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                  background: 'rgba(255, 255, 255, 0.15)',
                   fontSize: '11px',
                   cursor: 'pointer',
-                  color: '#666',
+                  color: '#ffffff',
                   marginLeft: '4px',
-                  fontWeight: 500,
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  fontWeight: 600,
+                  transition: 'background 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'
                 }}
               >
                 退出

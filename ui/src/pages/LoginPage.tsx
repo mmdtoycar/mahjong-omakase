@@ -50,6 +50,7 @@ export default function LoginPage() {
       const data = await loginWithGoogle(response.credential)
       localStorage.setItem('mahjong_token', data.token)
       sessionStorage.setItem('mahjong_me', JSON.stringify(data.player))
+      window.dispatchEvent(new Event('auth-change'))
       navigate('/home', { replace: true })
     } catch (err: any) {
       setError(err.message || '登录验证失败，请重试')
@@ -71,6 +72,7 @@ export default function LoginPage() {
       const data = await loginWithGoogle(`dev_${mockEmail.trim()}`)
       localStorage.setItem('mahjong_token', data.token)
       sessionStorage.setItem('mahjong_me', JSON.stringify(data.player))
+      window.dispatchEvent(new Event('auth-change'))
       navigate('/home', { replace: true })
     } catch (err: any) {
       setError(err.message || '模拟登录失败')

@@ -154,4 +154,82 @@ public class AuthController {
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
         .body(Map.of("error", "Invalid or expired token"));
   }
+
+  @PostMapping("/claim")
+  public ResponseEntity<?> claimAccount(
+      @RequestHeader(value = "Authorization", required = false) String authHeader,
+      @RequestBody Map<String, String> request) {
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing token"));
+    }
+    String token = authHeader.substring(7);
+    Optional<Player> currentOpt = playerRepo.findByToken(token);
+    if (currentOpt.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid token"));
+    }
+
+    Player current = currentOpt.get();
+    if (current.isMerged()) {
+      return ResponseEntity.badRequest().body(Map.of("error", "该账户已经合并过老账号，无法再次合并"));
+    }
+
+    String oldUserName = request.get("userName");
+    String oldFirstName = request.get("firstName");
+    String oldLastName = request.get("lastName");
+
+    if (oldUserName == null
+        || oldUserName.isBlank()
+        || oldFirstName == null
+        || oldFirstName.isBlank()
+        || oldLastName == null
+        || oldLastName.isBlank()) {
+      return ResponseEntity.badRequest().body(Map.of("error", "请完整填写老账号的用户名、名、姓信息"));
+    }
+
+    // 寻找匹配且未被其他人认领过的老账号
+    Optional<Player> oldPlayerOpt =
+        playerRepo.findAll().stream()
+            .filter(
+                p ->
+                    p.getUserName().equalsIgnoreCase(oldUserName.trim())
+                        && p.getFirstName().equalsIgnoreCase(oldFirstName.trim())
+                        && p.getLastName().equalsIgnoreCase(oldLastName.trim())
+                        && p.getEmail() == null
+                        && !p.getId().equals(current.getId()))
+            .findFirst();
+
+    if (oldPlayerOpt.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+          .body(Map.of("error", "未找到符合条件且未绑定的老账号，请核对用户名与姓名"));
+    }
+
+    Player oldPlayer = oldPlayerOpt.get();
+
+    // 转移 Google 账户的邮箱和头像，并将会话 token 移交到老账号实体
+    String currentEmail = current.getEmail();
+    String currentPicture = current.getPictureUrl();
+
+    // 关键突破点：必须先释放当前临时账号占用的 email 和 token 唯一索引约束，并进行强 Flush，防范 Hibernate Commit Unique constraint 异常
+    current.setEmail(null);
+    current.setToken(null);
+    playerRepo.saveAndFlush(current);
+
+    oldPlayer.setEmail(currentEmail);
+    oldPlayer.setPictureUrl(currentPicture);
+    oldPlayer.setToken(token);
+    oldPlayer.setMerged(true);
+
+    // 保存老账号（即完成了合并，数据完美继承）
+    playerRepo.saveAndFlush(oldPlayer);
+
+    // 删除原先自动新建的 Google 临时账户（因为老账号已经绑定，以后每次用 Google 登录就会直接获取到老账号实体）
+    playerRepo.delete(current);
+
+    log.info(
+        "Successfully merged current Google account with old account: username={}, id={}",
+        oldPlayer.getUserName(),
+        oldPlayer.getId());
+
+    return ResponseEntity.ok(oldPlayer);
+  }
 }

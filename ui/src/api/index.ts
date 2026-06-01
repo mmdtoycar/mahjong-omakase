@@ -223,3 +223,14 @@ export async function fetchFanDiscoveries(
   const qs = params.toString()
   return cachedFetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`, signal)
 }
+
+export async function claimPlayer(userName: string, firstName: string, lastName: string): Promise<Player> {
+  const res = await fetch(`${API}/auth/claim`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ userName, firstName, lastName }),
+  })
+  const data = await handleResponse<Player>(res)
+  invalidateCache()
+  return data
+}

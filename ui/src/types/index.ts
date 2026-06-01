@@ -4,6 +4,9 @@ export interface Player {
   firstName: string
   lastName: string
   createdAt: string
+  email?: string
+  pictureUrl?: string
+  merged?: boolean
 }
 
 export type GameModeKey = 'DONGBEI' | 'RIICHI' | 'GUOBIAO'
