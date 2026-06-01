@@ -306,7 +306,7 @@ export default function StatsPage() {
             </div>
           )}
 
-          {seasonKey !== 'all' && (
+          {!isOnline && seasonKey !== 'all' && (
             <div className="card best-hand-card">
               <div className="best-hand-header">
                 <span className="best-hand-crown">🌟</span>
@@ -340,7 +340,7 @@ export default function StatsPage() {
             </div>
           )}
 
-          {(bestRounds.length > 0 || !!bestRoundsError) && (
+          {!isOnline && (bestRounds.length > 0 || !!bestRoundsError) && (
             <div className="card best-hand-card">
               <div className="best-hand-header">
                 <span className="best-hand-crown">👑</span>

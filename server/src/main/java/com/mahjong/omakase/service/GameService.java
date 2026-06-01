@@ -75,7 +75,7 @@ public class GameService {
 
     while (hasMore) {
       Pageable pageable = PageRequest.of(page, size);
-      Page<Round> roundPage = roundRepo.findAllOrderByTime(pageable);
+      Page<Round> roundPage = roundRepo.findAllOrderByTime(false, pageable);
       List<Round> rounds = roundPage.getContent();
 
       if (rounds.isEmpty()) {
@@ -86,6 +86,7 @@ public class GameService {
       for (Round round : rounds) {
         if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
         if (round.getGameSession().getGameMode() != GameMode.GUOBIAO) continue;
+        if (Boolean.TRUE.equals(round.getGameSession().getIsOnline())) continue;
         Player winner =
             playerRepo.findById(Objects.requireNonNull(round.getWinnerId())).orElse(null);
         if (winner == null || winner.isBot()) continue;
@@ -356,6 +357,9 @@ public class GameService {
    */
   private Map<Long, Double> computeSessionPlayerBonuses(GameSession session) {
     Map<Long, Double> bonuses = new HashMap<>();
+    if (Boolean.TRUE.equals(session.getIsOnline())) {
+      return bonuses;
+    }
 
     List<Object[]> currentSessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
     if (currentSessionScores.isEmpty()) {
@@ -368,6 +372,7 @@ public class GameService {
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
             .filter(s -> s.getGameMode() == session.getGameMode())
+            .filter(s -> !Boolean.TRUE.equals(s.getIsOnline()))
             .filter(s -> getSeasonStringFromUtc(s.getCreatedAt()).equals(season))
             .filter(s -> !s.getCreatedAt().isAfter(session.getCreatedAt()))
             .sorted(Comparator.comparing(GameSession::getCreatedAt))
@@ -522,8 +527,9 @@ public class GameService {
     String season = ym.toString();
     int rederived = 0;
     for (Round round :
-        roundRepo.findByGameModeAndSessionDateRangeOrderByTime(mode, startUtc, endUtc)) {
+        roundRepo.findByGameModeAndSessionDateRangeOrderByTime(mode, startUtc, endUtc, false)) {
       if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
+      if (Boolean.TRUE.equals(round.getGameSession().getIsOnline())) continue;
       Player winner = playerRepo.findById(Objects.requireNonNull(round.getWinnerId())).orElse(null);
       if (winner == null || winner.isBot()) continue;
       rederived +=
@@ -557,26 +563,26 @@ public class GameService {
 
     Integer maxFan;
     if (hasMode && hasDate) {
-      maxFan = roundRepo.findMaxFanCountByModeAndDateRange(gameMode, startUtc, endUtc);
+      maxFan = roundRepo.findMaxFanCountByModeAndDateRange(gameMode, startUtc, endUtc, false);
     } else if (hasMode) {
-      maxFan = roundRepo.findMaxFanCountByMode(gameMode);
+      maxFan = roundRepo.findMaxFanCountByMode(gameMode, false);
     } else if (hasDate) {
-      maxFan = roundRepo.findMaxFanCountByDateRange(startUtc, endUtc);
+      maxFan = roundRepo.findMaxFanCountByDateRange(startUtc, endUtc, false);
     } else {
-      maxFan = roundRepo.findMaxFanCount();
+      maxFan = roundRepo.findMaxFanCount(false);
     }
 
     if (maxFan == null || maxFan == 0) return Collections.emptyList();
 
     List<Round> bestRounds;
     if (hasMode && hasDate) {
-      bestRounds = roundRepo.findByFanCountAndModeAndDateRange(maxFan, gameMode, startUtc, endUtc);
+      bestRounds = roundRepo.findByFanCountAndModeAndDateRange(maxFan, gameMode, startUtc, endUtc, false);
     } else if (hasMode) {
-      bestRounds = roundRepo.findByFanCountAndMode(maxFan, gameMode);
+      bestRounds = roundRepo.findByFanCountAndMode(maxFan, gameMode, false);
     } else if (hasDate) {
-      bestRounds = roundRepo.findByFanCountAndDateRange(maxFan, startUtc, endUtc);
+      bestRounds = roundRepo.findByFanCountAndDateRange(maxFan, startUtc, endUtc, false);
     } else {
-      bestRounds = roundRepo.findByFanCount(maxFan);
+      bestRounds = roundRepo.findByFanCount(maxFan, false);
     }
 
     return bestRounds.stream()

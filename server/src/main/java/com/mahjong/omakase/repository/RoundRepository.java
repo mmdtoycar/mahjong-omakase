@@ -14,68 +14,72 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
   int countByGameSessionId(Long gameSessionId);
 
   @Query(
-      "SELECT MAX(r.fanCount) FROM Round r WHERE r.gameSession.isOnline = false OR r.gameSession.isOnline IS NULL")
-  Integer findMaxFanCount();
+      "SELECT MAX(r.fanCount) FROM Round r WHERE :isOnline IS NULL OR r.gameSession.isOnline = :isOnline")
+  Integer findMaxFanCount(@Param("isOnline") Boolean isOnline);
 
   @Query(
-      "SELECT MAX(r.fanCount) FROM Round r WHERE r.gameSession.gameMode = :mode AND (r.gameSession.isOnline = false OR r.gameSession.isOnline IS NULL)")
-  Integer findMaxFanCountByMode(@Param("mode") GameMode mode);
+      "SELECT MAX(r.fanCount) FROM Round r WHERE r.gameSession.gameMode = :mode AND (:isOnline IS NULL OR r.gameSession.isOnline = :isOnline)")
+  Integer findMaxFanCountByMode(@Param("mode") GameMode mode, @Param("isOnline") Boolean isOnline);
 
   @Query(
-      "SELECT r FROM Round r WHERE r.fanCount = :fanCount AND (r.gameSession.isOnline = false OR r.gameSession.isOnline IS NULL)")
-  List<Round> findByFanCount(Integer fanCount);
+      "SELECT r FROM Round r WHERE r.fanCount = :fanCount AND (:isOnline IS NULL OR r.gameSession.isOnline = :isOnline)")
+  List<Round> findByFanCount(@Param("fanCount") Integer fanCount, @Param("isOnline") Boolean isOnline);
 
   @Query(
-      "SELECT r FROM Round r WHERE r.fanCount = :fanCount AND r.gameSession.gameMode = :mode AND (r.gameSession.isOnline = false OR r.gameSession.isOnline IS NULL)")
+      "SELECT r FROM Round r WHERE r.fanCount = :fanCount AND r.gameSession.gameMode = :mode AND (:isOnline IS NULL OR r.gameSession.isOnline = :isOnline)")
   List<Round> findByFanCountAndMode(
-      @Param("fanCount") Integer fanCount, @Param("mode") GameMode mode);
+      @Param("fanCount") Integer fanCount, @Param("mode") GameMode mode, @Param("isOnline") Boolean isOnline);
 
   @Query(
       "SELECT MAX(r.fanCount) FROM Round r JOIN r.gameSession s"
-          + " WHERE s.createdAt >= :start AND s.createdAt < :end AND (s.isOnline = false OR s.isOnline IS NULL)")
+          + " WHERE s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR s.isOnline = :isOnline)")
   Integer findMaxFanCountByDateRange(
-      @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+      @Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("isOnline") Boolean isOnline);
 
   @Query(
       "SELECT MAX(r.fanCount) FROM Round r JOIN r.gameSession s"
-          + " WHERE s.gameMode = :mode AND s.createdAt >= :start AND s.createdAt < :end AND (s.isOnline = false OR s.isOnline IS NULL)")
+          + " WHERE s.gameMode = :mode AND s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR s.isOnline = :isOnline)")
   Integer findMaxFanCountByModeAndDateRange(
       @Param("mode") GameMode mode,
       @Param("start") LocalDateTime start,
-      @Param("end") LocalDateTime end);
+      @Param("end") LocalDateTime end,
+      @Param("isOnline") Boolean isOnline);
 
   @Query(
       "SELECT r FROM Round r JOIN r.gameSession s"
-          + " WHERE r.fanCount = :fanCount AND s.createdAt >= :start AND s.createdAt < :end AND (s.isOnline = false OR s.isOnline IS NULL)")
+          + " WHERE r.fanCount = :fanCount AND s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR s.isOnline = :isOnline)")
   List<Round> findByFanCountAndDateRange(
       @Param("fanCount") Integer fanCount,
       @Param("start") LocalDateTime start,
-      @Param("end") LocalDateTime end);
+      @Param("end") LocalDateTime end,
+      @Param("isOnline") Boolean isOnline);
 
   @Query(
       "SELECT r FROM Round r JOIN r.gameSession s"
           + " WHERE r.fanCount = :fanCount AND s.gameMode = :mode"
-          + " AND s.createdAt >= :start AND s.createdAt < :end AND (s.isOnline = false OR s.isOnline IS NULL)")
+          + " AND s.createdAt >= :start AND s.createdAt < :end AND (:isOnline IS NULL OR s.isOnline = :isOnline)")
   List<Round> findByFanCountAndModeAndDateRange(
       @Param("fanCount") Integer fanCount,
       @Param("mode") GameMode mode,
       @Param("start") LocalDateTime start,
-      @Param("end") LocalDateTime end);
+      @Param("end") LocalDateTime end,
+      @Param("isOnline") Boolean isOnline);
 
   @Query(
       value =
-          "SELECT r FROM Round r JOIN FETCH r.gameSession s WHERE s.isOnline = false OR s.isOnline IS NULL ORDER BY s.createdAt ASC, r.roundNumber ASC",
+          "SELECT r FROM Round r JOIN FETCH r.gameSession s WHERE (:isOnline IS NULL OR s.isOnline = :isOnline) ORDER BY s.createdAt ASC, r.roundNumber ASC",
       countQuery =
-          "SELECT count(r) FROM Round r WHERE r.gameSession.isOnline = false OR r.gameSession.isOnline IS NULL")
-  Page<Round> findAllOrderByTime(Pageable pageable);
+          "SELECT count(r) FROM Round r JOIN r.gameSession s WHERE (:isOnline IS NULL OR s.isOnline = :isOnline)")
+  Page<Round> findAllOrderByTime(@Param("isOnline") Boolean isOnline, Pageable pageable);
 
   @Query(
       "SELECT r FROM Round r JOIN FETCH r.gameSession s"
           + " WHERE s.gameMode = :mode AND s.createdAt >= :start AND s.createdAt < :end"
-          + " AND (s.isOnline = false OR s.isOnline IS NULL)"
+          + " AND (:isOnline IS NULL OR s.isOnline = :isOnline)"
           + " ORDER BY s.createdAt ASC, r.roundNumber ASC")
   List<Round> findByGameModeAndSessionDateRangeOrderByTime(
       @Param("mode") GameMode mode,
       @Param("start") LocalDateTime start,
-      @Param("end") LocalDateTime end);
+      @Param("end") LocalDateTime end,
+      @Param("isOnline") Boolean isOnline);
 }
