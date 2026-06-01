@@ -10,11 +10,15 @@ import AdminPage from './pages/AdminPage'
 import FanTablePage from './pages/FanTablePage'
 import CalculatorPage from './pages/CalculatorPage'
 import LoginPage from './pages/LoginPage'
+import ProfilePage from './pages/ProfilePage'
 
 function App() {
   const token = localStorage.getItem('mahjong_token')
   const rawMe = sessionStorage.getItem('mahjong_me')
   const me = rawMe ? JSON.parse(rawMe) : null
+
+  // 优雅修复后端反序列化缺失 displayName 的问题：优先显示 Google 姓名，降级为系统用户名
+  const userDisplayName = me ? (me.firstName ? `${me.firstName} ${me.lastName}`.trim() : me.userName) : ''
 
   const handleLogout = () => {
     localStorage.removeItem('mahjong_token')
@@ -47,14 +51,26 @@ function App() {
                 paddingLeft: '15px',
               }}
             >
-              {me.pictureUrl && (
-                <img
-                  src={me.pictureUrl}
-                  alt={me.displayName}
-                  style={{ width: '32px', height: '32px', borderRadius: '50%' }}
-                />
-              )}
-              <span style={{ fontSize: '14px', color: '#333', fontWeight: 500 }}>{me.displayName}</span>
+              {/* 点击头像或姓名可直接无缝路由进入个人中心个人资料页 */}
+              <Link
+                to="/profile"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                }}
+              >
+                {me.pictureUrl && (
+                  <img
+                    src={me.pictureUrl}
+                    alt={userDisplayName}
+                    style={{ width: '32px', height: '32px', borderRadius: '50%' }}
+                  />
+                )}
+                <span style={{ fontSize: '14px', color: '#333', fontWeight: 500 }}>{userDisplayName}</span>
+              </Link>
               <button
                 onClick={handleLogout}
                 style={{
@@ -65,6 +81,7 @@ function App() {
                   fontSize: '12px',
                   cursor: 'pointer',
                   color: '#666',
+                  marginLeft: '10px',
                 }}
               >
                 退出
@@ -79,8 +96,19 @@ function App() {
                 marginLeft: '15px',
               }}
             >
-              {/* 注册与登录均直接使用统一的 btn-signup 类，达成完全一致的色彩和视觉质感 */}
-              <Link to="/signup" className="btn-signup">
+              <Link
+                to="/signup"
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #ccc',
+                  color: '#666',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  background: 'none',
+                }}
+              >
                 注册
               </Link>
               <Link to="/login" className="btn-signup">
@@ -94,6 +122,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/game" element={<DashboardPage />} />
           <Route path="/signup" element={<SignUpPage />} />
