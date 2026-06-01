@@ -17,6 +17,7 @@ public class SessionSummaryResponse {
   private Double participationBonus;
   private int roundCount;
   private List<PlayerPerformanceDTO> rankings;
+  private Boolean isOnline;
 
   public static SessionSummaryResponse from(GameSession session) {
     SessionSummaryResponse r = new SessionSummaryResponse();
@@ -29,6 +30,7 @@ public class SessionSummaryResponse {
     r.createdAt = session.getCreatedAt();
     r.participationBonus = session.getParticipationBonus();
     r.roundCount = session.getRounds() != null ? session.getRounds().size() : 0;
+    r.isOnline = session.getIsOnline();
 
     // Calculate rankings and RP
     r.rankings = calculateRankings(session);
@@ -116,5 +118,13 @@ public class SessionSummaryResponse {
 
   public List<PlayerPerformanceDTO> getRankings() {
     return rankings;
+  }
+
+  public Boolean getIsOnline() {
+    return isOnline;
+  }
+
+  public void setIsOnline(Boolean isOnline) {
+    this.isOnline = isOnline;
   }
 }

@@ -115,6 +115,7 @@ export default function DashboardPage() {
               createdAt={s.createdAt}
               roundLabel={`${s.roundCount}局 已结束`}
               isActive={false}
+              isOnline={s.isOnline}
               players={
                 s.rankings
                   ? s.rankings.map((p, idx) => ({

@@ -21,6 +21,7 @@ public class SessionDetailResponse {
   private double[] umaDist;
   private Double participationBonus;
   private Map<Long, Double> playerBonuses = Collections.emptyMap();
+  private Boolean isOnline;
 
   public static class PlayerInfo {
     private Long id;
@@ -263,5 +264,13 @@ public class SessionDetailResponse {
 
   public void setPlayerBonuses(Map<Long, Double> playerBonuses) {
     this.playerBonuses = playerBonuses;
+  }
+
+  public Boolean getIsOnline() {
+    return isOnline;
+  }
+
+  public void setIsOnline(Boolean isOnline) {
+    this.isOnline = isOnline;
   }
 }
