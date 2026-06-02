@@ -20,8 +20,19 @@ const CalculatorPage: React.FC = () => {
   const [riichiZifeng, setRiichiZifeng] = useState(1)
   const [riichiResetTrigger, setRiichiResetTrigger] = useState(0)
 
-  const handleGbReset = useCallback(() => setGbResetTrigger((p) => p + 1), [])
-  const handleRiichiReset = useCallback(() => setRiichiResetTrigger((p) => p + 1), [])
+  const handleGbReset = useCallback(() => {
+    setGbIsSelfDraw(false)
+    setGbQuanfeng(1)
+    setGbMenfeng(1)
+    setGbResetTrigger((p) => p + 1)
+  }, [])
+
+  const handleRiichiReset = useCallback(() => {
+    setRiichiIsSelfDraw(false)
+    setRiichiChangfeng(1)
+    setRiichiZifeng(1)
+    setRiichiResetTrigger((p) => p + 1)
+  }, [])
 
   // Dummy callback since direct output is rendered internally by the components
   const handleSelectScore = () => {}
