@@ -2,10 +2,28 @@ package com.mahjong.omakase.websocket;
 
 import com.mahjong.omakase.model.Player;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 public class MahjongGameSession {
   // Singleton global active session
   public static final MahjongGameSession INSTANCE = new MahjongGameSession();
+
+  // Observer listener interface for push notifications
+  public interface Listener {
+    void onSessionUpdated();
+  }
+
+  private static final List<Listener> listeners = new ArrayList<>();
+
+  public static synchronized void registerListener(Listener l) {
+    listeners.add(l);
+  }
+
+  private static synchronized void notifyListeners() {
+    for (Listener l : listeners) {
+      l.onSessionUpdated();
+    }
+  }
 
   private final List<String> tilePool = new ArrayList<>();
   private final List<String> wall = new ArrayList<>();
@@ -55,6 +73,16 @@ public class MahjongGameSession {
     wall.addAll(tilePool);
     Collections.shuffle(wall);
 
+    // Initialize virtual bots for empty seats
+    for (int i = 0; i < 4; i++) {
+      if (players[i] == null || players[i].isBot()) {
+        Player botPlayer = new Player("bot_" + i, "机器人", getWindName(i));
+        botPlayer.setBot(true);
+        botPlayer.setId(-10L - i); // negative IDs for virtual bots
+        players[i] = botPlayer;
+      }
+    }
+
     for (int i = 0; i < 4; i++) {
       hands[i] = new ArrayList<>();
       discards[i] = new ArrayList<>();
@@ -78,6 +106,14 @@ public class MahjongGameSession {
     activeTurn = 0;
     lastDrawnTile = null;
     gameInProgress = true;
+
+    // Trigger initial bot turn if East is a bot
+    triggerBotTurnIfActive();
+  }
+
+  private String getWindName(int pos) {
+    String[] winds = {"东风", "南风", "西风", "北风"};
+    return winds[pos];
   }
 
   private void sortHand(List<String> hand) {
@@ -94,9 +130,9 @@ public class MahjongGameSession {
 
   public synchronized boolean sitPlayer(Player player, int position) {
     if (position < 0 || position >= 4) return false;
-    // Check if player already seated elsewhere
+    // Check if player already seated elsewhere (and clear old seat)
     for (int i = 0; i < 4; i++) {
-      if (players[i] != null && players[i].getId().equals(player.getId())) {
+      if (players[i] != null && !players[i].isBot() && players[i].getId().equals(player.getId())) {
         players[i] = null; // Unseat from old position
       }
     }
@@ -105,14 +141,15 @@ public class MahjongGameSession {
   }
 
   public synchronized boolean sitPlayerAuto(Player player) {
-    // Seating logic: if already seated, keep seat. Otherwise find first empty seat.
+    // Seating logic: if already seated (non-bot), keep seat.
     for (int i = 0; i < 4; i++) {
-      if (players[i] != null && players[i].getId().equals(player.getId())) {
+      if (players[i] != null && !players[i].isBot() && players[i].getId().equals(player.getId())) {
         return true;
       }
     }
+    // Replace the first bot seat with this human player
     for (int i = 0; i < 4; i++) {
-      if (players[i] == null) {
+      if (players[i] == null || players[i].isBot()) {
         players[i] = player;
         return true;
       }
@@ -154,9 +191,65 @@ public class MahjongGameSession {
         hands[activeTurn].add(nextTile);
         lastDrawnTile = nextTile;
       }
+
+      // Async trigger the next bot turn if active
+      triggerBotTurnIfActive();
       return true;
     }
     return false;
+  }
+
+  public void triggerBotTurnIfActive() {
+    if (!gameInProgress) return;
+
+    final Player activePlayer;
+    synchronized (this) {
+      activePlayer = players[activeTurn];
+    }
+
+    if (activePlayer != null && activePlayer.isBot()) {
+      CompletableFuture.runAsync(
+          () -> {
+            try {
+              Thread.sleep(1200); // 1.2-second thinking delay to feel natural
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+
+            synchronized (this) {
+              if (!gameInProgress || activeTurn != getPlayerPosition(activePlayer.getId())) {
+                return;
+              }
+
+              // 1. Draw a tile if needed
+              if (lastDrawnTile == null && !wall.isEmpty()) {
+                drawTile(activeTurn);
+                notifyListeners();
+
+                // Wait another short delay before discarding
+                try {
+                  Thread.sleep(800);
+                } catch (InterruptedException e2) {
+                  Thread.currentThread().interrupt();
+                }
+              }
+            }
+
+            synchronized (this) {
+              if (!gameInProgress || activeTurn != getPlayerPosition(activePlayer.getId())) {
+                return;
+              }
+
+              // 2. Discard a random tile from hand
+              List<String> hand = hands[activeTurn];
+              if (hand != null && !hand.isEmpty()) {
+                String randomTile = hand.get(new Random().nextInt(hand.size()));
+                discardTile(activeTurn, randomTile);
+                notifyListeners();
+              }
+            }
+          });
+    }
   }
 
   // Generate filtered snapshot for a specific player (position 0-3, or -1 for guests)

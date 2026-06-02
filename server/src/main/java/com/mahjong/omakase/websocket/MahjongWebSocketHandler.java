@@ -24,6 +24,7 @@ public class MahjongWebSocketHandler extends TextWebSocketHandler {
 
   public MahjongWebSocketHandler(PlayerRepository playerRepo) {
     this.playerRepo = playerRepo;
+    MahjongGameSession.registerListener(this::broadcastSnapshot);
   }
 
   @Override
