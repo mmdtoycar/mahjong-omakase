@@ -2384,3 +2384,511 @@ tr:hover td {
   color: var(--text-light);
   font-weight: 500;
 }
+
+/* ==========================================================================
+   Premium Real-time Mahjong Table & 3D Bevel Tiles
+   ========================================================================== */
+
+/* Container & Header Controls */
+.live-game-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+.floating-banner {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  box-shadow: var(--shadow-lg);
+  border-radius: 8px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    top: 40px;
+    opacity: 0;
+  }
+  to {
+    top: 80px;
+    opacity: 1;
+  }
+}
+
+.game-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--sol-base2);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.status-dot.online {
+  background: #2ecc71;
+  box-shadow: 0 0 8px #2ecc71;
+}
+.status-dot.offline {
+  background: #e74c3c;
+  box-shadow: 0 0 8px #e74c3c;
+}
+
+.wall-indicator {
+  margin-left: 8px;
+  color: var(--sol-base01);
+  border-left: 1px solid var(--sol-base1);
+  padding-left: 12px;
+}
+
+/* 2D Ring Tabletop Felt Board */
+.mahjong-table-felt {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 780px;
+  margin: 20px auto;
+  background: radial-gradient(circle, #1e5a38 0%, #0e301d 100%);
+  border: 14px solid #4a2711; /* Mahogany wooden border */
+  border-radius: 36px;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), var(--shadow-lg);
+  overflow: hidden;
+}
+
+/* Table Felt Texture overlay (subtle micro-pattern) */
+.mahjong-table-felt::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+  background-size: 8px 8px;
+  pointer-events: none;
+}
+
+/* Central Turn/Dashboard Console */
+.mahjong-center-console {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  background: #0f1d14;
+  border: 6px solid #d4a017; /* Golden border */
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.console-wind-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #fff;
+}
+.console-wind-current {
+  font-family: 'Long Cang', 'Ma Shan Zheng', cursive;
+  font-size: 2.2rem;
+  line-height: 1;
+  color: var(--sol-yellow);
+  text-shadow: 0 0 10px rgba(181, 137, 0, 0.6);
+}
+.console-wind-sub {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.console-timer {
+  margin-top: 4px;
+  display: flex;
+  align-items: baseline;
+  color: var(--sol-red);
+}
+.timer-num {
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-family: monospace;
+}
+.timer-sec {
+  font-size: 0.65rem;
+  margin-left: 1px;
+}
+
+/* Seated Players relative layout */
+.player-seat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+/* Seating Positions layout mapping */
+.seat-bottom {
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  z-index: 20;
+}
+
+.seat-top {
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  z-index: 10;
+}
+.seat-top .seat-hand-display {
+  transform: scale(0.8);
+}
+
+.seat-left {
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  width: 60%;
+  z-index: 15;
+}
+.seat-left .seat-hand-display {
+  transform: scale(0.7);
+}
+
+.seat-right {
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+  width: 60%;
+  z-index: 15;
+}
+.seat-right .seat-hand-display {
+  transform: scale(0.7);
+}
+
+/* Seating Capsule Capsule Display */
+.seat-capsule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  margin-bottom: 8px;
+}
+
+.active-turn .seat-capsule {
+  border-color: var(--sol-yellow);
+  box-shadow: 0 0 12px var(--sol-yellow);
+  background: rgba(181, 137, 0, 0.25);
+  animation: pulseGold 2s infinite alternate;
+}
+
+@keyframes pulseGold {
+  from {
+    box-shadow: 0 0 6px var(--sol-yellow);
+  }
+  to {
+    box-shadow: 0 0 16px var(--sol-yellow);
+  }
+}
+
+.seat-wind-badge {
+  background: var(--sol-yellow);
+  color: #000;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+.seat-join-btn {
+  background: var(--sol-yellow);
+  color: #000;
+  border: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+/* Hand display wrapping rows */
+.seat-hand-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 70px;
+}
+
+.hand-tiles-row {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+/* Discard Rivers (整齐牌河排列) */
+.seat-discard-river {
+  margin-top: 6px;
+  display: flex;
+  justify-content: center;
+  max-width: 160px;
+  height: 60px;
+  overflow: hidden;
+}
+
+.discard-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 18px);
+  gap: 2px;
+  justify-content: center;
+}
+
+/* Adjust layout offsets for Rivers to keep center clear */
+.seat-bottom .seat-discard-river {
+  margin-bottom: 40px;
+}
+.seat-top .seat-discard-river {
+  margin-top: 40px;
+}
+
+/* 3D Bevel Mahjong Tiles Styling */
+.mahjong-tile {
+  position: relative;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s;
+}
+
+/* Tile Bevel depth mapping size layers */
+.mahjong-tile.size-lg {
+  width: 40px;
+  height: 52px;
+}
+.mahjong-tile.size-md {
+  width: 28px;
+  height: 38px;
+}
+.mahjong-tile.size-sm {
+  width: 18px;
+  height: 24px;
+}
+
+/* Face-down (Back-side of Mahjong Tile) */
+.mahjong-tile.face-down {
+  cursor: default;
+}
+.tile-back {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, #218c74 0%, #166552 100%);
+  border: 1px solid #0f4a3d;
+  border-radius: 4px;
+  box-shadow: inset 0 2px 2px rgba(255, 255, 255, 0.2), 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.mahjong-tile.size-sm .tile-back {
+  border-radius: 2px;
+}
+
+/* Face-up (Front-side of Mahjong Tile) */
+.tile-face {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #fdfdfa 0%, #ecece2 100%);
+  border: 1.5px solid #dcdccb;
+  border-bottom: 4px solid #b5b59e; /* Bevel depth */
+  border-right: 3px solid #cbcba8; /* Side bevel depth */
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.mahjong-tile.size-sm .tile-face {
+  border-bottom: 2px solid #b5b59e;
+  border-right: 1.5px solid #cbcba8;
+}
+
+/* Label styling inside front-face */
+.tile-label {
+  font-family: 'Noto Serif SC', 'Georgia', serif;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.mahjong-tile.size-lg .tile-label {
+  font-size: 1.5rem;
+}
+.mahjong-tile.size-md .tile-label {
+  font-size: 1.1rem;
+}
+.mahjong-tile.size-sm .tile-label {
+  font-size: 0.75rem;
+}
+
+/* Fine-tune label text for different suits */
+.tile-sub {
+  font-size: 0.5rem;
+  color: var(--mj-red);
+  transform: scale(0.8);
+  margin-top: -2px;
+  font-weight: bold;
+}
+.mahjong-tile.size-sm .tile-sub {
+  display: none; /* Hide subtitle details for tiny river cards */
+}
+
+/* Premium Suit Colors */
+.tile-color-wan {
+  color: #111; /* Main number in black */
+}
+.tile-color-pin {
+  color: #1b5bb0; /* Circles in cobalt blue */
+}
+.tile-color-sou {
+  color: #218c74; /* Bamboo in deep emerald */
+}
+.tile-color-wind-red {
+  color: #d33682; /* Wind Red */
+  font-family: 'Long Cang', cursive;
+}
+.tile-color-wind-black {
+  color: #073642; /* Wind Black */
+  font-family: 'Long Cang', cursive;
+}
+.tile-color-dragon-red {
+  color: #dc322f; /* Chun Red */
+  font-family: 'Long Cang', cursive;
+}
+.tile-color-dragon-green {
+  color: #859900; /* Green Dragon */
+  font-family: 'Long Cang', cursive;
+}
+.tile-color-dragon-white {
+  color: #268bd2; /* White dragon frame shape */
+  border: 1px solid #268bd2;
+  border-radius: 2px;
+  padding: 0 2px;
+  font-size: 0.9em;
+}
+
+/* Double-click / Interaction hover slide animation effects */
+.mahjong-tile:hover:not(.face-down) {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.mahjong-tile.selected {
+  transform: translateY(-16px) !important;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 12px var(--sol-yellow);
+  border-color: var(--sol-yellow);
+}
+
+/* Responsive Scaling for Table Board on smaller screen modes */
+@media (max-width: 820px) {
+  .mahjong-table-felt {
+    border-width: 10px;
+    border-radius: 24px;
+    margin: 10px auto;
+  }
+  .mahjong-center-console {
+    width: 90px;
+    height: 90px;
+    border-width: 4px;
+  }
+  .console-wind-current {
+    font-size: 1.6rem;
+  }
+  .mahjong-tile.size-lg {
+    width: 32px;
+    height: 44px;
+  }
+  .mahjong-tile.size-lg .tile-label {
+    font-size: 1.2rem;
+  }
+  .seat-capsule {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+  .seat-wind-badge {
+    width: 16px;
+    height: 16px;
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .mahjong-table-felt {
+    border-width: 6px;
+    border-radius: 16px;
+  }
+  .mahjong-center-console {
+    width: 65px;
+    height: 65px;
+    border-width: 3px;
+  }
+  .console-wind-current {
+    font-size: 1.1rem;
+  }
+  .console-wind-sub {
+    font-size: 0.5rem;
+  }
+  .console-timer {
+    display: none; /* Hide timer text on narrow device felt overlays */
+  }
+  .mahjong-tile.size-lg {
+    width: 20px;
+    height: 28px;
+  }
+  .mahjong-tile.size-lg .tile-label {
+    font-size: 0.8rem;
+  }
+  .mahjong-tile.size-md {
+    width: 16px;
+    height: 22px;
+  }
+  .mahjong-tile.size-md .tile-label {
+    font-size: 0.6rem;
+  }
+  .seat-capsule {
+    transform: scale(0.85);
+  }
+}

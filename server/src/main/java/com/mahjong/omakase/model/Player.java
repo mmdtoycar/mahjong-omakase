@@ -25,6 +25,15 @@ public class Player {
   @Column(nullable = false, columnDefinition = "boolean default false")
   private boolean bot = false;
 
+  @Column(unique = true)
+  private String email;
+
+  @Column(length = 1024)
+  private String pictureUrl;
+
+  @Column(unique = true)
+  private String token;
+
   public Player() {}
 
   public Player(String userName, String firstName, String lastName) {
@@ -83,5 +92,40 @@ public class Player {
 
   public void setBot(boolean bot) {
     this.bot = bot;
+  }
+
+  public String getEmail() {
+    return email;
+  }
+
+  public void setEmail(String email) {
+    this.email = email;
+  }
+
+  public String getPictureUrl() {
+    return pictureUrl;
+  }
+
+  public void setPictureUrl(String pictureUrl) {
+    this.pictureUrl = pictureUrl;
+  }
+
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private boolean merged = false;
+
+  public String getToken() {
+    return token;
+  }
+
+  public void setToken(String token) {
+    this.token = token;
+  }
+
+  public boolean isMerged() {
+    return merged;
+  }
+
+  public void setMerged(boolean merged) {
+    this.merged = merged;
   }
 }
