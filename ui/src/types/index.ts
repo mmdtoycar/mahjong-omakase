@@ -206,3 +206,23 @@ export interface FanDiscovery {
   bonusRp: number | null
   season: string
 }
+
+export interface LivePlayer {
+  id: number | null
+  userName: string
+  displayName: string
+  pictureUrl: string | null
+  position: number
+  handCount: number
+  discards: string[]
+  hand: string[] | null
+}
+
+export interface LiveGameSnapshot {
+  activeTurn: number
+  wallCount: number
+  lastDrawnTile: string | null
+  gameInProgress: boolean
+  players: LivePlayer[]
+  myPosition: number
+}

@@ -12,6 +12,7 @@ import FanTablePage from './pages/FanTablePage'
 import CalculatorPage from './pages/CalculatorPage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
+import LiveGamePage from './pages/LiveGamePage'
 import { fetchCurrentUser } from './api'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -73,7 +74,8 @@ function App() {
         </Link>
         <nav style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <Link to="/home">首页</Link>
-          <Link to="/game">游戏</Link>
+          <Link to="/game">对局历史</Link>
+          <Link to="/live">联机对战</Link>
           <Link to="/stats">统计</Link>
           <Link to="/calculator">算番器</Link>
           <Link to="/fan-table">番表</Link>
@@ -190,6 +192,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/live"
+            element={
+              <ProtectedRoute>
+                <LiveGamePage />
               </ProtectedRoute>
             }
           />
