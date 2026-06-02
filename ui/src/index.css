@@ -920,6 +920,90 @@ tr:hover td {
   margin-left: 4px;
 }
 
+/* ===== Calculator page ===== */
+.calc-page-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+.calc-page-wrapper .tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 2px;
+}
+
+.calc-mode-tab-btn {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 10px 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 4px solid transparent;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  margin: 0 4px;
+}
+
+.calc-mode-tab-btn.active {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+}
+
+.calc-card {
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.compact-toggle-btn {
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compact-toggle-btn.active {
+  background: var(--primary);
+  color: var(--card);
+  border-color: var(--primary);
+}
+
+.compact-toggle-btn-reset {
+  margin-left: auto;
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  border-color: var(--border-muted);
+}
+
+.configs-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  align-items: center;
+  background: var(--bg-muted);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.configs-row-section {
+  display: flex;
+  align-items: center;
+}
+
 /* ===== Mobile responsive ===== */
 @media (max-width: 640px) {
   .app-header {
@@ -1161,6 +1245,29 @@ tr:hover td {
 
   .quick-win-container {
     margin-bottom: 12px;
+  }
+
+  /* Calculator page responsive */
+  .calc-page-wrapper {
+    padding: 4px;
+  }
+
+  .calc-mode-tab-btn {
+    font-size: 0.95rem;
+    padding: 8px 14px;
+    margin: 0 2px;
+  }
+
+  .configs-row {
+    gap: 8px;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+  }
+
+  .compact-toggle-btn {
+    padding: 3px 6px;
+    font-size: 0.78rem;
+    border-radius: 4px;
   }
 }
 

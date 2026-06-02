@@ -47,131 +47,27 @@ const CalculatorPage: React.FC = () => {
   const handleSelectScore = () => {}
 
   return (
-    <div className="container calc-page-wrapper" style={{ maxWidth: '800px', margin: '0 auto', padding: '12px' }}>
-      {/* Premium Compact Styles */}
-      <style>{`
-        .compact-toggle-btn {
-          padding: 4px 10px;
-          font-size: 0.82rem;
-          font-weight: 700;
-          border: 1px solid var(--border);
-          background: #fff;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.15s ease;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .compact-toggle-btn.active {
-          background: var(--primary);
-          color: #fff;
-          border-color: var(--primary);
-        }
-        .configs-row {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-          margin-bottom: 12px;
-          align-items: center;
-          background: var(--bg-muted);
-          padding: 8px 12px;
-          border-radius: 8px;
-          border: 1px solid var(--border);
-        }
-
-        @media (max-width: 768px) {
-          .calc-page-wrapper {
-            padding: 4px !important;
-          }
-          .tab-btn {
-            font-size: 0.95rem !important;
-            padding: 8px 14px !important;
-            margin: 0 2px !important;
-          }
-          .configs-row {
-            gap: 8px !important;
-            padding: 6px 10px !important;
-            margin-bottom: 8px !important;
-          }
-          .compact-toggle-btn {
-            padding: 3px 6px !important;
-            font-size: 0.78rem !important;
-            border-radius: 4px !important;
-          }
-          .configs-row-section {
-            gap: 4px !important;
-          }
-          .card {
-            padding: 10px !important;
-          }
-        }
-      `}</style>
-
-      {/* Mode Tabs */}
-      <div
-        className="tabs"
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          marginBottom: 12,
-          borderBottom: '2px solid var(--border)',
-          paddingBottom: 2,
-        }}
-      >
+    <div className="container calc-page-wrapper">
+      <div className="tabs">
         <button
-          className={`tab-btn ${activeTab === 'GUOBIAO' ? 'active' : ''}`}
+          className={`calc-mode-tab-btn ${activeTab === 'GUOBIAO' ? 'active' : ''}`}
           onClick={() => setActiveTab('GUOBIAO')}
-          style={{
-            fontSize: '1.1rem',
-            fontWeight: 700,
-            padding: '10px 24px',
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'GUOBIAO' ? '4px solid var(--primary)' : '4px solid transparent',
-            color: activeTab === 'GUOBIAO' ? 'var(--primary)' : 'var(--text-muted)',
-            transition: 'all 0.2s ease',
-            margin: '0 4px',
-          }}
         >
           国标算番器
         </button>
         <button
-          className={`tab-btn ${activeTab === 'RIICHI' ? 'active' : ''}`}
+          className={`calc-mode-tab-btn ${activeTab === 'RIICHI' ? 'active' : ''}`}
           onClick={() => setActiveTab('RIICHI')}
-          style={{
-            fontSize: '1.1rem',
-            fontWeight: 700,
-            padding: '10px 24px',
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'RIICHI' ? '4px solid var(--primary)' : '4px solid transparent',
-            color: activeTab === 'RIICHI' ? 'var(--primary)' : 'var(--text-muted)',
-            transition: 'all 0.2s ease',
-            margin: '0 4px',
-          }}
         >
           立直算番器
         </button>
       </div>
 
-      {/* Main Container Card */}
-      <div
-        className="card"
-        style={{
-          padding: '16px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-          borderRadius: '12px',
-          border: '1px solid var(--border)',
-        }}
-      >
+      <div className="card calc-card">
         {activeTab === 'GUOBIAO' ? (
           <div>
-            {/* Super Compact Configurations Row */}
             <div className="configs-row">
-              <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="configs-row-section" style={{ gap: 6 }}>
                 <span className="config-row-label">和牌:</span>
                 <button
                   className={`compact-toggle-btn ${!gbIsSelfDraw ? 'active' : ''}`}
@@ -186,7 +82,7 @@ const CalculatorPage: React.FC = () => {
                   自摸
                 </button>
               </div>
-              <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div className="configs-row-section" style={{ gap: 4 }}>
                 <span className="config-row-label">圈风:</span>
                 {[1, 2, 3, 4].map((w) => (
                   <button
@@ -198,7 +94,7 @@ const CalculatorPage: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div className="configs-row-section" style={{ gap: 4 }}>
                 <span className="config-row-label">门风:</span>
                 {[1, 2, 3, 4].map((w) => (
                   <button
@@ -210,16 +106,11 @@ const CalculatorPage: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <button
-                className="compact-toggle-btn"
-                style={{ marginLeft: 'auto', background: 'var(--bg-muted)', color: 'var(--text-muted)', borderColor: 'var(--border-muted)' }}
-                onClick={handleGbReset}
-              >
+              <button className="compact-toggle-btn compact-toggle-btn-reset" onClick={handleGbReset}>
                 清空
               </button>
             </div>
 
-            {/* In-game Core Calculator Component */}
             <GuobiaoCalculator
               key={`gb-calc-${gbResetTrigger}`}
               onSelectScore={handleSelectScore}
@@ -234,9 +125,8 @@ const CalculatorPage: React.FC = () => {
           </div>
         ) : (
           <div>
-            {/* Super Compact Configurations Row */}
             <div className="configs-row">
-              <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="configs-row-section" style={{ gap: 6 }}>
                 <span className="config-row-label">和牌:</span>
                 <button
                   className={`compact-toggle-btn ${!riichiIsSelfDraw ? 'active' : ''}`}
@@ -251,7 +141,7 @@ const CalculatorPage: React.FC = () => {
                   自摸
                 </button>
               </div>
-              <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div className="configs-row-section" style={{ gap: 4 }}>
                 <span className="config-row-label">场风:</span>
                 {[1, 2, 3, 4].map((w) => (
                   <button
@@ -263,7 +153,7 @@ const CalculatorPage: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div className="configs-row-section" style={{ gap: 4 }}>
                 <span className="config-row-label">自风:</span>
                 {[1, 2, 3, 4].map((w) => (
                   <button
@@ -275,16 +165,11 @@ const CalculatorPage: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <button
-                className="compact-toggle-btn"
-                style={{ marginLeft: 'auto', background: 'var(--bg-muted)', color: 'var(--text-muted)', borderColor: 'var(--border-muted)' }}
-                onClick={handleRiichiReset}
-              >
+              <button className="compact-toggle-btn compact-toggle-btn-reset" onClick={handleRiichiReset}>
                 清空
               </button>
             </div>
 
-            {/* In-game Core Calculator Component */}
             <RiichiCalculator
               key={`riichi-calc-${riichiResetTrigger}`}
               onSelectScore={handleSelectScore}
