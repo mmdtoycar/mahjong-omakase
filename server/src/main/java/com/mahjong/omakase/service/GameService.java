@@ -654,32 +654,7 @@ public class GameService {
     LocalDateTime endUtc = toUtcTime(end);
 
     Map<Long, Integer> totalScores = new HashMap<>();
-    List<Object[]> scoreRows;
-    if (gameMode != null && hasDateRange) {
-      scoreRows = roundScoreRepo.getTotalScoresByGameModeAndDateRange(gameMode, startUtc, endUtc);
-    } else if (gameMode != null) {
-      scoreRows = roundScoreRepo.getTotalScoresByGameMode(gameMode);
-    } else {
-      scoreRows = roundScoreRepo.getTotalScoresAllTime();
-    }
-    for (Object[] row : scoreRows) {
-      if (row[0] != null) totalScores.put((Long) row[0], ((Number) row[1]).intValue());
-    }
-
     Map<Long, Integer> gamesPlayed = new HashMap<>();
-    List<Object[]> gamesRows;
-    if (gameMode != null && hasDateRange) {
-      gamesRows =
-          roundScoreRepo.getGamesPlayedPerPlayerByGameModeAndDateRange(gameMode, startUtc, endUtc);
-    } else if (gameMode != null) {
-      gamesRows = roundScoreRepo.getGamesPlayedPerPlayerByGameMode(gameMode);
-    } else {
-      gamesRows = roundScoreRepo.getGamesPlayedPerPlayer();
-    }
-    for (Object[] row : gamesRows) {
-      if (row[0] != null) gamesPlayed.put((Long) row[0], ((Number) row[1]).intValue());
-    }
-
     Map<Long, Integer> wins = new HashMap<>();
     Map<Long, Double> totalRP = new HashMap<>();
     Map<Long, Double> tieredBonusPerPlayer = new HashMap<>();
@@ -735,6 +710,14 @@ public class GameService {
         for (Object[] row : sessionScores) {
           if (row[0] != null) {
             Long playerId = (Long) row[0];
+            int score = ((Number) row[1]).intValue();
+
+            // Accumulate gamesPlayed and totalScores dynamically so they share the same
+            // session set as wins/bonuses below (otherwise mode-or-date-only filters can
+            // mix all-time totals with date-filtered wins).
+            gamesPlayed.merge(playerId, 1, Integer::sum);
+            totalScores.merge(playerId, score, Integer::sum);
+
             int gameIndex = seasonCounts.merge(playerId, 1, Integer::sum);
             double tieredBonus;
             if (gameIndex <= 10) {
