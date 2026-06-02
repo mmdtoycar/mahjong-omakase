@@ -7,6 +7,7 @@ import com.mahjong.omakase.service.handler.GameModeHandler;
 import com.mahjong.omakase.service.scoring.RpCalculator;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -26,8 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class GameService {
 
-  private static final java.time.ZoneId ZONE_UTC = java.time.ZoneId.of("UTC");
-  private static final java.time.ZoneId ZONE_PACIFIC = java.time.ZoneId.of("America/Los_Angeles");
+  private static final ZoneId ZONE_UTC = ZoneId.of("UTC");
+  private static final ZoneId ZONE_PACIFIC = ZoneId.of("America/Los_Angeles");
 
   private final PlayerRepository playerRepo;
   private final GameSessionRepository sessionRepo;

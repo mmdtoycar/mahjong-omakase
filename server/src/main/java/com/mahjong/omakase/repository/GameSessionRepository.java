@@ -2,6 +2,7 @@ package com.mahjong.omakase.repository;
 
 import com.mahjong.omakase.model.GameSession;
 import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,5 +25,5 @@ public interface GameSessionRepository extends JpaRepository<GameSession, Long> 
   List<Object[]> findDistinctSeasons();
 
   @Query("SELECT s.createdAt FROM GameSession s WHERE s.rounds IS NOT EMPTY")
-  List<java.time.LocalDateTime> findSessionCreationTimesWithRounds();
+  List<LocalDateTime> findSessionCreationTimesWithRounds();
 }
