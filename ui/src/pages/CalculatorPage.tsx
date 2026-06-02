@@ -212,7 +212,7 @@ const CalculatorPage: React.FC = () => {
               </div>
               <button
                 className="compact-toggle-btn"
-                style={{ marginLeft: 'auto', background: '#eaeaea', color: '#555', borderColor: '#dcdcdc' }}
+                style={{ marginLeft: 'auto', background: 'var(--bg-muted)', color: 'var(--text-muted)', borderColor: 'var(--border-muted)' }}
                 onClick={handleGbReset}
               >
                 清空
@@ -277,7 +277,7 @@ const CalculatorPage: React.FC = () => {
               </div>
               <button
                 className="compact-toggle-btn"
-                style={{ marginLeft: 'auto', background: '#eaeaea', color: '#555', borderColor: '#dcdcdc' }}
+                style={{ marginLeft: 'auto', background: 'var(--bg-muted)', color: 'var(--text-muted)', borderColor: 'var(--border-muted)' }}
                 onClick={handleRiichiReset}
               >
                 清空

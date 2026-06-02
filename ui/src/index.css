@@ -32,10 +32,15 @@
   --primary-light: var(--sol-base01);
   --accent: var(--sol-yellow);
   --bg: var(--sol-base3);
+  --bg-muted: #eaeaea;
   --card: #ffffff;
   --text: var(--sol-base01);
   --text-light: var(--sol-base0);
+  --text-muted: #555;
   --border: var(--sol-base2);
+  --border-muted: #dcdcdc;
+  --rank-silver: #95a5a6;
+  --rank-bronze: #cd7f32;
   --danger: var(--sol-red);
   --success: var(--sol-green);
   --radius: 12px;
@@ -549,12 +554,12 @@ tr:hover td {
 }
 
 .rank-2 {
-  color: #95a5a6;
+  color: var(--rank-silver);
   font-weight: 600;
 }
 
 .rank-3 {
-  color: #cd7f32;
+  color: var(--rank-bronze);
   font-weight: 600;
 }
 
