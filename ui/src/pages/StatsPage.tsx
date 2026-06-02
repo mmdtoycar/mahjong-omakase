@@ -1,16 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import {
-  PlayerStats,
-  Player,
-  GameModeKey,
-  GAME_MODES,
-  Season,
-  getCurrentSeason,
-  getSeasonLabel,
-  BestRound,
-} from '../types'
-import { fetchStats, fetchPlayers, fetchBestRounds, fetchActiveSeasons } from '../api'
+import { PlayerStats, Player, GameModeKey, GAME_MODES, getCurrentSeason, BestRound } from '../types'
+import { fetchStats, fetchPlayers, fetchBestRounds } from '../api'
 import { MahjongHand } from '../components/MahjongHand'
 
 type Tab = 'games' | 'players'
@@ -18,8 +9,9 @@ type Tab = 'games' | 'players'
 const currentSeason = getCurrentSeason()
 
 import { statFontSize } from '../utils/fontSize'
-import { abbrName } from '../utils/format'
+import { abbrName, parseError } from '../utils/format'
 import { MSG } from '../constants'
+import { useActiveSeasons } from '../hooks/useActiveSeasons'
 
 export default function StatsPage() {
   const navigate = useNavigate()
@@ -34,7 +26,7 @@ export default function StatsPage() {
   const [bestRoundsError, setBestRoundsError] = useState('')
   const [monthlyBestRounds, setMonthlyBestRounds] = useState<BestRound[]>([])
   const [monthlyBestRoundsError, setMonthlyBestRoundsError] = useState('')
-  const [seasons, setSeasons] = useState<Season[]>([])
+  const { seasons, error: seasonsError } = useActiveSeasons()
 
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
@@ -55,7 +47,7 @@ export default function StatsPage() {
         setLoading(false)
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : MSG.ERROR)
+        setError(parseError(e))
         setLoading(false)
       })
   }
@@ -69,32 +61,19 @@ export default function StatsPage() {
         setLoading(false)
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : MSG.ERROR)
+        setError(parseError(e))
         setLoading(false)
       })
   }
 
+  // Snap seasonKey to the first available season once seasons load,
+  // unless the current selection is still valid.
   useEffect(() => {
-    let mounted = true
-    fetchActiveSeasons()
-      .then((data) => {
-        if (!mounted) return
-        const list = data.map((s) => ({ year: s.year, month: s.month, label: getSeasonLabel(s.year, s.month) }))
-        setSeasons(list)
-        if (list.length > 0) {
-          setSeasonKey((prev) =>
-            list.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${list[0].year}-${list[0].month}`
-          )
-        }
-      })
-      .catch((e: unknown) => {
-        if (!mounted) return
-        setError(e instanceof Error ? e.message : MSG.ERROR)
-      })
-    return () => {
-      mounted = false
-    }
-  }, [])
+    if (seasons.length === 0) return
+    setSeasonKey((prev) =>
+      seasons.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${seasons[0].year}-${seasons[0].month}`
+    )
+  }, [seasons])
 
   useEffect(() => {
     if (tab === 'games') {
@@ -113,7 +92,7 @@ export default function StatsPage() {
           if (!controller.signal.aborted) setBestRounds(data)
         })
         .catch((e: unknown) => {
-          if (!controller.signal.aborted) setBestRoundsError(e instanceof Error ? e.message : MSG.ERROR)
+          if (!controller.signal.aborted) setBestRoundsError(parseError(e))
         })
     }
     return () => controller.abort()
@@ -131,7 +110,7 @@ export default function StatsPage() {
         })
         .catch((e: unknown) => {
           if (!controller.signal.aborted) {
-            setMonthlyBestRoundsError(e instanceof Error ? e.message : MSG.ERROR)
+            setMonthlyBestRoundsError(parseError(e))
             setMonthlyBestRounds([])
           }
         })
@@ -153,10 +132,10 @@ export default function StatsPage() {
         <p>{MSG.LOADING}</p>
       </div>
     )
-  if (error)
+  if (error || seasonsError)
     return (
       <div className="empty-state">
-        <p>{error}</p>
+        <p>{error || seasonsError}</p>
       </div>
     )
 
@@ -254,9 +233,9 @@ export default function StatsPage() {
                     <tr>
                       <th>名次</th>
                       <th>玩家</th>
-                      <th style={{ textAlign: 'right' }}>场次</th>
-                      <th style={{ textAlign: 'right' }}>胜场</th>
-                      <th style={{ textAlign: 'right' }}>积分(RP)</th>
+                      <th className="text-right">场次</th>
+                      <th className="text-right">胜场</th>
+                      <th className="text-right">积分(RP)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -271,16 +250,9 @@ export default function StatsPage() {
                           {s.userName}
                           <span className="table-username">{abbr(s)}</span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>{s.gamesPlayed}</td>
-                        <td style={{ textAlign: 'right' }}>{s.wins}</td>
-                        <td
-                          style={{
-                            textAlign: 'right',
-                            fontVariantNumeric: 'tabular-nums',
-                            fontWeight: 'bold',
-                            color: 'var(--primary)',
-                          }}
-                        >
+                        <td className="text-right">{s.gamesPlayed}</td>
+                        <td className="text-right">{s.wins}</td>
+                        <td className="num-cell-rp">
                           {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
                         </td>
                       </tr>

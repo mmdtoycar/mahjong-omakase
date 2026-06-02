@@ -7,8 +7,10 @@ import com.mahjong.omakase.service.handler.GameModeHandler;
 import com.mahjong.omakase.service.scoring.RpCalculator;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -25,8 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class GameService {
 
-  private static final java.time.ZoneId ZONE_UTC = java.time.ZoneId.of("UTC");
-  private static final java.time.ZoneId ZONE_PACIFIC = java.time.ZoneId.of("America/Los_Angeles");
+  private static final ZoneId ZONE_UTC = ZoneId.of("UTC");
+  private static final ZoneId ZONE_PACIFIC = ZoneId.of("America/Los_Angeles");
 
   private final PlayerRepository playerRepo;
   private final GameSessionRepository sessionRepo;
@@ -86,9 +88,8 @@ public class GameService {
       for (Round round : rounds) {
         if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
         if (round.getGameSession().getGameMode() != GameMode.GUOBIAO) continue;
-        Player winner =
-            playerRepo.findById(Objects.requireNonNull(round.getWinnerId())).orElse(null);
-        if (winner == null || winner.isBot()) continue;
+        Player winner = loadActivePlayer(round.getWinnerId());
+        if (winner == null) continue;
 
         String season = getSeasonStringFromUtc(round.getGameSession().getCreatedAt());
         newDiscoveries +=
@@ -123,6 +124,30 @@ public class GameService {
   private String getSeasonStringFromPacific(LocalDateTime pacificTime) {
     if (pacificTime == null) return null;
     return YearMonth.from(pacificTime).toString();
+  }
+
+  /** Returns the player if found and not a bot, else null. */
+  private Player loadActivePlayer(Long playerId) {
+    if (playerId == null) return null;
+    Player p = playerRepo.findById(playerId).orElse(null);
+    return (p != null && !p.isBot()) ? p : null;
+  }
+
+  /**
+   * Picks one of four query suppliers based on whether mode/date filters are present. Used to
+   * collapse parallel if/else ladders that all branch on (hasMode, hasDate).
+   */
+  private <T> T queryByModeAndDate(
+      boolean hasMode,
+      boolean hasDate,
+      Supplier<T> modeAndDate,
+      Supplier<T> modeOnly,
+      Supplier<T> dateOnly,
+      Supplier<T> none) {
+    if (hasMode && hasDate) return modeAndDate.get();
+    if (hasMode) return modeOnly.get();
+    if (hasDate) return dateOnly.get();
+    return none.get();
   }
 
   public void reloadSettings() {
@@ -522,8 +547,8 @@ public class GameService {
     for (Round round :
         roundRepo.findByGameModeAndSessionDateRangeOrderByTime(mode, startUtc, endUtc)) {
       if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
-      Player winner = playerRepo.findById(Objects.requireNonNull(round.getWinnerId())).orElse(null);
-      if (winner == null || winner.isBot()) continue;
+      Player winner = loadActivePlayer(round.getWinnerId());
+      if (winner == null) continue;
       rederived +=
           processFanDiscoveries(
               round.getFanDetails(),
@@ -553,29 +578,26 @@ public class GameService {
     LocalDateTime startUtc = toUtcTime(start);
     LocalDateTime endUtc = toUtcTime(end);
 
-    Integer maxFan;
-    if (hasMode && hasDate) {
-      maxFan = roundRepo.findMaxFanCountByModeAndDateRange(gameMode, startUtc, endUtc);
-    } else if (hasMode) {
-      maxFan = roundRepo.findMaxFanCountByMode(gameMode);
-    } else if (hasDate) {
-      maxFan = roundRepo.findMaxFanCountByDateRange(startUtc, endUtc);
-    } else {
-      maxFan = roundRepo.findMaxFanCount();
-    }
+    Integer maxFan =
+        queryByModeAndDate(
+            hasMode,
+            hasDate,
+            () -> roundRepo.findMaxFanCountByModeAndDateRange(gameMode, startUtc, endUtc),
+            () -> roundRepo.findMaxFanCountByMode(gameMode),
+            () -> roundRepo.findMaxFanCountByDateRange(startUtc, endUtc),
+            () -> roundRepo.findMaxFanCount());
 
     if (maxFan == null || maxFan == 0) return Collections.emptyList();
 
-    List<Round> bestRounds;
-    if (hasMode && hasDate) {
-      bestRounds = roundRepo.findByFanCountAndModeAndDateRange(maxFan, gameMode, startUtc, endUtc);
-    } else if (hasMode) {
-      bestRounds = roundRepo.findByFanCountAndMode(maxFan, gameMode);
-    } else if (hasDate) {
-      bestRounds = roundRepo.findByFanCountAndDateRange(maxFan, startUtc, endUtc);
-    } else {
-      bestRounds = roundRepo.findByFanCount(maxFan);
-    }
+    final Integer fan = maxFan;
+    List<Round> bestRounds =
+        queryByModeAndDate(
+            hasMode,
+            hasDate,
+            () -> roundRepo.findByFanCountAndModeAndDateRange(fan, gameMode, startUtc, endUtc),
+            () -> roundRepo.findByFanCountAndMode(fan, gameMode),
+            () -> roundRepo.findByFanCountAndDateRange(fan, startUtc, endUtc),
+            () -> roundRepo.findByFanCount(fan));
 
     return bestRounds.stream()
         .map(
@@ -884,8 +906,8 @@ public class GameService {
         && session.getGameMode() == GameMode.GUOBIAO) {
       Integer winnerScoreChange = computedScores.get(winnerId);
       if (winnerScoreChange != null && winnerScoreChange > 0) {
-        Player winner = playerRepo.findById(winnerId).orElse(null);
-        if (winner != null && !winner.isBot()) {
+        Player winner = loadActivePlayer(winnerId);
+        if (winner != null) {
           String season = getSeasonStringFromUtc(session.getCreatedAt());
           processFanDiscoveries(fanDetails, season, winner, round, winHand, session.getCreatedAt());
         }

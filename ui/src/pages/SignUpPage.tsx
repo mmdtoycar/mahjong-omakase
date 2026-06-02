@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createPlayer, checkUserName } from '../api'
-import { MSG } from '../constants'
+import { parseError } from '../utils/format'
 
 export default function SignUpPage() {
   const navigate = useNavigate()
@@ -56,7 +56,7 @@ export default function SignUpPage() {
       await createPlayer(userName.trim(), firstName.trim(), lastName.trim())
       navigate('/')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : MSG.ERROR)
+      setError(parseError(err))
       setSubmitting(false)
     }
   }
