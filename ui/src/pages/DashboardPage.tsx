@@ -88,11 +88,8 @@ export default function DashboardPage() {
     )
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div
-        className="flex-between dashboard-header"
-        style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)' }}
-      >
+    <div className="card dashboard-card">
+      <div className="flex-between dashboard-header">
         <h2 style={{ margin: 0, whiteSpace: 'nowrap' }}>历史对局</h2>
         <div className="dashboard-header-actions">
           <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">

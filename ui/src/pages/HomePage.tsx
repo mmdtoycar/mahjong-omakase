@@ -162,18 +162,7 @@ export default function HomePage() {
                     <span className="best-hand-label">🏆 本月最高和牌</span>
                     <div className="best-hand-value">
                       {data.best.fanCount} 番 · {data.best.winnerName}
-                      <div
-                        style={{
-                          fontSize: '0.75rem',
-                          marginTop: '4px',
-                          color: 'var(--sol-base01)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {data.best.fanDetails}
-                      </div>
+                      <div className="best-hand-summary-detail">{data.best.fanDetails}</div>
                     </div>
                   </div>
                 )}
