@@ -156,8 +156,15 @@ export function getSeasonLabel(year: number, month: number): string {
 
 export function getCurrentSeason(): Season {
   const now = new Date()
-  const month = now.getMonth() + 1
-  return { year: now.getFullYear(), month, label: getSeasonLabel(now.getFullYear(), month) }
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: 'numeric',
+  })
+  const parts = formatter.formatToParts(now)
+  const year = parseInt(parts.find((p) => p.type === 'year')?.value || '', 10)
+  const month = parseInt(parts.find((p) => p.type === 'month')?.value || '', 10)
+  return { year, month, label: getSeasonLabel(year, month) }
 }
 
 export interface PlayerGameEntry {

@@ -395,7 +395,7 @@ export default function StatsPage() {
                       <td>{i + 1}</td>
                       <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{p.userName}</td>
                       <td>{abbrName(p.firstName + ' ' + p.lastName)}</td>
-                      <td>{new Date(p.createdAt).toLocaleDateString()}</td>
+                      <td>{new Date(p.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
                     </tr>
                   ))}
                 </tbody>

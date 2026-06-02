@@ -59,10 +59,14 @@ export default function NewSessionPage() {
     setError('')
     try {
       const now = new Date()
-      const defaultName = `Game ${now.toLocaleDateString()} ${now.getHours()}:${String(now.getMinutes()).padStart(
-        2,
-        '0'
-      )}`
+      const dateStr = now.toLocaleDateString([], { timeZone: 'America/Los_Angeles' })
+      const timeStr = now.toLocaleTimeString([], {
+        timeZone: 'America/Los_Angeles',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+      const defaultName = `Game ${dateStr} ${timeStr}`
       const session = await createSession(defaultName, gameMode, selectedIds, isOnline)
       navigate(`/session/${session.id}`)
     } catch (e: unknown) {
