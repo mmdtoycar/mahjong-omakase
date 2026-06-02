@@ -74,6 +74,20 @@ find server/src -name "*.java" | while read f; do
 done
 ```
 
+### Java fully-qualified names (should be imports)
+Flag any `java.<pkg>.<TypeName>` reference in the file body — these should be
+imported and used as the simple type name. Common offenders: `java.time.ZoneId`,
+`java.util.function.Predicate`, `java.util.function.Supplier`. The body of a
+class should never spell out a `java.*` package; if it does, move the type to
+the import block.
+```bash
+grep -rn 'java\.[a-z][a-z]*\.[A-Z]' server/src --include='*.java' \
+  | grep -v '^[^:]*:[0-9]*:import ' \
+  | grep -v '^[^:]*:[0-9]*: \* '
+```
+Each line returned is a violation. Fix by adding an `import java.<pkg>.<Type>;`
+and replacing the FQN with `Type` at every use site in that file.
+
 ### Java unused private methods
 Read each Java service/controller/handler file and check if every private method is called within the same class.
 
