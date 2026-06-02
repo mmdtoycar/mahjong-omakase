@@ -31,8 +31,6 @@ public class GameSession {
 
   private Double participationBonus;
 
-  private Boolean isOnline = false;
-
   @JsonIgnore
   @OneToMany(mappedBy = "gameSession", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<GameSessionPlayer> players = new ArrayList<>();
@@ -112,13 +110,5 @@ public class GameSession {
 
   public void setParticipationBonus(Double participationBonus) {
     this.participationBonus = participationBonus;
-  }
-
-  public Boolean getIsOnline() {
-    return isOnline;
-  }
-
-  public void setIsOnline(Boolean isOnline) {
-    this.isOnline = isOnline;
   }
 }

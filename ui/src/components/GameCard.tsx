@@ -17,28 +17,14 @@ interface Props {
   roundLabel: string
   isActive: boolean
   players: PlayerEntry[]
-  isOnline?: boolean
 }
 
-export const GameCard: React.FC<Props> = ({
-  id,
-  gameModeDisplayName,
-  createdAt,
-  roundLabel,
-  isActive,
-  players,
-  isOnline,
-}) => {
+export const GameCard: React.FC<Props> = ({ id, gameModeDisplayName, createdAt, roundLabel, isActive, players }) => {
   return (
     <Link to={`/session/${id}`} className="game-card">
       <div className="session-card-header">
         <div className="session-card-mode">
           <span className="mode-text">{gameModeDisplayName}</span>
-          {isOnline && (
-            <span className="badge badge-sm" style={{ backgroundColor: 'var(--accent)', marginLeft: 8, color: '#fff' }}>
-              线上
-            </span>
-          )}
         </div>
         <div className="session-card-meta">
           <span className="session-card-date">

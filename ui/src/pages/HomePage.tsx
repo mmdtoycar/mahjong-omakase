@@ -35,7 +35,7 @@ export default function HomePage() {
           GAME_MODES.map(async (mode) => {
             try {
               const [stats, bestRounds] = await Promise.all([
-                fetchStats(mode.key, currentSeason.year, currentSeason.month, false, controller.signal),
+                fetchStats(mode.key, currentSeason.year, currentSeason.month, controller.signal),
                 fetchBestRounds(mode.key, currentSeason.year, currentSeason.month, controller.signal),
               ])
 
@@ -112,7 +112,6 @@ export default function HomePage() {
                   createdAt={s.createdAt}
                   roundLabel={`${state.displayName} 进行中`}
                   isActive={true}
-                  isOnline={s.isOnline}
                   players={sortedPlayers.map((p) => {
                     const score = s.totalScores[p.id] || 0
                     const rank = sortedScores.indexOf(score) + 1

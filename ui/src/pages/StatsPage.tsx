@@ -38,9 +38,8 @@ export default function StatsPage() {
 
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
-  const [isOnline, setIsOnline] = useState<boolean>(false)
 
-  const loadStats = (mode: GameModeKey, sKey: string, online: boolean) => {
+  const loadStats = (mode: GameModeKey, sKey: string) => {
     setError('')
     setLoading(true)
     let year: number | undefined
@@ -50,7 +49,7 @@ export default function StatsPage() {
       year = y
       month = m
     }
-    fetchStats(mode, year, month, online)
+    fetchStats(mode, year, month)
       .then((s) => {
         setStats(s.sort((a, b) => b.totalRP - a.totalRP || b.totalScore - a.totalScore))
         setLoading(false)
@@ -99,11 +98,11 @@ export default function StatsPage() {
 
   useEffect(() => {
     if (tab === 'games') {
-      loadStats(gameMode, seasonKey, isOnline)
+      loadStats(gameMode, seasonKey)
     } else {
       loadPlayers()
     }
-  }, [gameMode, seasonKey, tab, isOnline])
+  }, [gameMode, seasonKey, tab])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -214,20 +213,6 @@ export default function StatsPage() {
             </div>
           </div>
 
-          <div className="card">
-            <div className="flex-between">
-              <h2>对局类型</h2>
-              <select
-                value={isOnline ? 'online' : 'offline'}
-                onChange={(e) => setIsOnline(e.target.value === 'online')}
-                className="select-inline"
-              >
-                <option value="offline">线下正式赛</option>
-                <option value="online">线上练习赛</option>
-              </select>
-            </div>
-          </div>
-
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-value">{activeStats.length}</div>
@@ -306,7 +291,7 @@ export default function StatsPage() {
             </div>
           )}
 
-          {!isOnline && seasonKey !== 'all' && (
+          {seasonKey !== 'all' && (
             <div className="card best-hand-card">
               <div className="best-hand-header">
                 <span className="best-hand-crown">🌟</span>
@@ -340,7 +325,7 @@ export default function StatsPage() {
             </div>
           )}
 
-          {!isOnline && (bestRounds.length > 0 || !!bestRoundsError) && (
+          {(bestRounds.length > 0 || !!bestRoundsError) && (
             <div className="card best-hand-card">
               <div className="best-hand-header">
                 <span className="best-hand-crown">👑</span>

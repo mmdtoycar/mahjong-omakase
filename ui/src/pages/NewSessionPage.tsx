@@ -18,7 +18,6 @@ export default function NewSessionPage() {
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
   const [loaded, setLoaded] = useState(false)
-  const [isOnline, setIsOnline] = useState(false)
 
   useEffect(() => {
     fetchPlayers()
@@ -67,7 +66,7 @@ export default function NewSessionPage() {
         hour12: false,
       })
       const defaultName = `Game ${dateStr} ${timeStr}`
-      const session = await createSession(defaultName, gameMode, selectedIds, isOnline)
+      const session = await createSession(defaultName, gameMode, selectedIds)
       navigate(`/session/${session.id}`)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : MSG.ERROR)
@@ -94,21 +93,6 @@ export default function NewSessionPage() {
               {m.label}
             </button>
           ))}
-        </div>
-      </div>
-
-      <div className="form-group">
-        <label>对局属性</label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 'normal' }}>
-            <input
-              type="checkbox"
-              checked={isOnline}
-              onChange={(e) => setIsOnline(e.target.checked)}
-              style={{ width: 18, height: 18, cursor: 'pointer' }}
-            />
-            <span>线上练习赛</span>
-          </label>
         </div>
       </div>
 
