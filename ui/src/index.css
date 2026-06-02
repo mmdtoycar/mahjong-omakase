@@ -1250,8 +1250,11 @@ tr:hover td {
   .quick-win-container {
     margin-bottom: 12px;
   }
+}
 
-  /* Calculator page responsive */
+/* Calculator page uses a wider breakpoint because the dense toggle/wind
+   row needs to compress earlier than the rest of the app. */
+@media (max-width: 768px) {
   .calc-page-wrapper {
     padding: 4px;
   }
