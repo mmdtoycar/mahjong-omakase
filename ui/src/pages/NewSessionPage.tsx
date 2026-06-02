@@ -97,24 +97,13 @@ export default function NewSessionPage() {
       </div>
 
       <div className="form-group">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          <label style={{ margin: 0 }}>
-            选择玩家{' '}
-            <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal' }}>
-              (请按照东南西北顺序点击玩家)
-            </span>{' '}
-            (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
-          </label>
-        </div>
+        <label style={{ display: 'block', marginBottom: 12 }}>
+          选择玩家{' '}
+          <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal' }}>
+            (请按照东南西北顺序点击玩家)
+          </span>{' '}
+          (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
+        </label>
 
         {players.length > 0 && (
           <div className="filter-bar">

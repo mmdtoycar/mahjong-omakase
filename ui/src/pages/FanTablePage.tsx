@@ -163,21 +163,12 @@ const FanTablePage: React.FC = () => {
             ))}
           </div>
         </div>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 24,
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
+        <div className="flex-between" style={{ marginBottom: 24, flexWrap: 'wrap' }}>
           <p className="page-subtitle" style={{ marginBottom: 0 }}>
             {activeMode.fanTableSubtitle}
           </p>
           {activeTab === 'GUOBIAO' && (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <a
                 href="/guobiao-rules-2014-cn.pdf"
                 target="_blank"
