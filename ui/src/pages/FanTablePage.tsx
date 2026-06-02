@@ -16,11 +16,17 @@ const TAB_DATA_MAP: Record<GameModeKey, { data: () => FanItem[] }> = {
 
 const currentSeason = getCurrentSeason()
 
-function keyDiscoveriesByMostRecent(discoveries: FanDiscovery[]): Record<string, FanDiscovery> {
-  const sorted = [...discoveries].sort(
-    (a, b) => new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime()
-  )
-  return Object.fromEntries(sorted.map((d) => [d.fanName, d]))
+// Group discoveries by fanName, keeping the earliest record per fan
+// (= the first player to achieve that fan = the "首位达成者" / champion).
+function keyDiscoveriesByEarliest(discoveries: FanDiscovery[]): Record<string, FanDiscovery> {
+  const result: Record<string, FanDiscovery> = {}
+  for (const d of discoveries) {
+    const existing = result[d.fanName]
+    if (!existing || new Date(d.discoveredAt).getTime() < new Date(existing.discoveredAt).getTime()) {
+      result[d.fanName] = d
+    }
+  }
+  return result
 }
 
 const FanTablePage: React.FC = () => {
@@ -88,8 +94,8 @@ const FanTablePage: React.FC = () => {
     return () => controller.abort()
   }, [seasonKey, seasons])
 
-  const discoveriesMap = useMemo(() => keyDiscoveriesByMostRecent(discoveries), [discoveries])
-  const prevDiscoveriesMap = useMemo(() => keyDiscoveriesByMostRecent(prevDiscoveries), [prevDiscoveries])
+  const discoveriesMap = useMemo(() => keyDiscoveriesByEarliest(discoveries), [discoveries])
+  const prevDiscoveriesMap = useMemo(() => keyDiscoveriesByEarliest(prevDiscoveries), [prevDiscoveries])
 
   const filteredFanTable = useMemo(() => {
     const data = TAB_DATA_MAP[activeTab].data()

@@ -76,10 +76,6 @@ export default function StatsPage() {
   }, [seasons])
 
   useEffect(() => {
-    if (seasonsError) setError(seasonsError)
-  }, [seasonsError])
-
-  useEffect(() => {
     if (tab === 'games') {
       loadStats(gameMode, seasonKey)
     } else {
@@ -136,10 +132,10 @@ export default function StatsPage() {
         <p>{MSG.LOADING}</p>
       </div>
     )
-  if (error)
+  if (error || seasonsError)
     return (
       <div className="empty-state">
-        <p>{error}</p>
+        <p>{error || seasonsError}</p>
       </div>
     )
 

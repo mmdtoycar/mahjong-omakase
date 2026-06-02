@@ -81,7 +81,7 @@ imported and used as the simple type name. Common offenders: `java.time.ZoneId`,
 class should never spell out a `java.*` package; if it does, move the type to
 the import block.
 ```bash
-grep -rn 'java\.[a-z][a-z]*\.[A-Z]' server/src --include='*.java' \
+grep -rnE 'java(\.[a-z][a-z0-9_]*)+\.[A-Z][A-Za-z0-9_]*' server/src --include='*.java' \
   | grep -v '^[^:]*:[0-9]*:import ' \
   | grep -v '^[^:]*:[0-9]*: \* '
 ```

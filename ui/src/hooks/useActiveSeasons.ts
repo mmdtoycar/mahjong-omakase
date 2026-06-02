@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchActiveSeasons } from '../api'
 import { Season, getSeasonLabel } from '../types'
+import { parseError } from '../utils/format'
 
 export interface ActiveSeasonsResult {
   seasons: Season[]
@@ -34,7 +35,7 @@ export function useActiveSeasons(): ActiveSeasonsResult {
       })
       .catch((e: unknown) => {
         if (!mounted) return
-        setError(e instanceof Error ? e.message : 'Failed to load seasons')
+        setError(parseError(e))
       })
       .finally(() => {
         if (mounted) setLoading(false)
