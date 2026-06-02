@@ -114,9 +114,9 @@ const CalculatorPage: React.FC = () => {
         style={{
           display: 'flex',
           justifyContent: 'center',
-          marginBottom: '12px',
+          marginBottom: 12,
           borderBottom: '2px solid var(--border)',
-          paddingBottom: '2px',
+          paddingBottom: 2,
         }}
       >
         <button
@@ -172,7 +172,7 @@ const CalculatorPage: React.FC = () => {
             {/* Super Compact Configurations Row */}
             <div className="configs-row">
               <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>和牌:</span>
+                <span className="config-row-label">和牌:</span>
                 <button
                   className={`compact-toggle-btn ${!gbIsSelfDraw ? 'active' : ''}`}
                   onClick={() => setGbIsSelfDraw(false)}
@@ -187,7 +187,7 @@ const CalculatorPage: React.FC = () => {
                 </button>
               </div>
               <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>圈风:</span>
+                <span className="config-row-label">圈风:</span>
                 {[1, 2, 3, 4].map((w) => (
                   <button
                     key={w}
@@ -199,7 +199,7 @@ const CalculatorPage: React.FC = () => {
                 ))}
               </div>
               <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>门风:</span>
+                <span className="config-row-label">门风:</span>
                 {[1, 2, 3, 4].map((w) => (
                   <button
                     key={w}
@@ -237,7 +237,7 @@ const CalculatorPage: React.FC = () => {
             {/* Super Compact Configurations Row */}
             <div className="configs-row">
               <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>和牌:</span>
+                <span className="config-row-label">和牌:</span>
                 <button
                   className={`compact-toggle-btn ${!riichiIsSelfDraw ? 'active' : ''}`}
                   onClick={() => setRiichiIsSelfDraw(false)}
@@ -252,7 +252,7 @@ const CalculatorPage: React.FC = () => {
                 </button>
               </div>
               <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>场风:</span>
+                <span className="config-row-label">场风:</span>
                 {[1, 2, 3, 4].map((w) => (
                   <button
                     key={w}
@@ -264,7 +264,7 @@ const CalculatorPage: React.FC = () => {
                 ))}
               </div>
               <div className="configs-row-section" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>自风:</span>
+                <span className="config-row-label">自风:</span>
                 {[1, 2, 3, 4].map((w) => (
                   <button
                     key={w}

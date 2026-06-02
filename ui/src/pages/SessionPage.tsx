@@ -757,7 +757,7 @@ export default function SessionPage() {
       <div className="card">
         <div className="flex-between" style={{ marginBottom: 16 }}>
           <h2 style={{ marginBottom: 0 }}>计分板</h2>
-          <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <span className="session-meta" style={{ margin: 0, fontSize: '0.85rem' }}>
               {session.gameModeDisplayName} &middot;{' '}
               {new Date(session.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}
@@ -909,8 +909,8 @@ export default function SessionPage() {
                 <tr>
                   <th>名次</th>
                   <th>玩家</th>
-                  <th style={{ textAlign: 'right' }}>分数</th>
-                  <th style={{ textAlign: 'right' }}>积分(RP)</th>
+                  <th className="text-right">分数</th>
+                  <th className="text-right">积分(RP)</th>
                 </tr>
               </thead>
               <tbody>
@@ -925,23 +925,10 @@ export default function SessionPage() {
                         <span className={`rank-tag rank-tag-${rank}`}>#{rank}</span>
                       </td>
                       <td>{p.userName}</td>
-                      <td
-                        className={scoreClass(val)}
-                        style={{
-                          textAlign: 'right',
-                          fontVariantNumeric: 'tabular-nums',
-                        }}
-                      >
+                      <td className={`${scoreClass(val)} num-cell`}>
                         {val > 0 ? `+${val}` : val}
                       </td>
-                      <td
-                        style={{
-                          textAlign: 'right',
-                          fontVariantNumeric: 'tabular-nums',
-                          fontWeight: 'bold',
-                          color: 'var(--primary)',
-                        }}
-                      >
+                      <td className="num-cell-rp">
                         {baseRp > 0 ? `+${baseRp.toFixed(1)}` : baseRp.toFixed(1)}
                         {bonus > 0 && <span className="rp-bonus">(+{bonus.toFixed(bonus % 1 === 0 ? 0 : 1)})</span>}
                       </td>

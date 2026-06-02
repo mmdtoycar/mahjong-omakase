@@ -91,7 +91,7 @@ export default function HomePage() {
       </div>
 
       <div className="card active-games-section">
-        <h2 style={{ marginBottom: '16px' }}>正在进行的对局</h2>
+        <h2 style={{ marginBottom: 16 }}>正在进行的对局</h2>
         {activeSessions.length === 0 ? (
           <div className="empty-state">
             <p>当前没有正在进行的对局</p>
@@ -133,7 +133,7 @@ export default function HomePage() {
       </div>
 
       <div className="card rankings-section">
-        <h2 style={{ marginBottom: '16px' }}>本月荣誉殿堂</h2>
+        <h2 style={{ marginBottom: 16 }}>本月荣誉殿堂</h2>
         <div className="hall-of-fame-grid">
           {GAME_MODES.map((mode) => {
             const data = rankings[mode.key]

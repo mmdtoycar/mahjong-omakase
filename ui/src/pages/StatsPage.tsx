@@ -254,9 +254,9 @@ export default function StatsPage() {
                     <tr>
                       <th>名次</th>
                       <th>玩家</th>
-                      <th style={{ textAlign: 'right' }}>场次</th>
-                      <th style={{ textAlign: 'right' }}>胜场</th>
-                      <th style={{ textAlign: 'right' }}>积分(RP)</th>
+                      <th className="text-right">场次</th>
+                      <th className="text-right">胜场</th>
+                      <th className="text-right">积分(RP)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -271,16 +271,9 @@ export default function StatsPage() {
                           {s.userName}
                           <span className="table-username">{abbr(s)}</span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>{s.gamesPlayed}</td>
-                        <td style={{ textAlign: 'right' }}>{s.wins}</td>
-                        <td
-                          style={{
-                            textAlign: 'right',
-                            fontVariantNumeric: 'tabular-nums',
-                            fontWeight: 'bold',
-                            color: 'var(--primary)',
-                          }}
-                        >
+                        <td className="text-right">{s.gamesPlayed}</td>
+                        <td className="text-right">{s.wins}</td>
+                        <td className="num-cell-rp">
                           {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
                         </td>
                       </tr>

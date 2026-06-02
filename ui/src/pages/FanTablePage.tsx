@@ -174,7 +174,7 @@ const FanTablePage: React.FC = () => {
   return (
     <div className="fan-table-page">
       <div className="card">
-        <div className="flex-between" style={{ marginBottom: '16px' }}>
+        <div className="flex-between" style={{ marginBottom: 16 }}>
           <h2>{activeMode.fanTableTitle}</h2>
           <div className="tab-bar">
             {GAME_MODES.map((m) => (
@@ -193,7 +193,7 @@ const FanTablePage: React.FC = () => {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '24px',
+            marginBottom: 24,
             flexWrap: 'wrap',
             gap: '12px',
           }}

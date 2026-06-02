@@ -548,6 +548,28 @@ tr:hover td {
   margin-bottom: 0;
 }
 
+.text-right {
+  text-align: right;
+}
+
+.num-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.num-cell-rp {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.config-row-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
 .rank-1 {
   color: var(--mj-gold);
   font-weight: 700;

@@ -62,7 +62,7 @@ export default function PlayerDetailPage() {
                   <th>模式</th>
                   <th>日期</th>
                   <th>状态</th>
-                  <th style={{ textAlign: 'right' }}>分数</th>
+                  <th className="text-right">分数</th>
                 </tr>
               </thead>
               <tbody>
@@ -80,13 +80,7 @@ export default function PlayerDetailPage() {
                         {g.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
                       </span>
                     </td>
-                    <td
-                      className={`${scoreClass(g.totalScore)}`}
-                      style={{
-                        textAlign: 'right',
-                        fontVariantNumeric: 'tabular-nums',
-                      }}
-                    >
+                    <td className={`${scoreClass(g.totalScore)} num-cell`}>
                       {g.totalScore > 0 ? `+${g.totalScore}` : g.totalScore}
                     </td>
                   </tr>
