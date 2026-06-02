@@ -12,11 +12,7 @@ export const WindSelectorRow: React.FC<Props> = ({ label, value, onChange }) => 
   <div className="configs-row-section" style={{ gap: 4 }}>
     <span className="config-row-label">{label}:</span>
     {[1, 2, 3, 4].map((w) => (
-      <button
-        key={w}
-        className={`compact-toggle-btn ${value === w ? 'active' : ''}`}
-        onClick={() => onChange(w)}
-      >
+      <button key={w} className={`compact-toggle-btn ${value === w ? 'active' : ''}`} onClick={() => onChange(w)}>
         {WIND_NAMES[w]}
       </button>
     ))}

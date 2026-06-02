@@ -36,7 +36,9 @@ const FanTablePage: React.FC = () => {
   // Snap seasonKey to the first available season once seasons load.
   useEffect(() => {
     if (seasons.length === 0) return
-    setSeasonKey((prev) => (seasons.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${seasons[0].year}-${seasons[0].month}`))
+    setSeasonKey((prev) =>
+      seasons.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${seasons[0].year}-${seasons[0].month}`
+    )
   }, [seasons])
 
   // Load selected season discoveries

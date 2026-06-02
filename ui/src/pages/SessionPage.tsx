@@ -925,9 +925,7 @@ export default function SessionPage() {
                         <span className={`rank-tag rank-tag-${rank}`}>#{rank}</span>
                       </td>
                       <td>{p.userName}</td>
-                      <td className={`${scoreClass(val)} num-cell`}>
-                        {val > 0 ? `+${val}` : val}
-                      </td>
+                      <td className={`${scoreClass(val)} num-cell`}>{val > 0 ? `+${val}` : val}</td>
                       <td className="num-cell-rp">
                         {baseRp > 0 ? `+${baseRp.toFixed(1)}` : baseRp.toFixed(1)}
                         {bonus > 0 && <span className="rp-bonus">(+{bonus.toFixed(bonus % 1 === 0 ? 0 : 1)})</span>}

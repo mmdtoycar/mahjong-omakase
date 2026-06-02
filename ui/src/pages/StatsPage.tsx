@@ -70,7 +70,9 @@ export default function StatsPage() {
   // unless the current selection is still valid.
   useEffect(() => {
     if (seasons.length === 0) return
-    setSeasonKey((prev) => (seasons.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${seasons[0].year}-${seasons[0].month}`))
+    setSeasonKey((prev) =>
+      seasons.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${seasons[0].year}-${seasons[0].month}`
+    )
   }, [seasons])
 
   useEffect(() => {

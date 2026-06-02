@@ -12,7 +12,7 @@ const CalculatorPage: React.FC = () => {
   const [gbIsSelfDraw, setGbIsSelfDraw] = useState(false)
   const [gbQuanfeng, setGbQuanfeng] = useState(1)
   const [gbMenfeng, setGbMenfeng] = useState(1)
-  const [gbResetTrigger, setGbResetTrigger] = useState(0)
+  const [gbResetTrigger,  setGbResetTrigger] = useState(0)
 
   // Standalone state for Riichi
   const [riichiIsSelfDraw, setRiichiIsSelfDraw] = useState(false)
