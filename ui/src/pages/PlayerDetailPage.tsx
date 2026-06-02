@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPlayerDetail } from '../api'
 import { PlayerDetail } from '../types'
-import { abbrName, scoreClass } from '../utils/format'
+import { abbrName, scoreClass, parseError } from '../utils/format'
 import { MSG } from '../constants'
 
 export default function PlayerDetailPage() {
@@ -22,7 +22,7 @@ export default function PlayerDetailPage() {
         setLoading(false)
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : MSG.ERROR)
+        setError(parseError(e))
         setLoading(false)
       })
   }, [id])

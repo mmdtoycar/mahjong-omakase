@@ -8,7 +8,7 @@ import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
-import { scoreClass } from '../utils/format'
+import { scoreClass, parseError } from '../utils/format'
 import { MSG } from '../constants'
 
 export default function SessionPage() {
@@ -80,7 +80,7 @@ export default function SessionPage() {
   }
 
   useEffect(() => {
-    load().catch((e: unknown) => setError(e instanceof Error ? e.message : MSG.ERROR))
+    load().catch((e: unknown) => setError(parseError(e)))
   }, [id])
 
   if (!session)
@@ -220,7 +220,7 @@ export default function SessionPage() {
       resetForm()
       await load()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : MSG.ERROR)
+      setError(parseError(e))
     } finally {
       setSubmitting(false)
     }
@@ -234,7 +234,7 @@ export default function SessionPage() {
       await deleteRound(session.id, roundNumber)
       await load()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : MSG.ERROR)
+      setError(parseError(e))
     } finally {
       setSubmitting(false)
     }
@@ -248,7 +248,7 @@ export default function SessionPage() {
       await completeSession(session.id)
       await load()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : MSG.ERROR)
+      setError(parseError(e))
     } finally {
       setSubmitting(false)
     }

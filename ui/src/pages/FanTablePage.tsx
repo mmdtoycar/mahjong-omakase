@@ -2,10 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { fanTableData, FanItem } from '../data/fanTableData'
 import { riichiFanTableData } from '../data/riichiFanTableData'
 import { shenyangFanTableData } from '../data/shenyangFanTableData'
-import { fetchFanDiscoveries, fetchActiveSeasons } from '../api'
-import { FanDiscovery, getCurrentSeason, getSeasonLabel, Season, GAME_MODES, GameModeKey } from '../types'
+import { fetchFanDiscoveries } from '../api'
+import { FanDiscovery, getCurrentSeason, GAME_MODES, GameModeKey } from '../types'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
+import { useActiveSeasons } from '../hooks/useActiveSeasons'
 
 const TAB_DATA_MAP: Record<GameModeKey, { data: () => FanItem[] }> = {
   GUOBIAO: { data: () => fanTableData },
@@ -22,37 +23,14 @@ const FanTablePage: React.FC = () => {
   const [discoveries, setDiscoveries] = useState<FanDiscovery[]>([])
   // Previous season discoveries (fallback when current season has no record yet)
   const [prevDiscoveries, setPrevDiscoveries] = useState<FanDiscovery[]>([])
-  const [seasons, setSeasons] = useState<Season[]>([])
+  const { seasons } = useActiveSeasons()
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
 
-  // Load active seasons from backend (same as StatsPage)
+  // Snap seasonKey to the first available season once seasons load.
   useEffect(() => {
-    let mounted = true
-    fetchActiveSeasons()
-      .then((data) => {
-        if (!mounted) return
-        const list = data
-          .map((s) => ({
-            year: s.year,
-            month: s.month,
-            label: getSeasonLabel(s.year, s.month),
-          }))
-          .sort((a, b) => b.year - a.year || b.month - a.month)
-        setSeasons(list)
-        if (list.length > 0) {
-          setSeasonKey((prev) =>
-            list.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${list[0].year}-${list[0].month}`
-          )
-        }
-      })
-      .catch((e: unknown) => {
-        if (!mounted) return
-        console.error(e)
-      })
-    return () => {
-      mounted = false
-    }
-  }, [])
+    if (seasons.length === 0) return
+    setSeasonKey((prev) => (seasons.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${seasons[0].year}-${seasons[0].month}`))
+  }, [seasons])
 
   // Load selected season discoveries
   useEffect(() => {
@@ -235,7 +213,7 @@ const FanTablePage: React.FC = () => {
           />
           {activeTab === 'GUOBIAO' && seasons.length > 0 && (
             <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
-              {seasons.map((s: Season) => (
+              {seasons.map((s) => (
                 <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
                   {s.label}
                 </option>

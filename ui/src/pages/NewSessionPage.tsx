@@ -4,7 +4,7 @@ import { fetchPlayers, createSession } from '../api'
 import { Player, GameModeKey, GAME_MODES } from '../types'
 import { cardFontSize } from '../utils/fontSize'
 import { MSG } from '../constants'
-import { abbrName } from '../utils/format'
+import { abbrName, parseError } from '../utils/format'
 
 const MIN_PLAYERS = 3
 const MAX_PLAYERS = 4
@@ -25,7 +25,7 @@ export default function NewSessionPage() {
         setPlayers(p)
         setLoaded(true)
       })
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : MSG.ERROR))
+      .catch((e: unknown) => setError(parseError(e)))
   }, [])
 
   const togglePlayer = (id: number) => {
@@ -69,7 +69,7 @@ export default function NewSessionPage() {
       const session = await createSession(defaultName, gameMode, selectedIds)
       navigate(`/session/${session.id}`)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : MSG.ERROR)
+      setError(parseError(e))
       setCreating(false)
     }
   }

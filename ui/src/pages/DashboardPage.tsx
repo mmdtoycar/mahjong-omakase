@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { GameSession, Season, getCurrentSeason, getSeasonLabel } from '../types'
-import { fetchSessions, fetchActiveSeasons } from '../api'
+import { GameSession } from '../types'
+import { fetchSessions } from '../api'
 import { GameCard } from '../components/GameCard'
 import { MSG } from '../constants'
+import { parseError } from '../utils/format'
+import { useActiveSeasons } from '../hooks/useActiveSeasons'
 
 export default function DashboardPage() {
   const [sessions, setSessions] = useState<GameSession[]>([])
-  const [seasons, setSeasons] = useState<Season[]>([])
+  const { seasons } = useActiveSeasons()
   const [seasonKey, setSeasonKey] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
@@ -23,22 +25,10 @@ export default function DashboardPage() {
       .then((sData) => {
         if (!mounted) return
         setSessions(sData)
-        // If sessions load successfully, we can already stop the main loading spinner
-        // once we also try to get the seasons.
-        return fetchActiveSeasons()
-      })
-      .then((seasonsData) => {
-        if (!mounted || !seasonsData) return
-        const list = seasonsData.map((s) => ({
-          year: s.year,
-          month: s.month,
-          label: getSeasonLabel(s.year, s.month),
-        }))
-        setSeasons(list)
       })
       .catch((e: unknown) => {
         if (!mounted) return
-        setError(e instanceof Error ? e.message : MSG.ERROR)
+        setError(parseError(e))
       })
       .finally(() => {
         if (mounted) setLoading(false)
