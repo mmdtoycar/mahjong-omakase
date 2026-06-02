@@ -39,7 +39,6 @@ export interface GameSession {
   createdAt: string
   roundCount: number
   rankings?: PlayerPerformance[]
-  isOnline?: boolean
 }
 
 export interface PlayerPerformance {
@@ -87,7 +86,6 @@ export interface SessionDetail {
   rpOrigin: number
   umaDist: number[]
   playerBonuses?: Record<number, number>
-  isOnline?: boolean
 }
 
 export interface AddRoundData {

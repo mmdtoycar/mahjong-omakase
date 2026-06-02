@@ -29,11 +29,10 @@ public class StatsController {
   public List<PlayerStatsResponse> getStats(
       @RequestParam(required = false) String gameMode,
       @RequestParam(required = false) Integer year,
-      @RequestParam(required = false) Integer month,
-      @RequestParam(required = false) Boolean isOnline) {
+      @RequestParam(required = false) Integer month) {
     GameMode mode = parseGameMode(gameMode);
     LocalDateTime[] range = parseDateRange(year, month);
-    return gameService.getPlayerStats(mode, range[0], range[1], isOnline);
+    return gameService.getPlayerStats(mode, range[0], range[1]);
   }
 
   @GetMapping("/seasons")

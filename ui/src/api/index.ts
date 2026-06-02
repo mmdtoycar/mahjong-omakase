@@ -86,16 +86,11 @@ export async function fetchSessions(signal?: AbortSignal): Promise<GameSession[]
   return cachedFetch(`${API}/sessions`, signal)
 }
 
-export async function createSession(
-  name: string,
-  gameMode: string,
-  playerIds: number[],
-  isOnline?: boolean
-): Promise<GameSession> {
+export async function createSession(name: string, gameMode: string, playerIds: number[]): Promise<GameSession> {
   const res = await fetch(`${API}/sessions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, gameMode, playerIds, isOnline }),
+    body: JSON.stringify({ name, gameMode, playerIds }),
   })
   const data = await handleResponse<GameSession>(res)
   invalidateCache()
@@ -136,7 +131,6 @@ export async function fetchStats(
   gameMode?: string,
   year?: number,
   month?: number,
-  isOnline?: boolean,
   signal?: AbortSignal
 ): Promise<PlayerStats[]> {
   const params = new URLSearchParams()
@@ -144,9 +138,6 @@ export async function fetchStats(
   if (year != null && month != null) {
     params.set('year', String(year))
     params.set('month', String(month))
-  }
-  if (isOnline != null) {
-    params.set('isOnline', String(isOnline))
   }
   const qs = params.toString()
   return cachedFetch(`${API}/stats${qs ? `?${qs}` : ''}`, signal)
