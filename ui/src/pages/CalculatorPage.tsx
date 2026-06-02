@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { RiichiCalculator } from '../components/RiichiCalculator'
+import { WindSelectorRow } from '../components/WindSelectorRow'
 
 type GameMode = 'GUOBIAO' | 'RIICHI'
 
@@ -19,29 +20,8 @@ const CalculatorPage: React.FC = () => {
   const [riichiZifeng, setRiichiZifeng] = useState(1)
   const [riichiResetTrigger, setRiichiResetTrigger] = useState(0)
 
-  // Reset callbacks
-  const handleGbReset = useCallback(() => {
-    setGbResetTrigger((prev) => prev + 1)
-  }, [])
-
-  const handleRiichiReset = useCallback(() => {
-    setRiichiResetTrigger((prev) => prev + 1)
-  }, [])
-
-  const getWindName = (val: number) => {
-    switch (val) {
-      case 1:
-        return '东'
-      case 2:
-        return '南'
-      case 3:
-        return '西'
-      case 4:
-        return '北'
-      default:
-        return '东'
-    }
-  }
+  const handleGbReset = useCallback(() => setGbResetTrigger((p) => p + 1), [])
+  const handleRiichiReset = useCallback(() => setRiichiResetTrigger((p) => p + 1), [])
 
   // Dummy callback since direct output is rendered internally by the components
   const handleSelectScore = () => {}
@@ -82,30 +62,8 @@ const CalculatorPage: React.FC = () => {
                   自摸
                 </button>
               </div>
-              <div className="configs-row-section" style={{ gap: 4 }}>
-                <span className="config-row-label">圈风:</span>
-                {[1, 2, 3, 4].map((w) => (
-                  <button
-                    key={w}
-                    className={`compact-toggle-btn ${gbQuanfeng === w ? 'active' : ''}`}
-                    onClick={() => setGbQuanfeng(w)}
-                  >
-                    {getWindName(w)}
-                  </button>
-                ))}
-              </div>
-              <div className="configs-row-section" style={{ gap: 4 }}>
-                <span className="config-row-label">门风:</span>
-                {[1, 2, 3, 4].map((w) => (
-                  <button
-                    key={w}
-                    className={`compact-toggle-btn ${gbMenfeng === w ? 'active' : ''}`}
-                    onClick={() => setGbMenfeng(w)}
-                  >
-                    {getWindName(w)}
-                  </button>
-                ))}
-              </div>
+              <WindSelectorRow label="圈风" value={gbQuanfeng} onChange={setGbQuanfeng} />
+              <WindSelectorRow label="门风" value={gbMenfeng} onChange={setGbMenfeng} />
               <button className="compact-toggle-btn compact-toggle-btn-reset" onClick={handleGbReset}>
                 清空
               </button>
@@ -141,30 +99,8 @@ const CalculatorPage: React.FC = () => {
                   自摸
                 </button>
               </div>
-              <div className="configs-row-section" style={{ gap: 4 }}>
-                <span className="config-row-label">场风:</span>
-                {[1, 2, 3, 4].map((w) => (
-                  <button
-                    key={w}
-                    className={`compact-toggle-btn ${riichiChangfeng === w ? 'active' : ''}`}
-                    onClick={() => setRiichiChangfeng(w)}
-                  >
-                    {getWindName(w)}
-                  </button>
-                ))}
-              </div>
-              <div className="configs-row-section" style={{ gap: 4 }}>
-                <span className="config-row-label">自风:</span>
-                {[1, 2, 3, 4].map((w) => (
-                  <button
-                    key={w}
-                    className={`compact-toggle-btn ${riichiZifeng === w ? 'active' : ''}`}
-                    onClick={() => setRiichiZifeng(w)}
-                  >
-                    {getWindName(w)}
-                  </button>
-                ))}
-              </div>
+              <WindSelectorRow label="场风" value={riichiChangfeng} onChange={setRiichiChangfeng} />
+              <WindSelectorRow label="自风" value={riichiZifeng} onChange={setRiichiZifeng} />
               <button className="compact-toggle-btn compact-toggle-btn-reset" onClick={handleRiichiReset}>
                 清空
               </button>

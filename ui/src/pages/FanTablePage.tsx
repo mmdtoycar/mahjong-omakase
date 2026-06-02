@@ -16,6 +16,13 @@ const TAB_DATA_MAP: Record<GameModeKey, { data: () => FanItem[] }> = {
 
 const currentSeason = getCurrentSeason()
 
+function keyDiscoveriesByMostRecent(discoveries: FanDiscovery[]): Record<string, FanDiscovery> {
+  const sorted = [...discoveries].sort(
+    (a, b) => new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime()
+  )
+  return Object.fromEntries(sorted.map((d) => [d.fanName, d]))
+}
+
 const FanTablePage: React.FC = () => {
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<GameModeKey>('GUOBIAO')
@@ -79,18 +86,8 @@ const FanTablePage: React.FC = () => {
     return () => controller.abort()
   }, [seasonKey, seasons])
 
-  const discoveriesMap = useMemo(() => {
-    const sorted = [...discoveries].sort(
-      (a, b) => new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime()
-    )
-    return Object.fromEntries(sorted.map((d) => [d.fanName, d]))
-  }, [discoveries])
-  const prevDiscoveriesMap = useMemo(() => {
-    const sorted = [...prevDiscoveries].sort(
-      (a, b) => new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime()
-    )
-    return Object.fromEntries(sorted.map((d) => [d.fanName, d]))
-  }, [prevDiscoveries])
+  const discoveriesMap = useMemo(() => keyDiscoveriesByMostRecent(discoveries), [discoveries])
+  const prevDiscoveriesMap = useMemo(() => keyDiscoveriesByMostRecent(prevDiscoveries), [prevDiscoveries])
 
   const filteredFanTable = useMemo(() => {
     const data = TAB_DATA_MAP[activeTab].data()
