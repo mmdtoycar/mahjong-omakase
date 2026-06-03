@@ -35,7 +35,7 @@ export default function HomePage() {
           GAME_MODES.map(async (mode) => {
             try {
               const [stats, bestRounds] = await Promise.all([
-                fetchStats(mode.key, currentSeason.year, currentSeason.month, false, controller.signal),
+                fetchStats(mode.key, currentSeason.year, currentSeason.month, controller.signal),
                 fetchBestRounds(mode.key, currentSeason.year, currentSeason.month, controller.signal),
               ])
 
@@ -91,7 +91,7 @@ export default function HomePage() {
       </div>
 
       <div className="card active-games-section">
-        <h2 style={{ marginBottom: '16px' }}>正在进行的对局</h2>
+        <h2 style={{ marginBottom: 16 }}>正在进行的对局</h2>
         {activeSessions.length === 0 ? (
           <div className="empty-state">
             <p>当前没有正在进行的对局</p>
@@ -112,7 +112,6 @@ export default function HomePage() {
                   createdAt={s.createdAt}
                   roundLabel={`${state.displayName} 进行中`}
                   isActive={true}
-                  isOnline={s.isOnline}
                   players={sortedPlayers.map((p) => {
                     const score = s.totalScores[p.id] || 0
                     const rank = sortedScores.indexOf(score) + 1
@@ -134,7 +133,7 @@ export default function HomePage() {
       </div>
 
       <div className="card rankings-section">
-        <h2 style={{ marginBottom: '16px' }}>本月荣誉殿堂</h2>
+        <h2 style={{ marginBottom: 16 }}>本月荣誉殿堂</h2>
         <div className="hall-of-fame-grid">
           {GAME_MODES.map((mode) => {
             const data = rankings[mode.key]
@@ -163,18 +162,7 @@ export default function HomePage() {
                     <span className="best-hand-label">🏆 本月最高和牌</span>
                     <div className="best-hand-value">
                       {data.best.fanCount} 番 · {data.best.winnerName}
-                      <div
-                        style={{
-                          fontSize: '0.75rem',
-                          marginTop: '4px',
-                          color: 'var(--sol-base01)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {data.best.fanDetails}
-                      </div>
+                      <div className="best-hand-summary-detail">{data.best.fanDetails}</div>
                     </div>
                   </div>
                 )}

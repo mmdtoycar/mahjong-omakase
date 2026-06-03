@@ -8,6 +8,7 @@ import com.mahjong.omakase.service.GameService;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -97,7 +98,7 @@ public class AdminController {
         .collect(Collectors.toMap(AppSetting::getKey, AppSetting::getValue));
   }
 
-  private static final Map<String, java.util.function.Predicate<String>> SETTING_VALIDATORS =
+  private static final Map<String, Predicate<String>> SETTING_VALIDATORS =
       Map.of(
           "participation_bonus",
           v -> {

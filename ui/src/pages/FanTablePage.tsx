@@ -2,10 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { fanTableData, FanItem } from '../data/fanTableData'
 import { riichiFanTableData } from '../data/riichiFanTableData'
 import { shenyangFanTableData } from '../data/shenyangFanTableData'
-import { fetchFanDiscoveries, fetchActiveSeasons } from '../api'
-import { FanDiscovery, getCurrentSeason, getSeasonLabel, Season, GAME_MODES, GameModeKey } from '../types'
+import { fetchFanDiscoveries } from '../api'
+import { FanDiscovery, getCurrentSeason, GAME_MODES, GameModeKey } from '../types'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
+import { useActiveSeasons } from '../hooks/useActiveSeasons'
 
 const TAB_DATA_MAP: Record<GameModeKey, { data: () => FanItem[] }> = {
   GUOBIAO: { data: () => fanTableData },
@@ -15,6 +16,19 @@ const TAB_DATA_MAP: Record<GameModeKey, { data: () => FanItem[] }> = {
 
 const currentSeason = getCurrentSeason()
 
+// Group discoveries by fanName, keeping the earliest record per fan
+// (= the first player to achieve that fan = the "首位达成者" / champion).
+function keyDiscoveriesByEarliest(discoveries: FanDiscovery[]): Record<string, FanDiscovery> {
+  const result: Record<string, FanDiscovery> = {}
+  for (const d of discoveries) {
+    const existing = result[d.fanName]
+    if (!existing || new Date(d.discoveredAt).getTime() < new Date(existing.discoveredAt).getTime()) {
+      result[d.fanName] = d
+    }
+  }
+  return result
+}
+
 const FanTablePage: React.FC = () => {
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<GameModeKey>('GUOBIAO')
@@ -22,37 +36,16 @@ const FanTablePage: React.FC = () => {
   const [discoveries, setDiscoveries] = useState<FanDiscovery[]>([])
   // Previous season discoveries (fallback when current season has no record yet)
   const [prevDiscoveries, setPrevDiscoveries] = useState<FanDiscovery[]>([])
-  const [seasons, setSeasons] = useState<Season[]>([])
+  const { seasons } = useActiveSeasons()
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
 
-  // Load active seasons from backend (same as StatsPage)
+  // Snap seasonKey to the first available season once seasons load.
   useEffect(() => {
-    let mounted = true
-    fetchActiveSeasons()
-      .then((data) => {
-        if (!mounted) return
-        const list = data
-          .map((s) => ({
-            year: s.year,
-            month: s.month,
-            label: getSeasonLabel(s.year, s.month),
-          }))
-          .sort((a, b) => b.year - a.year || b.month - a.month)
-        setSeasons(list)
-        if (list.length > 0) {
-          setSeasonKey((prev) =>
-            list.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${list[0].year}-${list[0].month}`
-          )
-        }
-      })
-      .catch((e: unknown) => {
-        if (!mounted) return
-        console.error(e)
-      })
-    return () => {
-      mounted = false
-    }
-  }, [])
+    if (seasons.length === 0) return
+    setSeasonKey((prev) =>
+      seasons.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${seasons[0].year}-${seasons[0].month}`
+    )
+  }, [seasons])
 
   // Load selected season discoveries
   useEffect(() => {
@@ -101,18 +94,8 @@ const FanTablePage: React.FC = () => {
     return () => controller.abort()
   }, [seasonKey, seasons])
 
-  const discoveriesMap = useMemo(() => {
-    const sorted = [...discoveries].sort(
-      (a, b) => new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime()
-    )
-    return Object.fromEntries(sorted.map((d) => [d.fanName, d]))
-  }, [discoveries])
-  const prevDiscoveriesMap = useMemo(() => {
-    const sorted = [...prevDiscoveries].sort(
-      (a, b) => new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime()
-    )
-    return Object.fromEntries(sorted.map((d) => [d.fanName, d]))
-  }, [prevDiscoveries])
+  const discoveriesMap = useMemo(() => keyDiscoveriesByEarliest(discoveries), [discoveries])
+  const prevDiscoveriesMap = useMemo(() => keyDiscoveriesByEarliest(prevDiscoveries), [prevDiscoveries])
 
   const filteredFanTable = useMemo(() => {
     const data = TAB_DATA_MAP[activeTab].data()
@@ -174,7 +157,7 @@ const FanTablePage: React.FC = () => {
   return (
     <div className="fan-table-page">
       <div className="card">
-        <div className="flex-between" style={{ marginBottom: '16px' }}>
+        <div className="flex-between" style={{ marginBottom: 16 }}>
           <h2>{activeMode.fanTableTitle}</h2>
           <div className="tab-bar">
             {GAME_MODES.map((m) => (
@@ -188,21 +171,12 @@ const FanTablePage: React.FC = () => {
             ))}
           </div>
         </div>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '24px',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
+        <div className="flex-between" style={{ marginBottom: 24, flexWrap: 'wrap' }}>
           <p className="page-subtitle" style={{ marginBottom: 0 }}>
             {activeMode.fanTableSubtitle}
           </p>
           {activeTab === 'GUOBIAO' && (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <a
                 href="/guobiao-rules-2014-cn.pdf"
                 target="_blank"
@@ -235,7 +209,7 @@ const FanTablePage: React.FC = () => {
           />
           {activeTab === 'GUOBIAO' && seasons.length > 0 && (
             <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
-              {seasons.map((s: Season) => (
+              {seasons.map((s) => (
                 <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
                   {s.label}
                 </option>

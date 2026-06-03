@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPlayerDetail } from '../api'
 import { PlayerDetail } from '../types'
-import { abbrName, scoreClass } from '../utils/format'
+import { abbrName, scoreClass, parseError } from '../utils/format'
 import { MSG } from '../constants'
 
 export default function PlayerDetailPage() {
@@ -22,7 +22,7 @@ export default function PlayerDetailPage() {
         setLoading(false)
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : MSG.ERROR)
+        setError(parseError(e))
         setLoading(false)
       })
   }, [id])
@@ -55,14 +55,14 @@ export default function PlayerDetailPage() {
           </div>
         ) : (
           <div className="score-table">
-            <table style={{ minWidth: 340 }}>
+            <table>
               <thead>
                 <tr>
                   <th>游戏</th>
                   <th>模式</th>
                   <th>日期</th>
                   <th>状态</th>
-                  <th style={{ textAlign: 'right' }}>分数</th>
+                  <th className="text-right">分数</th>
                 </tr>
               </thead>
               <tbody>
@@ -80,13 +80,7 @@ export default function PlayerDetailPage() {
                         {g.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
                       </span>
                     </td>
-                    <td
-                      className={`${scoreClass(g.totalScore)}`}
-                      style={{
-                        textAlign: 'right',
-                        fontVariantNumeric: 'tabular-nums',
-                      }}
-                    >
+                    <td className={`${scoreClass(g.totalScore)} num-cell`}>
                       {g.totalScore > 0 ? `+${g.totalScore}` : g.totalScore}
                     </td>
                   </tr>

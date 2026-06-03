@@ -4,7 +4,7 @@ import { fetchPlayers, createSession } from '../api'
 import { Player, GameModeKey, GAME_MODES } from '../types'
 import { cardFontSize } from '../utils/fontSize'
 import { MSG } from '../constants'
-import { abbrName } from '../utils/format'
+import { abbrName, parseError } from '../utils/format'
 
 const MIN_PLAYERS = 3
 const MAX_PLAYERS = 4
@@ -18,7 +18,6 @@ export default function NewSessionPage() {
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
   const [loaded, setLoaded] = useState(false)
-  const [isOnline, setIsOnline] = useState(false)
 
   useEffect(() => {
     fetchPlayers()
@@ -26,7 +25,7 @@ export default function NewSessionPage() {
         setPlayers(p)
         setLoaded(true)
       })
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : MSG.ERROR))
+      .catch((e: unknown) => setError(parseError(e)))
   }, [])
 
   const togglePlayer = (id: number) => {
@@ -67,10 +66,10 @@ export default function NewSessionPage() {
         hour12: false,
       })
       const defaultName = `Game ${dateStr} ${timeStr}`
-      const session = await createSession(defaultName, gameMode, selectedIds, isOnline)
+      const session = await createSession(defaultName, gameMode, selectedIds)
       navigate(`/session/${session.id}`)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : MSG.ERROR)
+      setError(parseError(e))
       setCreating(false)
     }
   }
@@ -98,38 +97,12 @@ export default function NewSessionPage() {
       </div>
 
       <div className="form-group">
-        <label>对局属性</label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 'normal' }}>
-            <input
-              type="checkbox"
-              checked={isOnline}
-              onChange={(e) => setIsOnline(e.target.checked)}
-              style={{ width: 18, height: 18, cursor: 'pointer' }}
-            />
-            <span>线上练习赛</span>
-          </label>
-        </div>
-      </div>
-
-      <div className="form-group">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          <label style={{ margin: 0 }}>
-            选择玩家{' '}
-            <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal' }}>
-              (请按照东南西北顺序点击玩家)
-            </span>{' '}
-            (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
-          </label>
+        <div style={{ display: 'block', marginBottom: 12 }}>
+          选择玩家{' '}
+          <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal' }}>
+            (请按照东南西北顺序点击玩家)
+          </span>{' '}
+          (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
         </div>
 
         {players.length > 0 && (
