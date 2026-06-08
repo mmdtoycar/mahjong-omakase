@@ -1,5 +1,7 @@
 FROM eclipse-temurin:17-jdk AS build
 WORKDIR /app
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
 COPY server/src ./server/src
