@@ -31,7 +31,30 @@ function App() {
       setMe(rawMe ? JSON.parse(rawMe) : null)
     }
 
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== 'mahjong_token') return
+      if (!event.newValue) {
+        sessionStorage.removeItem('mahjong_me')
+        setToken(null)
+        setMe(null)
+        return
+      }
+      setToken(event.newValue)
+      fetchCurrentUser()
+        .then((player) => {
+          sessionStorage.setItem('mahjong_me', JSON.stringify(player))
+          setMe(player)
+        })
+        .catch(() => {
+          localStorage.removeItem('mahjong_token')
+          sessionStorage.removeItem('mahjong_me')
+          setToken(null)
+          setMe(null)
+        })
+    }
+
     window.addEventListener('auth-change', handleAuthChange)
+    window.addEventListener('storage', handleStorage)
 
     const storedToken = localStorage.getItem('mahjong_token')
     if (storedToken && !me) {
@@ -52,10 +75,11 @@ function App() {
 
     return () => {
       window.removeEventListener('auth-change', handleAuthChange)
+      window.removeEventListener('storage', handleStorage)
     }
   }, [])
 
-  const userDisplayName = me ? (me.firstName ? `${me.firstName} ${me.lastName}`.trim() : me.userName) : ''
+  const userDisplayName = me ? [me.firstName, me.lastName].filter(Boolean).join(' ') || me.userName || '' : ''
 
   const handleLogout = () => {
     localStorage.removeItem('mahjong_token')
