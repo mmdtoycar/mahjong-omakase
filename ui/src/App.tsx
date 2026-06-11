@@ -78,7 +78,7 @@ function App() {
     }
   }, [])
 
-  const userDisplayName = me?.userName || ''
+  const userDisplayName = me ? [me.firstName, me.lastName].filter(Boolean).join(' ') || me.userName || '' : ''
 
   const handleLogout = () => {
     localStorage.removeItem('mahjong_token')

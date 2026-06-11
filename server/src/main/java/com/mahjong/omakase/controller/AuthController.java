@@ -155,8 +155,7 @@ public class AuthController {
     }
     boolean exists =
         playerRepo
-            .findByUserNameIgnoreCaseAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndEmailIsNull(
-                userName.trim(), firstName.trim(), lastName.trim())
+            .findClaimableLegacyPlayer(userName.trim(), firstName.trim(), lastName.trim())
             .isPresent();
     return ResponseEntity.ok(Map.of("exists", exists));
   }
@@ -207,8 +206,7 @@ public class AuthController {
     // 1. Try to find a matching unbound legacy player.
     Player target =
         playerRepo
-            .findByUserNameIgnoreCaseAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndEmailIsNull(
-                trimmedUserName, trimmedFirstName, trimmedLastName)
+            .findClaimableLegacyPlayer(trimmedUserName, trimmedFirstName, trimmedLastName)
             .orElse(null);
 
     boolean claimedExisting = target != null;
@@ -216,7 +214,8 @@ public class AuthController {
     // 2. Fall back to creating a fresh player record.
     if (target == null) {
       // Reject if the userName collides with someone else's bound (email != null) account.
-      if (playerRepo.existsByUserName(trimmedUserName)) {
+      // Case-insensitive to match the lookup above and the typical DB collation.
+      if (playerRepo.existsByUserNameIgnoreCase(trimmedUserName)) {
         return ResponseEntity.badRequest()
             .body(Map.of("error", "用户名「" + trimmedUserName + "」已被占用,请换一个"));
       }

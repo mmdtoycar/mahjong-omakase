@@ -149,7 +149,7 @@ Single-use classes are not always wrong — they're justified when:
 Flag the rest:
 
 ```bash
-grep -oE '^\.[a-zA-Z][a-zA-Z0-9_-]*\s*\{' ui/src/index.css | sed -E 's/^\.//;s/\s*\{$//' | sort -u | while read cls; do
+grep -oE '^[[:space:]]*\.[a-zA-Z][a-zA-Z0-9_-]*\s*\{' ui/src/index.css | sed -E 's/^[[:space:]]*\.//;s/\s*\{$//' | sort -u | while read cls; do
   jsx=$(grep -rhEow "${cls}" ui/src/pages/ ui/src/components/ ui/src/App.tsx 2>/dev/null | wc -l | tr -d ' ')
   if [ "$jsx" = "1" ]; then echo "SINGLE-USE: .$cls"; fi
 done

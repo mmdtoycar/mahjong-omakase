@@ -671,8 +671,7 @@ public class GameService {
    */
   public HomeSummaryResponse getHomeSummary(LocalDateTime start, LocalDateTime end) {
     List<SessionDetailResponse> activeSessions =
-        sessionRepo.findAllByOrderByCreatedAtDesc().stream()
-            .filter(s -> s.getStatus() == SessionStatus.IN_PROGRESS)
+        sessionRepo.findByStatusOrderByCreatedAtDesc(SessionStatus.IN_PROGRESS).stream()
             .map(s -> getSessionDetail(s.getId()))
             .collect(Collectors.toList());
 

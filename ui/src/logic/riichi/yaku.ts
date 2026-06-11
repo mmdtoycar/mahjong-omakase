@@ -19,7 +19,7 @@ function detectKokushiYaku(_allTiles: Tile[], _winTile: Tile, options: GameOptio
   return yaku
 }
 
-function detectChiitoitsuYaku(combination: HandCombination, allTiles: Tile[], options: GameOptions): YakuResult[] {
+function detectChiitoitsuYaku(_combination: HandCombination, allTiles: Tile[], options: GameOptions): YakuResult[] {
   const yaku: YakuResult[] = [{ name: '七对子', han: 2 }]
   const isMenqing = true
 

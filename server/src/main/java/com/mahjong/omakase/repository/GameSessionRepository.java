@@ -1,6 +1,7 @@
 package com.mahjong.omakase.repository;
 
 import com.mahjong.omakase.model.GameSession;
+import com.mahjong.omakase.model.SessionStatus;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface GameSessionRepository extends JpaRepository<GameSession, Long> {
   List<GameSession> findAllByOrderByCreatedAtDesc();
+
+  List<GameSession> findByStatusOrderByCreatedAtDesc(SessionStatus status);
 
   List<GameSession> findByPlayersPlayerIdOrderByCreatedAtDesc(Long playerId);
 
