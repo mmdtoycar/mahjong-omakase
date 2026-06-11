@@ -1,0 +1,147 @@
+<?xml version="1.0"?>
+<ruleset name="MahjongOmakase"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Backend rules for Mahjong Omakase (Spring Boot + JPA + Lombok).
+
+        Rule selection priorities (in order):
+          1. Real bugs and dead code (errorprone, performance, multithreading)
+          2. Maintainability (bestpractices, key design rules)
+          3. Skip pure style rules — Spotless + google-java-format already handle those
+
+        Excluded rules carry a one-line reason. When you exclude a new rule,
+        leave the reason inline so future reviewers know whether to revisit.
+    </description>
+
+    <!-- ====================================================================
+         Best Practices — real maintainability concerns; skip noisy rules
+         ==================================================================== -->
+    <rule ref="category/java/bestpractices.xml">
+        <!-- DTOs / @RestController bodies legitimately expose internal state -->
+        <exclude name="ArrayIsStoredDirectly"/>
+        <exclude name="MethodReturnsInternalArray"/>
+
+        <!-- log4j2 / SLF4J handle log-level guarding internally -->
+        <exclude name="GuardLogStatement"/>
+
+        <!-- Spring / Hibernate APIs return concrete collection types intentionally -->
+        <exclude name="LooseCoupling"/>
+
+        <!-- Varargs vs array — sometimes API designs need explicit arrays -->
+        <exclude name="UseVarargs"/>
+    </rule>
+
+    <!-- ====================================================================
+         Error Prone — likely-real bugs
+         ==================================================================== -->
+    <rule ref="category/java/errorprone.xml">
+        <!-- @Entity classes don't need serialVersionUID -->
+        <exclude name="MissingSerialVersionUID"/>
+
+        <!-- Spring config / SQL strings legitimately repeat -->
+        <exclude name="AvoidDuplicateLiterals"/>
+        <exclude name="AvoidLiteralsInIfCondition"/>
+
+        <!-- Builder/fluent APIs commonly use field name == method name -->
+        <exclude name="AvoidFieldNameMatchingMethodName"/>
+
+        <!-- @SuppressWarnings is sometimes the right escape hatch -->
+        <exclude name="EmptyCatchBlock"/>
+    </rule>
+
+    <!-- ====================================================================
+         Performance — actual perf wins
+         ==================================================================== -->
+    <rule ref="category/java/performance.xml">
+        <!-- Frequent false positives in Stream pipelines -->
+        <exclude name="AvoidInstantiatingObjectsInLoops"/>
+
+        <!-- Modern compilers inline String concatenation just fine -->
+        <exclude name="UseStringBufferForStringAppends"/>
+
+        <!-- We use ArrayList literals for short fixed lists; readability wins -->
+        <exclude name="UseArraysAsList"/>
+
+        <!-- Field initializers like `= false` / `= null` are explicit and harmless -->
+        <exclude name="RedundantFieldInitializer"/>
+    </rule>
+
+    <!-- ====================================================================
+         Multithreading — concurrency safety
+         ==================================================================== -->
+    <rule ref="category/java/multithreading.xml">
+        <!-- Spring uses thread pools / @Async legitimately -->
+        <exclude name="DoNotUseThreads"/>
+
+        <!-- HashMap inside a single-threaded service is fine; rule is overly broad -->
+        <exclude name="UseConcurrentHashMap"/>
+
+        <!-- volatile on participationBonus is a deliberate visibility guard -->
+        <exclude name="AvoidUsingVolatile"/>
+    </rule>
+
+    <!-- ====================================================================
+         Design — complexity / coupling. Selectively included.
+         ==================================================================== -->
+    <rule ref="category/java/design.xml">
+        <!-- Skip Law of Demeter — too noisy with stream chains and getters -->
+        <exclude name="LawOfDemeter"/>
+
+        <!-- DTOs with public fields/getters are valid by design -->
+        <exclude name="DataClass"/>
+
+        <!-- Spring-style services legitimately have many dependencies / methods -->
+        <exclude name="ExcessiveImports"/>
+        <exclude name="ExcessivePublicCount"/>
+        <exclude name="GodClass"/>
+        <exclude name="TooManyFields"/>
+        <exclude name="TooManyMethods"/>
+        <exclude name="ExcessiveParameterList"/>
+        <exclude name="UseObjectForClearerAPI"/>
+
+        <!-- We catch generic Exception in controllers to translate to ResponseEntity -->
+        <exclude name="AvoidCatchingGenericException"/>
+
+        <!-- Allow null returns in DTOs / Optional-light APIs -->
+        <exclude name="AvoidUncheckedExceptionsInSignatures"/>
+
+        <!-- Cyclomatic / cognitive / NPath / NCSS complexity flags fire all over the
+             scoring/handler code where the complexity is intrinsic to mahjong rules.
+             Refactoring just to satisfy these metrics is busywork; reviewers should
+             watch for this manually. -->
+        <exclude name="CyclomaticComplexity"/>
+        <exclude name="CognitiveComplexity"/>
+        <exclude name="NPathComplexity"/>
+        <exclude name="NcssCount"/>
+
+        <!-- ImmutableField fires on every Spring DI field that's set via setter/reflection;
+             flipping all to constructor-injected `final` is a separate refactor. -->
+        <exclude name="ImmutableField"/>
+
+        <!-- CouplingBetweenObjects threshold of 20 is too low for service layers -->
+        <exclude name="CouplingBetweenObjects"/>
+
+        <!-- @SpringBootApplication entry-point class needs a public default constructor;
+             marking it as a utility class would break Spring's reflection-based startup. -->
+        <exclude name="UseUtilityClass"/>
+
+        <!-- LoosePackageCoupling requires explicit package whitelist to be useful;
+             without one PMD prints an "auto-removed" info message every run. -->
+        <exclude name="LoosePackageCoupling"/>
+    </rule>
+
+    <!-- ====================================================================
+         Code Style — Spotless/google-java-format owns most of this.
+         Pick only the few semantic rules that Spotless doesn't handle.
+         ==================================================================== -->
+    <rule ref="category/java/codestyle.xml/UnnecessaryImport"/>
+    <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName"/>
+    <rule ref="category/java/codestyle.xml/UnnecessaryReturn"/>
+    <rule ref="category/java/codestyle.xml/UnnecessaryModifier"/>
+    <rule ref="category/java/codestyle.xml/UselessParentheses"/>
+    <rule ref="category/java/codestyle.xml/UselessQualifiedThis"/>
+
+</ruleset>

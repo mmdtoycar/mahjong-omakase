@@ -17,7 +17,8 @@ final class RequestParsers {
     try {
       return GameMode.valueOf(gameMode);
     } catch (IllegalArgumentException e) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid game mode: " + gameMode);
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Invalid game mode: " + gameMode, e);
     }
   }
 

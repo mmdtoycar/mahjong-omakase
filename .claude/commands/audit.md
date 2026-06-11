@@ -86,8 +86,41 @@ done
 awk '{for(i=1;i<=length($0);i++){c=substr($0,i,1);if(c=="{")n++;if(c=="}")n--}}END{print "CSS brace balance:",n,"(should be 0)"}' ui/src/index.css
 ```
 
-### Java unused imports
+### Java static analysis via PMD
+The project ships a curated PMD ruleset at `config/pmd/ruleset.xml` covering
+real bugs and dead code. **Run this for the comprehensive backend check** —
+it's much more thorough than the grep-based scans below:
+
 ```bash
+./gradlew pmdMain
+```
+
+Output:
+- Console list of every violation (file:line, rule, message).
+- Full HTML report at `build/reports/pmd/main.html`.
+- XML at `build/reports/pmd/main.xml` (CI-friendly).
+
+Rules grouped by category — categories included:
+- `bestpractices` — unused locals/parameters/private methods/private fields, etc.
+- `errorprone` — likely-real bugs (PreserveStackTrace, EmptyControlStatement, etc.)
+- `performance` — UseStringBuilderInStringConcat, AvoidArrayLoops, etc.
+- `multithreading` — concurrency patterns
+- `design` — coupling, complexity (some thresholds raised; pure noise rules excluded)
+- A handful of `codestyle` rules Spotless doesn't already cover (UnnecessaryImport, UselessParentheses, UnnecessaryFullyQualifiedName).
+
+Excluded rules carry inline `<!-- ... -->` reasons in `config/pmd/ruleset.xml`.
+PMD is configured with `ignoreFailures = true` and **not auto-attached to `check`**,
+so it's opt-in via `./gradlew pmdMain` and won't break the regular build.
+
+When triaging:
+- Real findings (UnusedLocalVariable, PreserveStackTrace, LiteralsFirstInComparisons, etc.) → fix in code.
+- False positives → either suppress globally in the ruleset (with reason comment) or annotate the call site with `@SuppressWarnings("PMD.RuleName")`.
+
+### Java unused imports / FQN — quick fallback
+PMD already covers these via `UnnecessaryImport` and `UnnecessaryFullyQualifiedName`. The grep below is a fallback for when you can't run Gradle:
+
+```bash
+# Possibly unused imports (manual verify — naive grep)
 find server/src -name "*.java" | while read f; do
   grep "^import " "$f" | sed 's/import //;s/;//;s/static //' | while read imp; do
     cls=$(echo "$imp" | sed 's/.*\.//')
@@ -100,23 +133,18 @@ done
 ```
 
 ### Java fully-qualified names (should be imports)
-Flag any `java.<pkg>.<TypeName>` reference in the file body — these should be
-imported and used as the simple type name. Common offenders: `java.time.ZoneId`,
-`java.util.function.Predicate`, `java.util.function.Supplier`. The body of a
-class should never spell out a `java.*` package; if it does, move the type to
-the import block.
+PMD's `UnnecessaryFullyQualifiedName` already catches this. Quick grep fallback:
+
 ```bash
 grep -rnE 'java(\.[a-z][a-z0-9_]*)+\.[A-Z][A-Za-z0-9_]*' server/src --include='*.java' \
   | grep -v '^[^:]*:[0-9]*:import ' \
   | grep -v '^[^:]*:[0-9]*: \* '
 ```
-Each line returned is a violation. Fix by adding an `import java.<pkg>.<Type>;`
-and replacing the FQN with `Type` at every use site in that file.
 
 ### Java unused private methods
-Read each Java service/controller/handler file and check if every private method is called within the same class.
+PMD's `UnusedPrivateMethod` (in `bestpractices`) catches this reliably. Manual fallback if Gradle isn't available: read each Java service/controller/handler file and check if every private method is called within the same class.
 
-**Caution — known false positives**: Naive method-name extraction via `grep`+`sed` regularly drops the trailing `s` in plural names (`saveRoundScores` → `saveRoundScore`). Always verify a flagged method by manually re-grepping its full name before removing.
+**Caution — known false positives in the manual fallback**: Naive method-name extraction via `grep`+`sed` regularly drops the trailing `s` in plural names (`saveRoundScores` → `saveRoundScore`). Always verify a flagged method by manually re-grepping its full name before removing.
 
 ## Part 5.5: CSS Excess & Reuse
 

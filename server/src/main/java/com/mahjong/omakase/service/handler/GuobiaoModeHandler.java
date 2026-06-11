@@ -81,8 +81,8 @@ public class GuobiaoModeHandler implements GameModeHandler {
     }
     int flowerScore = 0;
     String[] parts = fanDetails.split(",");
-    for (String part : parts) {
-      part = part.trim();
+    for (String rawPart : parts) {
+      String part = rawPart.trim();
       if (part.startsWith("花牌(")) {
         int openParen = part.indexOf('(');
         int closeParen = part.indexOf(')');

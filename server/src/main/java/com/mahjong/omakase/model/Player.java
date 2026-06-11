@@ -95,7 +95,7 @@ public class Player {
   }
 
   public boolean isBot() {
-    return bot || (this.userName != null && this.userName.equalsIgnoreCase("BOT"));
+    return bot || (this.userName != null && "BOT".equalsIgnoreCase(this.userName));
   }
 
   public void setBot(boolean bot) {

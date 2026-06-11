@@ -73,15 +73,13 @@ public class GameService {
     int page = 0;
     int size = 100;
     int newDiscoveries = 0;
-    boolean hasMore = true;
 
-    while (hasMore) {
+    while (true) {
       Pageable pageable = PageRequest.of(page, size);
       Page<Round> roundPage = roundRepo.findAllOrderByTime(pageable);
       List<Round> rounds = roundPage.getContent();
 
       if (rounds.isEmpty()) {
-        hasMore = false;
         break;
       }
 
@@ -190,9 +188,9 @@ public class GameService {
     try {
       return playerRepo.save(
           new Player(request.getUserName(), request.getFirstName(), request.getLastName()));
-    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+    } catch (DataIntegrityViolationException e) {
       throw new IllegalArgumentException(
-          "Username '" + request.getUserName() + "' is already taken");
+          "Username '" + request.getUserName() + "' is already taken", e);
     }
   }
 
@@ -233,7 +231,7 @@ public class GameService {
     playerRepo.deleteById(Objects.requireNonNull(id));
   }
 
-  @org.springframework.transaction.annotation.Transactional(readOnly = true)
+  @Transactional(readOnly = true)
   public List<SessionSummaryResponse> getAllSessionSummaries() {
     return sessionRepo.findAllByOrderByCreatedAtDesc().stream()
         .map(SessionSummaryResponse::from)

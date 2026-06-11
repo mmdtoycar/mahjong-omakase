@@ -45,9 +45,9 @@ public class AuthController {
       return ResponseEntity.badRequest().body(Map.of("error", "Missing credential"));
     }
 
-    String email = null;
-    String name = null;
-    String pictureUrl = null;
+    String email;
+    String name;
+    String pictureUrl;
 
     // 正常校验模式 (Google Sign-In JWT Verification)
     try {
