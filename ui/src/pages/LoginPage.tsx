@@ -41,28 +41,47 @@ export default function LoginPage() {
       setGisAvailable(false)
       return
     }
-    if (!window.google?.accounts?.id) {
-      setGisAvailable(false)
-      return
+
+    const runInit = () => {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        })
+        const btn = document.getElementById('google-signin-btn')
+        if (btn) {
+          window.google.accounts.id.renderButton(btn, {
+            theme: 'outline',
+            size: 'large',
+            width: '280',
+          })
+        }
+        window.google.accounts.id.prompt()
+        setGisAvailable(true)
+      } catch (err) {
+        console.warn('Failed to initialize Google GIS SDK.', err)
+        setGisAvailable(false)
+      }
     }
-    try {
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      })
-      window.google.accounts.id.renderButton(document.getElementById('google-signin-btn'), {
-        theme: 'outline',
-        size: 'large',
-        width: '280',
-      })
-      window.google.accounts.id.prompt()
-      setGisAvailable(true)
-    } catch (err) {
-      console.warn('Failed to initialize Google GIS SDK.', err)
-      setGisAvailable(false)
+
+    // GIS script is loaded async via index.html; poll up to 5s for it to be ready
+    // before declaring failure, instead of failing on the first render tick.
+    let attempts = 0
+    const maxAttempts = 50
+    const tick = () => {
+      if (window.google?.accounts?.id) {
+        runInit()
+        return
+      }
+      if (++attempts >= maxAttempts) {
+        setGisAvailable(false)
+        return
+      }
+      window.setTimeout(tick, 100)
     }
+    tick()
   }, [handleGoogleResponse])
 
   useEffect(() => {
