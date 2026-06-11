@@ -34,6 +34,14 @@ public class Player {
   @Column(unique = true)
   private String token;
 
+  /**
+   * Hibernate optimistic-lock version. Guards setupProfile / claim flows: if two concurrent
+   * transactions race to bind a Google account to the same legacy Player, only the first commit
+   * succeeds; the second one's UPDATE checks {@code version = ?} mismatches and Hibernate throws an
+   * {@link jakarta.persistence.OptimisticLockException}, which Spring surfaces as a 409/500.
+   */
+  @Version private Long version;
+
   public Player() {}
 
   public Player(String userName, String firstName, String lastName) {
