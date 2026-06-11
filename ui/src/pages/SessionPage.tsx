@@ -929,7 +929,7 @@ export default function SessionPage() {
             <h2>最高番和牌</h2>
           </div>
           <div className="best-hand-list">
-            {bestRounds.map((round, _idx) => {
+            {bestRounds.map((round) => {
               const winner = session.players.find((p) => p.id === round.winnerId)
               const loser =
                 round.dealInPlayerId != null ? session.players.find((p) => p.id === round.dealInPlayerId) : null
