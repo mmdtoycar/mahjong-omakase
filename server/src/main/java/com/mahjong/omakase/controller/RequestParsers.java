@@ -21,6 +21,20 @@ final class RequestParsers {
     }
   }
 
+  /**
+   * Parses optional year/month query parameters into a half-open date range {@code [start, end)}
+   * suitable for "all sessions in this month" queries.
+   *
+   * <ul>
+   *   <li>Both {@code null}: returns {@code {null, null}} → callers treat this as "no date filter"
+   *       (all-time).
+   *   <li>Both provided, with {@code 1 <= month <= 12}: returns {@code {start,
+   *       start.plusMonths(1)}} where {@code start = LocalDateTime.of(year, month, 1, 0, 0)}. End
+   *       is exclusive — the first instant of the following month.
+   *   <li>Only one of the two provided, or {@code month} out of [1, 12]: throws {@link
+   *       ResponseStatusException} with HTTP 400.
+   * </ul>
+   */
   static LocalDateTime[] parseDateRange(Integer year, Integer month) {
     if (year == null && month == null) return new LocalDateTime[] {null, null};
     if (year == null || month == null) {

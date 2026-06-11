@@ -226,8 +226,8 @@ export async function fetchFanDiscoveries(
   return cachedFetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`, signal)
 }
 
-export async function claimPlayer(userName: string, firstName: string, lastName: string): Promise<Player> {
-  const res = await fetch(`${API}/auth/claim`, {
+export async function setupProfile(userName: string, firstName: string, lastName: string): Promise<Player> {
+  const res = await fetch(`${API}/auth/setup-profile`, {
     method: 'POST',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ userName, firstName, lastName }),

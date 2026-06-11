@@ -110,7 +110,7 @@ A class that appears as `className="foo"` in JSX but has no corresponding `.foo 
 grep -rohE 'className="[^"]+"' ui/src/pages/ ui/src/components/ ui/src/App.tsx \
   | sed -E 's/className="//;s/"$//' | tr ' ' '\n' | sort -u | while read cls; do
   [ -z "$cls" ] && continue
-  if ! grep -qE "^\.${cls}\s*[\{,]" ui/src/index.css; then
+  if ! grep -qE "^[[:space:]]*\.${cls}\s*[\{,]" ui/src/index.css; then
     echo "GHOST CLASS (no top-level CSS rule): .$cls"
   fi
 done
@@ -132,6 +132,13 @@ grep -rnE "className=\{\`[^\`]+\\\$\{[^}]+\?\s*'[a-z][a-z0-9-]+'" ui/src/pages/ 
   fi
 done
 ```
+
+**Caution — known regex limitations**: this pattern only catches:
+- Template-literal ternaries (`` `base ${flag ? 'mod' : ''}` ``); plain string ternaries (`flag ? 'mod' : ''`) are missed.
+- Single-quoted modifiers; double-quoted (`"mod"`) are missed.
+- Modifier names of 2+ chars starting with lowercase letter; single-char or PascalCase modifiers are missed.
+
+For exhaustive coverage, manually grep `className={` regions you're suspicious of, or eyeball the JSX.
 
 ### Single-use classes (defined once, referenced once)
 Single-use classes are not always wrong — they're justified when:
@@ -170,8 +177,8 @@ grep -oP '#[0-9a-fA-F]{3,8}' ui/src/index.css | sort | uniq -c | sort -rn | head
 ### CSS duplicate selectors
 ```bash
 # Match only top-level selector definitions (not those nested inside @media blocks)
-grep -nE '^\.[a-zA-Z][\w-]*\s*\{' ui/src/index.css \
-  | sed -E 's/^[0-9]+:\.//;s/\s*\{.*//' \
+grep -nE '^[[:space:]]*\.[a-zA-Z][\w-]*\s*\{' ui/src/index.css \
+  | sed -E 's/^[0-9]+:[[:space:]]*\.//;s/\s*\{.*//' \
   | sort | uniq -c | sort -rn \
   | awk '$1>1 {print "DUPLICATE SELECTOR:",$2,"("$1" times)"}'
 ```

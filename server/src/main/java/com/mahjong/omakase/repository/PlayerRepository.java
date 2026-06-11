@@ -10,4 +10,8 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
   Optional<Player> findByEmail(String email);
 
   Optional<Player> findByToken(String token);
+
+  Optional<Player>
+      findByUserNameIgnoreCaseAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndEmailIsNull(
+          String userName, String firstName, String lastName);
 }

@@ -145,20 +145,32 @@ public class AuthController {
       @RequestParam String userName,
       @RequestParam String firstName,
       @RequestParam String lastName) {
+    if (userName == null
+        || userName.isBlank()
+        || firstName == null
+        || firstName.isBlank()
+        || lastName == null
+        || lastName.isBlank()) {
+      return ResponseEntity.badRequest().body(Map.of("error", "All fields are required"));
+    }
     boolean exists =
-        playerRepo.findAll().stream()
-            .anyMatch(
-                p ->
-                    p.getUserName().equalsIgnoreCase(userName.trim())
-                        && p.getFirstName().equalsIgnoreCase(firstName.trim())
-                        && p.getLastName().equalsIgnoreCase(lastName.trim())
-                        && p.getEmail() == null);
+        playerRepo
+            .findByUserNameIgnoreCaseAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndEmailIsNull(
+                userName.trim(), firstName.trim(), lastName.trim())
+            .isPresent();
     return ResponseEntity.ok(Map.of("exists", exists));
   }
 
+  /**
+   * Atomic profile finalization: claim a matching legacy player if one exists, otherwise create a
+   * brand-new player with the supplied name fields. Either path ends with the current Google
+   * identity merged into the target player and the auto-created Google player deleted. The whole
+   * thing runs in a single transaction so a failure can't leave a half-created player record
+   * behind.
+   */
   @Transactional
-  @PostMapping("/claim")
-  public ResponseEntity<?> claimAccount(
+  @PostMapping("/setup-profile")
+  public ResponseEntity<?> setupProfile(
       @RequestHeader(value = "Authorization", required = false) String authHeader,
       @RequestBody Map<String, String> request) {
     if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -172,66 +184,68 @@ public class AuthController {
 
     Player current = currentOpt.get();
     if (current.isMerged()) {
-      return ResponseEntity.badRequest().body(Map.of("error", "该账户已经合并过老账号，无法再次合并"));
+      return ResponseEntity.badRequest().body(Map.of("error", "该账户已经完成绑定，无法再次设置"));
     }
 
-    String oldUserName = request.get("userName");
-    String oldFirstName = request.get("firstName");
-    String oldLastName = request.get("lastName");
+    String userName = request.get("userName");
+    String firstName = request.get("firstName");
+    String lastName = request.get("lastName");
 
-    if (oldUserName == null
-        || oldUserName.isBlank()
-        || oldFirstName == null
-        || oldFirstName.isBlank()
-        || oldLastName == null
-        || oldLastName.isBlank()) {
-      return ResponseEntity.badRequest().body(Map.of("error", "请完整填写老账号的用户名、名、姓信息"));
+    if (userName == null
+        || userName.isBlank()
+        || firstName == null
+        || firstName.isBlank()
+        || lastName == null
+        || lastName.isBlank()) {
+      return ResponseEntity.badRequest().body(Map.of("error", "请完整填写用户名、名、姓信息"));
     }
 
-    // 寻找匹配且未被其他人认领过的老账号
-    Optional<Player> oldPlayerOpt =
-        playerRepo.findAll().stream()
-            .filter(
-                p ->
-                    p.getUserName().equalsIgnoreCase(oldUserName.trim())
-                        && p.getFirstName().equalsIgnoreCase(oldFirstName.trim())
-                        && p.getLastName().equalsIgnoreCase(oldLastName.trim())
-                        && p.getEmail() == null
-                        && !p.getId().equals(current.getId()))
-            .findFirst();
+    String trimmedUserName = userName.trim();
+    String trimmedFirstName = firstName.trim();
+    String trimmedLastName = lastName.trim();
 
-    if (oldPlayerOpt.isEmpty()) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND)
-          .body(Map.of("error", "未找到符合条件且未绑定的老账号，请核对用户名与姓名"));
+    // 1. Try to find a matching unbound legacy player.
+    Player target =
+        playerRepo
+            .findByUserNameIgnoreCaseAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndEmailIsNull(
+                trimmedUserName, trimmedFirstName, trimmedLastName)
+            .orElse(null);
+
+    boolean claimedExisting = target != null;
+
+    // 2. Fall back to creating a fresh player record.
+    if (target == null) {
+      // Reject if the userName collides with someone else's bound (email != null) account.
+      if (playerRepo.existsByUserName(trimmedUserName)) {
+        return ResponseEntity.badRequest()
+            .body(Map.of("error", "用户名「" + trimmedUserName + "」已被占用,请换一个"));
+      }
+      target = playerRepo.save(new Player(trimmedUserName, trimmedFirstName, trimmedLastName));
     }
 
-    Player oldPlayer = oldPlayerOpt.get();
-
-    // 转移 Google 账户的邮箱和头像，并将会话 token 移交到老账号实体
+    // 3. Merge current Google identity (email/picture/token) into target, mark merged, delete temp.
     String currentEmail = current.getEmail();
     String currentPicture = current.getPictureUrl();
 
-    // 关键突破点：必须先释放当前临时账号占用的 email 和 token 唯一索引约束，并进行强 Flush，防范 Hibernate Commit Unique constraint 异常
+    // Release current's email/token first so the unique-index constraint doesn't trip on flush.
     current.setEmail(null);
     current.setToken(null);
     playerRepo.saveAndFlush(current);
 
-    oldPlayer.setEmail(currentEmail);
-    oldPlayer.setPictureUrl(currentPicture);
-    oldPlayer.setToken(token);
-    oldPlayer.setMerged(true);
+    target.setEmail(currentEmail);
+    target.setPictureUrl(currentPicture);
+    target.setToken(token);
+    target.setMerged(true);
+    playerRepo.saveAndFlush(target);
 
-    // 保存老账号（即完成了合并，数据完美继承）
-    playerRepo.saveAndFlush(oldPlayer);
-
-    // 删除原先自动新建的 Google 临时账户（因为老账号已经绑定，以后每次用 Google 登录就会直接获取到老账号实体）
     playerRepo.delete(current);
 
     log.info(
-        "Successfully merged current Google account with old account: username={}, id={}",
-        oldPlayer.getUserName(),
-        oldPlayer.getId());
+        "Profile setup complete (mode={}) for username={}, id={}",
+        claimedExisting ? "claim" : "register",
+        target.getUserName(),
+        target.getId());
 
-    return ResponseEntity.ok(oldPlayer);
+    return ResponseEntity.ok(target);
   }
 }

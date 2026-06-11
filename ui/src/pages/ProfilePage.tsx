@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchStats, fetchFanDiscoveries, claimPlayer, createPlayer, lookupClaimablePlayer } from '../api'
+import { fetchStats, fetchFanDiscoveries, setupProfile, lookupClaimablePlayer } from '../api'
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -82,12 +82,7 @@ export default function ProfilePage() {
       }
 
       let mergedMe: any
-      if (claimable) {
-        mergedMe = await claimPlayer(userName, firstName, lastName)
-      } else {
-        await createPlayer(userName, firstName, lastName)
-        mergedMe = await claimPlayer(userName, firstName, lastName)
-      }
+      mergedMe = await setupProfile(userName, firstName, lastName)
 
       sessionStorage.setItem('mahjong_me', JSON.stringify(mergedMe))
       setMe(mergedMe)

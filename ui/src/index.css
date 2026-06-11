@@ -34,9 +34,11 @@
   --bg: var(--sol-base3);
   --bg-muted: #eaeaea;
   --card: #ffffff;
+  --card-muted: #fcfcfc;
   --text: var(--sol-base01);
   --text-light: var(--sol-base0);
   --text-muted: #555;
+  --text-on-accent: #ffffff;
   --border: var(--sol-base2);
   --border-muted: #dcdcdc;
   --rank-silver: #95a5a6;
@@ -534,6 +536,42 @@ tr:hover td {
   letter-spacing: -0.01em;
 }
 
+.login-alert-spaced {
+  margin-bottom: 20px;
+}
+
+.alert-retry-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid #f59e0b;
+  background: var(--card);
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-signin-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin: 8px 0 0;
+}
+
+.login-loading-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.login-helper-text {
+  font-size: 12px;
+  color: var(--text-light);
+  margin: 4px 0 0;
+  letter-spacing: 0.02em;
+}
+
 .profile-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -554,7 +592,7 @@ tr:hover td {
 }
 
 .profile-stat-card {
-  background: #fcfcfc;
+  background: var(--card-muted);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
@@ -637,12 +675,12 @@ tr:hover td {
   display: flex;
   align-items: center;
   text-decoration: none;
-  color: #ffffff;
+  color: var(--text-on-accent);
 }
 
 .user-profile-capsule .user-display-name {
   font-size: 13px;
-  color: #ffffff;
+  color: var(--text-on-accent);
   font-weight: 600;
   max-width: 80px;
   overflow: hidden;
@@ -657,7 +695,7 @@ tr:hover td {
   background: rgba(255, 255, 255, 0.15);
   font-size: 11px;
   cursor: pointer;
-  color: #ffffff;
+  color: var(--text-on-accent);
   margin-left: 4px;
   font-weight: 600;
   transition: background 0.2s;
