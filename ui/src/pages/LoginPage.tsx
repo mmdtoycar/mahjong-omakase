@@ -8,7 +8,7 @@ declare global {
   }
 }
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+const GOOGLE_CLIENT_ID = '471645797225-qtqf1nlv8l807tblfhpa9d36p5q456l3.apps.googleusercontent.com'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -36,12 +36,6 @@ export default function LoginPage() {
   )
 
   const initGis = useCallback(() => {
-    if (!GOOGLE_CLIENT_ID) {
-      console.error('VITE_GOOGLE_CLIENT_ID is not set. Configure it at build time.')
-      setGisAvailable(false)
-      return () => {}
-    }
-
     const runInit = () => {
       try {
         window.google.accounts.id.initialize({
