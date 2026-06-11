@@ -149,3 +149,30 @@ pmd {
 tasks.named('pmdTest') {
     enabled = false                                     // test code follows different conventions
 }
+
+// PMD CPD (Copy/Paste Detector) — finds duplicated code blocks across the
+// backend tree. Opt-in via `./gradlew cpdMain`; not auto-attached to `check`
+// because legitimate boilerplate (DTO getters under Lombok, repeated SQL
+// patterns) can produce noise. Use as an audit tool, not a CI gate.
+tasks.register('cpdMain', JavaExec) {
+    group = 'verification'
+    description = 'Run PMD CPD (Copy/Paste Detector) over server/src/main/java'
+
+    def pmdConfig = configurations.detachedConfiguration(
+        dependencies.create("net.sourceforge.pmd:pmd-dist:${pmd.toolVersion}")
+    )
+    classpath = pmdConfig
+    mainClass = 'net.sourceforge.pmd.cli.PmdCli'
+
+    // Audit tool, not CI gate — CPD exits 4 when duplications found, but we
+    // want the task to succeed and let the human eyeball the output.
+    ignoreExitValue = true
+
+    args(
+        'cpd',
+        '--minimum-tokens', '75',                       // 75 filters out interface-impl boilerplate; lower for stricter audit
+        '--language', 'java',
+        '--dir', 'server/src/main/java',
+        '--format', 'text',
+    )
+}
