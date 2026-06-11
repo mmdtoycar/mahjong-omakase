@@ -94,81 +94,41 @@ export default function LoginPage() {
   }, [navigate, initGis])
 
   return (
-    <div
-      className="login-container"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '80vh',
-        padding: '20px',
-        fontFamily: 'system-ui, sans-serif',
-      }}
-    >
-      <div
-        className="login-card"
-        style={{
-          background: '#ffffff',
-          padding: '40px 30px',
-          borderRadius: '16px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
-          width: '100%',
-          maxWidth: '400px',
-          textAlign: 'center',
-          border: '1px solid #eaeaea',
-        }}
-      >
-        <div style={{ fontSize: '64px', marginBottom: '10px' }}>🀄</div>
-        <h2 style={{ margin: '0 0 10px 0', color: '#1a1a1a', fontSize: '24px' }}>Mahjong Omakase</h2>
-        <p style={{ margin: '0 0 30px 0', color: '#666', fontSize: '14px' }}>熟人专属的多人联机麻将记分及对战平台</p>
+    <div className="login-container">
+      <div className="login-card">
+        <img src="/logo-header.png" alt="Mahjong Omakase" className="login-logo" />
+        <h2 className="login-title">Mahjong Omakase</h2>
 
         {error && (
-          <div
-            style={{
-              background: '#ffebeb',
-              color: '#d32f2f',
-              padding: '12px',
-              borderRadius: '8px',
-              fontSize: '13px',
-              marginBottom: '20px',
-              textAlign: 'left',
-            }}
-          >
-            ⚠️ {error}
+          <div className="alert alert-error" role="alert" style={{ marginBottom: '20px' }}>
+            <span className="alert-icon">⚠</span>
+            <span className="alert-body">{error}</span>
           </div>
         )}
 
         {!gisAvailable && (
-          <div
-            style={{
-              background: '#fff7e6',
-              color: '#8a5a00',
-              padding: '12px',
-              borderRadius: '8px',
-              fontSize: '13px',
-              marginBottom: '20px',
-              textAlign: 'left',
-            }}
-            role="alert"
-          >
-            ⚠️ Google 登录加载失败，请检查网络后重试。
-            <button
-              type="button"
-              onClick={initGis}
-              style={{
-                marginLeft: '10px',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                border: '1px solid #d4a017',
-                background: '#fffbe6',
-                color: '#8a5a00',
-                fontSize: '12px',
-                cursor: 'pointer',
-              }}
-            >
-              重试
-            </button>
+          <div className="alert alert-warning" role="alert" style={{ marginBottom: '20px' }}>
+            <span className="alert-icon">⚠</span>
+            <div className="alert-body">
+              <div className="alert-title">无法加载 Google 登录</div>
+              <div style={{ marginBottom: '8px' }}>请检查网络后重试。</div>
+              <button
+                type="button"
+                onClick={initGis}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #f59e0b',
+                  background: '#fff',
+                  color: '#92400e',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                重试
+              </button>
+            </div>
           </div>
         )}
 
@@ -177,13 +137,22 @@ export default function LoginPage() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '15px',
-            margin: '20px 0',
+            gap: '14px',
+            margin: '8px 0 0',
           }}
         >
           <div id="google-signin-btn"></div>
-          {loading && <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>正在登录中...</p>}
-          <p style={{ fontSize: '12px', color: '#999', margin: 0 }}>推荐使用 Google 账户一键免密安全登录</p>
+          {loading && <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>正在登录中...</p>}
+          <p
+            style={{
+              fontSize: '12px',
+              color: 'var(--text-light)',
+              margin: '4px 0 0',
+              letterSpacing: '0.02em',
+            }}
+          >
+            使用 Google 账户一键免密安全登录
+          </p>
         </div>
       </div>
     </div>

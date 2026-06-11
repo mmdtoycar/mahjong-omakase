@@ -5,7 +5,6 @@ import DashboardPage from './pages/DashboardPage'
 import NewSessionPage from './pages/NewSessionPage'
 import SessionPage from './pages/SessionPage'
 import StatsPage from './pages/StatsPage'
-import SignUpPage from './pages/SignUpPage'
 import PlayerDetailPage from './pages/PlayerDetailPage'
 import AdminPage from './pages/AdminPage'
 import FanTablePage from './pages/FanTablePage'
@@ -79,7 +78,7 @@ function App() {
     }
   }, [])
 
-  const userDisplayName = me ? [me.firstName, me.lastName].filter(Boolean).join(' ') || me.userName || '' : ''
+  const userDisplayName = me?.userName || ''
 
   const handleLogout = () => {
     localStorage.removeItem('mahjong_token')
@@ -95,106 +94,29 @@ function App() {
           <img src="/logo-header.png" alt="Mahjong Omakase" className="logo" />
           <h1>Mahjong Omakase</h1>
         </Link>
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <nav>
           <Link to="/home">首页</Link>
           <Link to="/game">游戏</Link>
           <Link to="/stats">统计</Link>
           <Link to="/calculator">算番器</Link>
           <Link to="/fan-table">番表</Link>
+        </nav>
+        <div className="auth-actions">
           {token && me ? (
-            /* 升级为高度清晰、对比强烈的用户身份栏，使用与登录按钮完全一致的金色品牌底色 */
-            <div
-              className="user-profile-capsule"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginLeft: '15px',
-                background: 'var(--accent)',
-                padding: '5px 12px',
-                borderRadius: '6px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                transition: 'background-color 0.2s',
-              }}
-            >
-              <Link
-                to="/profile"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  textDecoration: 'none',
-                  color: '#ffffff',
-                }}
-              >
-                {/* 使用极佳白字对比度，增加 CSS 截断防止溢出，彻底移除圆形头像/缩写以保持绝对扁平极简 */}
-                <span
-                  style={{
-                    fontSize: '13px',
-                    color: '#ffffff',
-                    fontWeight: 600,
-                    maxWidth: '80px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {userDisplayName}
-                </span>
+            <div className="user-profile-capsule">
+              <Link to="/profile">
+                <span className="user-display-name">{userDisplayName}</span>
               </Link>
-              <button
-                onClick={handleLogout}
-                style={{
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  border: '1px solid rgba(255, 255, 255, 0.4)',
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  color: '#ffffff',
-                  marginLeft: '4px',
-                  fontWeight: 600,
-                  transition: 'background 0.2s',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'
-                }}
-              >
+              <button onClick={handleLogout} className="btn-logout">
                 退出
               </button>
             </div>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginLeft: '15px',
-              }}
-            >
-              <Link
-                to="/signup"
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #ccc',
-                  color: '#666',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  textDecoration: 'none',
-                  background: 'none',
-                }}
-              >
-                注册
-              </Link>
-              <Link to="/login" className="btn-signup">
-                登录
-              </Link>
-            </div>
+            <Link to="/login" className="btn-signup">
+              登录
+            </Link>
           )}
-        </nav>
+        </div>
       </header>
       <main>
         <Routes>
@@ -217,7 +139,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/signup" element={<SignUpPage />} />
           <Route
             path="/new-session"
             element={

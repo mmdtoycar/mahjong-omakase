@@ -135,6 +135,27 @@ public class AuthController {
         .body(Map.of("error", "Invalid or expired token"));
   }
 
+  /**
+   * Read-only check: does a claimable legacy player (matching userName/firstName/lastName, with no
+   * bound email) exist? Used by the profile setup form to show the right confirmation copy (绑定 vs
+   * 注册) before submitting.
+   */
+  @GetMapping("/lookup-claimable")
+  public ResponseEntity<?> lookupClaimable(
+      @RequestParam String userName,
+      @RequestParam String firstName,
+      @RequestParam String lastName) {
+    boolean exists =
+        playerRepo.findAll().stream()
+            .anyMatch(
+                p ->
+                    p.getUserName().equalsIgnoreCase(userName.trim())
+                        && p.getFirstName().equalsIgnoreCase(firstName.trim())
+                        && p.getLastName().equalsIgnoreCase(lastName.trim())
+                        && p.getEmail() == null);
+    return ResponseEntity.ok(Map.of("exists", exists));
+  }
+
   @Transactional
   @PostMapping("/claim")
   public ResponseEntity<?> claimAccount(

@@ -12,16 +12,19 @@ spring:
   h2:
     console:
       enabled: false
-  http:
+
+server:
+  port: 8080
+  address: 0.0.0.0
+  servlet:
     encoding:
       charset: UTF-8
       enabled: true
       force: true
 
-server:
-  port: 8080
-  address: 0.0.0.0
-
 app:
   cors:
     allowed-origins: http://localhost:5173
+
+google:
+  client-id: 471645797225-qtqf1nlv8l807tblfhpa9d36p5q456l3.apps.googleusercontent.com

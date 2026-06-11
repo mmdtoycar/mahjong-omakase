@@ -13,14 +13,14 @@ spring:
   h2:
     console:
       enabled: false
-  http:
+
+server:
+  port: ${PORT:8080}
+  servlet:
     encoding:
       charset: UTF-8
       enabled: true
       force: true
-
-server:
-  port: ${PORT:8080}
 
 app:
   cors:

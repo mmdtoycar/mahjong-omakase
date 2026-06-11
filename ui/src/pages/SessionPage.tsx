@@ -534,15 +534,7 @@ export default function SessionPage() {
                         </button>
                       )
                     })}
-                    <div
-                      className="win-action-row"
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: isGuobiao ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
-                        gap: '8px',
-                        width: '100%',
-                      }}
-                    >
+                    <div className={`win-action-row${isGuobiao ? ' win-action-row-three' : ''}`}>
                       <button
                         type="button"
                         className={`quick-player-btn win-type-btn dianpao ${
