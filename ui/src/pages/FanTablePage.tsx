@@ -171,33 +171,7 @@ const FanTablePage: React.FC = () => {
             ))}
           </div>
         </div>
-        <div className="flex-between" style={{ marginBottom: 24, flexWrap: 'wrap' }}>
-          <p className="page-subtitle" style={{ marginBottom: 0 }}>
-            {activeMode.fanTableSubtitle}
-          </p>
-          {activeTab === 'GUOBIAO' && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <a
-                href="/guobiao-rules-2014-cn.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-accent btn-small"
-                style={{ whiteSpace: 'nowrap', textDecoration: 'none' }}
-              >
-                📖 官方规则 (中文版)
-              </a>
-              <a
-                href="/guobiao-rules-2014-en.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-outline btn-small"
-                style={{ whiteSpace: 'nowrap', textDecoration: 'none' }}
-              >
-                🌐 Official Rules (EN)
-              </a>
-            </div>
-          )}
-        </div>
+        <p className="page-subtitle">{activeMode.fanTableSubtitle}</p>
 
         <div className="filter-bar">
           <input
