@@ -40,7 +40,7 @@ Check all pages for consistent use of shared patterns:
 - **Filter bars**: Use `.filter-bar`, not inline flex/gap/wrap styles.
 - **Card wrappers**: All content sections in `.card`. Flag floating content.
 - **Colors**: Use CSS variables (`--mj-gold`, `--mj-teal`, `--sol-yellow`, etc.), not hardcoded hex values. Eyeball with the grep in Part 5; `color-no-hex` is not part of `stylelint-config-standard`.
-- **Inline styles**: Flag any that duplicate a CSS class or appear 2+ times across files (see Part 5).
+- **Inline styles**: Flag any that duplicate a CSS class or appear 2+ times across files. Manual eyeball — no off-the-shelf tool covers JSX inline-style duplication, and `stylelint` only sees `.css` files.
 
 ---
 
@@ -159,7 +159,7 @@ Lowest false-positive rate of the three; usually safe to act on. Still verify th
 ./gradlew cpdMain
 ```
 - Threshold: `--minimum-tokens 75` (configured in `build.gradle`); lower for stricter audit.
-- Output: console; report at `build/reports/cpd/`.
+- Output: console only — PMD 7's `cpd` CLI has no `--report-file` flag, and this is an opt-in audit task you eyeball.
 - Task is **opt-in audit**, not a CI gate (`ignoreExitValue = true`). Triage findings manually — interface implementations of the same method shape will appear and are usually unavoidable.
 
 ### CSS color / selector duplication — stylelint

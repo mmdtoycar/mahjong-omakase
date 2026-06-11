@@ -164,9 +164,6 @@ tasks.register('cpdMain', JavaExec) {
     classpath = pmdConfig
     mainClass = 'net.sourceforge.pmd.cli.PmdCli'
 
-    def reportDir = layout.buildDirectory.dir('reports/cpd')
-    outputs.dir(reportDir)
-
     // Audit tool, not CI gate — CPD exits 4 when duplications found, but we
     // want the task to succeed and let the human eyeball the output.
     ignoreExitValue = true
@@ -178,6 +175,4 @@ tasks.register('cpdMain', JavaExec) {
         '--dir', 'server/src/main/java',
         '--format', 'text',
     )
-
-    doFirst { reportDir.get().asFile.mkdirs() }
 }
