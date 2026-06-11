@@ -78,8 +78,6 @@ function App() {
     }
   }, [])
 
-  const userDisplayName = me ? [me.firstName, me.lastName].filter(Boolean).join(' ') || me.userName || '' : ''
-
   const handleLogout = () => {
     localStorage.removeItem('mahjong_token')
     sessionStorage.removeItem('mahjong_me')
@@ -105,7 +103,7 @@ function App() {
           {token && me ? (
             <div className="user-profile-capsule">
               <Link to="/profile">
-                <span className="user-display-name">{userDisplayName}</span>
+                <span className="user-display-name">我的</span>
               </Link>
               <button onClick={handleLogout} className="btn-logout">
                 退出
