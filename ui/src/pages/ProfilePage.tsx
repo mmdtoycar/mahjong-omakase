@@ -250,7 +250,7 @@ export default function ProfilePage() {
             🎯 完善账号
           </h3>
           <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            填写下方信息完成账号绑定。\n\n如果系统已存在匹配的历史账号,将自动关联并继承战绩,否则会注册一个全新雀士档案。
+            填写下方信息完成账号绑定。如果系统已存在匹配的历史账号,将自动关联并继承战绩,否则会注册一个全新雀士档案。
           </p>
 
           <form onSubmit={handleSetupSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>

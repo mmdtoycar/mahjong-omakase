@@ -138,16 +138,6 @@ done
 ```
 **Caution**: only catches template-literal ternaries with single-quoted, ≥2-char, lowercase-leading modifiers. Misses double quotes, single chars, PascalCase, and non-template ternaries.
 
-#### Single-use classes (CSS rule with only one JSX reference)
-```bash
-grep -oE '^[[:space:]]*\.[a-zA-Z][a-zA-Z0-9_-]*\s*\{' ui/src/index.css \
-  | sed -E 's/^[[:space:]]*\.//;s/\s*\{$//' | sort -u | while read cls; do
-  jsx=$(grep -rhEow "${cls}" ui/src/pages/ ui/src/components/ ui/src/App.tsx 2>/dev/null | wc -l | tr -d ' ')
-  [ "$jsx" = "1" ] && echo "SINGLE-USE: .$cls"
-done
-```
-Single-use is fine when the class has a `:hover`/`:focus` pseudo-state, is a `@media` query hook, or has 5+ properties. Otherwise consider inlining.
-
 ---
 
 ## Part 5: Code Duplication
@@ -174,17 +164,6 @@ grep -nE '^[[:space:]]*\.[a-zA-Z][\w-]*\s*\{' ui/src/index.css \
   | sort | uniq -c | sort -rn \
   | awk '$1>1 {print "DUPLICATE SELECTOR:",$2,"("$1" times)"}'
 ```
-
-### Frontend inline-style duplication
-No off-the-shelf tool models this well (each project's "what's worth extracting to a CSS class" threshold differs). Bash sketch:
-
-```bash
-grep -rn 'style={{' ui/src/pages/ ui/src/components/ \
-  | sed 's/.*style={{//' | sed 's/}}.*//' \
-  | sort | uniq -c | sort -rn | head -20
-```
-
-If the same `style={{ ... }}` shape appears 3+ times, extract to a CSS class.
 
 ---
 
