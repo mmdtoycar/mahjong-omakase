@@ -39,14 +39,14 @@ Check all pages for consistent use of shared patterns:
 - **Subtitles**: Use `.page-subtitle`, not inline color/margin styles.
 - **Filter bars**: Use `.filter-bar`, not inline flex/gap/wrap styles.
 - **Card wrappers**: All content sections in `.card`. Flag floating content.
-- **Colors**: Use CSS variables (`--mj-gold`, `--mj-teal`, `--sol-yellow`, etc.), not hardcoded hex values. **Tool**: `stylelint` with `color-no-hex` (see Part 4 for install).
+- **Colors**: Use CSS variables (`--mj-gold`, `--mj-teal`, `--sol-yellow`, etc.), not hardcoded hex values. Eyeball with the grep in Part 5; `color-no-hex` is not part of `stylelint-config-standard`.
 - **Inline styles**: Flag any that duplicate a CSS class or appear 2+ times across files (see Part 5).
 
 ---
 
 ## Part 4: Dead Code
 
-### TypeScript: `tsc --noEmit` (already wired)
+### TypeScript: `tsc --noEmit`
 `ui/tsconfig.json` has `noUnusedLocals: true` and `noUnusedParameters: true`. Run:
 
 ```bash
@@ -88,18 +88,14 @@ PMD covers (so don't grep for these manually):
 
 Reports: console + `build/reports/pmd/main.html`.
 
-### CSS: recommended tool — **stylelint**
-For unused CSS classes, unused `@keyframes`, broken syntax, and invalid CSS, use [`stylelint`](https://stylelint.io/) with `stylelint-config-standard`:
+### CSS: stylelint (already wired)
+The project ships `stylelint` + `stylelint-config-standard` and a config at `ui/.stylelintrc.json`. Run:
 
 ```bash
-cd ui && npm install --save-dev stylelint stylelint-config-standard
-echo '{"extends":"stylelint-config-standard"}' > .stylelintrc.json
-npx stylelint "src/**/*.css"
+(cd ui && npm run lint:css)
 ```
 
-Replaces the brace-balance / unused-keyframes / hex-color audits below.
-
-> Apple corporate `npm.apple.com` may block this; install when on a network with public npm access.
+Catches: unused `@keyframes`, duplicate properties/selectors, deprecated values, broken syntax, kebab-case naming. `no-descending-specificity` is intentionally disabled (pure ordering preference, not a correctness check).
 
 ### CSS micro-patterns — bash fallbacks (no good tool)
 These remain hand-rolled because they're project-specific patterns no off-the-shelf tool models well. Treat output as **suggestions, not findings** — manual verify each hit.
@@ -142,7 +138,7 @@ done
 
 ## Part 5: Code Duplication
 
-### Java: PMD CPD (already wired)
+### Java: PMD CPD
 ```bash
 ./gradlew cpdMain
 ```
@@ -150,19 +146,12 @@ done
 - Output: console; report at `build/reports/cpd/`.
 - Task is **opt-in audit**, not a CI gate (`ignoreExitValue = true`). Triage findings manually — interface implementations of the same method shape will appear and are usually unavoidable.
 
-### CSS color / selector duplication — recommended: **stylelint**
-With the install above, `stylelint-config-standard` gives you `color-no-hex` (forces CSS-variable use) and `no-duplicate-selectors`. No bash needed.
+### CSS color / selector duplication — stylelint
+`stylelint-config-standard` (already wired) flags `no-duplicate-selectors` and duplicate properties out of the box. Hex-color audits remain a manual eyeball pass since `color-no-hex` isn't part of the standard config:
 
-Until stylelint is installed, ad-hoc bash:
 ```bash
 # Hex colors used 2+ times (candidates for CSS variables):
 grep -oP '#[0-9a-fA-F]{3,8}' ui/src/index.css | sort | uniq -c | sort -rn | head -20
-
-# Top-level duplicate selectors (excludes @media-nested overrides):
-grep -nE '^[[:space:]]*\.[a-zA-Z][\w-]*\s*\{' ui/src/index.css \
-  | sed -E 's/^[0-9]+:[[:space:]]*\.//;s/\s*\{.*//' \
-  | sort | uniq -c | sort -rn \
-  | awk '$1>1 {print "DUPLICATE SELECTOR:",$2,"("$1" times)"}'
 ```
 
 ---
