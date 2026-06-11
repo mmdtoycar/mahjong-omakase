@@ -709,6 +709,7 @@ public class GameService {
     Map<Long, Integer> totalScores = new HashMap<>();
     Map<Long, Integer> gamesPlayed = new HashMap<>();
     Map<Long, Integer> wins = new HashMap<>();
+    Map<Long, Integer> totalRanks = new HashMap<>();
     Map<Long, Double> totalRP = new HashMap<>();
     Map<Long, Double> tieredBonusPerPlayer = new HashMap<>();
     Map<Long, Double> adminBonusPerPlayer = new HashMap<>();
@@ -802,6 +803,7 @@ public class GameService {
 
         for (var entry : ranked) {
           totalRP.merge(entry.playerId(), entry.rp(), (a, b) -> a + b);
+          totalRanks.merge(entry.playerId(), entry.rank(), Integer::sum);
         }
 
         int topScore = ((Number) sorted.get(0)[1]).intValue();
@@ -835,6 +837,8 @@ public class GameService {
               stat.setTotalRP(total);
               int games = gamesPlayed.getOrDefault(p.getId(), 0);
               stat.setAvgScore(games > 0 ? total / games : 0);
+              stat.setAvgRank(
+                  games > 0 ? (double) totalRanks.getOrDefault(p.getId(), 0) / games : 0);
               return stat;
             })
         .collect(Collectors.toList());

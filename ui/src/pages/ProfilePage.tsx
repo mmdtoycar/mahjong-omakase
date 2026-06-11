@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchStats, fetchFanDiscoveries, setupProfile, lookupClaimablePlayer } from '../api'
+import { GAME_MODES, GameModeKey, PlayerStats } from '../types'
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -9,7 +10,7 @@ export default function ProfilePage() {
     return rawMe ? JSON.parse(rawMe) : null
   })
 
-  const [stats, setStats] = useState<any | null>(null)
+  const [statsByMode, setStatsByMode] = useState<Partial<Record<GameModeKey, PlayerStats>>>({})
   const [discoveries, setDiscoveries] = useState<any[]>([])
 
   // 账号设置(关联老账号 / 注册新账号)
@@ -22,15 +23,17 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!me) return
 
-    // 1. 获取玩家个人战绩
-    fetchStats()
-      .then((data) => {
-        const myStat = data.find((s: any) => s.playerId === me.id)
-        if (myStat) setStats(myStat)
-      })
-      .catch(console.error)
+    // 1. 各模式战绩并行拉取
+    GAME_MODES.forEach((mode) => {
+      fetchStats(mode.key)
+        .then((data) => {
+          const myStat = data.find((s: any) => s.playerId === me.id)
+          if (myStat) setStatsByMode((prev) => ({ ...prev, [mode.key]: myStat }))
+        })
+        .catch(console.error)
+    })
 
-    // 2. 获取玩家个人番型成就
+    // 2. 稀有番种成就(仅国标产生)
     fetchFanDiscoveries()
       .then((data) => {
         const myDiscoveries = data.filter((fd: any) => fd.playerId === me.id)
@@ -141,100 +144,116 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* 2. 个人战绩展示 */}
-      <div className="profile-card">
-        <h3
-          style={{
-            margin: '0 0 20px 0',
-            fontSize: '18px',
-            color: 'var(--primary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          📊 个人战绩
-        </h3>
-        {stats && stats.gamesPlayed > 0 ? (
-          <div className="profile-stats-grid">
-            <div className="profile-stat-card">
-              <div className="profile-stat-value profile-stat-value-teal">{stats.gamesPlayed}</div>
-              <div className="profile-stat-label">总局数</div>
-            </div>
-            <div className="profile-stat-card">
-              <div className="profile-stat-value profile-stat-value-teal">
-                {stats.wins}{' '}
-                <span className="profile-stat-suffix">({((stats.wins / stats.gamesPlayed) * 100).toFixed(0)}%)</span>
-              </div>
-              <div className="profile-stat-label">胜场 (胜率)</div>
-            </div>
-            <div className="profile-stat-card">
-              <div className="profile-stat-value profile-stat-value-gold">
-                {stats.totalRP > 0 ? `+${stats.totalRP.toFixed(1)}` : stats.totalRP.toFixed(1)}
-              </div>
-              <div className="profile-stat-label">总积分 (RP)</div>
-            </div>
-            <div className="profile-stat-card">
-              <div className="profile-stat-value profile-stat-value-gold">
-                {stats.avgScore > 0 ? `+${stats.avgScore.toFixed(0)}` : stats.avgScore.toFixed(0)}
-              </div>
-              <div className="profile-stat-label">场均表现</div>
-            </div>
-          </div>
-        ) : (
-          <div className="empty-state empty-state-compact">
-            <p>新晋雀士，暂无本赛季对局统计数据。</p>
-          </div>
-        )}
-      </div>
-
-      {/* 3. 个人番型成就展示 */}
-      <div className="profile-card">
-        <h3
-          style={{
-            margin: '0 0 20px 0',
-            fontSize: '18px',
-            color: 'var(--primary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          🏆 稀有番种成就
-        </h3>
-        {discoveries.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {discoveries.map((fd, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  background: 'linear-gradient(135deg, rgba(33, 140, 116, 0.02), rgba(181, 137, 0, 0.02))',
-                  border: '1px solid #eef7f4',
-                  borderRadius: '10px',
-                  padding: '12px 16px',
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 700, color: 'var(--mj-teal)', fontSize: '15px' }}>🏅 {fd.fanName}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '4px' }}>
-                    发现日期: {new Date(fd.discoveredAt).toLocaleDateString()}
-                  </div>
+      {/* 2. 各模式个人战绩(国标 / 东北 / 立直) */}
+      {GAME_MODES.map((mode) => {
+        const stats = statsByMode[mode.key]
+        const hasStats = stats && stats.gamesPlayed > 0
+        return (
+          <div key={mode.key} className="profile-card">
+            <h3
+              style={{
+                margin: '0 0 20px 0',
+                fontSize: '18px',
+                color: 'var(--primary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              📊 {mode.label} 战绩
+            </h3>
+            {hasStats ? (
+              <div className="profile-stats-grid">
+                <div className="profile-stat-card">
+                  <div className="profile-stat-value profile-stat-value-teal">{stats.gamesPlayed}</div>
+                  <div className="profile-stat-label">总局数</div>
                 </div>
-                <span className="profile-status-pill profile-status-pill-warning">+{fd.bonusRp || 0} RP</span>
+                <div className="profile-stat-card">
+                  <div className="profile-stat-value profile-stat-value-teal">
+                    {stats.wins}{' '}
+                    <span className="profile-stat-suffix">
+                      ({((stats.wins / stats.gamesPlayed) * 100).toFixed(0)}%)
+                    </span>
+                  </div>
+                  <div className="profile-stat-label">胜场 (胜率)</div>
+                </div>
+                <div className="profile-stat-card">
+                  <div className="profile-stat-value profile-stat-value-gold">
+                    {stats.totalRP > 0 ? `+${stats.totalRP.toFixed(1)}` : stats.totalRP.toFixed(1)}
+                  </div>
+                  <div className="profile-stat-label">总积分 (RP)</div>
+                </div>
+                <div className="profile-stat-card">
+                  <div className="profile-stat-value profile-stat-value-gold">
+                    {stats.avgScore > 0 ? `+${stats.avgScore.toFixed(0)}` : stats.avgScore.toFixed(0)}
+                  </div>
+                  <div className="profile-stat-label">场均表现</div>
+                </div>
+                <div className="profile-stat-card">
+                  <div className="profile-stat-value profile-stat-value-teal">{stats.avgRank.toFixed(2)}</div>
+                  <div className="profile-stat-label">平均排名</div>
+                </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state empty-state-compact">
-            <p>暂未发现首和稀有番种成就。</p>
-          </div>
-        )}
-      </div>
+            ) : (
+              <div className="empty-state empty-state-compact">
+                <p>本模式暂无对局统计。</p>
+              </div>
+            )}
 
-      {/* 4. 完善账号:关联老账号 / 注册新账号 — 二选一,完成后此区永久消失 */}
+            {/* 稀有番种成就只在国标模式下显示(其他模式没有番种系统) */}
+            {mode.key === 'GUOBIAO' && (
+              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
+                <h4
+                  style={{
+                    margin: '0 0 16px 0',
+                    fontSize: '15px',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  🏆 稀有番种成就
+                </h4>
+                {discoveries.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {discoveries.map((fd, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          background: 'linear-gradient(135deg, rgba(33, 140, 116, 0.02), rgba(181, 137, 0, 0.02))',
+                          border: '1px solid #eef7f4',
+                          borderRadius: '10px',
+                          padding: '12px 16px',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, color: 'var(--mj-teal)', fontSize: '15px' }}>
+                            🏅 {fd.fanName}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '4px' }}>
+                            发现日期: {new Date(fd.discoveredAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <span className="profile-status-pill profile-status-pill-warning">+{fd.bonusRp || 0} RP</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state empty-state-compact">
+                    <p>暂未发现首和稀有番种成就。</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {/* 4. 完善账号:关联老账号 / 注册新账号 */}
       {!me.merged && (
         <div className="profile-card profile-card-warning">
           <h3

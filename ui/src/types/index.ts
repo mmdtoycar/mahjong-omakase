@@ -124,6 +124,7 @@ export interface PlayerStats {
   adminBonus: number
   fanDiscoveryBonus: number
   avgScore: number
+  avgRank: number
   wins: number
 }
 

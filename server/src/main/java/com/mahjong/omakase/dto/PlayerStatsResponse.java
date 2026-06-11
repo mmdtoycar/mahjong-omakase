@@ -7,6 +7,7 @@ public class PlayerStatsResponse {
   private int gamesPlayed;
   private int totalScore;
   private double avgScore;
+  private double avgRank;
   private int wins;
   private double totalRP;
   private double baseRP;
@@ -60,6 +61,14 @@ public class PlayerStatsResponse {
 
   public void setAvgScore(double avgScore) {
     this.avgScore = avgScore;
+  }
+
+  public double getAvgRank() {
+    return avgRank;
+  }
+
+  public void setAvgRank(double avgRank) {
+    this.avgRank = avgRank;
   }
 
   public int getWins() {

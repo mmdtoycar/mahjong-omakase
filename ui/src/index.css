@@ -1311,6 +1311,7 @@ tr:hover td {
     gap: 8px;
     flex-wrap: wrap;
     justify-content: center;
+    order: 3;
   }
 
   .app-header nav a {
@@ -1438,6 +1439,7 @@ tr:hover td {
   .auth-actions {
     margin-left: 0;
     gap: 6px;
+    order: 2;
   }
 
   .btn-signup {
