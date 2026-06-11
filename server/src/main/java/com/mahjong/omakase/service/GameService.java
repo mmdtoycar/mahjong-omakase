@@ -73,15 +73,13 @@ public class GameService {
     int page = 0;
     int size = 100;
     int newDiscoveries = 0;
-    boolean hasMore = true;
 
-    while (hasMore) {
+    while (true) {
       Pageable pageable = PageRequest.of(page, size);
       Page<Round> roundPage = roundRepo.findAllOrderByTime(pageable);
       List<Round> rounds = roundPage.getContent();
 
       if (rounds.isEmpty()) {
-        hasMore = false;
         break;
       }
 
@@ -130,7 +128,7 @@ public class GameService {
   private Player loadActivePlayer(Long playerId) {
     if (playerId == null) return null;
     Player p = playerRepo.findById(playerId).orElse(null);
-    return (p != null && !p.isBot()) ? p : null;
+    return (p != null && p.isHuman()) ? p : null;
   }
 
   /**
@@ -190,9 +188,9 @@ public class GameService {
     try {
       return playerRepo.save(
           new Player(request.getUserName(), request.getFirstName(), request.getLastName()));
-    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+    } catch (DataIntegrityViolationException e) {
       throw new IllegalArgumentException(
-          "Username '" + request.getUserName() + "' is already taken");
+          "Username '" + request.getUserName() + "' is already taken", e);
     }
   }
 
@@ -233,7 +231,7 @@ public class GameService {
     playerRepo.deleteById(Objects.requireNonNull(id));
   }
 
-  @org.springframework.transaction.annotation.Transactional(readOnly = true)
+  @Transactional(readOnly = true)
   public List<SessionSummaryResponse> getAllSessionSummaries() {
     return sessionRepo.findAllByOrderByCreatedAtDesc().stream()
         .map(SessionSummaryResponse::from)
@@ -599,6 +597,20 @@ public class GameService {
             () -> roundRepo.findByFanCountAndDateRange(fan, startUtc, endUtc),
             () -> roundRepo.findByFanCount(fan));
 
+    if (bestRounds.isEmpty()) return Collections.emptyList();
+
+    // Batch-fetch all referenced players in a single query to avoid N+1 lookups
+    // (one findById per winner + dealInPlayer per row).
+    Set<Long> playerIds = new HashSet<>();
+    for (Round r : bestRounds) {
+      if (r.getWinnerId() != null) playerIds.add(r.getWinnerId());
+      if (r.getDealInPlayerId() != null) playerIds.add(r.getDealInPlayerId());
+    }
+    Map<Long, String> userNameById = new HashMap<>();
+    for (Player p : playerRepo.findAllById(playerIds)) {
+      userNameById.put(p.getId(), p.getUserName());
+    }
+
     return bestRounds.stream()
         .map(
             round -> {
@@ -610,19 +622,12 @@ public class GameService {
 
               String winnerName =
                   round.getWinnerId() != null
-                      ? playerRepo
-                          .findById(Objects.requireNonNull(round.getWinnerId()))
-                          .map(Player::getUserName)
-                          .orElse("?")
+                      ? userNameById.getOrDefault(round.getWinnerId(), "?")
                       : null;
 
-              // Find deal-in player
               Long dealInId = round.getDealInPlayerId();
-
               String dealInName =
-                  dealInId != null
-                      ? playerRepo.findById(dealInId).map(Player::getUserName).orElse("?")
-                      : null;
+                  dealInId != null ? userNameById.getOrDefault(dealInId, "?") : null;
 
               return new BestRoundResponse(
                   round.getGameSession().getId(),
@@ -655,6 +660,32 @@ public class GameService {
               return m;
             })
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Aggregates everything HomePage needs in a single call: in-progress sessions (with full detail)
+   * and per-mode rankings (top 3 by RP + best round). Replaces 1 + N + 2M frontend round-trips with
+   * one response.
+   */
+  public HomeSummaryResponse getHomeSummary(LocalDateTime start, LocalDateTime end) {
+    List<SessionDetailResponse> activeSessions =
+        sessionRepo.findByStatusOrderByCreatedAtDesc(SessionStatus.IN_PROGRESS).stream()
+            .map(s -> getSessionDetail(s.getId()))
+            .collect(Collectors.toList());
+
+    Map<String, HomeSummaryResponse.ModeRanking> rankings = new LinkedHashMap<>();
+    for (GameMode mode : GameMode.values()) {
+      List<PlayerStatsResponse> stats = getPlayerStats(mode, start, end);
+      stats.sort((a, b) -> Double.compare(b.getTotalRP(), a.getTotalRP()));
+      List<PlayerStatsResponse> top = stats.subList(0, Math.min(3, stats.size()));
+
+      List<BestRoundResponse> bests = getBestRounds(mode, start, end);
+      BestRoundResponse best = bests.isEmpty() ? null : bests.get(0);
+
+      rankings.put(mode.name(), new HomeSummaryResponse.ModeRanking(top, best));
+    }
+
+    return new HomeSummaryResponse(activeSessions, rankings);
   }
 
   /**
@@ -782,7 +813,7 @@ public class GameService {
     }
 
     return players.stream()
-        .filter(p -> !p.isBot())
+        .filter(Player::isHuman)
         .map(
             p -> {
               PlayerStatsResponse stat = new PlayerStatsResponse();
@@ -989,7 +1020,7 @@ public class GameService {
     }
 
     return discoveries.stream()
-        .filter(fd -> !fd.getPlayer().isBot())
+        .filter(fd -> fd.getPlayer().isHuman())
         .map(
             fd ->
                 new FanDiscoveryResponse(

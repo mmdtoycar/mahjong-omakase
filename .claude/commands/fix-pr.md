@@ -19,6 +19,7 @@ Review PR comments from CodeRabbit and fix all issues, including nits.
      - `./gradlew spotlessApply`
      - `(cd ui && npx tsc --noEmit)`
      - `./gradlew compileJava -q`
+     - `./gradlew pmdMain` — **any violation must be fixed or suppressed in the ruleset (with reason comment) before pushing.**
    - Commit with a message referencing what was fixed
 
 4. **Reply to every comment**

@@ -1,5 +1,5 @@
 import { Tile } from './tiles'
-import { HandCombination, GameOptions, FanResult, CalcResult, Meld, tileCount, removeTilesOnce } from './types'
+import { HandCombination, GameOptions, FanResult, CalcResult, Meld, removeTilesOnce } from './types'
 import { findAllCombinations } from './hu'
 
 /**
@@ -129,7 +129,7 @@ const TUI_BU_DAO_TILES = new Set([
 
 export function scoreCombination(
   combo: HandCombination,
-  concealedTiles: Tile[],
+  _concealedTiles: Tile[],
   options: GameOptions,
   lastTile?: Tile,
   tingCount: number = -1
@@ -187,10 +187,6 @@ export function scoreCombination(
     }
   }
   const hasFan = (name: string) => fans.some((f) => f.name === name)
-  const countFan = (name: string) => {
-    const existing = fans.find((f) => f.name === name)
-    return existing ? existing.count || 1 : 0
-  }
 
   if (isSpecial) {
     // 十三幺 (88) — Check if it's actually thirteen orphans (13 unique yao tiles + 1 duplicate)
@@ -223,7 +219,6 @@ export function scoreCombination(
     if (allTiles.every((t) => t.isGreen)) addFan('绿一色', 88)
     // 九莲宝灯 (88) — same suit, closed, 1112345678999 + any of that suit
     if (allClosed && distinctSuits === 1 && !hasHonors) {
-      const s = numberTiles[0].suit
       const counts = new Map<number, number>()
       allTiles.forEach((t) => counts.set(t.rank, (counts.get(t.rank) || 0) + 1))
       // Must have at least: 1×3, 2×1, 3×1, 4×1, 5×1, 6×1, 7×1, 8×1, 9×3
@@ -274,10 +269,6 @@ export function scoreCombination(
     if (shunMelds.length === 4 && duiMelds.length === 1) {
       const duiTile = duiMelds[0].tiles[0]
       if (duiTile.isNumber && duiTile.rank === 5) {
-        const otherSuits = ['m', 'p', 's'].filter((s) => s !== duiTile.suit)
-        for (const s of otherSuits) {
-          // skip — one-suit double dragon must all be same suit? No, it's 一种花色
-        }
         // Check: all 4 shuns are same suit as dui, and contain 2×123 + 2×789
         const sameShuns = shunStarts.filter((ss) => ss.suit === duiTile.suit)
         if (sameShuns.length === 4) {

@@ -13,18 +13,18 @@ spring:
   h2:
     console:
       enabled: false
-  http:
+
+server:
+  port: ${PORT:8080}
+  servlet:
     encoding:
       charset: UTF-8
       enabled: true
       force: true
-
-server:
-  port: ${PORT:8080}
 
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
 
 google:
-  client-id: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID must be set}
+  client-id: 471645797225-qtqf1nlv8l807tblfhpa9d36p5q456l3.apps.googleusercontent.com

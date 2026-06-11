@@ -195,6 +195,11 @@ export interface BestRound {
   dealInPlayerName: string | null
 }
 
+export interface HomeSummary {
+  activeSessions: SessionDetail[]
+  rankings: Record<string, { top: PlayerStats[]; best: BestRound | null }>
+}
+
 export interface FanDiscovery {
   fanName: string
   playerId: number

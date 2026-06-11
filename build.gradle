@@ -4,6 +4,7 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.5'
     id 'com.github.node-gradle.node' version '7.1.0'
     id 'com.diffplug.spotless' version '7.1.0'
+    id 'pmd'
 }
 
 import com.github.gradle.node.npm.task.NpmTask
@@ -130,4 +131,21 @@ spotless {
         trimTrailingWhitespace()
         endWithNewline()
     }
+}
+
+// ==========================================================================
+// Static analysis — PMD
+// ==========================================================================
+
+pmd {
+    toolVersion = '7.7.0'
+    consoleOutput = true
+    ignoreFailures = false                              // violations fail the build
+    ruleSets = []                                       // reset PMD's defaults
+    ruleSetFiles = files('config/pmd/ruleset.xml')
+    incrementalAnalysis = true
+}
+
+tasks.named('pmdTest') {
+    enabled = false                                     // test code follows different conventions
 }

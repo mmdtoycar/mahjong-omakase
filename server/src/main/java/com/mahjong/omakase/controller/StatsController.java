@@ -8,12 +8,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @RestController
@@ -30,8 +28,8 @@ public class StatsController {
       @RequestParam(required = false) String gameMode,
       @RequestParam(required = false) Integer year,
       @RequestParam(required = false) Integer month) {
-    GameMode mode = parseGameMode(gameMode);
-    LocalDateTime[] range = parseDateRange(year, month);
+    GameMode mode = RequestParsers.parseGameMode(gameMode);
+    LocalDateTime[] range = RequestParsers.parseDateRange(year, month);
     return gameService.getPlayerStats(mode, range[0], range[1]);
   }
 
@@ -45,37 +43,15 @@ public class StatsController {
       @RequestParam(required = false) String gameMode,
       @RequestParam(required = false) Integer year,
       @RequestParam(required = false) Integer month) {
-    GameMode mode = parseGameMode(gameMode);
-    LocalDateTime[] range = parseDateRange(year, month);
+    GameMode mode = RequestParsers.parseGameMode(gameMode);
+    LocalDateTime[] range = RequestParsers.parseDateRange(year, month);
     return gameService.getBestRounds(mode, range[0], range[1]);
   }
 
   @GetMapping("/fan-discoveries")
   public List<FanDiscoveryResponse> getFanDiscoveries(
       @RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
-    LocalDateTime[] range = parseDateRange(year, month);
+    LocalDateTime[] range = RequestParsers.parseDateRange(year, month);
     return gameService.getFanDiscoveries(range[0], range[1]);
-  }
-
-  private GameMode parseGameMode(String gameMode) {
-    if (gameMode == null || gameMode.isEmpty()) return null;
-    try {
-      return GameMode.valueOf(gameMode);
-    } catch (IllegalArgumentException e) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid game mode: " + gameMode);
-    }
-  }
-
-  private LocalDateTime[] parseDateRange(Integer year, Integer month) {
-    if (year == null && month == null) return new LocalDateTime[] {null, null};
-    if (year == null || month == null) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Both year and month must be provided");
-    }
-    if (month < 1 || month > 12) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Month must be between 1 and 12");
-    }
-    LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0);
-    return new LocalDateTime[] {start, start.plusMonths(1)};
   }
 }

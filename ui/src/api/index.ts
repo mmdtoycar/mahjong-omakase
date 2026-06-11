@@ -7,6 +7,7 @@ import {
   AddRoundData,
   BestRound,
   FanDiscovery,
+  HomeSummary,
 } from '../types'
 import { MSG } from '../constants'
 
@@ -52,8 +53,8 @@ function getAuthHeaders(headers: Record<string, string> = {}): Record<string, st
 
 async function handleResponse<T = void>(res: Response): Promise<T> {
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: MSG.ERROR }))
-    throw new Error(error.message || MSG.ERROR)
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error || body.message || MSG.ERROR)
   }
   const text = await res.text()
   if (!text.trim()) return undefined as T
@@ -198,6 +199,16 @@ export async function fetchBestRounds(
   return cachedFetch(`${API}/stats/best-rounds${qs ? `?${qs}` : ''}`, signal)
 }
 
+export async function fetchHomeSummary(year?: number, month?: number, signal?: AbortSignal): Promise<HomeSummary> {
+  const params = new URLSearchParams()
+  if (year != null && month != null) {
+    params.set('year', String(year))
+    params.set('month', String(month))
+  }
+  const qs = params.toString()
+  return cachedFetch(`${API}/home-summary${qs ? `?${qs}` : ''}`, signal)
+}
+
 export async function fetchFanDiscoveries(
   year?: number,
   month?: number,
@@ -215,8 +226,8 @@ export async function fetchFanDiscoveries(
   return cachedFetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`, signal)
 }
 
-export async function claimPlayer(userName: string, firstName: string, lastName: string): Promise<Player> {
-  const res = await fetch(`${API}/auth/claim`, {
+export async function setupProfile(userName: string, firstName: string, lastName: string): Promise<Player> {
+  const res = await fetch(`${API}/auth/setup-profile`, {
     method: 'POST',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ userName, firstName, lastName }),
@@ -224,4 +235,13 @@ export async function claimPlayer(userName: string, firstName: string, lastName:
   const data = await handleResponse<Player>(res)
   invalidateCache()
   return data
+}
+
+export async function lookupClaimablePlayer(userName: string, firstName: string, lastName: string): Promise<boolean> {
+  const params = new URLSearchParams({ userName, firstName, lastName })
+  const res = await fetch(`${API}/auth/lookup-claimable?${params.toString()}`, {
+    headers: getAuthHeaders(),
+  })
+  const data = await handleResponse<{ exists: boolean }>(res)
+  return data.exists
 }

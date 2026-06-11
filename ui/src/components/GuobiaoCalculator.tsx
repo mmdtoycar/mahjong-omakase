@@ -84,7 +84,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   initialOptions,
   resetTrigger,
   isSelfDraw,
-  onIsSelfDrawChange,
+  onIsSelfDrawChange: _onIsSelfDrawChange,
 }) => {
   const [concealedTiles, setConcealedTiles] = useState<Tile[]>([])
   const [melds, setMelds] = useState<Meld[]>([])

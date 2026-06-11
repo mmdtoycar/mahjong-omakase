@@ -1,5 +1,7 @@
 package com.mahjong.omakase.model;
 
+import java.util.Locale;
+
 public enum RoundType {
   WIN,
   DRAWN_GAME;
@@ -9,9 +11,9 @@ public enum RoundType {
       return WIN;
     }
     try {
-      return valueOf(value.toUpperCase());
+      return valueOf(value.toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException("Invalid round type: " + value);
+      throw new IllegalArgumentException("Invalid round type: " + value, e);
     }
   }
 }

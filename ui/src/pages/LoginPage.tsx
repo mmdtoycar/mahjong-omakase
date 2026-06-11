@@ -8,7 +8,7 @@ declare global {
   }
 }
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+const GOOGLE_CLIENT_ID = '471645797225-qtqf1nlv8l807tblfhpa9d36p5q456l3.apps.googleusercontent.com'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -36,32 +36,55 @@ export default function LoginPage() {
   )
 
   const initGis = useCallback(() => {
-    if (!GOOGLE_CLIENT_ID) {
-      console.error('VITE_GOOGLE_CLIENT_ID is not set. Configure it at build time.')
-      setGisAvailable(false)
-      return
+    const runInit = () => {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        })
+        const btn = document.getElementById('google-signin-btn')
+        if (btn) {
+          window.google.accounts.id.renderButton(btn, {
+            theme: 'outline',
+            size: 'large',
+            width: '280',
+          })
+        }
+        window.google.accounts.id.prompt()
+        setGisAvailable(true)
+      } catch (err) {
+        console.warn('Failed to initialize Google GIS SDK.', err)
+        setGisAvailable(false)
+      }
     }
-    if (!window.google?.accounts?.id) {
-      setGisAvailable(false)
-      return
+
+    // GIS script is loaded async via index.html; poll up to 5s for it to be ready
+    // before declaring failure, instead of failing on the first render tick.
+    let cancelled = false
+    let timeoutId: number | null = null
+    let attempts = 0
+    const maxAttempts = 50
+    const tick = () => {
+      if (cancelled) return
+      if (window.google?.accounts?.id) {
+        runInit()
+        return
+      }
+      if (++attempts >= maxAttempts) {
+        setGisAvailable(false)
+        return
+      }
+      timeoutId = window.setTimeout(tick, 100)
     }
-    try {
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      })
-      window.google.accounts.id.renderButton(document.getElementById('google-signin-btn'), {
-        theme: 'outline',
-        size: 'large',
-        width: '280',
-      })
-      window.google.accounts.id.prompt()
-      setGisAvailable(true)
-    } catch (err) {
-      console.warn('Failed to initialize Google GIS SDK.', err)
-      setGisAvailable(false)
+    tick()
+
+    // Cleanup: stop polling and ignore any in-flight setTimeout if the component unmounts
+    // (or the effect re-runs) before the SDK is ready.
+    return () => {
+      cancelled = true
+      if (timeoutId !== null) window.clearTimeout(timeoutId)
     }
   }, [handleGoogleResponse])
 
@@ -71,100 +94,39 @@ export default function LoginPage() {
       navigate('/home', { replace: true })
       return
     }
-    initGis()
+    return initGis()
   }, [navigate, initGis])
 
   return (
-    <div
-      className="login-container"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '80vh',
-        padding: '20px',
-        fontFamily: 'system-ui, sans-serif',
-      }}
-    >
-      <div
-        className="login-card"
-        style={{
-          background: '#ffffff',
-          padding: '40px 30px',
-          borderRadius: '16px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
-          width: '100%',
-          maxWidth: '400px',
-          textAlign: 'center',
-          border: '1px solid #eaeaea',
-        }}
-      >
-        <div style={{ fontSize: '64px', marginBottom: '10px' }}>🀄</div>
-        <h2 style={{ margin: '0 0 10px 0', color: '#1a1a1a', fontSize: '24px' }}>Mahjong Omakase</h2>
-        <p style={{ margin: '0 0 30px 0', color: '#666', fontSize: '14px' }}>熟人专属的多人联机麻将记分及对战平台</p>
+    <div className="login-container">
+      <div className="login-card">
+        <img src="/logo-header.png" alt="Mahjong Omakase" className="login-logo" />
+        <h2 className="login-title">Mahjong Omakase</h2>
 
         {error && (
-          <div
-            style={{
-              background: '#ffebeb',
-              color: '#d32f2f',
-              padding: '12px',
-              borderRadius: '8px',
-              fontSize: '13px',
-              marginBottom: '20px',
-              textAlign: 'left',
-            }}
-          >
-            ⚠️ {error}
+          <div className="alert alert-error login-alert-spaced" role="alert">
+            <span className="alert-icon">⚠</span>
+            <span className="alert-body">{error}</span>
           </div>
         )}
 
         {!gisAvailable && (
-          <div
-            style={{
-              background: '#fff7e6',
-              color: '#8a5a00',
-              padding: '12px',
-              borderRadius: '8px',
-              fontSize: '13px',
-              marginBottom: '20px',
-              textAlign: 'left',
-            }}
-            role="alert"
-          >
-            ⚠️ Google 登录加载失败，请检查网络后重试。
-            <button
-              type="button"
-              onClick={initGis}
-              style={{
-                marginLeft: '10px',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                border: '1px solid #d4a017',
-                background: '#fffbe6',
-                color: '#8a5a00',
-                fontSize: '12px',
-                cursor: 'pointer',
-              }}
-            >
-              重试
-            </button>
+          <div className="alert alert-warning login-alert-spaced" role="alert">
+            <span className="alert-icon">⚠</span>
+            <div className="alert-body">
+              <div className="alert-title">无法加载 Google 登录</div>
+              <div style={{ marginBottom: '8px' }}>请检查网络后重试。</div>
+              <button type="button" onClick={initGis} className="alert-retry-btn">
+                重试
+              </button>
+            </div>
           </div>
         )}
 
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '15px',
-            margin: '20px 0',
-          }}
-        >
+        <div className="login-signin-area">
           <div id="google-signin-btn"></div>
-          {loading && <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>正在登录中...</p>}
-          <p style={{ fontSize: '12px', color: '#999', margin: 0 }}>推荐使用 Google 账户一键免密安全登录</p>
+          {loading && <p className="login-loading-text">正在登录中...</p>}
+          <p className="login-helper-text">使用 Google 账户一键免密安全登录</p>
         </div>
       </div>
     </div>

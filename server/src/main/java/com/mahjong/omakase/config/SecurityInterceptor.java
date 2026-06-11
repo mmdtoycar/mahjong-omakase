@@ -28,7 +28,7 @@ public class SecurityInterceptor implements HandlerInterceptor {
     String path = request.getRequestURI();
 
     // 1. 放行 Google 认证接口、静态资源、Spa路由转发、以及错误信息
-    if (path.startsWith("/api/auth/google") || path.equals("/error") || !path.startsWith("/api")) {
+    if (path.startsWith("/api/auth/google") || "/error".equals(path) || !path.startsWith("/api")) {
       return true;
     }
 

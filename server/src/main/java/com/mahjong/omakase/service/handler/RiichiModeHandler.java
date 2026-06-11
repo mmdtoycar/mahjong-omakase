@@ -163,7 +163,6 @@ public class RiichiModeHandler implements GameModeHandler {
         int remainder = score - base * numOthers;
         int remainderSticks = remainder / 100;
 
-        int idx = 0;
         for (Long id : playerIds) {
           if (!id.equals(winnerId)) {
             int extra = 0;
@@ -177,7 +176,6 @@ public class RiichiModeHandler implements GameModeHandler {
             int pays = base + extra + honbaPerPlayer;
             result.put(id, -pays);
             winnerGets += pays;
-            idx++;
           }
         }
       } else {
@@ -200,18 +198,16 @@ public class RiichiModeHandler implements GameModeHandler {
         }
 
         if (remainderSticks != 0 && dealerId != null && playerShares.containsKey(dealerId)) {
-          int extra = 0;
+          int extra;
           if (remainderSticks > 0) {
             extra = Math.min(remainderSticks, 2) * 100;
-            remainderSticks -= extra / 100;
           } else {
             extra = Math.max(remainderSticks, -2) * 100;
-            remainderSticks -= extra / 100;
           }
+          remainderSticks -= extra / 100;
           playerShares.put(dealerId, playerShares.get(dealerId) + extra);
         }
 
-        int idx = 0;
         for (Long id : playerIds) {
           if (id.equals(winnerId) || id.equals(dealerId)) continue;
           int extra = 0;
@@ -223,7 +219,6 @@ public class RiichiModeHandler implements GameModeHandler {
             remainderSticks++;
           }
           playerShares.put(id, playerShares.get(id) + extra);
-          idx++;
         }
 
         for (Map.Entry<Long, Integer> entry : playerShares.entrySet()) {

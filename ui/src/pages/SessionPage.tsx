@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, PlayerInfo, RoundInfo } from '../types'
 import { calculateRanks } from '../logic/ranking'
@@ -128,15 +128,6 @@ export default function SessionPage() {
     } else {
       setDealInPlayerId(pid)
       setIsSelfDraw(false)
-    }
-  }
-
-  const handleWinTypeToggle = () => {
-    if (isSelfDraw) {
-      setIsSelfDraw(false)
-    } else {
-      setIsSelfDraw(true)
-      setDealInPlayerId('')
     }
   }
 
@@ -534,15 +525,7 @@ export default function SessionPage() {
                         </button>
                       )
                     })}
-                    <div
-                      className="win-action-row"
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: isGuobiao ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
-                        gap: '8px',
-                        width: '100%',
-                      }}
-                    >
+                    <div className={`win-action-row${isGuobiao ? ' win-action-row-three' : ''}`}>
                       <button
                         type="button"
                         className={`quick-player-btn win-type-btn dianpao ${
@@ -946,7 +929,7 @@ export default function SessionPage() {
             <h2>最高番和牌</h2>
           </div>
           <div className="best-hand-list">
-            {bestRounds.map((round, idx) => {
+            {bestRounds.map((round) => {
               const winner = session.players.find((p) => p.id === round.winnerId)
               const loser =
                 round.dealInPlayerId != null ? session.players.find((p) => p.id === round.dealInPlayerId) : null

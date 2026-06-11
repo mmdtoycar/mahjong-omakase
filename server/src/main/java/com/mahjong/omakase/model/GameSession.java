@@ -5,9 +5,13 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "game_sessions")
+@Getter
+@Setter
 public class GameSession {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,76 +43,4 @@ public class GameSession {
   @OneToMany(mappedBy = "gameSession", cascade = CascadeType.ALL, orphanRemoval = true)
   @OrderBy("roundNumber ASC")
   private List<Round> rounds = new ArrayList<>();
-
-  public Long getId() {
-    return id;
-  }
-
-  public void setId(Long id) {
-    this.id = id;
-  }
-
-  public String getName() {
-    return name;
-  }
-
-  public void setName(String name) {
-    this.name = name;
-  }
-
-  public int getPlayerCount() {
-    return playerCount;
-  }
-
-  public void setPlayerCount(int playerCount) {
-    this.playerCount = playerCount;
-  }
-
-  public SessionStatus getStatus() {
-    return status;
-  }
-
-  public void setStatus(SessionStatus status) {
-    this.status = status;
-  }
-
-  public GameMode getGameMode() {
-    return gameMode;
-  }
-
-  public void setGameMode(GameMode gameMode) {
-    this.gameMode = gameMode;
-  }
-
-  public LocalDateTime getCreatedAt() {
-    return createdAt;
-  }
-
-  public void setCreatedAt(LocalDateTime createdAt) {
-    this.createdAt = createdAt;
-  }
-
-  public List<GameSessionPlayer> getPlayers() {
-    return players;
-  }
-
-  public void setPlayers(List<GameSessionPlayer> players) {
-    this.players = players;
-  }
-
-  public List<Round> getRounds() {
-    return rounds;
-  }
-
-  public void setRounds(List<Round> rounds) {
-    this.rounds = rounds;
-  }
-
-  public Double getParticipationBonus() {
-    return participationBonus;
-  }
-
-  public void setParticipationBonus(Double participationBonus) {
-    this.participationBonus = participationBonus;
-  }
 }
