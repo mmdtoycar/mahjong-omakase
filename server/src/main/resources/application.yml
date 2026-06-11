@@ -25,3 +25,6 @@ server:
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID must be set}

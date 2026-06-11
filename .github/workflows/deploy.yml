@@ -38,6 +38,8 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
+          build-args: |
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -71,6 +73,7 @@ jobs:
               -v mahjong-data:/app/data \
               -e ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
               -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
+              -e GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
               "$IMAGE:latest"
 
             docker image prune -f
