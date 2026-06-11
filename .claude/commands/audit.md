@@ -46,11 +46,31 @@ done < /tmp/css-classes.txt
 - Classes built via template literals like `` `rank-tag-${idx + 1}` `` won't show in `grep -w`. Manually verify any flagged class that has a numeric/dynamic suffix sibling (`.rank-tag-1` → check `rank-tag-` template-literal usages).
 - A class only ever appearing inside a descendant selector like `.game-card .rank-1 .rank-number` may have no standalone CSS rule but still be valid as an HTML hook. Inspect the JSX before deleting.
 
-### Unused TypeScript exports
+### Unused TypeScript locals / parameters / imports
+The project's `ui/tsconfig.json` enables `noUnusedLocals: true` and `noUnusedParameters: true`. Run TypeScript with `--noEmit` and grep `TS6133` from the output — anything reported is a real dead identifier (TS sees it declared but never read).
+
 ```bash
+(cd ui && npx tsc --noEmit) 2>&1 | grep -E "TS6133|TS6196"
+```
+- `TS6133` — unused locals / parameters / imports
+- `TS6196` — unused type aliases
+
+**Triage**:
+- Unused **import**: just delete from the import list.
+- Unused **local variable** (`const foo = ...` never read): delete the line.
+- Unused **function** declaration: delete (it's truly orphaned).
+- Unused **parameter** that you can't delete (e.g. callback signature, position-based args, controlled-component prop): rename with `_` prefix → `_foo`. TS treats `_`-prefixed identifiers as intentionally ignored.
+- Unused **type alias**: delete the `type Foo = ...` line.
+
+**Caution — what tsc does NOT catch**:
+- Unused **exports** (declared `export` and used in same file but never imported elsewhere). For that, use a separate tool like `ts-prune` or `knip`. The grep-based check below is a best-effort fallback when those tools aren't available.
+
+```bash
+# Best-effort fallback for unused exports (manual verify each hit — type-only
+# imports and template-literal usage can hide references the grep misses):
 grep -oP 'export (interface|function|const|type) \K\w+' ui/src/types/index.ts | while read name; do
-  count=$(grep -rn "$name" ui/src/pages/ ui/src/components/ ui/src/App.tsx ui/src/api/ ui/src/logic/ ui/src/utils/ 2>/dev/null | grep -v "types/index.ts" | wc -l)
-  if [ "$count" -eq 0 ]; then echo "UNUSED EXPORT: $name in types/index.ts"; fi
+  count=$(grep -rn "\b$name\b" ui/src/pages/ ui/src/components/ ui/src/App.tsx ui/src/api/ ui/src/logic/ ui/src/utils/ 2>/dev/null | grep -v "types/index.ts" | wc -l)
+  if [ "$count" -eq 0 ]; then echo "UNUSED EXPORT (manual verify): $name in types/index.ts"; fi
 done
 ```
 
