@@ -72,7 +72,7 @@ Knip also finds unused files, dependencies, and devDependencies. No config neede
 
 > Apple corporate `npm.apple.com` may not mirror this package; install when on a network with public npm access.
 
-### Java: PMD (already wired)
+### Java: PMD
 The project ships a curated PMD ruleset at `config/pmd/ruleset.xml` and PMD is **attached to `check`**, so `./gradlew build` and `./gradlew check` both fail on violations. Manual run:
 
 ```bash
@@ -88,7 +88,7 @@ PMD covers (so don't grep for these manually):
 
 Reports: console + `build/reports/pmd/main.html`.
 
-### CSS: stylelint (already wired)
+### CSS: stylelint
 The project ships `stylelint` + `stylelint-config-standard` and a config at `ui/.stylelintrc.json`. Run:
 
 ```bash
@@ -97,8 +97,10 @@ The project ships `stylelint` + `stylelint-config-standard` and a config at `ui/
 
 Catches: unused `@keyframes`, duplicate properties/selectors, deprecated values, broken syntax, kebab-case naming. `no-descending-specificity` is intentionally disabled (pure ordering preference, not a correctness check).
 
-### CSS micro-patterns — bash fallbacks (no good tool)
-These remain hand-rolled because they're project-specific patterns no off-the-shelf tool models well. Treat output as **suggestions, not findings** — manual verify each hit.
+### CSS micro-patterns — bash fallbacks (no off-the-shelf replacement)
+These three checks have **no real tool replacement** — `stylelint` only analyzes CSS in isolation; `tsc`/`oxlint`/`PMD` don't cross-reference CSS classes against JSX; PurgeCSS doesn't handle template-literal classNames.
+
+**Treat output as candidates for manual eyeball, NOT as findings.** Every hit must be opened in the editor and verified before reporting. False positives are expected and frequent — never paste raw bash output into the audit report.
 
 #### Orphan CSS classes (defined in CSS but never used in JSX)
 ```bash
@@ -109,7 +111,12 @@ grep -oE '^[[:space:]]*\.[a-zA-Z][a-zA-Z0-9_-]*' ui/src/index.css \
   fi
 done
 ```
-**Caution**: classes built via template literals (`` `rank-tag-${idx}` ``) won't show in `grep -w`; classes referenced as descendants (`.parent .foo`) are valid even without standalone `.foo {`. Manual verify.
+**False-positive sources** — verify before reporting:
+- Template-literal classNames: `` `rank-tag-${idx}` `` won't match `grep -w rank-tag-1`.
+- Descendant selectors: `.parent .foo` is a valid use of `.foo` even without a standalone `.foo {` rule.
+- Dynamically-built strings: `clsx('foo', cond && 'bar')`, conditional spreads.
+
+For each `POSSIBLY UNUSED: .X` hit, before reporting: open the CSS rule, then `grep -rE "X[\"\`'\\s)}]" ui/src/` (broader regex). Only report if still no match.
 
 #### Ghost classes (className in JSX but no matching CSS rule)
 ```bash
@@ -121,7 +128,12 @@ grep -rohE 'className="[^"]+"' ui/src/pages/ ui/src/components/ ui/src/App.tsx \
   fi
 done
 ```
-**Caution**: legitimate when the class is referenced as a descendant (`.parent .foo`), an E2E hook, or a template-literal target.
+**False-positive sources** — verify before reporting:
+- Descendant selectors: `.parent .foo` won't match the top-level grep but is a legitimate definition.
+- Combined selectors: `.foo.bar { }` won't match a bare `.foo` lookup.
+- E2E hooks: classes intentionally unstyled, used only as a JS/test selector.
+
+For each `POSSIBLY GHOST: .X` hit, before reporting: `grep -nE "\\.X[\\s.,:{]" ui/src/index.css`. Only report if still no match.
 
 #### Conditionally-added dead modifiers
 ```bash
@@ -132,7 +144,11 @@ grep -rnE "className=\{\`[^\`]+\\\$\{[^}]+\?\s*'[a-z][a-z0-9-]+'" ui/src/pages/ 
   fi
 done
 ```
-**Caution**: only catches template-literal ternaries with single-quoted, ≥2-char, lowercase-leading modifiers. Misses double quotes, single chars, PascalCase, and non-template ternaries.
+Lowest false-positive rate of the three; usually safe to act on. Still verify the call site — combined-selector rules (`.parent.modifier`) will be missed by the grep.
+
+**Coverage limits** — this regex is narrow on purpose to keep signal tight:
+- Single-quoted, ≥2-char, lowercase-leading modifiers in template-literal ternaries only.
+- Misses: double-quoted, single-char, PascalCase, non-template ternaries (`isX ? styles.a : styles.b`), `clsx()` calls.
 
 ---
 
@@ -147,7 +163,7 @@ done
 - Task is **opt-in audit**, not a CI gate (`ignoreExitValue = true`). Triage findings manually — interface implementations of the same method shape will appear and are usually unavoidable.
 
 ### CSS color / selector duplication — stylelint
-`stylelint-config-standard` (already wired) flags `no-duplicate-selectors` and duplicate properties out of the box. Hex-color audits remain a manual eyeball pass since `color-no-hex` isn't part of the standard config:
+`stylelint-config-standard` flags `no-duplicate-selectors` and duplicate properties out of the box. Hex-color audits remain a manual eyeball pass since `color-no-hex` isn't part of the standard config:
 
 ```bash
 # Hex colors used 2+ times (candidates for CSS variables):

@@ -7,6 +7,7 @@ Commit all changes and create a PR. Do not include yourself as co-author or comm
 1. **Pre-flight checks** (ALL commands MUST run from project root)
    - `./gradlew spotlessApply` — format Java + UI
    - `(cd ui && npx tsc --noEmit)` — TypeScript check
+   - `(cd ui && npm run lint:css)` — stylelint (CSS static analysis)
    - `./gradlew compileJava -q` — Java compile
    - `./gradlew pmdMain` — backend static analysis. **Any violation must be fixed or suppressed in the ruleset (with reason comment) before creating the PR.**
    - If any check fails, stop and report the error. Do NOT create the PR.
