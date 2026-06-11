@@ -2,9 +2,15 @@ package com.mahjong.omakase.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "players")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Player {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,6 +40,9 @@ public class Player {
   @Column(unique = true)
   private String token;
 
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private boolean merged = false;
+
   /**
    * Hibernate optimistic-lock version. Guards setupProfile / claim flows: if two concurrent
    * transactions race to bind a Google account to the same legacy Player, only the first commit
@@ -42,52 +51,10 @@ public class Player {
    */
   @Version private Long version;
 
-  public Player() {}
-
   public Player(String userName, String firstName, String lastName) {
     this.userName = userName;
     this.firstName = firstName;
     this.lastName = lastName;
-  }
-
-  public Long getId() {
-    return id;
-  }
-
-  public void setId(Long id) {
-    this.id = id;
-  }
-
-  public String getUserName() {
-    return userName;
-  }
-
-  public void setUserName(String userName) {
-    this.userName = userName;
-  }
-
-  public String getFirstName() {
-    return firstName;
-  }
-
-  public void setFirstName(String firstName) {
-    this.firstName = firstName;
-  }
-
-  public String getLastName() {
-    return lastName;
-  }
-
-  public void setLastName(String lastName) {
-    this.lastName = lastName;
-  }
-
-  public LocalDateTime getCreatedAt() {
-    return createdAt;
-  }
-
-  public void setCreatedAt(LocalDateTime createdAt) {
-    this.createdAt = createdAt;
   }
 
   public String getDisplayName() {
@@ -95,45 +62,10 @@ public class Player {
   }
 
   public boolean isBot() {
-    return bot || (this.userName != null && "BOT".equalsIgnoreCase(this.userName));
+    return bot || "BOT".equalsIgnoreCase(this.userName);
   }
 
-  public void setBot(boolean bot) {
-    this.bot = bot;
-  }
-
-  public String getEmail() {
-    return email;
-  }
-
-  public void setEmail(String email) {
-    this.email = email;
-  }
-
-  public String getPictureUrl() {
-    return pictureUrl;
-  }
-
-  public void setPictureUrl(String pictureUrl) {
-    this.pictureUrl = pictureUrl;
-  }
-
-  @Column(nullable = false, columnDefinition = "boolean default false")
-  private boolean merged = false;
-
-  public String getToken() {
-    return token;
-  }
-
-  public void setToken(String token) {
-    this.token = token;
-  }
-
-  public boolean isMerged() {
-    return merged;
-  }
-
-  public void setMerged(boolean merged) {
-    this.merged = merged;
+  public boolean isHuman() {
+    return !isBot();
   }
 }

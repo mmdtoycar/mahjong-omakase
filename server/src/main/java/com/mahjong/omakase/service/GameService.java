@@ -128,7 +128,7 @@ public class GameService {
   private Player loadActivePlayer(Long playerId) {
     if (playerId == null) return null;
     Player p = playerRepo.findById(playerId).orElse(null);
-    return (p != null && !p.isBot()) ? p : null;
+    return (p != null && p.isHuman()) ? p : null;
   }
 
   /**
@@ -813,7 +813,7 @@ public class GameService {
     }
 
     return players.stream()
-        .filter(p -> !p.isBot())
+        .filter(Player::isHuman)
         .map(
             p -> {
               PlayerStatsResponse stat = new PlayerStatsResponse();
@@ -1020,7 +1020,7 @@ public class GameService {
     }
 
     return discoveries.stream()
-        .filter(fd -> !fd.getPlayer().isBot())
+        .filter(fd -> fd.getPlayer().isHuman())
         .map(
             fd ->
                 new FanDiscoveryResponse(

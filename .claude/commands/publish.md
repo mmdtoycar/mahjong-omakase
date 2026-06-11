@@ -5,11 +5,13 @@ Commit all changes and create a PR. Do not include yourself as co-author or comm
 ## Steps
 
 1. **Pre-flight checks** (ALL commands MUST run from project root)
-   - Run `./gradlew spotlessApply` to format Java code
-   - Run `(cd ui && npx tsc --noEmit)` to verify TypeScript compiles (subshell keeps cwd at project root)
-   - Run `npx oxlint@latest ui/src` to lint JS/TS via oxc. Reads `.oxlintrc.json` at repo root. Block on `correctness` errors; surface `suspicious`/`perf` warnings in the PR description's 测试要点 section so the reviewer is aware (but don't block).
-   - Run `./gradlew compileJava -q` to verify Java compiles
+   - `./gradlew spotlessApply` — format Java + UI
+   - `(cd ui && npx tsc --noEmit)` — TypeScript check
+   - `./gradlew compileJava -q` — Java compile
+   - `./gradlew pmdMain` — backend static analysis. **Any violation must be fixed or suppressed in the ruleset (with reason comment) before creating the PR.**
    - If any check fails, stop and report the error. Do NOT create the PR.
+
+   These checks duplicate the `.githooks/pre-commit` hook on purpose — they catch (a) edits the skill itself just made that haven't been committed yet, and (b) cases where the hook was bypassed with `git commit --no-verify`.
 
 2. **Review changes**
    - Run `git status` and `git diff HEAD --stat`

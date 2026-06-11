@@ -3,9 +3,13 @@ package com.mahjong.omakase.model;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "rounds")
+@Getter
+@Setter
 public class Round {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,100 +45,4 @@ public class Round {
   private String riichiPlayerIds;
 
   private Boolean backfill;
-
-  public Boolean getBackfill() {
-    return backfill;
-  }
-
-  public void setBackfill(Boolean backfill) {
-    this.backfill = backfill;
-  }
-
-  public String getRiichiPlayerIds() {
-    return riichiPlayerIds;
-  }
-
-  public void setRiichiPlayerIds(String riichiPlayerIds) {
-    this.riichiPlayerIds = riichiPlayerIds;
-  }
-
-  public Integer getPrevalentWind() {
-    return prevalentWind;
-  }
-
-  public void setPrevalentWind(Integer prevalentWind) {
-    this.prevalentWind = prevalentWind;
-  }
-
-  public Long getDealInPlayerId() {
-    return dealInPlayerId;
-  }
-
-  public void setDealInPlayerId(Long dealInPlayerId) {
-    this.dealInPlayerId = dealInPlayerId;
-  }
-
-  public Integer getFanCount() {
-    return fanCount;
-  }
-
-  public void setFanCount(Integer fanCount) {
-    this.fanCount = fanCount;
-  }
-
-  public Long getWinnerId() {
-    return winnerId;
-  }
-
-  public void setWinnerId(Long winnerId) {
-    this.winnerId = winnerId;
-  }
-
-  public String getWinHand() {
-    return winHand;
-  }
-
-  public void setWinHand(String winHand) {
-    this.winHand = winHand;
-  }
-
-  public String getFanDetails() {
-    return fanDetails;
-  }
-
-  public void setFanDetails(String fanDetails) {
-    this.fanDetails = fanDetails;
-  }
-
-  public Long getId() {
-    return id;
-  }
-
-  public void setId(Long id) {
-    this.id = id;
-  }
-
-  public GameSession getGameSession() {
-    return gameSession;
-  }
-
-  public void setGameSession(GameSession gameSession) {
-    this.gameSession = gameSession;
-  }
-
-  public int getRoundNumber() {
-    return roundNumber;
-  }
-
-  public void setRoundNumber(int roundNumber) {
-    this.roundNumber = roundNumber;
-  }
-
-  public List<RoundScore> getScores() {
-    return scores;
-  }
-
-  public void setScores(List<RoundScore> scores) {
-    this.scores = scores;
-  }
 }

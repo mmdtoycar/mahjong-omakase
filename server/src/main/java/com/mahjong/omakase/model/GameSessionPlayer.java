@@ -2,11 +2,15 @@ package com.mahjong.omakase.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(
     name = "game_session_players",
     uniqueConstraints = @UniqueConstraint(columnNames = {"game_session_id", "seat"}))
+@Getter
+@Setter
 public class GameSessionPlayer {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,36 +27,4 @@ public class GameSessionPlayer {
 
   @Column(name = "seat")
   private Integer seat;
-
-  public Long getId() {
-    return id;
-  }
-
-  public void setId(Long id) {
-    this.id = id;
-  }
-
-  public GameSession getGameSession() {
-    return gameSession;
-  }
-
-  public void setGameSession(GameSession gameSession) {
-    this.gameSession = gameSession;
-  }
-
-  public Player getPlayer() {
-    return player;
-  }
-
-  public void setPlayer(Player player) {
-    this.player = player;
-  }
-
-  public Integer getSeat() {
-    return seat;
-  }
-
-  public void setSeat(Integer seat) {
-    this.seat = seat;
-  }
 }

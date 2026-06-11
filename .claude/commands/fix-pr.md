@@ -18,8 +18,8 @@ Review PR comments from CodeRabbit and fix all issues, including nits.
    - Run pre-flight checks (ALL from project root):
      - `./gradlew spotlessApply`
      - `(cd ui && npx tsc --noEmit)`
-     - `npx oxlint@latest ui/src` — JS/TS lint via oxc; reads `.oxlintrc.json` at repo root. Treat `correctness` errors as blockers; `suspicious`/`perf` warnings as advisory unless the PR comment specifically asks them fixed.
      - `./gradlew compileJava -q`
+     - `./gradlew pmdMain` — **any violation must be fixed or suppressed in the ruleset (with reason comment) before pushing.**
    - Commit with a message referencing what was fixed
 
 4. **Reply to every comment**

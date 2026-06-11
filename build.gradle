@@ -140,7 +140,7 @@ spotless {
 pmd {
     toolVersion = '7.7.0'
     consoleOutput = true
-    ignoreFailures = true                               // warn-only; don't break local build
+    ignoreFailures = false                              // violations fail the build
     ruleSets = []                                       // reset PMD's defaults
     ruleSetFiles = files('config/pmd/ruleset.xml')
     incrementalAnalysis = true
@@ -148,9 +148,4 @@ pmd {
 
 tasks.named('pmdTest') {
     enabled = false                                     // test code follows different conventions
-}
-
-// Don't auto-attach pmdMain to `check` — it's opt-in via `./gradlew pmdMain`.
-tasks.named('check') {
-    dependsOn.remove(tasks.named('pmdMain'))
 }
