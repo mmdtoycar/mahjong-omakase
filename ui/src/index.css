@@ -2904,6 +2904,13 @@ tr:hover td {
   padding-bottom: 12px;
 }
 
+.session-card-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .mode-text {
   font-weight: 700;
   color: var(--mj-gold);

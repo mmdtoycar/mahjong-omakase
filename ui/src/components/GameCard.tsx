@@ -36,7 +36,7 @@ export const GameCard: React.FC<Props> = ({
   return (
     <Link to={`/session/${id}`} className="game-card">
       <div className="session-card-header">
-        <div>
+        <div className="session-card-mode">
           <span className="mode-text">{gameModeDisplayName}</span>
           <TableStrengthTag table={tableStrength} />
         </div>
