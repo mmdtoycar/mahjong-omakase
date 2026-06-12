@@ -126,6 +126,11 @@ export interface PlayerStats {
   avgScore: number
   avgRank: number
   wins: number
+  roundsPlayed: number
+  handWins: number
+  dealIns: number
+  avgWinPoints: number
+  avgDealInPoints: number
 }
 
 export interface Season {

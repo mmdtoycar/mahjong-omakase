@@ -714,6 +714,11 @@ public class GameService {
     Map<Long, Double> tieredBonusPerPlayer = new HashMap<>();
     Map<Long, Double> adminBonusPerPlayer = new HashMap<>();
     Map<Long, Double> fanBonusPerPlayer = new HashMap<>();
+    Map<Long, Integer> roundsPlayed = new HashMap<>();
+    Map<Long, Integer> handWins = new HashMap<>();
+    Map<Long, Integer> dealIns = new HashMap<>();
+    Map<Long, Integer> winPointsSum = new HashMap<>();
+    Map<Long, Integer> dealInPointsSum = new HashMap<>();
     List<GameSession> completedSessions =
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
@@ -811,6 +816,13 @@ public class GameService {
           if (((Number) row[1]).intValue() != topScore) break;
           if (row[0] != null) wins.merge((Long) row[0], 1, (a, b) -> a + b);
         }
+
+        // Round-level metrics only collected for Riichi (和牌率/放铳率/平均打点/平均铳点).
+        // Other modes have different scoring semantics where these don't translate cleanly.
+        if (session.getGameMode() == GameMode.RIICHI) {
+          accumulateRiichiRoundStats(
+              session.getId(), roundsPlayed, handWins, dealIns, winPointsSum, dealInPointsSum);
+        }
       }
     }
 
@@ -839,9 +851,62 @@ public class GameService {
               stat.setAvgScore(games > 0 ? total / games : 0);
               stat.setAvgRank(
                   games > 0 ? (double) totalRanks.getOrDefault(p.getId(), 0) / games : 0);
+
+              int rounds = roundsPlayed.getOrDefault(p.getId(), 0);
+              int hw = handWins.getOrDefault(p.getId(), 0);
+              int di = dealIns.getOrDefault(p.getId(), 0);
+              stat.setRoundsPlayed(rounds);
+              stat.setHandWins(hw);
+              stat.setDealIns(di);
+              stat.setAvgWinPoints(
+                  hw > 0 ? (double) winPointsSum.getOrDefault(p.getId(), 0) / hw : 0);
+              stat.setAvgDealInPoints(
+                  di > 0 ? (double) dealInPointsSum.getOrDefault(p.getId(), 0) / di : 0);
               return stat;
             })
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Walks one Riichi session's per-(round × player) score rows and bumps the four metric maps.
+   * roundsPlayed counts each round-participant pair once; handWins/avgWinPoints land on the
+   * round.winnerId; dealIns/avgDealInPoints land on the round.dealInPlayerId (self-draws are
+   * dealInPlayerId == null, so no deal-in is recorded for those rounds).
+   */
+  private void accumulateRiichiRoundStats(
+      Long sessionId,
+      Map<Long, Integer> roundsPlayed,
+      Map<Long, Integer> handWins,
+      Map<Long, Integer> dealIns,
+      Map<Long, Integer> winPointsSum,
+      Map<Long, Integer> dealInPointsSum) {
+    List<Object[]> rows = roundScoreRepo.getRoundDetailsBySession(sessionId);
+    Set<Long> seenRounds = new HashSet<>();
+    for (Object[] row : rows) {
+      Long roundId = (Long) row[0];
+      Long winnerId = (Long) row[1];
+      Long dealInPlayerId = (Long) row[2];
+      Long playerId = (Long) row[3];
+      int score = ((Number) row[4]).intValue();
+
+      roundsPlayed.merge(playerId, 1, Integer::sum);
+
+      if (seenRounds.add(roundId)) {
+        if (winnerId != null) {
+          handWins.merge(winnerId, 1, Integer::sum);
+        }
+        if (dealInPlayerId != null) {
+          dealIns.merge(dealInPlayerId, 1, Integer::sum);
+        }
+      }
+
+      if (playerId.equals(winnerId) && score > 0) {
+        winPointsSum.merge(playerId, score, Integer::sum);
+      }
+      if (playerId.equals(dealInPlayerId) && score < 0) {
+        dealInPointsSum.merge(playerId, -score, Integer::sum);
+      }
+    }
   }
 
   public PlayerDetailResponse getPlayerDetail(Long playerId) {

@@ -12,6 +12,7 @@ export default function ProfilePage() {
 
   const [statsByMode, setStatsByMode] = useState<Partial<Record<GameModeKey, PlayerStats>>>({})
   const [discoveries, setDiscoveries] = useState<any[]>([])
+  const [selectedMode, setSelectedMode] = useState<GameModeKey>(GAME_MODES[0].key)
 
   // 账号设置(关联老账号 / 注册新账号)
   const [setupForm, setSetupForm] = useState({ userName: '', firstName: '', lastName: '' })
@@ -144,24 +145,46 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* 2. 各模式个人战绩(国标 / 东北 / 立直) */}
-      {GAME_MODES.map((mode) => {
-        const stats = statsByMode[mode.key]
+      {/* 2. 个人战绩(下拉切换模式) */}
+      {(() => {
+        const stats = statsByMode[selectedMode]
         const hasStats = stats && stats.gamesPlayed > 0
         return (
-          <div key={mode.key} className="profile-card">
-            <h3
+          <div className="profile-card">
+            <div
               style={{
-                margin: '0 0 20px 0',
-                fontSize: '18px',
-                color: 'var(--primary)',
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '12px',
+                marginBottom: '20px',
+                flexWrap: 'wrap',
               }}
             >
-              📊 {mode.label} 战绩
-            </h3>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: '18px',
+                  color: 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                📊 个人战绩
+              </h3>
+              <select
+                value={selectedMode}
+                onChange={(e) => setSelectedMode(e.target.value as GameModeKey)}
+                className="select-inline"
+              >
+                {GAME_MODES.map((m) => (
+                  <option key={m.key} value={m.key}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             {hasStats ? (
               <div className="profile-stats-grid">
                 <div className="profile-stat-card">
@@ -200,8 +223,51 @@ export default function ProfilePage() {
               </div>
             )}
 
+            {selectedMode === 'RIICHI' && hasStats && stats.roundsPlayed > 0 && (
+              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
+                <h4
+                  style={{
+                    margin: '0 0 16px 0',
+                    fontSize: '15px',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  📈 数据统计
+                </h4>
+                <div className="profile-stats-grid">
+                  <div className="profile-stat-card">
+                    <div className="profile-stat-value profile-stat-value-teal">
+                      {((stats.handWins / stats.roundsPlayed) * 100).toFixed(1)}%
+                    </div>
+                    <div className="profile-stat-label">和牌率</div>
+                  </div>
+                  <div className="profile-stat-card">
+                    <div className="profile-stat-value profile-stat-value-teal">
+                      {((stats.dealIns / stats.roundsPlayed) * 100).toFixed(1)}%
+                    </div>
+                    <div className="profile-stat-label">放铳率</div>
+                  </div>
+                  <div className="profile-stat-card">
+                    <div className="profile-stat-value profile-stat-value-gold">
+                      {stats.handWins > 0 ? Math.round(stats.avgWinPoints).toLocaleString() : '-'}
+                    </div>
+                    <div className="profile-stat-label">平均打点</div>
+                  </div>
+                  <div className="profile-stat-card">
+                    <div className="profile-stat-value profile-stat-value-gold">
+                      {stats.dealIns > 0 ? Math.round(stats.avgDealInPoints).toLocaleString() : '-'}
+                    </div>
+                    <div className="profile-stat-label">平均铳点</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 稀有番种成就只在国标模式下显示(其他模式没有番种系统) */}
-            {mode.key === 'GUOBIAO' && (
+            {selectedMode === 'GUOBIAO' && (
               <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
                 <h4
                   style={{
@@ -251,7 +317,7 @@ export default function ProfilePage() {
             )}
           </div>
         )
-      })}
+      })()}
 
       {/* 4. 完善账号:关联老账号 / 注册新账号 */}
       {!me.merged && (
