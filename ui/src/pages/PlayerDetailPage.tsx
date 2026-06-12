@@ -59,6 +59,7 @@ export default function PlayerDetailPage() {
                 <RankBadge
                   tier={tier.guobiao.tier}
                   size="md"
+                  userName={tier.userName}
                   rating={tier.guobiao.tier === 'UNRANKED' ? undefined : tier.guobiao.rating}
                   gamesNeeded={tier.guobiao.gamesNeeded}
                 />
@@ -68,6 +69,7 @@ export default function PlayerDetailPage() {
                 <RankBadge
                   tier={tier.riichi.tier}
                   size="md"
+                  userName={tier.userName}
                   rating={tier.riichi.tier === 'UNRANKED' ? undefined : tier.riichi.rating}
                   gamesNeeded={tier.riichi.gamesNeeded}
                 />
