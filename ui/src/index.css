@@ -1165,6 +1165,27 @@ tr:hover td {
   object-fit: cover;
 }
 
+/* Per-size dimensions — applied to <img> / fallback box / UNRANKED card. */
+.rank-badge-sm .rank-badge-img,
+.rank-badge-sm .rank-badge-fallback {
+  width: 52px;
+  height: 52px;
+}
+
+.rank-badge-md .rank-badge-img,
+.rank-badge-md .rank-badge-fallback,
+.rank-badge-unranked.rank-badge-md {
+  width: 112px;
+  height: 112px;
+}
+
+.rank-badge-lg .rank-badge-img,
+.rank-badge-lg .rank-badge-fallback,
+.rank-badge-unranked.rank-badge-lg {
+  width: 220px;
+  height: 220px;
+}
+
 .rank-badge-sm {
   font-size: 0.75rem;
 }
@@ -1707,6 +1728,28 @@ tr:hover td {
 
   .quick-win-container {
     margin-bottom: 12px;
+  }
+
+  /* Rank badges: shrink across all sizes on mobile to keep dense layouts readable. */
+  .rank-badge-sm .rank-badge-img,
+  .rank-badge-sm .rank-badge-fallback,
+  .rank-badge-unranked-sm {
+    width: 38px;
+    height: 38px;
+  }
+
+  .rank-badge-md .rank-badge-img,
+  .rank-badge-md .rank-badge-fallback,
+  .rank-badge-unranked.rank-badge-md {
+    width: 80px;
+    height: 80px;
+  }
+
+  .rank-badge-lg .rank-badge-img,
+  .rank-badge-lg .rank-badge-fallback,
+  .rank-badge-unranked.rank-badge-lg {
+    width: 140px;
+    height: 140px;
   }
 }
 
