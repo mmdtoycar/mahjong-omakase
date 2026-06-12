@@ -16,6 +16,7 @@ Review PR comments from CodeRabbit and fix all issues, including nits.
 3. **Classify each comment**
    - **Actionable**: has a code suggestion or identifies a real issue → fix it
    - **Nit**: minor style/naming/consistency issue → fix it (all nits should be fixed)
+   - **Over-engineered for scale**: concurrency hardening (`@Version` optimistic locking, `@Lock` pessimistic locking, race-condition guards, retry/backoff) suggested for an app whose realistic concurrent user count is a small group (~20 people for this project). At this scale the suggested race rarely happens, and adding optimistic locking adds maintenance burden and has historically broken working flows (e.g., admin retries, concurrent edits). **Default = decline.** Reply explaining the scale. Only fix if the bot identifies an actually-observable bug, not a theoretical race.
    - **Invalid**: the suggestion is wrong or doesn't apply → reply explaining why
    - **Already fixed**: check if a previous commit already addressed it → reply with commit hash
 
