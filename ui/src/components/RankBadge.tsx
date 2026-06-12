@@ -14,8 +14,6 @@ interface Props {
   className?: string
 }
 
-const SIZE_PX: Record<'sm' | 'md' | 'lg', number> = { sm: 52, md: 112, lg: 220 }
-
 const TIER_TO_IMAGE: Record<TierKey, string | null> = {
   UNRANKED: null,
   LV1: 'lv1',
@@ -27,7 +25,6 @@ const TIER_TO_IMAGE: Record<TierKey, string | null> = {
 export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rating, onClick, className }) => {
   const [imgFailed, setImgFailed] = useState(false)
   if (!tier) return null
-  const px = SIZE_PX[size]
   const imageBase = TIER_TO_IMAGE[tier]
   // Always use _small.png — large versions are 3-6MB and tank performance.
   const src = imageBase ? `/rank/${imageBase}_small.png` : null
@@ -57,11 +54,7 @@ export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rat
   // Unranked + md/lg: bigger progress card without image
   if (tier === 'UNRANKED') {
     return (
-      <div
-        className={`rank-badge rank-badge-unranked rank-badge-${size} ${className ?? ''}`}
-        onClick={onClick}
-        style={{ width: px, height: px }}
-      >
+      <div className={`rank-badge rank-badge-unranked rank-badge-${size} ${className ?? ''}`} onClick={onClick}>
         <div className="rank-badge-progress">{showProgress ? `${progressPlayed}/5` : '未定段'}</div>
       </div>
     )
@@ -75,9 +68,7 @@ export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rat
         onClick={onClick}
         title={label}
       >
-        <span className="rank-badge-fallback" style={{ width: px, height: px }}>
-          {label.slice(0, 1)}
-        </span>
+        <span className="rank-badge-fallback">{label.slice(0, 1)}</span>
         {size !== 'sm' && (
           <span className="rank-badge-meta">
             <span className="rank-badge-name">{label}</span>
@@ -95,13 +86,7 @@ export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rat
       title={`${label}${rating !== undefined ? ` · ${rating.toFixed(0)}` : ''}`}
       onClick={onClick}
     >
-      <img
-        src={src}
-        alt={label}
-        className="rank-badge-img"
-        style={{ width: px, height: px }}
-        onError={() => setImgFailed(true)}
-      />
+      <img src={src} alt={label} className="rank-badge-img" onError={() => setImgFailed(true)} />
       {size !== 'sm' && (
         <span className="rank-badge-meta">
           <span className="rank-badge-name">{label}</span>
