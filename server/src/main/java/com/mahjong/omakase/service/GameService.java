@@ -763,6 +763,20 @@ public class GameService {
     LocalDateTime startUtc = toUtcTime(start);
     LocalDateTime endUtc = toUtcTime(end);
 
+    // Historical tier snapshot lookup — only for past PT months in GUOBIAO/RIICHI.
+    // Current/future months keep using live Player state (no snapshot exists yet).
+    Map<Long, TierService.MonthlyTierInfo> historicalTiers = null;
+    if (hasDateRange && (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI)) {
+      YearMonth queryMonth = YearMonth.of(start.getYear(), start.getMonthValue());
+      YearMonth currentPtMonth = YearMonth.from(java.time.LocalDate.now(ZONE_PACIFIC));
+      if (queryMonth.isBefore(currentPtMonth)) {
+        historicalTiers =
+            tierService.computeMonthlySnapshotTiers(
+                gameMode, queryMonth.getYear(), queryMonth.getMonthValue());
+      }
+    }
+    final Map<Long, TierService.MonthlyTierInfo> historicalTiersFinal = historicalTiers;
+
     Map<Long, Integer> totalScores = new HashMap<>();
     Map<Long, Integer> gamesPlayed = new HashMap<>();
     Map<Long, Integer> wins = new HashMap<>();
@@ -922,9 +936,20 @@ public class GameService {
 
               // Tier in the queried mode (only GUOBIAO/RIICHI track ratings; DONGBEI gets null).
               if (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI) {
-                stat.setTier(tierService.computeTier(p, gameMode).name());
-                stat.setSkillRating(
-                    gameMode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi());
+                if (historicalTiersFinal != null) {
+                  TierService.MonthlyTierInfo info = historicalTiersFinal.get(p.getId());
+                  if (info != null) {
+                    stat.setTier(info.tier().name());
+                    stat.setSkillRating(info.skillRating());
+                  } else {
+                    stat.setTier(Tier.UNRANKED.name());
+                    stat.setSkillRating(0);
+                  }
+                } else {
+                  stat.setTier(tierService.computeTier(p, gameMode).name());
+                  stat.setSkillRating(
+                      gameMode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi());
+                }
               } else {
                 stat.setTier(null);
                 stat.setSkillRating(0);

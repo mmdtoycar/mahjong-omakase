@@ -34,17 +34,17 @@ export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rat
   const label = tierLabel(tier)
   const isThrone = tier === 'LV4_THRONE'
   const showProgress = tier === 'UNRANKED' && typeof gamesNeeded === 'number' && gamesNeeded > 0
-  const progressPlayed = typeof gamesNeeded === 'number' ? Math.max(0, 10 - gamesNeeded) : 0
+  const progressPlayed = typeof gamesNeeded === 'number' ? Math.max(0, 5 - gamesNeeded) : 0
 
   // Unranked + sm: render compact progress chip
   if (tier === 'UNRANKED' && size === 'sm') {
     return (
       <span
         className={`rank-badge rank-badge-unranked-sm ${className ?? ''}`}
-        title={showProgress ? `挑战中 ${progressPlayed}/10` : '未定段'}
+        title={showProgress ? `挑战中 ${progressPlayed}/5` : '未定段'}
         onClick={onClick}
       >
-        {showProgress ? `${progressPlayed}/10` : '·'}
+        {showProgress ? `${progressPlayed}/5` : <span className="rank-badge-new">新</span>}
       </span>
     )
   }
@@ -57,7 +57,7 @@ export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rat
         onClick={onClick}
         style={{ width: px, height: px }}
       >
-        <div className="rank-badge-progress">{showProgress ? `${progressPlayed}/10` : '未定段'}</div>
+        <div className="rank-badge-progress">{showProgress ? `${progressPlayed}/5` : '未定段'}</div>
       </div>
     )
   }

@@ -53,10 +53,17 @@ export default function StatsPage() {
       })
   }
 
-  const loadPlayers = () => {
+  const loadPlayers = (mode: GameModeKey, sKey: string) => {
     setError('')
     setLoading(true)
-    Promise.all([fetchPlayers(), fetchStats(gameMode)])
+    let year: number | undefined
+    let month: number | undefined
+    if (sKey !== 'all') {
+      const [y, m] = sKey.split('-').map(Number)
+      year = y
+      month = m
+    }
+    Promise.all([fetchPlayers(), fetchStats(mode, year, month)])
       .then(([p, s]) => {
         setPlayers(p)
         setStats(s)
@@ -81,7 +88,7 @@ export default function StatsPage() {
     if (tab === 'games') {
       loadStats(gameMode, seasonKey)
     } else {
-      loadPlayers()
+      loadPlayers(gameMode, seasonKey)
     }
   }, [gameMode, seasonKey, tab])
 
@@ -122,8 +129,6 @@ export default function StatsPage() {
     }
     return () => controller.abort()
   }, [tab, seasonKey, gameMode])
-
-  const abbr = (s: PlayerStats) => abbrName(s.displayName)
 
   const activeStats = stats.filter((s) => s.gamesPlayed > 0)
   const selectedSeason = seasons.find((s) => `${s.year}-${s.month}` === seasonKey)
@@ -174,39 +179,39 @@ export default function StatsPage() {
         </div>
       </div>
 
+      <div className="card">
+        <div className="flex-between">
+          <h2>赛季</h2>
+          <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
+            {seasons.map((s) => (
+              <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
+                {s.label}
+              </option>
+            ))}
+            <option value="all">全部赛季</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="flex-between">
+          <h2>游戏模式</h2>
+          <select
+            value={gameMode}
+            onChange={(e) => setGameMode(e.target.value as GameModeKey)}
+            className="select-inline"
+          >
+            {GAME_MODES.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {tab === 'games' && (
         <>
-          <div className="card">
-            <div className="flex-between">
-              <h2>赛季</h2>
-              <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
-                {seasons.map((s) => (
-                  <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
-                    {s.label}
-                  </option>
-                ))}
-                <option value="all">全部赛季</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex-between">
-              <h2>游戏模式</h2>
-              <select
-                value={gameMode}
-                onChange={(e) => setGameMode(e.target.value as GameModeKey)}
-                className="select-inline"
-              >
-                {GAME_MODES.map((m) => (
-                  <option key={m.key} value={m.key}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-value">{activeStats.length}</div>
@@ -266,11 +271,10 @@ export default function StatsPage() {
                             <RankBadge
                               tier={s.tier}
                               size="sm"
-                              gamesNeeded={s.tier === 'UNRANKED' ? Math.max(0, 10 - s.gamesPlayed) : undefined}
+                              gamesNeeded={s.tier === 'UNRANKED' ? Math.max(0, 5 - s.gamesPlayed) : undefined}
                             />
                             {s.userName}
                           </span>
-                          <span className="table-username">{abbr(s)}</span>
                         </td>
                         <td className="text-right">{s.gamesPlayed}</td>
                         <td className="text-right">{s.wins}</td>
@@ -353,23 +357,6 @@ export default function StatsPage() {
       {tab === 'players' && (
         <>
           <div className="card">
-            <div className="flex-between">
-              <h2>游戏模式</h2>
-              <select
-                value={gameMode}
-                onChange={(e) => setGameMode(e.target.value as GameModeKey)}
-                className="select-inline"
-              >
-                {GAME_MODES.map((m) => (
-                  <option key={m.key} value={m.key}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="card">
             <h2>全部玩家</h2>
             <div className="score-table">
               <table>
@@ -398,7 +385,7 @@ export default function StatsPage() {
                             tier={p.tier ?? 'UNRANKED'}
                             size="sm"
                             gamesNeeded={
-                              p.tier === 'UNRANKED' || !p.tier ? Math.max(0, 10 - (p.totalGames ?? 0)) : undefined
+                              p.tier === 'UNRANKED' || !p.tier ? Math.max(0, 5 - (p.totalGames ?? 0)) : undefined
                             }
                           />
                           {p.tier && p.tier !== 'UNRANKED' && (
