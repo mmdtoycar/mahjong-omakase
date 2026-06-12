@@ -1182,6 +1182,190 @@ tr:hover td {
   margin-left: 4px;
 }
 
+/* ===== RankBadge / 段位徽章 ===== */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.rank-badge-img {
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.rank-badge-sm {
+  font-size: 0.75rem;
+}
+
+.rank-badge-md .rank-badge-img {
+  border-radius: 50%;
+}
+
+.rank-badge-md .rank-badge-meta,
+.rank-badge-lg .rank-badge-meta {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.rank-badge-md .rank-badge-name,
+.rank-badge-lg .rank-badge-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.rank-badge-md .rank-badge-rating,
+.rank-badge-lg .rank-badge-rating {
+  color: var(--text-light);
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rank-badge-throne .rank-badge-img {
+  filter: drop-shadow(0 0 8px rgb(255 200 50 / 60%));
+}
+
+.rank-badge-throne .rank-badge-name {
+  background: linear-gradient(90deg, #d4a017, #ff9800, #d4a017);
+  background-clip: text;
+  color: transparent;
+}
+
+.rank-badge-unranked,
+.rank-badge-unranked-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.7rem;
+  border: 1px dashed var(--border);
+}
+
+.rank-badge-unranked-sm {
+  width: 22px;
+  height: 22px;
+  font-size: 0.65rem;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.player-name-with-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Player detail header (PlayerDetailPage) */
+.player-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.player-detail-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-detail-name h2 {
+  margin: 0;
+}
+
+.player-detail-tiers {
+  display: flex;
+  gap: 24px;
+}
+
+.player-detail-tier-cell,
+.profile-tier-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.player-detail-tier-mode,
+.profile-tier-mode {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+/* Profile tier row (ProfilePage banner) */
+.profile-tier-row {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgb(255 255 255 / 20%);
+}
+
+.profile-tier-row .profile-tier-mode {
+  color: rgb(255 255 255 / 85%);
+}
+
+.profile-tier-row .rank-badge-name,
+.profile-tier-row .rank-badge-rating {
+  color: #fff;
+}
+
+/* ===== TableStrengthTag / 桌力 ===== */
+.table-strength {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.table-strength-md {
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.table-strength-phoenix {
+  background: linear-gradient(135deg, #ffe0b2, #ff9800);
+  color: #5d4037;
+  border-color: #d4a017;
+}
+
+.table-strength-qilin {
+  background: linear-gradient(135deg, #f3e5ab, #d4a017);
+  color: #5d4037;
+}
+
+.table-strength-taiji {
+  background: var(--sol-base2);
+  color: var(--sol-base01);
+}
+
+.table-strength-dragon {
+  background: linear-gradient(135deg, #c8e6c9, #2e7d32);
+  color: #1b5e20;
+}
+
+.table-strength-sparrow {
+  background: var(--sol-base3);
+  color: var(--sol-base00);
+  border-color: var(--sol-base2);
+}
+
 /* ===== Calculator page ===== */
 .calc-page-wrapper {
   max-width: 800px;

@@ -10,6 +10,8 @@ import { nameFontSize } from '../utils/fontSize'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
 import { scoreClass, parseError } from '../utils/format'
 import { MSG } from '../constants'
+import { RankBadge } from '../components/RankBadge'
+import { TableStrengthTag } from '../components/TableStrengthTag'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -749,6 +751,7 @@ export default function SessionPage() {
                 {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
               </span>
             </span>
+            <TableStrengthTag table={session.tableStrength} size="md" />
             {session.status === 'IN_PROGRESS' && (
               <button className="btn btn-danger btn-small" onClick={handleComplete} disabled={submitting}>
                 结束游戏
@@ -765,6 +768,7 @@ export default function SessionPage() {
                   <th key={p.id} style={playerColStyle}>
                     <div className="player-header-cell">
                       <span className={`rank-tag rank-tag-${rankMap[p.id]?.rank}`}>#{rankMap[p.id]?.rank}</span>
+                      <RankBadge tier={p.tier} size="sm" />
                       <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
                         {p.userName}
                       </span>

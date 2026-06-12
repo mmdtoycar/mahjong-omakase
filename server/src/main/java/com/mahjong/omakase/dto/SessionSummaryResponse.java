@@ -73,6 +73,7 @@ public class SessionSummaryResponse {
     for (var entry : ranked) {
       results.add(
           PlayerPerformanceDTO.builder()
+              .playerId(entry.playerId())
               .userName(names.get(entry.playerId()))
               .totalScore(entry.score())
               .rp(entry.rp())

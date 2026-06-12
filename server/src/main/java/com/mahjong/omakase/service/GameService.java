@@ -239,22 +239,30 @@ public class GameService {
 
   @Transactional(readOnly = true)
   public List<SessionSummaryResponse> getAllSessionSummaries() {
-    return sessionRepo.findAllByOrderByCreatedAtDesc().stream()
-        .map(
-            s -> {
-              SessionSummaryResponse r = SessionSummaryResponse.from(s);
-              GameMode mode = s.getGameMode();
-              if (mode == GameMode.GUOBIAO || mode == GameMode.RIICHI) {
-                List<Player> players =
-                    s.getPlayers().stream()
-                        .map(GameSessionPlayer::getPlayer)
-                        .filter(Objects::nonNull)
-                        .toList();
-                r.setTableStrength(tableStrengthService.compute(players, mode).getDisplayName());
-              }
-              return r;
-            })
-        .toList();
+    return sessionRepo.findAllByOrderByCreatedAtDesc().stream().map(this::toSummary).toList();
+  }
+
+  private SessionSummaryResponse toSummary(GameSession s) {
+    SessionSummaryResponse r = SessionSummaryResponse.from(s);
+    GameMode mode = s.getGameMode();
+    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return r;
+    List<Player> players =
+        s.getPlayers().stream().map(GameSessionPlayer::getPlayer).filter(Objects::nonNull).toList();
+    r.setTableStrength(tableStrengthService.compute(players, mode).getDisplayName());
+    annotateRankingsTier(r.getRankings(), players, mode);
+    return r;
+  }
+
+  private void annotateRankingsTier(
+      List<PlayerPerformanceDTO> rankings, List<Player> players, GameMode mode) {
+    if (rankings == null) return;
+    Map<Long, Player> byId = new HashMap<>();
+    for (Player p : players) byId.put(p.getId(), p);
+    for (PlayerPerformanceDTO row : rankings) {
+      Player p = byId.get(row.getPlayerId());
+      if (p == null) continue;
+      row.setTier(tierService.computeTier(p, mode).name());
+    }
   }
 
   public List<GameSession> getAllSessions() {

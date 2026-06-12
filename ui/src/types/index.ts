@@ -42,13 +42,49 @@ export interface GameSession {
   createdAt: string
   roundCount: number
   rankings?: PlayerPerformance[]
+  tableStrength?: string | null
+}
+
+export type TierKey = 'UNRANKED' | 'LV1' | 'LV2' | 'LV3' | 'LV4_THRONE'
+
+/** 段位与隐藏分信息 (单一模式). */
+export interface TierInfo {
+  tier: TierKey
+  /** 0-4 — maps to /rank/lv{level}.png (level 0 = 未定段, no image). */
+  level: number
+  rating: number
+  games: number
+  /** When unranked: 10 - games (counts down to ranked debut). */
+  gamesNeeded: number
+  peakRating: number
+}
+
+export interface PlayerTierResponse {
+  playerId: number
+  userName: string
+  guobiao: TierInfo
+  riichi: TierInfo
+}
+
+const TIER_LABEL: Record<TierKey, string> = {
+  UNRANKED: '未定段',
+  LV1: '灵明石猴',
+  LV2: '美猴王',
+  LV3: '齐天大圣',
+  LV4_THRONE: '斗战圣佛',
+}
+
+export function tierLabel(tier: TierKey): string {
+  return TIER_LABEL[tier]
 }
 
 export interface PlayerPerformance {
+  playerId?: number
   userName: string
   totalScore: number
   rp: number
   rank: number
+  tier?: TierKey | null
 }
 
 export interface PlayerInfo {
@@ -58,6 +94,7 @@ export interface PlayerInfo {
   lastName: string
   displayName: string
   seat: number
+  tier?: TierKey | null
 }
 
 export interface RoundInfo {
@@ -89,6 +126,7 @@ export interface SessionDetail {
   rpOrigin: number
   umaDist: number[]
   playerBonuses?: Record<number, number>
+  tableStrength?: string | null
 }
 
 export interface AddRoundData {
@@ -131,6 +169,8 @@ export interface PlayerStats {
   dealIns: number
   avgWinPoints: number
   avgDealInPoints: number
+  tier?: TierKey | null
+  skillRating?: number
 }
 
 export interface Season {

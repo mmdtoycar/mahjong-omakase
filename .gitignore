@@ -1,7 +1,7 @@
 # Build output
 build/
 /data/
-data-prod/
+
 
 # Gradle
 .gradle/

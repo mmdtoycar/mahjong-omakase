@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchStats, fetchFanDiscoveries, setupProfile, lookupClaimablePlayer } from '../api'
-import { GAME_MODES, GameModeKey, PlayerStats } from '../types'
+import { fetchStats, fetchFanDiscoveries, fetchPlayerTier, setupProfile, lookupClaimablePlayer } from '../api'
+import { GAME_MODES, GameModeKey, PlayerStats, PlayerTierResponse } from '../types'
+import { RankBadge } from '../components/RankBadge'
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -13,6 +14,7 @@ export default function ProfilePage() {
   const [statsByMode, setStatsByMode] = useState<Partial<Record<GameModeKey, PlayerStats>>>({})
   const [discoveries, setDiscoveries] = useState<any[]>([])
   const [selectedMode, setSelectedMode] = useState<GameModeKey>(GAME_MODES[0].key)
+  const [tier, setTier] = useState<PlayerTierResponse | null>(null)
 
   // 账号设置(关联老账号 / 注册新账号)
   const [setupForm, setSetupForm] = useState({ userName: '', firstName: '', lastName: '' })
@@ -41,6 +43,9 @@ export default function ProfilePage() {
         setDiscoveries(myDiscoveries)
       })
       .catch(console.error)
+
+    // 3. 段位 (国标 + 立直)
+    fetchPlayerTier(me.id).then(setTier).catch(console.error)
   }, [me])
 
   if (!me) {
@@ -127,6 +132,28 @@ export default function ProfilePage() {
             <p style={{ margin: '6px 0 0 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: 500 }}>
               @{me.userName}
             </p>
+          )}
+          {tier && (
+            <div className="profile-tier-row">
+              <div className="profile-tier-cell">
+                <span className="profile-tier-mode">国标</span>
+                <RankBadge
+                  tier={tier.guobiao.tier}
+                  size="md"
+                  rating={tier.guobiao.tier === 'UNRANKED' ? undefined : tier.guobiao.rating}
+                  gamesNeeded={tier.guobiao.gamesNeeded}
+                />
+              </div>
+              <div className="profile-tier-cell">
+                <span className="profile-tier-mode">立直</span>
+                <RankBadge
+                  tier={tier.riichi.tier}
+                  size="md"
+                  rating={tier.riichi.tier === 'UNRANKED' ? undefined : tier.riichi.rating}
+                  gamesNeeded={tier.riichi.gamesNeeded}
+                />
+              </div>
+            </div>
           )}
         </div>
 

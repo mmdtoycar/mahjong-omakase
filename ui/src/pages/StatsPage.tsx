@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { PlayerStats, Player, GameModeKey, GAME_MODES, getCurrentSeason, BestRound } from '../types'
 import { fetchStats, fetchPlayers, fetchBestRounds } from '../api'
 import { MahjongHand } from '../components/MahjongHand'
+import { RankBadge } from '../components/RankBadge'
 
 type Tab = 'games' | 'players'
 
@@ -247,7 +248,14 @@ export default function StatsPage() {
                       >
                         <td className={i < 3 ? `rank-${i + 1}` : ''}>#{i + 1}</td>
                         <td>
-                          {s.userName}
+                          <span className="player-name-with-rank">
+                            <RankBadge
+                              tier={s.tier}
+                              size="sm"
+                              gamesNeeded={s.tier === 'UNRANKED' ? Math.max(0, 10 - s.gamesPlayed) : undefined}
+                            />
+                            {s.userName}
+                          </span>
                           <span className="table-username">{abbr(s)}</span>
                         </td>
                         <td className="text-right">{s.gamesPlayed}</td>

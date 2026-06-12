@@ -1,24 +1,28 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { fetchPlayerDetail } from '../api'
-import { PlayerDetail } from '../types'
+import { fetchPlayerDetail, fetchPlayerTier } from '../api'
+import { PlayerDetail, PlayerTierResponse } from '../types'
 import { abbrName, scoreClass, parseError } from '../utils/format'
 import { MSG } from '../constants'
+import { RankBadge } from '../components/RankBadge'
 
 export default function PlayerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [player, setPlayer] = useState<PlayerDetail | null>(null)
+  const [tier, setTier] = useState<PlayerTierResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
     setPlayer(null)
+    setTier(null)
     setError('')
     setLoading(true)
-    fetchPlayerDetail(Number(id))
-      .then((p) => {
+    Promise.all([fetchPlayerDetail(Number(id)), fetchPlayerTier(Number(id))])
+      .then(([p, t]) => {
         setPlayer(p)
+        setTier(t)
         setLoading(false)
       })
       .catch((e: unknown) => {
@@ -43,8 +47,34 @@ export default function PlayerDetailPage() {
   return (
     <>
       <div className="card">
-        <h2>{player.userName}</h2>
-        <span className="session-meta">{abbrName(player.firstName + ' ' + player.lastName)}</span>
+        <div className="player-detail-header">
+          <div className="player-detail-name">
+            <h2>{player.userName}</h2>
+            <span className="session-meta">{abbrName(player.firstName + ' ' + player.lastName)}</span>
+          </div>
+          {tier && (
+            <div className="player-detail-tiers">
+              <div className="player-detail-tier-cell">
+                <span className="player-detail-tier-mode">国标</span>
+                <RankBadge
+                  tier={tier.guobiao.tier}
+                  size="md"
+                  rating={tier.guobiao.tier === 'UNRANKED' ? undefined : tier.guobiao.rating}
+                  gamesNeeded={tier.guobiao.gamesNeeded}
+                />
+              </div>
+              <div className="player-detail-tier-cell">
+                <span className="player-detail-tier-mode">立直</span>
+                <RankBadge
+                  tier={tier.riichi.tier}
+                  size="md"
+                  rating={tier.riichi.tier === 'UNRANKED' ? undefined : tier.riichi.rating}
+                  gamesNeeded={tier.riichi.gamesNeeded}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="card">
