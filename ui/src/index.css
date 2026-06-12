@@ -1325,51 +1325,61 @@ tr:hover td {
 .table-strength {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 6px;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
   font-size: 0.72rem;
-  font-weight: 600;
-  background: var(--bg-muted);
-  color: var(--text);
-  border: 1px solid var(--border);
+  font-weight: 700;
+  letter-spacing: 0.3px;
   white-space: nowrap;
 }
 
 .table-strength-md {
   font-size: 0.85rem;
-  padding: 4px 10px;
-  border-radius: 8px;
+  padding: 4px 12px;
 }
 
 .table-strength-emoji {
-  font-size: 0.95em;
+  font-size: 1em;
 }
 
-/* 凤凰台 — 顶配, 金光高亮 */
+/* 凤凰台 — 顶配, 烈焰红金 + 金光 */
 .table-strength-phoenix {
-  background: linear-gradient(90deg, #fff3e0, #ffe0b2);
-  color: #5d4037;
-  border-color: #d4a017;
-  box-shadow: 0 0 6px rgb(212 160 23 / 25%);
+  background: linear-gradient(135deg, #d4351c 0%, #f0a429 100%);
+  color: #fff;
+  border: 1px solid rgb(255 215 0 / 60%);
+  box-shadow: 0 0 0 1px rgb(255 200 50 / 25%), 0 2px 8px rgb(212 53 28 / 35%), inset 0 1px 0 rgb(255 255 255 / 30%);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 20%);
 }
 
-/* 其余 4 种保持低调 — 中性背景 + 不同边框点缀色 */
+/* 麒麟阁 — 金辉 */
 .table-strength-qilin {
-  border-color: var(--mj-gold-light);
+  background: linear-gradient(135deg, #fcd34d 0%, #d4a017 100%);
+  color: #5b3a0f;
+  border: 1px solid #b88800;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 40%);
 }
 
+/* 太极殿 — 玉色青绿 */
 .table-strength-taiji {
-  border-color: var(--sol-base1);
+  background: linear-gradient(135deg, #d6e4e3 0%, #a2cecd 100%);
+  color: #2c4f4d;
+  border: 1px solid #7da8a6;
 }
 
+/* 困龙阙 — 风云紫蓝 */
 .table-strength-dragon {
-  border-color: var(--mj-green);
+  background: linear-gradient(135deg, #4f3eb3 0%, #6c5ce7 100%);
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 20%);
+  box-shadow: 0 2px 6px rgb(76 60 179 / 30%), inset 0 1px 0 rgb(255 255 255 / 20%);
 }
 
+/* 百雀林 — 朴素米绿 */
 .table-strength-sparrow {
-  border-color: var(--sol-base2);
-  color: var(--text-light);
+  background: linear-gradient(135deg, #e8ecdf 0%, #c4cfa8 100%);
+  color: #4a5a30;
+  border: 1px solid #a7bd87;
 }
 
 /* ===== Calculator page ===== */
