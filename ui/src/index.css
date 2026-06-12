@@ -1795,6 +1795,20 @@ tr:hover td {
     width: 140px;
     height: 140px;
   }
+
+  /* "新" / BOT 🤖 字号跟着圆圈一起缩, 不然字撑不满或溢出. */
+  .rank-badge-new {
+    font-size: 1.1rem;
+  }
+
+  .rank-badge-bot {
+    font-size: 1.3rem;
+  }
+
+  .rank-badge-bot.rank-badge-md,
+  .rank-badge-bot.rank-badge-lg {
+    font-size: 2.2rem;
+  }
 }
 
 /* Calculator page uses a wider breakpoint because the dense toggle/wind
