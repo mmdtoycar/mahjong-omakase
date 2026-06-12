@@ -9,6 +9,8 @@ interface Props {
   gamesNeeded?: number
   /** Optional rating overlay shown beside the image (md/lg only). */
   rating?: number
+  /** Player userName — used to detect BOT and render 🤖 instead of UNRANKED placeholder. */
+  userName?: string
   /** Click target — links to player detail / profile / etc. */
   onClick?: () => void
   className?: string
@@ -22,9 +24,18 @@ const TIER_TO_IMAGE: Record<TierKey, string | null> = {
   LV4_THRONE: 'lv4',
 }
 
-export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rating, onClick, className }) => {
+export const RankBadge: React.FC<Props> = ({
+  tier,
+  size = 'sm',
+  gamesNeeded,
+  rating,
+  userName,
+  onClick,
+  className,
+}) => {
   const [imgFailed, setImgFailed] = useState(false)
   if (!tier) return null
+  const isBot = !!userName && userName.toUpperCase() === 'BOT'
   const imageBase = TIER_TO_IMAGE[tier]
   // Always use _small.png — large versions are 3-6MB and tank performance.
   const src = imageBase ? `/rank/${imageBase}_small.png` : null
@@ -37,6 +48,30 @@ export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rat
   const isThrone = tier === 'LV4_THRONE'
   const showProgress = tier === 'UNRANKED' && typeof gamesNeeded === 'number' && gamesNeeded > 0
   const progressPlayed = typeof gamesNeeded === 'number' ? Math.max(0, 5 - gamesNeeded) : 0
+
+  // BOT: bots are always UNRANKED but show 🤖 instead of "新"/"X/5" — they don't earn tiers.
+  if (isBot && size === 'sm') {
+    return (
+      <span
+        className={`rank-badge rank-badge-unranked-sm rank-badge-bot ${className ?? ''}`}
+        title="机器人"
+        onClick={onClick}
+      >
+        🤖
+      </span>
+    )
+  }
+  if (isBot) {
+    return (
+      <div
+        className={`rank-badge rank-badge-unranked rank-badge-bot rank-badge-${size} ${className ?? ''}`}
+        onClick={onClick}
+        title="机器人"
+      >
+        <div className="rank-badge-progress">🤖</div>
+      </div>
+    )
+  }
 
   // Unranked + sm: render compact progress chip
   if (tier === 'UNRANKED' && size === 'sm') {

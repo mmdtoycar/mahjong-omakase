@@ -768,7 +768,7 @@ export default function SessionPage() {
                   <th key={p.id} style={playerColStyle}>
                     <div className="player-header-cell">
                       <span className={`rank-tag rank-tag-${rankMap[p.id]?.rank}`}>#{rankMap[p.id]?.rank}</span>
-                      <RankBadge tier={p.tier} size="sm" />
+                      <RankBadge tier={p.tier} size="sm" userName={p.userName} />
                       <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
                         {p.userName}
                       </span>

@@ -59,7 +59,7 @@ export const GameCard: React.FC<Props> = ({
             <div className="player-rank-main">
               <span className="rank-number">#{p.rank}</span>
               {p.wind && <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>{p.wind}</span>}
-              <RankBadge tier={p.tier} size="sm" />
+              <RankBadge tier={p.tier} size="sm" userName={p.name} />
               <span className="player-name">{p.name}</span>
             </div>
             <span className={`player-score ${scoreClass(p.score)}`}>{p.score > 0 ? `+${p.score}` : p.score}</span>
