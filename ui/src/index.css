@@ -1376,7 +1376,7 @@ tr:hover td {
 }
 
 .table-strength-phoenix .table-strength-emoji {
-  filter: drop-shadow(0 0 3px rgb(255 200 50 / 80%));
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 40%));
 }
 
 /* 麒麟阁 — 第二尊位, 墨青底 + 金字金边, 矜贵不张扬 */
