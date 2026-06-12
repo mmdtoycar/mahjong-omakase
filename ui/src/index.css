@@ -1229,6 +1229,18 @@ tr:hover td {
   filter: drop-shadow(0 0 8px rgb(255 200 50 / 60%));
 }
 
+.rank-badge-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-weight: 800;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+}
+
 .rank-badge-throne .rank-badge-name {
   background: linear-gradient(90deg, #d4a017, #ff9800, #d4a017);
   background-clip: text;
@@ -1301,6 +1313,22 @@ tr:hover td {
   font-weight: 600;
 }
 
+/* Profile tier section (inside stats card, follows mode selector) */
+.profile-tier-section {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.player-tier-rating {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-variant-numeric: tabular-nums;
+  margin-left: 4px;
+}
+
 /* Profile tier row (ProfilePage banner) */
 .profile-tier-row {
   display: flex;
@@ -1324,13 +1352,15 @@ tr:hover td {
 .table-strength {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   padding: 2px 8px;
   border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--bg-muted);
+  color: var(--text);
+  border: 1px solid var(--border);
   white-space: nowrap;
-  border: 1px solid transparent;
 }
 
 .table-strength-md {
@@ -1339,31 +1369,34 @@ tr:hover td {
   border-radius: 8px;
 }
 
-.table-strength-phoenix {
-  background: linear-gradient(135deg, #ffe0b2, #ff9800);
-  color: #5d4037;
-  border-color: #d4a017;
+.table-strength-emoji {
+  font-size: 0.95em;
 }
 
-.table-strength-qilin {
-  background: linear-gradient(135deg, #f3e5ab, #d4a017);
+/* 凤凰台 — 顶配, 金光高亮 */
+.table-strength-phoenix {
+  background: linear-gradient(90deg, #fff3e0, #ffe0b2);
   color: #5d4037;
+  border-color: #d4a017;
+  box-shadow: 0 0 6px rgb(212 160 23 / 25%);
+}
+
+/* 其余 4 种保持低调 — 中性背景 + 不同边框点缀色 */
+.table-strength-qilin {
+  border-color: var(--mj-gold-light);
 }
 
 .table-strength-taiji {
-  background: var(--sol-base2);
-  color: var(--sol-base01);
+  border-color: var(--sol-base1);
 }
 
 .table-strength-dragon {
-  background: linear-gradient(135deg, #c8e6c9, #2e7d32);
-  color: #1b5e20;
+  border-color: var(--mj-green);
 }
 
 .table-strength-sparrow {
-  background: var(--sol-base3);
-  color: var(--sol-base00);
   border-color: var(--sol-base2);
+  color: var(--text-light);
 }
 
 /* ===== Calculator page ===== */

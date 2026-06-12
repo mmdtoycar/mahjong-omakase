@@ -7,18 +7,23 @@ interface Props {
   className?: string
 }
 
-const TABLE_THEME: Record<string, string> = {
-  凤凰台: 'phoenix',
-  麒麟阁: 'qilin',
-  太极殿: 'taiji',
-  困龙阙: 'dragon',
-  百雀林: 'sparrow',
+const TABLE_META: Record<string, { emoji: string; theme: string }> = {
+  凤凰台: { emoji: '🔥', theme: 'phoenix' },
+  麒麟阁: { emoji: '✨', theme: 'qilin' },
+  太极殿: { emoji: '☯️', theme: 'taiji' },
+  困龙阙: { emoji: '🐉', theme: 'dragon' },
+  百雀林: { emoji: '🐦', theme: 'sparrow' },
 }
 
 export const TableStrengthTag: React.FC<Props> = ({ table, size = 'sm', className }) => {
   if (!table) return null
-  const theme = TABLE_THEME[table] ?? 'taiji'
+  const meta = TABLE_META[table] ?? { emoji: '·', theme: 'taiji' }
   return (
-    <span className={`table-strength table-strength-${theme} table-strength-${size} ${className ?? ''}`}>{table}</span>
+    <span className={`table-strength table-strength-${meta.theme} table-strength-${size} ${className ?? ''}`}>
+      <span className="table-strength-emoji" aria-hidden>
+        {meta.emoji}
+      </span>
+      <span>{table}</span>
+    </span>
   )
 }

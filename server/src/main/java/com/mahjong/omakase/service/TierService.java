@@ -123,6 +123,7 @@ public class TierService {
   /** Compute tier for a player in a given mode, factoring in the throne (单 1 位). */
   public Tier computeTier(Player p, GameMode mode) {
     if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return Tier.UNRANKED;
+    // 该模式累计 ≥ 10 场才入段.
     if (getGames(p, mode) < RANKED_MIN_GAMES) return Tier.UNRANKED;
 
     double rating = getRating(p, mode);

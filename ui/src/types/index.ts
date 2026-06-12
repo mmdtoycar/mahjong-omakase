@@ -53,8 +53,9 @@ export interface TierInfo {
   /** 0-4 — maps to /rank/lv{level}.png (level 0 = 未定段, no image). */
   level: number
   rating: number
+  /** Games in this mode (国标 or 立直). */
   games: number
-  /** When unranked: 10 - games (counts down to ranked debut). */
+  /** When unranked: 10 - games (counts down to ranked debut for THIS mode). 0 once ranked. */
   gamesNeeded: number
   peakRating: number
 }

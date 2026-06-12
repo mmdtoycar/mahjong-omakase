@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { TierKey, tierLabel } from '../types'
 
 interface Props {
@@ -25,24 +25,26 @@ const TIER_TO_IMAGE: Record<TierKey, string | null> = {
 }
 
 export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rating, onClick, className }) => {
+  const [imgFailed, setImgFailed] = useState(false)
   if (!tier) return null
   const px = SIZE_PX[size]
   const imageBase = TIER_TO_IMAGE[tier]
-  const variant = size === 'sm' ? '_small' : ''
-  const src = imageBase ? `/rank/${imageBase}${variant}.png` : null
+  // Always use _small.png — large versions are 3-6MB and tank performance.
+  const src = imageBase ? `/rank/${imageBase}_small.png` : null
   const label = tierLabel(tier)
   const isThrone = tier === 'LV4_THRONE'
   const showProgress = tier === 'UNRANKED' && typeof gamesNeeded === 'number' && gamesNeeded > 0
+  const progressPlayed = typeof gamesNeeded === 'number' ? Math.max(0, 10 - gamesNeeded) : 0
 
   // Unranked + sm: render compact progress chip
   if (tier === 'UNRANKED' && size === 'sm') {
     return (
       <span
         className={`rank-badge rank-badge-unranked-sm ${className ?? ''}`}
-        title={showProgress ? `挑战中 ${10 - gamesNeeded}/10` : '未定段'}
+        title={showProgress ? `挑战中 ${progressPlayed}/10` : '未定段'}
         onClick={onClick}
       >
-        {showProgress ? `${10 - gamesNeeded}/10` : '·'}
+        {showProgress ? `${progressPlayed}/10` : '·'}
       </span>
     )
   }
@@ -55,12 +57,31 @@ export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rat
         onClick={onClick}
         style={{ width: px, height: px }}
       >
-        <div className="rank-badge-progress">{showProgress ? `${10 - gamesNeeded}/10` : '未定段'}</div>
+        <div className="rank-badge-progress">{showProgress ? `${progressPlayed}/10` : '未定段'}</div>
       </div>
     )
   }
 
-  if (!src) return null
+  if (!src || imgFailed) {
+    // Fallback: show tier label only when image fails to load
+    return (
+      <span
+        className={`rank-badge rank-badge-${size}${isThrone ? ' rank-badge-throne' : ''} ${className ?? ''}`}
+        onClick={onClick}
+        title={label}
+      >
+        <span className="rank-badge-fallback" style={{ width: px, height: px }}>
+          {label.slice(0, 1)}
+        </span>
+        {size !== 'sm' && (
+          <span className="rank-badge-meta">
+            <span className="rank-badge-name">{label}</span>
+            {rating !== undefined && <span className="rank-badge-rating">{rating.toFixed(0)}</span>}
+          </span>
+        )}
+      </span>
+    )
+  }
 
   // Ranked: image + (optional throne halo)
   return (
@@ -69,7 +90,13 @@ export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rat
       title={`${label}${rating !== undefined ? ` · ${rating.toFixed(0)}` : ''}`}
       onClick={onClick}
     >
-      <img src={src} alt={label} className="rank-badge-img" style={{ width: px, height: px }} />
+      <img
+        src={src}
+        alt={label}
+        className="rank-badge-img"
+        style={{ width: px, height: px }}
+        onError={() => setImgFailed(true)}
+      />
       {size !== 'sm' && (
         <span className="rank-badge-meta">
           <span className="rank-badge-name">{label}</span>

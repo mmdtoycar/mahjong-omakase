@@ -24,40 +24,36 @@ public class TierInfo {
   /** Current skill rating */
   private double rating;
 
-  /** Games played in this mode */
+  /** Games played in this mode (国标 or 立直). */
   private int games;
 
-  /** 0 if ranked, else (RANKED_MIN_GAMES - games). For "挑战中 X/10" display. */
+  /** 0 if ranked, else (RANKED_MIN_GAMES - games). For "挑战中 X/10" display per mode. */
   private int gamesNeeded;
 
   /** All-time peak rating in this mode */
   private double peakRating;
 
-  public static TierInfo from(Tier tier, double rating, int games, double peakRating) {
+  public static TierInfo of(TierService tierService, Player p, GameMode mode) {
+    Tier t = tierService.computeTier(p, mode);
     int level =
-        switch (tier) {
+        switch (t) {
           case UNRANKED -> 0;
           case LV1 -> 1;
           case LV2 -> 2;
           case LV3 -> 3;
           case LV4_THRONE -> 4;
         };
-    int needed = tier == Tier.UNRANKED ? Math.max(0, TierService.RANKED_MIN_GAMES - games) : 0;
+    double rating = mode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi();
+    int games = mode == GameMode.GUOBIAO ? p.getGamesGuobiao() : p.getGamesRiichi();
+    double peak = mode == GameMode.GUOBIAO ? p.getPeakSkillGuobiao() : p.getPeakSkillRiichi();
+    int needed = t == Tier.UNRANKED ? Math.max(0, TierService.RANKED_MIN_GAMES - games) : 0;
     return TierInfo.builder()
-        .tier(tier.name())
+        .tier(t.name())
         .level(level)
         .rating(rating)
         .games(games)
         .gamesNeeded(needed)
-        .peakRating(peakRating)
+        .peakRating(peak)
         .build();
-  }
-
-  public static TierInfo of(TierService tierService, Player p, GameMode mode) {
-    Tier t = tierService.computeTier(p, mode);
-    double rating = mode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi();
-    int games = mode == GameMode.GUOBIAO ? p.getGamesGuobiao() : p.getGamesRiichi();
-    double peak = mode == GameMode.GUOBIAO ? p.getPeakSkillGuobiao() : p.getPeakSkillRiichi();
-    return from(t, rating, games, peak);
   }
 }

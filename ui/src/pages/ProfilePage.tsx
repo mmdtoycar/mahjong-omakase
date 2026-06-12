@@ -133,28 +133,6 @@ export default function ProfilePage() {
               @{me.userName}
             </p>
           )}
-          {tier && (
-            <div className="profile-tier-row">
-              <div className="profile-tier-cell">
-                <span className="profile-tier-mode">国标</span>
-                <RankBadge
-                  tier={tier.guobiao.tier}
-                  size="md"
-                  rating={tier.guobiao.tier === 'UNRANKED' ? undefined : tier.guobiao.rating}
-                  gamesNeeded={tier.guobiao.gamesNeeded}
-                />
-              </div>
-              <div className="profile-tier-cell">
-                <span className="profile-tier-mode">立直</span>
-                <RankBadge
-                  tier={tier.riichi.tier}
-                  size="md"
-                  rating={tier.riichi.tier === 'UNRANKED' ? undefined : tier.riichi.rating}
-                  gamesNeeded={tier.riichi.gamesNeeded}
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         <div style={{ padding: '25px' }}>
@@ -212,6 +190,25 @@ export default function ProfilePage() {
                 ))}
               </select>
             </div>
+
+            {/* 段位显示: 国标 / 立直 跟随上面 selectedMode 切换 */}
+            {tier && (selectedMode === 'GUOBIAO' || selectedMode === 'RIICHI') && (
+              <div className="profile-tier-section">
+                <RankBadge
+                  tier={selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier}
+                  size="md"
+                  rating={
+                    (selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier) === 'UNRANKED'
+                      ? undefined
+                      : selectedMode === 'GUOBIAO'
+                      ? tier.guobiao.rating
+                      : tier.riichi.rating
+                  }
+                  gamesNeeded={selectedMode === 'GUOBIAO' ? tier.guobiao.gamesNeeded : tier.riichi.gamesNeeded}
+                />
+              </div>
+            )}
+
             {hasStats ? (
               <div className="profile-stats-grid">
                 <div className="profile-stat-card">
