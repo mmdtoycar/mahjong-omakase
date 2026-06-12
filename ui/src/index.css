@@ -388,6 +388,11 @@ tr:hover td {
   min-width: 100%;
 }
 
+.score-table th,
+.score-table td {
+  vertical-align: middle;
+}
+
 .score-table td.score-cell {
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -2808,6 +2813,7 @@ tr:hover td {
 .rank-info {
   flex: 1;
   display: flex;
+  align-items: center;
   justify-content: space-between;
 }
 
