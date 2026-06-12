@@ -1045,28 +1045,11 @@ tr:hover td {
   cursor: not-allowed;
 }
 
-.form-row {
-  display: flex;
-  gap: 16px;
-}
-
-.form-row .form-group {
-  flex: 1;
-}
-
 .field-hint {
   display: block;
   margin-top: 4px;
   font-size: 0.8rem;
   color: var(--text-light);
-}
-
-.hint-success {
-  color: var(--success);
-}
-
-.hint-error {
-  color: var(--danger);
 }
 
 .error-banner {
@@ -1288,16 +1271,14 @@ tr:hover td {
   gap: 24px;
 }
 
-.player-detail-tier-cell,
-.profile-tier-cell {
+.player-detail-tier-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
 }
 
-.player-detail-tier-mode,
-.profile-tier-mode {
+.player-detail-tier-mode {
   font-size: 0.75rem;
   color: var(--text-light);
   font-weight: 600;
@@ -1317,25 +1298,6 @@ tr:hover td {
   color: var(--text-light);
   font-variant-numeric: tabular-nums;
   margin-left: 4px;
-}
-
-/* Profile tier row (ProfilePage banner) */
-.profile-tier-row {
-  display: flex;
-  justify-content: center;
-  gap: 32px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgb(255 255 255 / 20%);
-}
-
-.profile-tier-row .profile-tier-mode {
-  color: rgb(255 255 255 / 85%);
-}
-
-.profile-tier-row .rank-badge-name,
-.profile-tier-row .rank-badge-rating {
-  color: #fff;
 }
 
 /* ===== TableStrengthTag / 桌力 ===== */
@@ -1574,11 +1536,6 @@ tr:hover td {
 
   .tab-bar {
     align-self: stretch;
-  }
-
-  .form-row {
-    flex-direction: column;
-    gap: 0;
   }
 
   /* Score table: compact cells */

@@ -304,7 +304,7 @@ export default function StatsPage() {
                   <p>本月无记录</p>
                 </div>
               )}
-              <div className="best-hand-list">
+              <div>
                 {monthlyBestRounds.map((round) => (
                   <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">
@@ -333,7 +333,7 @@ export default function StatsPage() {
                 <h2>历史最高和牌</h2>
               </div>
               {bestRoundsError && <p className="error-text">{bestRoundsError}</p>}
-              <div className="best-hand-list">
+              <div>
                 {bestRounds.map((round) => (
                   <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">

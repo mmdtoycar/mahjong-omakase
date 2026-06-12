@@ -40,7 +40,7 @@ export default function HomePage() {
   }, [currentSeason.year, currentSeason.month])
 
   return (
-    <div className="home-hub">
+    <div>
       <div className="hero-section">
         <Link to="/new-session" className="hero-logo-link">
           <div className="hero-logo-ring">
@@ -100,7 +100,7 @@ export default function HomePage() {
         )}
       </div>
 
-      <div className="card rankings-section">
+      <div className="card">
         <h2 style={{ marginBottom: 16 }}>本月荣誉殿堂</h2>
         {loading ? (
           <div className="empty-state">
@@ -113,7 +113,7 @@ export default function HomePage() {
               return (
                 <div key={mode.key} className="mode-rank-column">
                   <h3 className="mode-rank-title">{mode.label}</h3>
-                  <div className="rank-list">
+                  <div>
                     {!data || data.top.length === 0 ? (
                       <div className="empty-state empty-state-compact">
                         <p>暂无本月排名</p>

@@ -426,7 +426,7 @@ export default function SessionPage() {
   return (
     <>
       {session.status === 'IN_PROGRESS' && (
-        <div className="card round-form-card">
+        <div className="card">
           <div className="round-form">
             <h3 className="round-form-title">添加 — {gameState.displayName}</h3>
             {isRiichi && (
@@ -932,7 +932,7 @@ export default function SessionPage() {
             <span className="best-hand-crown">👑</span>
             <h2>最高番和牌</h2>
           </div>
-          <div className="best-hand-list">
+          <div>
             {bestRounds.map((round) => {
               const winner = session.players.find((p) => p.id === round.winnerId)
               const loser =
