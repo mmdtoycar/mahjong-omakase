@@ -850,16 +850,6 @@ tr:hover td {
   gap: 2px;
 }
 
-.player-rank {
-  font-size: 0.7rem;
-  background: var(--accent);
-  color: white;
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
 .player-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1113,12 +1103,6 @@ tr:hover td {
   align-items: center;
   gap: 10px;
   margin-left: 15px;
-}
-
-.table-username {
-  color: var(--text-light);
-  font-size: 0.8rem;
-  margin-left: 6px;
 }
 
 .player-select-grid {
