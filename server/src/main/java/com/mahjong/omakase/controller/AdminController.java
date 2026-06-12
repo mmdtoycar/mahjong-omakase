@@ -138,13 +138,10 @@ public class AdminController {
   }
 
   /**
-   * ⚠️ ONE-OFF: delete this endpoint after running it on production once.
-   *
-   * <p>Skill rating backfill: replays every completed session in chronological order to seed
-   * current ELO ratings for all players. After the first deploy + curl invocation succeeds,
-   * incremental updates happen automatically in {@link
-   * com.mahjong.omakase.service.GameService#completeSession} and the monthly cron handles the soft
-   * reset. This endpoint then has no reason to exist.
+   * Skill rating backfill: replays every completed session in chronological order to seed current
+   * ELO ratings for all players. After the first deploy + curl invocation succeeds, incremental
+   * updates happen automatically in {@link com.mahjong.omakase.service.GameService#completeSession}
+   * and the monthly cron handles the soft reset. This endpoint then has no reason to exist.
    */
   @PostMapping("/tier/backfill")
   public Map<String, Object> backfillTier(@RequestHeader("X-Admin-Password") String password) {

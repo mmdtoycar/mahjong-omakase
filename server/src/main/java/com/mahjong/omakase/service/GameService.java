@@ -39,6 +39,7 @@ public class GameService {
   private final FanDiscoveryRepository fanDiscoveryRepo;
   private final TierService tierService;
   private final TableStrengthService tableStrengthService;
+  private final PlayerMonthlySkillRepository monthlySkillRepo;
   private final Map<GameMode, GameModeHandler> handlers;
   private volatile double participationBonus;
 
@@ -52,6 +53,7 @@ public class GameService {
       FanDiscoveryRepository fanDiscoveryRepo,
       TierService tierService,
       TableStrengthService tableStrengthService,
+      PlayerMonthlySkillRepository monthlySkillRepo,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
@@ -62,6 +64,7 @@ public class GameService {
     this.fanDiscoveryRepo = fanDiscoveryRepo;
     this.tierService = tierService;
     this.tableStrengthService = tableStrengthService;
+    this.monthlySkillRepo = monthlySkillRepo;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
@@ -234,6 +237,7 @@ public class GameService {
 
     roundScoreRepo.nullifyPlayerScores(id);
     gameSessionPlayerRepo.deleteByPlayerId(id);
+    monthlySkillRepo.deleteByPlayerId(id);
     playerRepo.deleteById(Objects.requireNonNull(id));
   }
 
@@ -564,6 +568,11 @@ public class GameService {
         sessionRepo
             .findByIdForUpdate(sessionId)
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
+    if (session.getStatus() == SessionStatus.COMPLETED) {
+      // Idempotency guard: a retry would otherwise re-apply ELO + games + peak twice.
+      log.info("Session id={} already COMPLETED, skipping tier update", sessionId);
+      return;
+    }
     session.setStatus(SessionStatus.COMPLETED);
     sessionRepo.save(session);
 

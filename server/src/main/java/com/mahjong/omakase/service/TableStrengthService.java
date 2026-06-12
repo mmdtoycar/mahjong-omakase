@@ -5,6 +5,7 @@ import com.mahjong.omakase.model.Player;
 import com.mahjong.omakase.model.Tier;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -64,12 +65,16 @@ public class TableStrengthService {
     List<Player> humans = players.stream().filter(p -> p != null && !p.isBot()).toList();
     if (humans.size() < 2) return TableStrength.BAI_QUE_LIN;
 
+    // Tier per player AT THE TIME of the session — snapshot for past months, live for current.
+    Map<Long, Tier> tierByPlayer =
+        sessionDate != null ? tierService.resolveTiersForDate(mode, sessionDate) : Map.of();
+
     int stableTop = 0;
     int lv3Count = 0;
     int lv1Count = 0;
 
     for (Player p : humans) {
-      Tier t = tierService.computeTier(p, mode);
+      Tier t = tierByPlayer.getOrDefault(p.getId(), tierService.computeTier(p, mode));
       if (t == Tier.LV3 || t == Tier.LV4_THRONE) {
         lv3Count++;
         int monthlyGames =

@@ -275,6 +275,33 @@ public class TierService {
     return result;
   }
 
+  /**
+   * Resolve per-player tier for everyone, as of the given session's PT calendar month. For past
+   * months we read from {@link PlayerMonthlySkill} snapshots; for the current/future month we fall
+   * back to live state. Used by {@link TableStrengthService} so historical sessions show the label
+   * they had at the time, not what today's ratings would suggest.
+   */
+  public Map<Long, Tier> resolveTiersForDate(GameMode mode, LocalDateTime referenceUtc) {
+    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return Map.of();
+    YearMonth queryMonth =
+        YearMonth.from(
+            referenceUtc.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDate());
+    YearMonth currentMonth = YearMonth.from(java.time.LocalDate.now(ZONE_PACIFIC));
+    if (queryMonth.isBefore(currentMonth)) {
+      Map<Long, MonthlyTierInfo> snap =
+          computeMonthlySnapshotTiers(mode, queryMonth.getYear(), queryMonth.getMonthValue());
+      Map<Long, Tier> out = new HashMap<>();
+      snap.forEach((pid, info) -> out.put(pid, info.tier()));
+      return out;
+    }
+    Map<Long, Tier> out = new HashMap<>();
+    for (Player p : playerRepo.findAll()) {
+      if (p.isBot()) continue;
+      out.put(p.getId(), computeTier(p, mode));
+    }
+    return out;
+  }
+
   private LocalDateTime[] currentMonthUtcRange() {
     return monthUtcRangeFor(java.time.LocalDate.now(ZONE_PACIFIC));
   }

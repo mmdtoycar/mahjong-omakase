@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { TierKey, tierLabel } from '../types'
 
 interface Props {
@@ -31,6 +31,11 @@ export const RankBadge: React.FC<Props> = ({ tier, size = 'sm', gamesNeeded, rat
   const imageBase = TIER_TO_IMAGE[tier]
   // Always use _small.png — large versions are 3-6MB and tank performance.
   const src = imageBase ? `/rank/${imageBase}_small.png` : null
+  // Reset failure state when src changes — otherwise a one-time load failure
+  // would stick around for later tier/source changes in the same component instance.
+  useEffect(() => {
+    setImgFailed(false)
+  }, [src])
   const label = tierLabel(tier)
   const isThrone = tier === 'LV4_THRONE'
   const showProgress = tier === 'UNRANKED' && typeof gamesNeeded === 'number' && gamesNeeded > 0
