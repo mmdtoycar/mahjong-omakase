@@ -31,7 +31,7 @@ export default function ProfilePage() {
     setDiscoveries([])
     setTier(null)
 
-    // 2. 稀有番种成就(仅国标产生)
+    // 2. 番种成就(仅国标产生)
     fetchFanDiscoveries()
       .then((data) => {
         const myDiscoveries = data.filter((fd: any) => fd.playerId === me.id)
@@ -302,7 +302,7 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* 稀有番种成就只在国标模式下显示(其他模式没有番种系统) */}
+            {/* 番种成就只在国标模式下显示(其他模式没有番种系统) */}
             {selectedMode === 'GUOBIAO' && (
               <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
                 <h4
@@ -315,7 +315,7 @@ export default function ProfilePage() {
                     gap: '6px',
                   }}
                 >
-                  🏆 稀有番种成就
+                  🏆 番种成就
                 </h4>
                 {discoveries.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -346,7 +346,7 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <div className="empty-state empty-state-compact">
-                    <p>暂未发现首和稀有番种成就。</p>
+                    <p>暂未发现首和番种成就。</p>
                   </div>
                 )}
               </div>
