@@ -14,6 +14,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -40,6 +42,7 @@ public class GameService {
   private final TierService tierService;
   private final TableStrengthService tableStrengthService;
   private final PlayerMonthlySkillRepository monthlySkillRepo;
+  private final CacheManager cacheManager;
   private final Map<GameMode, GameModeHandler> handlers;
   private volatile double participationBonus;
 
@@ -54,6 +57,7 @@ public class GameService {
       TierService tierService,
       TableStrengthService tableStrengthService,
       PlayerMonthlySkillRepository monthlySkillRepo,
+      CacheManager cacheManager,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
@@ -65,15 +69,53 @@ public class GameService {
     this.tierService = tierService;
     this.tableStrengthService = tableStrengthService;
     this.monthlySkillRepo = monthlySkillRepo;
+    this.cacheManager = cacheManager;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
     this.participationBonus = loadParticipationBonus();
   }
 
+  /**
+   * Wipes every derived-state cache. Called from every write path that could change session list,
+   * player stats, home summary, or active seasons. Cheaper than fine-grained per-cache eviction —
+   * caches refill on the next read.
+   */
+  public void evictAllCaches() {
+    for (String name : cacheManager.getCacheNames()) {
+      var cache = cacheManager.getCache(name);
+      if (cache != null) cache.clear();
+    }
+  }
+
   @EventListener(ApplicationReadyEvent.class)
   public void init() {
     initializeDiscoveries();
+    warmupCaches();
+  }
+
+  /**
+   * Pre-populate the read caches so the first user request after deploy doesn't pay the cold cost.
+   * Without this, deploy + idle hours = the next user gets a slow page even though the Caffeine
+   * cache exists — it would just be empty.
+   */
+  private void warmupCaches() {
+    log.info("Warming up read caches...");
+    try {
+      getAllSessionSummaries();
+      getActiveSeasons();
+      java.time.LocalDate today = java.time.LocalDate.now(ZONE_PACIFIC);
+      LocalDateTime ptStart = YearMonth.from(today).atDay(1).atStartOfDay();
+      LocalDateTime ptEnd = YearMonth.from(today).plusMonths(1).atDay(1).atStartOfDay();
+      getHomeSummary(ptStart, ptEnd);
+      for (GameMode mode : GameMode.values()) {
+        getPlayerStats(mode, ptStart, ptEnd);
+      }
+      log.info("Cache warmup done");
+    } catch (RuntimeException e) {
+      // Don't fail boot if warmup hits an issue — caches will fill on first real request anyway.
+      log.warn("Cache warmup hit an error (caches will fill lazily): {}", e.getMessage());
+    }
   }
 
   public void initializeDiscoveries() {
@@ -159,6 +201,7 @@ public class GameService {
 
   public void reloadSettings() {
     this.participationBonus = loadParticipationBonus();
+    evictAllCaches();
   }
 
   private double loadParticipationBonus() {
@@ -219,7 +262,9 @@ public class GameService {
       player.setLastName(lastName.trim());
     }
     log.info("Updated player id={}, name='{} {}'", id, player.getFirstName(), player.getLastName());
-    return playerRepo.save(player);
+    Player saved = playerRepo.save(player);
+    evictAllCaches();
+    return saved;
   }
 
   public void deletePlayer(Long id) {
@@ -239,9 +284,11 @@ public class GameService {
     gameSessionPlayerRepo.deleteByPlayerId(id);
     monthlySkillRepo.deleteByPlayerId(id);
     playerRepo.deleteById(Objects.requireNonNull(id));
+    evictAllCaches();
   }
 
   @Transactional(readOnly = true)
+  @Cacheable("sessionSummaries")
   public List<SessionSummaryResponse> getAllSessionSummaries() {
     List<GameSession> sessions = sessionRepo.findAllByOrderByCreatedAtDesc();
     Map<String, Map<Long, Tier>> tiersCache = new HashMap<>();
@@ -330,6 +377,7 @@ public class GameService {
         session.getId(),
         session.getName(),
         session.getPlayerCount());
+    evictAllCaches();
     return session;
   }
 
@@ -564,6 +612,7 @@ public class GameService {
         request.getPrevalentWind(),
         request.getRiichiPlayerIds(),
         request.getBackfill());
+    evictAllCaches();
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -587,6 +636,7 @@ public class GameService {
       r.setRoundNumber(num++);
     }
     sessionRepo.save(session);
+    evictAllCaches();
   }
 
   public void completeSession(Long sessionId) {
@@ -610,6 +660,7 @@ public class GameService {
     tierService.onSessionCompleted(session, totals);
 
     log.info("Completed session id={}", sessionId);
+    evictAllCaches();
   }
 
   public void deleteSession(Long sessionId) {
@@ -622,6 +673,7 @@ public class GameService {
     sessionRepo.delete(session);
     log.info("Deleted session id={}", sessionId);
     rederiveDiscoveriesForSeason(mode, sessionTime);
+    evictAllCaches();
   }
 
   private void rederiveDiscoveriesForSeason(GameMode mode, LocalDateTime sessionTime) {
@@ -736,6 +788,7 @@ public class GameService {
         .collect(Collectors.toList());
   }
 
+  @Cacheable("activeSeasons")
   public List<Map<String, Integer>> getActiveSeasons() {
     List<LocalDateTime> creationTimes = sessionRepo.findSessionCreationTimesWithRounds();
     Set<YearMonth> seasons = new TreeSet<>(Comparator.reverseOrder());
@@ -759,6 +812,7 @@ public class GameService {
    * and per-mode rankings (top 3 by RP + best round). Replaces 1 + N + 2M frontend round-trips with
    * one response.
    */
+  @Cacheable("homeSummary")
   public HomeSummaryResponse getHomeSummary(LocalDateTime start, LocalDateTime end) {
     List<SessionDetailResponse> activeSessions =
         sessionRepo.findByStatusOrderByCreatedAtDesc(SessionStatus.IN_PROGRESS).stream()
@@ -791,6 +845,7 @@ public class GameService {
    *     back to returning all-time statistics. The season string is derived consistently using
    *     getSeasonStringFromUtc.
    */
+  @Cacheable("playerStats")
   public List<PlayerStatsResponse> getPlayerStats(
       GameMode gameMode, LocalDateTime start, LocalDateTime end) {
     List<Player> players = playerRepo.findAll();

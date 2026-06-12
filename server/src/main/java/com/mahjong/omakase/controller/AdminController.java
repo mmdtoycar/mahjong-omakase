@@ -147,6 +147,7 @@ public class AdminController {
   public Map<String, Object> backfillTier(@RequestHeader("X-Admin-Password") String password) {
     checkPassword(password);
     TierService.BackfillResult r = tierService.backfillAllHistory();
+    gameService.evictAllCaches();
     log.info("Admin triggered tier backfill: processed={} skipped={}", r.processed(), r.skipped());
     return Map.of("processed", r.processed(), "skipped", r.skipped());
   }

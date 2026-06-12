@@ -13,6 +13,15 @@ spring:
   h2:
     console:
       enabled: false
+  cache:
+    type: caffeine
+    cache-names:
+      - sessionSummaries
+      - playerStats
+      - homeSummary
+      - activeSeasons
+    caffeine:
+      spec: maximumSize=200,recordStats
 
 server:
   port: ${PORT:8080}
