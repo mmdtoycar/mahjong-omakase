@@ -266,7 +266,9 @@ export default function StatsPage() {
                         onClick={() => navigate(`/player/${s.playerId}?from=games`)}
                         style={{ cursor: 'pointer' }}
                       >
-                        <td className={i < 3 ? `rank-${i + 1}` : ''}>#{i + 1}</td>
+                        <td>
+                          {i < 3 ? <span className={`rank-number rank-tag-${i + 1}`}>#{i + 1}</span> : <>#{i + 1}</>}
+                        </td>
                         <td>
                           <span className="player-name-with-rank">
                             <RankBadge
@@ -274,7 +276,7 @@ export default function StatsPage() {
                               size="sm"
                               gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
                             />
-                            {s.userName}
+                            <span className="player-name">{s.userName}</span>
                           </span>
                         </td>
                         <td className="text-right">{s.gamesPlayed}</td>
@@ -302,7 +304,7 @@ export default function StatsPage() {
                   <p>本月无记录</p>
                 </div>
               )}
-              <div className="best-hand-list">
+              <div>
                 {monthlyBestRounds.map((round) => (
                   <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">
@@ -331,7 +333,7 @@ export default function StatsPage() {
                 <h2>历史最高和牌</h2>
               </div>
               {bestRoundsError && <p className="error-text">{bestRoundsError}</p>}
-              <div className="best-hand-list">
+              <div>
                 {bestRounds.map((round) => (
                   <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">
