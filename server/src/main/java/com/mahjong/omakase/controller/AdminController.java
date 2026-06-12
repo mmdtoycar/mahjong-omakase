@@ -5,6 +5,7 @@ import com.mahjong.omakase.model.AppSetting;
 import com.mahjong.omakase.model.Player;
 import com.mahjong.omakase.repository.AppSettingRepository;
 import com.mahjong.omakase.service.GameService;
+import com.mahjong.omakase.service.TierService;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,10 +27,13 @@ public class AdminController {
 
   private final GameService gameService;
   private final AppSettingRepository appSettingRepo;
+  private final TierService tierService;
 
-  public AdminController(GameService gameService, AppSettingRepository appSettingRepo) {
+  public AdminController(
+      GameService gameService, AppSettingRepository appSettingRepo, TierService tierService) {
     this.gameService = gameService;
     this.appSettingRepo = appSettingRepo;
+    this.tierService = tierService;
   }
 
   private void checkPassword(String password) {
@@ -131,5 +135,22 @@ public class AdminController {
     log.info("Admin updated settings: {}", body.keySet());
     gameService.reloadSettings();
     return body;
+  }
+
+  /**
+   * ⚠️ ONE-OFF: delete this endpoint after running it on production once.
+   *
+   * <p>Skill rating backfill: replays every completed session in chronological order to seed
+   * current ELO ratings for all players. After the first deploy + curl invocation succeeds,
+   * incremental updates happen automatically in {@link
+   * com.mahjong.omakase.service.GameService#completeSession} and the monthly cron handles the soft
+   * reset. This endpoint then has no reason to exist.
+   */
+  @PostMapping("/tier/backfill")
+  public Map<String, Object> backfillTier(@RequestHeader("X-Admin-Password") String password) {
+    checkPassword(password);
+    TierService.BackfillResult r = tierService.backfillAllHistory();
+    log.info("Admin triggered tier backfill: processed={} skipped={}", r.processed(), r.skipped());
+    return Map.of("processed", r.processed(), "skipped", r.skipped());
   }
 }

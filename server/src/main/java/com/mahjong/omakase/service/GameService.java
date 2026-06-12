@@ -37,6 +37,8 @@ public class GameService {
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
   private final AppSettingRepository appSettingRepo;
   private final FanDiscoveryRepository fanDiscoveryRepo;
+  private final TierService tierService;
+  private final TableStrengthService tableStrengthService;
   private final Map<GameMode, GameModeHandler> handlers;
   private volatile double participationBonus;
 
@@ -48,6 +50,8 @@ public class GameService {
       GameSessionPlayerRepository gameSessionPlayerRepo,
       AppSettingRepository appSettingRepo,
       FanDiscoveryRepository fanDiscoveryRepo,
+      TierService tierService,
+      TableStrengthService tableStrengthService,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
@@ -56,6 +60,8 @@ public class GameService {
     this.gameSessionPlayerRepo = gameSessionPlayerRepo;
     this.appSettingRepo = appSettingRepo;
     this.fanDiscoveryRepo = fanDiscoveryRepo;
+    this.tierService = tierService;
+    this.tableStrengthService = tableStrengthService;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
@@ -234,7 +240,20 @@ public class GameService {
   @Transactional(readOnly = true)
   public List<SessionSummaryResponse> getAllSessionSummaries() {
     return sessionRepo.findAllByOrderByCreatedAtDesc().stream()
-        .map(SessionSummaryResponse::from)
+        .map(
+            s -> {
+              SessionSummaryResponse r = SessionSummaryResponse.from(s);
+              GameMode mode = s.getGameMode();
+              if (mode == GameMode.GUOBIAO || mode == GameMode.RIICHI) {
+                List<Player> players =
+                    s.getPlayers().stream()
+                        .map(GameSessionPlayer::getPlayer)
+                        .filter(Objects::nonNull)
+                        .toList();
+                r.setTableStrength(tableStrengthService.compute(players, mode).getDisplayName());
+              }
+              return r;
+            })
         .toList();
   }
 
@@ -295,14 +314,32 @@ public class GameService {
         session.getPlayers().stream()
             .filter(gsp -> gsp.getPlayer() != null)
             .map(
-                gsp ->
-                    new SessionDetailResponse.PlayerInfo(
-                        gsp.getPlayer().getId(),
-                        gsp.getPlayer().getUserName(),
-                        gsp.getPlayer().getFirstName(),
-                        gsp.getPlayer().getLastName(),
-                        gsp.getSeat()))
+                gsp -> {
+                  Player p = gsp.getPlayer();
+                  SessionDetailResponse.PlayerInfo info =
+                      new SessionDetailResponse.PlayerInfo(
+                          p.getId(),
+                          p.getUserName(),
+                          p.getFirstName(),
+                          p.getLastName(),
+                          gsp.getSeat());
+                  GameMode mode = session.getGameMode();
+                  if (mode == GameMode.GUOBIAO || mode == GameMode.RIICHI) {
+                    info.setTier(tierService.computeTier(p, mode).name());
+                  }
+                  return info;
+                })
             .collect(Collectors.toList()));
+
+    GameMode sessionMode = session.getGameMode();
+    if (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI) {
+      List<Player> players =
+          session.getPlayers().stream()
+              .map(GameSessionPlayer::getPlayer)
+              .filter(Objects::nonNull)
+              .toList();
+      resp.setTableStrength(tableStrengthService.compute(players, sessionMode).getDisplayName());
+    }
 
     Map<Long, String> playerNameMap =
         session.getPlayers().stream()
@@ -517,6 +554,14 @@ public class GameService {
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
     session.setStatus(SessionStatus.COMPLETED);
     sessionRepo.save(session);
+
+    // Update hidden skill ratings (国标 / 立直 only).
+    Map<Long, Integer> totals = new HashMap<>();
+    for (Object[] row : roundScoreRepo.getTotalScoresBySession(sessionId)) {
+      if (row[0] != null) totals.put((Long) row[0], ((Number) row[1]).intValue());
+    }
+    tierService.onSessionCompleted(session, totals);
+
     log.info("Completed session id={}", sessionId);
   }
 
@@ -862,6 +907,16 @@ public class GameService {
                   hw > 0 ? (double) winPointsSum.getOrDefault(p.getId(), 0) / hw : 0);
               stat.setAvgDealInPoints(
                   di > 0 ? (double) dealInPointsSum.getOrDefault(p.getId(), 0) / di : 0);
+
+              // Tier in the queried mode (only GUOBIAO/RIICHI track ratings).
+              if (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI) {
+                stat.setTier(tierService.computeTier(p, gameMode).name());
+                stat.setSkillRating(
+                    gameMode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi());
+              } else {
+                stat.setTier("UNRANKED");
+                stat.setSkillRating(0);
+              }
               return stat;
             })
         .collect(Collectors.toList());

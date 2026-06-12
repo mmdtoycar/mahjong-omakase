@@ -5,7 +5,11 @@ import com.mahjong.omakase.model.GameSession;
 import com.mahjong.omakase.service.scoring.RpCalculator;
 import java.time.LocalDateTime;
 import java.util.*;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 public class SessionSummaryResponse {
   private Long id;
   private String name;
@@ -18,6 +22,9 @@ public class SessionSummaryResponse {
   private int roundCount;
   private List<PlayerPerformanceDTO> rankings;
 
+  /** "凤凰台" / "麒麟阁" / "太极殿" / "困龙阙" / "百雀林" — null if mode doesn't track ratings. */
+  private String tableStrength;
+
   public static SessionSummaryResponse from(GameSession session) {
     SessionSummaryResponse r = new SessionSummaryResponse();
     r.id = session.getId();
@@ -29,10 +36,7 @@ public class SessionSummaryResponse {
     r.createdAt = session.getCreatedAt();
     r.participationBonus = session.getParticipationBonus();
     r.roundCount = session.getRounds() != null ? session.getRounds().size() : 0;
-
-    // Calculate rankings and RP
     r.rankings = calculateRankings(session);
-
     return r;
   }
 
@@ -54,7 +58,7 @@ public class SessionSummaryResponse {
       for (var round : session.getRounds()) {
         for (var rs : round.getScores()) {
           if (rs.getPlayer() != null) {
-            totals.merge(rs.getPlayer().getId(), rs.getScore(), (a, b) -> a + b);
+            totals.merge(rs.getPlayer().getId(), rs.getScore(), Integer::sum);
           }
         }
       }
@@ -76,45 +80,5 @@ public class SessionSummaryResponse {
               .build());
     }
     return results;
-  }
-
-  public Long getId() {
-    return id;
-  }
-
-  public String getName() {
-    return name;
-  }
-
-  public String getGameMode() {
-    return gameMode;
-  }
-
-  public String getGameModeDisplayName() {
-    return gameModeDisplayName;
-  }
-
-  public int getPlayerCount() {
-    return playerCount;
-  }
-
-  public String getStatus() {
-    return status;
-  }
-
-  public LocalDateTime getCreatedAt() {
-    return createdAt;
-  }
-
-  public Double getParticipationBonus() {
-    return participationBonus;
-  }
-
-  public int getRoundCount() {
-    return roundCount;
-  }
-
-  public List<PlayerPerformanceDTO> getRankings() {
-    return rankings;
   }
 }

@@ -1,5 +1,10 @@
 package com.mahjong.omakase.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class PlayerStatsResponse {
   private Long playerId;
   private String userName;
@@ -19,148 +24,6 @@ public class PlayerStatsResponse {
   private int dealIns;
   private double avgWinPoints;
   private double avgDealInPoints;
-
-  public Long getPlayerId() {
-    return playerId;
-  }
-
-  public void setPlayerId(Long playerId) {
-    this.playerId = playerId;
-  }
-
-  public String getUserName() {
-    return userName;
-  }
-
-  public void setUserName(String userName) {
-    this.userName = userName;
-  }
-
-  public String getDisplayName() {
-    return displayName;
-  }
-
-  public void setDisplayName(String displayName) {
-    this.displayName = displayName;
-  }
-
-  public int getGamesPlayed() {
-    return gamesPlayed;
-  }
-
-  public void setGamesPlayed(int gamesPlayed) {
-    this.gamesPlayed = gamesPlayed;
-  }
-
-  public int getTotalScore() {
-    return totalScore;
-  }
-
-  public void setTotalScore(int totalScore) {
-    this.totalScore = totalScore;
-  }
-
-  public double getAvgScore() {
-    return avgScore;
-  }
-
-  public void setAvgScore(double avgScore) {
-    this.avgScore = avgScore;
-  }
-
-  public double getAvgRank() {
-    return avgRank;
-  }
-
-  public void setAvgRank(double avgRank) {
-    this.avgRank = avgRank;
-  }
-
-  public int getWins() {
-    return wins;
-  }
-
-  public void setWins(int wins) {
-    this.wins = wins;
-  }
-
-  public double getTotalRP() {
-    return totalRP;
-  }
-
-  public void setTotalRP(double totalRP) {
-    this.totalRP = totalRP;
-  }
-
-  public double getBaseRP() {
-    return baseRP;
-  }
-
-  public void setBaseRP(double baseRP) {
-    this.baseRP = baseRP;
-  }
-
-  public double getTieredBonus() {
-    return tieredBonus;
-  }
-
-  public void setTieredBonus(double tieredBonus) {
-    this.tieredBonus = tieredBonus;
-  }
-
-  public double getAdminBonus() {
-    return adminBonus;
-  }
-
-  public void setAdminBonus(double adminBonus) {
-    this.adminBonus = adminBonus;
-  }
-
-  public double getFanDiscoveryBonus() {
-    return fanDiscoveryBonus;
-  }
-
-  public void setFanDiscoveryBonus(double fanDiscoveryBonus) {
-    this.fanDiscoveryBonus = fanDiscoveryBonus;
-  }
-
-  public int getRoundsPlayed() {
-    return roundsPlayed;
-  }
-
-  public void setRoundsPlayed(int roundsPlayed) {
-    this.roundsPlayed = roundsPlayed;
-  }
-
-  public int getHandWins() {
-    return handWins;
-  }
-
-  public void setHandWins(int handWins) {
-    this.handWins = handWins;
-  }
-
-  public int getDealIns() {
-    return dealIns;
-  }
-
-  public void setDealIns(int dealIns) {
-    this.dealIns = dealIns;
-  }
-
-  public double getAvgWinPoints() {
-    return avgWinPoints;
-  }
-
-  public void setAvgWinPoints(double avgWinPoints) {
-    this.avgWinPoints = avgWinPoints;
-  }
-
-  public double getAvgDealInPoints() {
-    return avgDealInPoints;
-  }
-
-  public void setAvgDealInPoints(double avgDealInPoints) {
-    this.avgDealInPoints = avgDealInPoints;
-  }
+  private String tier;
+  private double skillRating;
 }
