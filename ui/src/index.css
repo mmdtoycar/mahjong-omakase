@@ -1262,6 +1262,16 @@ tr:hover td {
   font-weight: 700;
 }
 
+.rank-badge-bot {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.rank-badge-bot.rank-badge-md,
+.rank-badge-bot.rank-badge-lg {
+  font-size: 3rem;
+}
+
 .player-name-with-rank {
   display: inline-flex;
   align-items: center;
@@ -1325,51 +1335,85 @@ tr:hover td {
 .table-strength {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  background: var(--bg-muted);
-  color: var(--text);
-  border: 1px solid var(--border);
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
   white-space: nowrap;
 }
 
 .table-strength-md {
-  font-size: 0.85rem;
-  padding: 4px 10px;
-  border-radius: 8px;
+  font-size: 1rem;
+  padding: 6px 16px;
 }
 
 .table-strength-emoji {
-  font-size: 0.95em;
+  font-size: 1.1em;
 }
 
-/* 凤凰台 — 顶配, 金光高亮 */
+/* 凤凰台 — 顶配, 烈焰红金 + 动态火焰外圈 */
+@keyframes phoenix-flame {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 2px rgb(120 30 0 / 60%), inset 0 1px 0 rgb(255 255 255 / 35%),
+      0 0 8px 1px rgb(255 100 30 / 55%), 0 0 16px 3px rgb(255 60 0 / 30%);
+  }
+
+  50% {
+    box-shadow: inset 0 0 0 2px rgb(120 30 0 / 60%), inset 0 1px 0 rgb(255 255 255 / 55%),
+      0 0 14px 2px rgb(255 150 30 / 75%), 0 0 26px 5px rgb(255 80 0 / 50%);
+  }
+}
+
 .table-strength-phoenix {
-  background: linear-gradient(90deg, #fff3e0, #ffe0b2);
-  color: #5d4037;
-  border-color: #d4a017;
-  box-shadow: 0 0 6px rgb(212 160 23 / 25%);
+  background: linear-gradient(135deg, #d4351c 0%, #f0a429 100%);
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  animation: phoenix-flame 1.8s ease-in-out infinite;
 }
 
-/* 其余 4 种保持低调 — 中性背景 + 不同边框点缀色 */
+.table-strength-phoenix .table-strength-emoji {
+  filter: brightness(0) invert(1) drop-shadow(0 1px 2px rgb(120 30 0 / 60%));
+}
+
+/* 麒麟阁 — 第二尊位, 墨青底 + 金字金边, 矜贵不张扬 */
 .table-strength-qilin {
-  border-color: var(--mj-gold-light);
+  background: linear-gradient(135deg, #1a3a3a 0%, #0d2828 100%);
+  color: #f4d03f;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%), inset 0 0 0 2px rgb(244 208 63 / 35%), inset 0 1px 0 rgb(244 208 63 / 30%);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 50%);
 }
 
+.table-strength-qilin .table-strength-emoji {
+  filter: drop-shadow(0 0 3px rgb(244 208 63 / 70%));
+}
+
+/* 太极殿 — 玉石青绿, 阴阳渐变 */
 .table-strength-taiji {
-  border-color: var(--sol-base1);
+  background: linear-gradient(135deg, #4a9b94 0%, #2c5f5b 100%);
+  color: #fff;
+  box-shadow: 0 1px 3px rgb(44 95 91 / 35%), inset 0 0 0 2px rgb(15 50 47 / 50%), inset 0 1px 0 rgb(255 255 255 / 25%);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 25%);
 }
 
+.table-strength-taiji .table-strength-emoji {
+  filter: drop-shadow(0 0 2px rgb(255 255 255 / 50%));
+}
+
+/* 困龙阙 — 风云紫蓝 */
 .table-strength-dragon {
-  border-color: var(--mj-green);
+  background: linear-gradient(135deg, #4f3eb3 0%, #6c5ce7 100%);
+  color: #fff;
+  box-shadow: 0 2px 6px rgb(76 60 179 / 30%), inset 0 0 0 2px rgb(40 28 110 / 55%), inset 0 1px 0 rgb(255 255 255 / 20%);
 }
 
+/* 百雀林 — 朴素米绿 */
 .table-strength-sparrow {
-  border-color: var(--sol-base2);
-  color: var(--text-light);
+  background: linear-gradient(135deg, #e8ecdf 0%, #c4cfa8 100%);
+  color: #4a5a30;
+  box-shadow: inset 0 0 0 2px rgb(120 140 80 / 35%), inset 0 1px 0 rgb(255 255 255 / 40%);
 }
 
 /* ===== Calculator page ===== */
@@ -2892,6 +2936,13 @@ tr:hover td {
   margin-bottom: 20px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
+}
+
+.session-card-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .mode-text {

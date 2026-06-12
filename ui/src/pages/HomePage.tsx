@@ -124,7 +124,12 @@ export default function HomePage() {
                           <span className={`rank-number rank-tag-${idx + 1}`}>#{idx + 1}</span>
                           <div className="rank-info">
                             <span className="player-name-with-rank">
-                              <RankBadge tier={player.tier} size="sm" gamesNeeded={undefined} />
+                              <RankBadge
+                                tier={player.tier}
+                                size="sm"
+                                gamesNeeded={undefined}
+                                userName={player.userName}
+                              />
                               <span className="player-name">{player.userName}</span>
                             </span>
                             <span className="player-score">{player.totalRP.toFixed(1)} RP</span>

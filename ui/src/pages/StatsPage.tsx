@@ -274,6 +274,7 @@ export default function StatsPage() {
                             <RankBadge
                               tier={s.tier}
                               size="sm"
+                              userName={s.userName}
                               gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
                             />
                             <span className="player-name">{s.userName}</span>
@@ -387,6 +388,7 @@ export default function StatsPage() {
                           <RankBadge
                             tier={p.tier ?? 'UNRANKED'}
                             size="sm"
+                            userName={p.userName}
                             gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
                           />
                           {p.tier && p.tier !== 'UNRANKED' && (
