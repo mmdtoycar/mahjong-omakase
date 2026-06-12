@@ -1382,11 +1382,17 @@ tr:hover td {
   filter: drop-shadow(0 0 2px rgb(255 255 255 / 60%));
 }
 
-/* 太极殿 — 玉色青绿 */
+/* 太极殿 — 玉石青绿, 阴阳渐变 */
 .table-strength-taiji {
-  background: linear-gradient(135deg, #d6e4e3 0%, #a2cecd 100%);
-  color: #2c4f4d;
-  border: 1px solid #7da8a6;
+  background: linear-gradient(135deg, #4a9b94 0%, #2c5f5b 100%);
+  color: #fff;
+  border: 1px solid #1f4845;
+  box-shadow: 0 1px 3px rgb(44 95 91 / 35%), inset 0 1px 0 rgb(255 255 255 / 25%);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 25%);
+}
+
+.table-strength-taiji .table-strength-emoji {
+  filter: drop-shadow(0 0 2px rgb(255 255 255 / 50%));
 }
 
 /* 困龙阙 — 风云紫蓝 */
