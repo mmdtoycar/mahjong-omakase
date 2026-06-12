@@ -157,8 +157,11 @@ public class TierService {
   }
 
   private LocalDateTime[] currentMonthUtcRange() {
-    java.time.LocalDate today = java.time.LocalDate.now(ZONE_PACIFIC);
-    java.time.YearMonth ym = java.time.YearMonth.from(today);
+    return monthUtcRangeFor(java.time.LocalDate.now(ZONE_PACIFIC));
+  }
+
+  private LocalDateTime[] monthUtcRangeFor(java.time.LocalDate pacificDate) {
+    java.time.YearMonth ym = java.time.YearMonth.from(pacificDate);
     LocalDateTime startPacific = ym.atDay(1).atStartOfDay();
     LocalDateTime endPacific = ym.plusMonths(1).atDay(1).atStartOfDay();
     LocalDateTime startUtc =
@@ -171,6 +174,13 @@ public class TierService {
   /** Count completed sessions THIS MONTH (Pacific) where player participated, in given mode. */
   public int monthlyGames(Player p, GameMode mode) {
     LocalDateTime[] r = currentMonthUtcRange();
+    return monthlyGames(p, mode, r[0], r[1]);
+  }
+
+  public int monthlyGamesForReferenceDate(Player p, GameMode mode, LocalDateTime referenceUtc) {
+    java.time.LocalDate pacificDate =
+        referenceUtc.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDate();
+    LocalDateTime[] r = monthUtcRangeFor(pacificDate);
     return monthlyGames(p, mode, r[0], r[1]);
   }
 

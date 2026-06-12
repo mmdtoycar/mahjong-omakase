@@ -248,7 +248,8 @@ public class GameService {
     if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return r;
     List<Player> players =
         s.getPlayers().stream().map(GameSessionPlayer::getPlayer).filter(Objects::nonNull).toList();
-    r.setTableStrength(tableStrengthService.compute(players, mode).getDisplayName());
+    r.setTableStrength(
+        tableStrengthService.compute(players, mode, s.getCreatedAt()).getDisplayName());
     annotateRankingsTier(r.getRankings(), players, mode);
     return r;
   }
@@ -346,7 +347,10 @@ public class GameService {
               .map(GameSessionPlayer::getPlayer)
               .filter(Objects::nonNull)
               .toList();
-      resp.setTableStrength(tableStrengthService.compute(players, sessionMode).getDisplayName());
+      resp.setTableStrength(
+          tableStrengthService
+              .compute(players, sessionMode, session.getCreatedAt())
+              .getDisplayName());
     }
 
     Map<Long, String> playerNameMap =

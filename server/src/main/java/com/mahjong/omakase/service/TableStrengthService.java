@@ -3,6 +3,7 @@ package com.mahjong.omakase.service;
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.model.Player;
 import com.mahjong.omakase.model.Tier;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -49,8 +50,14 @@ public class TableStrengthService {
 
   private final TierService tierService;
 
-  /** Compute the table strength label for a session's seated players. Returns null for DONGBEI. */
-  public TableStrength compute(List<Player> players, GameMode mode) {
+  /**
+   * Compute the table strength label for a session's seated players. Returns null for DONGBEI.
+   *
+   * @param sessionDate session's createdAt (UTC) — monthly game count is taken from THAT month, so
+   *     historical sessions get the label they should have had at the time, not what they'd be
+   *     under today's monthly count.
+   */
+  public TableStrength compute(List<Player> players, GameMode mode, LocalDateTime sessionDate) {
     if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return null;
     if (players == null) return TableStrength.BAI_QUE_LIN;
 
@@ -65,7 +72,11 @@ public class TableStrengthService {
       Tier t = tierService.computeTier(p, mode);
       if (t == Tier.LV3 || t == Tier.LV4_THRONE) {
         lv3Count++;
-        if (tierService.monthlyGames(p, mode) >= STABLE_TOP_MONTHLY_GAMES) {
+        int monthlyGames =
+            sessionDate != null
+                ? tierService.monthlyGamesForReferenceDate(p, mode, sessionDate)
+                : tierService.monthlyGames(p, mode);
+        if (monthlyGames >= STABLE_TOP_MONTHLY_GAMES) {
           stableTop++;
         }
       }
