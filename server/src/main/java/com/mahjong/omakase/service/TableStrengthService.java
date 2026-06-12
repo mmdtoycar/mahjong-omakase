@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
  * <p>Rules (priority top-down):
  *
  * <ol>
- *   <li>FENG_HUANG_TAI 凤凰台 — ≥ 2 stable顶尖 (LV3+ AND 当月 ≥ 10 场) AND 0 LV1
+ *   <li>FENG_HUANG_TAI 凤凰台 — ≥ 2 stable顶尖 (LV3+ AND 当月 ≥ 5 场) AND 0 LV1
  *   <li>KUN_LONG_QUE 困龙阙 — ≥ 2 LV3+ AND ≥ 1 LV1 (高低混战)
  *   <li>QI_LIN_GE 麒麟阁 — ≥ 1 LV3+ (含未达月度门槛的)
  *   <li>BAI_QUE_LIN 百雀林 — 全员 LV1 / 未定段
@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 public class TableStrengthService {
 
   /** "顶尖" 月度场数门槛 — 防止"少场高分"瞎冲凤凰台. */
-  public static final int STABLE_TOP_MONTHLY_GAMES = 10;
+  public static final int STABLE_TOP_MONTHLY_GAMES = 5;
 
   public enum TableStrength {
     FENG_HUANG_TAI("凤凰台"),
