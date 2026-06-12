@@ -3,7 +3,7 @@ import { TierKey, tierLabel } from '../types'
 
 interface Props {
   tier?: TierKey | null
-  /** sm = 22px small in lists, md = 56px in cards, lg = 140px headers. */
+  /** sm = list/scoreboard inline, md = card header, lg = profile/detail hero. */
   size?: 'sm' | 'md' | 'lg'
   /** When unranked, show "X/10" progress instead of empty. Pass `gamesNeeded` to enable. */
   gamesNeeded?: number
@@ -14,7 +14,7 @@ interface Props {
   className?: string
 }
 
-const SIZE_PX: Record<'sm' | 'md' | 'lg', number> = { sm: 32, md: 56, lg: 140 }
+const SIZE_PX: Record<'sm' | 'md' | 'lg', number> = { sm: 44, md: 80, lg: 180 }
 
 const TIER_TO_IMAGE: Record<TierKey, string | null> = {
   UNRANKED: null,
