@@ -31,16 +31,6 @@ export default function ProfilePage() {
     setDiscoveries([])
     setTier(null)
 
-    // 1. 各模式战绩并行拉取
-    GAME_MODES.forEach((mode) => {
-      fetchStats(mode.key)
-        .then((data) => {
-          const myStat = data.find((s: any) => s.playerId === me.id)
-          if (myStat) setStatsByMode((prev) => ({ ...prev, [mode.key]: myStat }))
-        })
-        .catch(console.error)
-    })
-
     // 2. 稀有番种成就(仅国标产生)
     fetchFanDiscoveries()
       .then((data) => {
@@ -57,6 +47,18 @@ export default function ProfilePage() {
         setTier(null)
       })
   }, [me])
+
+  // 个人战绩按需拉取: 只拉当前选中模式的, 切模式时再拉. 避免开页就触发 3 次重的 stats 请求.
+  useEffect(() => {
+    if (!me) return
+    if (statsByMode[selectedMode]) return
+    fetchStats(selectedMode)
+      .then((data) => {
+        const myStat = data.find((s: any) => s.playerId === me.id)
+        if (myStat) setStatsByMode((prev) => ({ ...prev, [selectedMode]: myStat }))
+      })
+      .catch(console.error)
+  }, [me, selectedMode, statsByMode])
 
   if (!me) {
     return (
