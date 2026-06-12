@@ -223,8 +223,6 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* 立直专属数据统计:和牌率/放铳率/平均打点/平均铳点。其他模式有不同的计分语义,
-                这些指标在国标/东北下意义不大,所以不渲染。 */}
             {selectedMode === 'RIICHI' && hasStats && stats.roundsPlayed > 0 && (
               <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
                 <h4
