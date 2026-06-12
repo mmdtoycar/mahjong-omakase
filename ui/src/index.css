@@ -1343,21 +1343,43 @@ tr:hover td {
   font-size: 1em;
 }
 
-/* 凤凰台 — 顶配, 烈焰红金 + 金光 */
+/* 凤凰台 — 顶配, 烈焰红金 + 动态火焰外圈 */
+@keyframes phoenix-flame {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgb(255 215 0 / 60%), 0 0 8px 1px rgb(255 100 30 / 55%), 0 0 16px 3px rgb(255 60 0 / 30%),
+      inset 0 1px 0 rgb(255 255 255 / 35%);
+  }
+
+  50% {
+    box-shadow: 0 0 0 1px rgb(255 215 0 / 90%), 0 0 14px 2px rgb(255 150 30 / 75%), 0 0 26px 5px rgb(255 80 0 / 50%),
+      inset 0 1px 0 rgb(255 255 255 / 55%);
+  }
+}
+
 .table-strength-phoenix {
   background: linear-gradient(135deg, #d4351c 0%, #f0a429 100%);
   color: #fff;
-  border: 1px solid rgb(255 215 0 / 60%);
-  box-shadow: 0 0 0 1px rgb(255 200 50 / 25%), 0 2px 8px rgb(212 53 28 / 35%), inset 0 1px 0 rgb(255 255 255 / 30%);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 20%);
+  border: 1px solid rgb(255 215 0 / 70%);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  animation: phoenix-flame 1.8s ease-in-out infinite;
 }
 
-/* 麒麟阁 — 金辉 */
+.table-strength-phoenix .table-strength-emoji {
+  filter: drop-shadow(0 0 3px rgb(255 200 50 / 80%));
+}
+
+/* 麒麟阁 — 深金渐变 + 白字, emoji 跟金色背景对比拉满 */
 .table-strength-qilin {
-  background: linear-gradient(135deg, #fcd34d 0%, #d4a017 100%);
-  color: #5b3a0f;
-  border: 1px solid #b88800;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 40%);
+  background: linear-gradient(135deg, #d4a017 0%, #8b6500 100%);
+  color: #fff;
+  border: 1px solid #6b4f00;
+  box-shadow: 0 1px 3px rgb(139 101 0 / 30%), inset 0 1px 0 rgb(255 255 255 / 25%);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+}
+
+.table-strength-qilin .table-strength-emoji {
+  filter: drop-shadow(0 0 2px rgb(255 255 255 / 60%));
 }
 
 /* 太极殿 — 玉色青绿 */
