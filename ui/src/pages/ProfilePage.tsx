@@ -208,7 +208,7 @@ export default function ProfilePage() {
               <div className="profile-tier-section">
                 <RankBadge
                   tier={selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier}
-                  size="md"
+                  size="lg"
                   rating={
                     (selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier) === 'UNRANKED'
                       ? undefined
