@@ -348,6 +348,12 @@ public class GameService {
     resp.setStatus(session.getStatus().name());
     resp.setCreatedAt(session.getCreatedAt());
 
+    GameMode sessionMode = session.getGameMode();
+    final Long sessionThroneId =
+        (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI)
+            ? tierService.findThroneId(sessionMode)
+            : null;
+
     resp.setPlayers(
         session.getPlayers().stream()
             .filter(gsp -> gsp.getPlayer() != null)
@@ -361,15 +367,13 @@ public class GameService {
                           p.getFirstName(),
                           p.getLastName(),
                           gsp.getSeat());
-                  GameMode mode = session.getGameMode();
-                  if (mode == GameMode.GUOBIAO || mode == GameMode.RIICHI) {
-                    info.setTier(tierService.computeTier(p, mode).name());
+                  if (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI) {
+                    info.setTier(tierService.computeTier(p, sessionMode, sessionThroneId).name());
                   }
                   return info;
                 })
             .collect(Collectors.toList()));
 
-    GameMode sessionMode = session.getGameMode();
     if (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI) {
       List<Player> players =
           session.getPlayers().stream()
@@ -461,16 +465,13 @@ public class GameService {
       return bonuses;
     }
 
-    String season = getSeasonStringFromUtc(session.getCreatedAt());
+    YearMonth seasonYm = YearMonth.from(toPacificTime(session.getCreatedAt()));
+    LocalDateTime seasonStartUtc = toUtcTime(seasonYm.atDay(1).atStartOfDay());
+    LocalDateTime seasonEndUtc = toUtcTime(seasonYm.plusMonths(1).atDay(1).atStartOfDay());
 
     List<GameSession> seasonSessions =
-        sessionRepo.findAll().stream()
-            .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
-            .filter(s -> s.getGameMode() == session.getGameMode())
-            .filter(s -> getSeasonStringFromUtc(s.getCreatedAt()).equals(season))
-            .filter(s -> !s.getCreatedAt().isAfter(session.getCreatedAt()))
-            .sorted(Comparator.comparing(GameSession::getCreatedAt))
-            .toList();
+        sessionRepo.findCompletedInSeasonUpTo(
+            session.getGameMode(), seasonStartUtc, seasonEndUtc, session.getCreatedAt());
 
     Map<Long, Integer> gameIndexUpToHere = new HashMap<>();
     if (!seasonSessions.isEmpty()) {
@@ -867,8 +868,38 @@ public class GameService {
       }
     }
 
+    // Bulk-load total scores per session — replaces N+1 calls to getTotalScoresBySession.
+    Map<Long, List<Object[]>> scoresBySessionId = new HashMap<>();
+    if (!completedSessions.isEmpty()) {
+      List<Long> sessionIds = completedSessions.stream().map(GameSession::getId).toList();
+      for (Object[] row : roundScoreRepo.getTotalScoresBySessions(sessionIds)) {
+        Long sid = (Long) row[0];
+        // Reshape into [playerId, score] tuples to keep the existing inner-loop format.
+        scoresBySessionId
+            .computeIfAbsent(sid, k -> new ArrayList<>())
+            .add(new Object[] {row[1], row[2]});
+      }
+    }
+
+    // Bulk-load Riichi round details — one SQL for all Riichi sessions in scope.
+    Map<Long, List<Object[]>> riichiRoundsBySessionId = new HashMap<>();
+    List<Long> riichiSessionIds =
+        completedSessions.stream()
+            .filter(s -> s.getGameMode() == GameMode.RIICHI)
+            .map(GameSession::getId)
+            .toList();
+    if (!riichiSessionIds.isEmpty()) {
+      for (Object[] row : roundScoreRepo.getRoundDetailsBySessions(riichiSessionIds)) {
+        Long sid = (Long) row[0];
+        // Drop the leading sessionId so the per-session shape matches getRoundDetailsBySession.
+        riichiRoundsBySessionId
+            .computeIfAbsent(sid, k -> new ArrayList<>())
+            .add(new Object[] {row[1], row[2], row[3], row[4], row[5]});
+      }
+    }
+
     for (GameSession session : completedSessions) {
-      List<Object[]> sessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
+      List<Object[]> sessionScores = scoresBySessionId.getOrDefault(session.getId(), List.of());
       if (!sessionScores.isEmpty()) {
         String season = getSeasonStringFromUtc(session.getCreatedAt());
         String seasonModeKey = season + ":" + session.getGameMode().name();
@@ -930,8 +961,9 @@ public class GameService {
         // Round-level metrics only collected for Riichi (和牌率/放铳率/平均打点/平均铳点).
         // Other modes have different scoring semantics where these don't translate cleanly.
         if (session.getGameMode() == GameMode.RIICHI) {
+          List<Object[]> rows = riichiRoundsBySessionId.getOrDefault(session.getId(), List.of());
           accumulateRiichiRoundStats(
-              session.getId(), roundsPlayed, handWins, dealIns, winPointsSum, dealInPointsSum);
+              rows, roundsPlayed, handWins, dealIns, winPointsSum, dealInPointsSum);
         }
       }
     }
@@ -1015,13 +1047,12 @@ public class GameService {
    * dealInPlayerId == null, so no deal-in is recorded for those rounds).
    */
   private void accumulateRiichiRoundStats(
-      Long sessionId,
+      List<Object[]> rows,
       Map<Long, Integer> roundsPlayed,
       Map<Long, Integer> handWins,
       Map<Long, Integer> dealIns,
       Map<Long, Integer> winPointsSum,
       Map<Long, Integer> dealInPointsSum) {
-    List<Object[]> rows = roundScoreRepo.getRoundDetailsBySession(sessionId);
     Set<Long> seenRounds = new HashSet<>();
     for (Object[] row : rows) {
       Long roundId = (Long) row[0];
@@ -1058,18 +1089,21 @@ public class GameService {
 
     List<GameSession> sessions = sessionRepo.findByPlayersPlayerIdOrderByCreatedAtDesc(playerId);
 
+    // Bulk-load this player's score per session — replaces N+1 calls to getTotalScoresBySession.
+    Map<Long, Integer> scoreBySession = new HashMap<>();
+    if (!sessions.isEmpty()) {
+      List<Long> sessionIds = sessions.stream().map(GameSession::getId).toList();
+      for (Object[] row : roundScoreRepo.getTotalScoresBySessions(sessionIds)) {
+        if (row[1] != null && ((Long) row[1]).equals(playerId)) {
+          scoreBySession.put((Long) row[0], ((Number) row[2]).intValue());
+        }
+      }
+    }
+
     List<PlayerDetailResponse.GameEntry> games =
         sessions.stream()
             .map(
                 session -> {
-                  List<Object[]> scores = roundScoreRepo.getTotalScoresBySession(session.getId());
-                  int totalScore =
-                      scores.stream()
-                          .filter(r -> r[0] != null && ((Long) r[0]).equals(playerId))
-                          .map(r -> ((Number) r[1]).intValue())
-                          .findFirst()
-                          .orElse(0);
-
                   PlayerDetailResponse.GameEntry entry = new PlayerDetailResponse.GameEntry();
                   entry.setSessionId(session.getId());
                   entry.setSessionName(session.getName());
@@ -1077,7 +1111,7 @@ public class GameService {
                   entry.setGameModeDisplayName(session.getGameMode().getDisplayName());
                   entry.setStatus(session.getStatus().name());
                   entry.setCreatedAt(session.getCreatedAt());
-                  entry.setTotalScore(totalScore);
+                  entry.setTotalScore(scoreBySession.getOrDefault(session.getId(), 0));
                   return entry;
                 })
             .collect(Collectors.toList());

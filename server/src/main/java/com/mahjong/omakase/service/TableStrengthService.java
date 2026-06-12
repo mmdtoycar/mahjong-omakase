@@ -82,6 +82,8 @@ public class TableStrengthService {
       Map<Long, Integer> monthlyByPlayer) {
     if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return null;
     if (players == null) return TableStrength.BAI_QUE_LIN;
+    Map<Long, Tier> safeTiers = tierByPlayer != null ? tierByPlayer : Map.of();
+    Map<Long, Integer> safeMonthly = monthlyByPlayer != null ? monthlyByPlayer : Map.of();
 
     List<Player> humans = players.stream().filter(p -> p != null && !p.isBot()).toList();
     if (humans.size() < 2) return TableStrength.BAI_QUE_LIN;
@@ -91,10 +93,10 @@ public class TableStrengthService {
     int lv1Count = 0;
 
     for (Player p : humans) {
-      Tier t = tierByPlayer.getOrDefault(p.getId(), tierService.computeTier(p, mode));
+      Tier t = safeTiers.getOrDefault(p.getId(), tierService.computeTier(p, mode));
       if (t == Tier.LV3 || t == Tier.LV4_THRONE) {
         lv3Count++;
-        int monthlyGames = monthlyByPlayer.getOrDefault(p.getId(), 0);
+        int monthlyGames = safeMonthly.getOrDefault(p.getId(), 0);
         if (monthlyGames >= STABLE_TOP_MONTHLY_GAMES) {
           stableTop++;
         }

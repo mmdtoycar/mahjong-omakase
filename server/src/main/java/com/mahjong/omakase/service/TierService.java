@@ -343,13 +343,6 @@ public class TierService {
     return monthlyGames(p, mode, r[0], r[1]);
   }
 
-  public int monthlyGamesForReferenceDate(Player p, GameMode mode, LocalDateTime referenceUtc) {
-    java.time.LocalDate pacificDate =
-        referenceUtc.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDate();
-    LocalDateTime[] r = monthUtcRangeFor(pacificDate);
-    return monthlyGames(p, mode, r[0], r[1]);
-  }
-
   /**
    * Bulk: per-player count of completed sessions in [start, end) for a mode. One SQL — replaces
    * per-player {@code findAll}+filter scans that were causing N+1 lazy collection loads on the
