@@ -4,7 +4,7 @@ import { fetchPlayers, createSession } from '../api'
 import { Player, GameModeKey, GAME_MODES } from '../types'
 import { cardFontSize } from '../utils/fontSize'
 import { MSG } from '../constants'
-import { abbrName } from '../utils/format'
+import { abbrName, parseError } from '../utils/format'
 
 const MIN_PLAYERS = 3
 const MAX_PLAYERS = 4
@@ -25,7 +25,7 @@ export default function NewSessionPage() {
         setPlayers(p)
         setLoaded(true)
       })
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : MSG.ERROR))
+      .catch((e: unknown) => setError(parseError(e)))
   }, [])
 
   const togglePlayer = (id: number) => {
@@ -58,14 +58,18 @@ export default function NewSessionPage() {
     setError('')
     try {
       const now = new Date()
-      const defaultName = `Game ${now.toLocaleDateString()} ${now.getHours()}:${String(now.getMinutes()).padStart(
-        2,
-        '0'
-      )}`
+      const dateStr = now.toLocaleDateString([], { timeZone: 'America/Los_Angeles' })
+      const timeStr = now.toLocaleTimeString([], {
+        timeZone: 'America/Los_Angeles',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+      const defaultName = `Game ${dateStr} ${timeStr}`
       const session = await createSession(defaultName, gameMode, selectedIds)
       navigate(`/session/${session.id}`)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : MSG.ERROR)
+      setError(parseError(e))
       setCreating(false)
     }
   }
@@ -93,23 +97,12 @@ export default function NewSessionPage() {
       </div>
 
       <div className="form-group">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          <label style={{ margin: 0 }}>
-            选择玩家{' '}
-            <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal' }}>
-              (请按照东南西北顺序点击玩家)
-            </span>{' '}
-            (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
-          </label>
+        <div style={{ display: 'block', marginBottom: 12 }}>
+          选择玩家{' '}
+          <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal' }}>
+            (请按照东南西北顺序点击玩家)
+          </span>{' '}
+          (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
         </div>
 
         {players.length > 0 && (
@@ -161,10 +154,19 @@ export default function NewSessionPage() {
       </div>
 
       <div style={{ marginTop: 24 }}>
+        {gameMode === '' && (
+          <div className="alert alert-error" role="alert" style={{ marginBottom: 16 }}>
+            <span className="alert-icon">⚠</span>
+            <span className="alert-body">请先选择游戏模式。</span>
+          </div>
+        )}
         {selectedIds.length < MIN_PLAYERS && (
-          <p className="warning-text" style={{ marginBottom: 16 }}>
-            至少需要{MIN_PLAYERS}名玩家才能开始游戏。(还差 {MIN_PLAYERS - selectedIds.length} 人)
-          </p>
+          <div className="alert alert-error" role="alert" style={{ marginBottom: 16 }}>
+            <span className="alert-icon">⚠</span>
+            <span className="alert-body">
+              至少需要{MIN_PLAYERS}名玩家才能开始游戏。(还差 {MIN_PLAYERS - selectedIds.length} 人)
+            </span>
+          </div>
         )}
         <button
           className="btn btn-accent btn-large"

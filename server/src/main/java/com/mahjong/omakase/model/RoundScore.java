@@ -1,9 +1,13 @@
 package com.mahjong.omakase.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "round_scores")
+@Getter
+@Setter
 public class RoundScore {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,36 +23,4 @@ public class RoundScore {
 
   @Column(nullable = false)
   private int score;
-
-  public Long getId() {
-    return id;
-  }
-
-  public void setId(Long id) {
-    this.id = id;
-  }
-
-  public Round getRound() {
-    return round;
-  }
-
-  public void setRound(Round round) {
-    this.round = round;
-  }
-
-  public Player getPlayer() {
-    return player;
-  }
-
-  public void setPlayer(Player player) {
-    this.player = player;
-  }
-
-  public int getScore() {
-    return score;
-  }
-
-  public void setScore(int score) {
-    this.score = score;
-  }
 }

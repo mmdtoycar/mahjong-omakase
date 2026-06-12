@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, PlayerInfo, RoundInfo } from '../types'
 import { calculateRanks } from '../logic/ranking'
@@ -8,8 +8,10 @@ import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
-import { scoreClass } from '../utils/format'
+import { scoreClass, parseError } from '../utils/format'
 import { MSG } from '../constants'
+import { RankBadge } from '../components/RankBadge'
+import { TableStrengthTag } from '../components/TableStrengthTag'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -80,7 +82,7 @@ export default function SessionPage() {
   }
 
   useEffect(() => {
-    load().catch((e: unknown) => setError(e instanceof Error ? e.message : MSG.ERROR))
+    load().catch((e: unknown) => setError(parseError(e)))
   }, [id])
 
   if (!session)
@@ -128,15 +130,6 @@ export default function SessionPage() {
     } else {
       setDealInPlayerId(pid)
       setIsSelfDraw(false)
-    }
-  }
-
-  const handleWinTypeToggle = () => {
-    if (isSelfDraw) {
-      setIsSelfDraw(false)
-    } else {
-      setIsSelfDraw(true)
-      setDealInPlayerId('')
     }
   }
 
@@ -220,7 +213,7 @@ export default function SessionPage() {
       resetForm()
       await load()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : MSG.ERROR)
+      setError(parseError(e))
     } finally {
       setSubmitting(false)
     }
@@ -234,7 +227,7 @@ export default function SessionPage() {
       await deleteRound(session.id, roundNumber)
       await load()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : MSG.ERROR)
+      setError(parseError(e))
     } finally {
       setSubmitting(false)
     }
@@ -248,7 +241,7 @@ export default function SessionPage() {
       await completeSession(session.id)
       await load()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : MSG.ERROR)
+      setError(parseError(e))
     } finally {
       setSubmitting(false)
     }
@@ -433,7 +426,7 @@ export default function SessionPage() {
   return (
     <>
       {session.status === 'IN_PROGRESS' && (
-        <div className="card round-form-card">
+        <div className="card">
           <div className="round-form">
             <h3 className="round-form-title">添加 — {gameState.displayName}</h3>
             {isRiichi && (
@@ -534,15 +527,7 @@ export default function SessionPage() {
                         </button>
                       )
                     })}
-                    <div
-                      className="win-action-row"
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: isGuobiao ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
-                        gap: '8px',
-                        width: '100%',
-                      }}
-                    >
+                    <div className={`win-action-row${isGuobiao ? ' win-action-row-three' : ''}`}>
                       <button
                         type="button"
                         className={`quick-player-btn win-type-btn dianpao ${
@@ -757,14 +742,16 @@ export default function SessionPage() {
       <div className="card">
         <div className="flex-between" style={{ marginBottom: 16 }}>
           <h2 style={{ marginBottom: 0 }}>计分板</h2>
-          <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <span className="session-meta" style={{ margin: 0, fontSize: '0.85rem' }}>
-              {session.gameModeDisplayName} &middot; {new Date(session.createdAt).toLocaleDateString()}
+              {session.gameModeDisplayName} &middot;{' '}
+              {new Date(session.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}
               &nbsp;
               <span className={`badge ${session.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
                 {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
               </span>
             </span>
+            <TableStrengthTag table={session.tableStrength} size="md" />
             {session.status === 'IN_PROGRESS' && (
               <button className="btn btn-danger btn-small" onClick={handleComplete} disabled={submitting}>
                 结束游戏
@@ -781,6 +768,7 @@ export default function SessionPage() {
                   <th key={p.id} style={playerColStyle}>
                     <div className="player-header-cell">
                       <span className={`rank-tag rank-tag-${rankMap[p.id]?.rank}`}>#{rankMap[p.id]?.rank}</span>
+                      <RankBadge tier={p.tier} size="sm" userName={p.userName} />
                       <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
                         {p.userName}
                       </span>
@@ -908,8 +896,8 @@ export default function SessionPage() {
                 <tr>
                   <th>名次</th>
                   <th>玩家</th>
-                  <th style={{ textAlign: 'right' }}>分数</th>
-                  <th style={{ textAlign: 'right' }}>积分(RP)</th>
+                  <th className="text-right">分数</th>
+                  <th className="text-right">积分(RP)</th>
                 </tr>
               </thead>
               <tbody>
@@ -924,23 +912,8 @@ export default function SessionPage() {
                         <span className={`rank-tag rank-tag-${rank}`}>#{rank}</span>
                       </td>
                       <td>{p.userName}</td>
-                      <td
-                        className={scoreClass(val)}
-                        style={{
-                          textAlign: 'right',
-                          fontVariantNumeric: 'tabular-nums',
-                        }}
-                      >
-                        {val > 0 ? `+${val}` : val}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: 'right',
-                          fontVariantNumeric: 'tabular-nums',
-                          fontWeight: 'bold',
-                          color: 'var(--primary)',
-                        }}
-                      >
+                      <td className={`${scoreClass(val)} num-cell`}>{val > 0 ? `+${val}` : val}</td>
+                      <td className="num-cell-rp">
                         {baseRp > 0 ? `+${baseRp.toFixed(1)}` : baseRp.toFixed(1)}
                         {bonus > 0 && <span className="rp-bonus">(+{bonus.toFixed(bonus % 1 === 0 ? 0 : 1)})</span>}
                       </td>
@@ -959,8 +932,8 @@ export default function SessionPage() {
             <span className="best-hand-crown">👑</span>
             <h2>最高番和牌</h2>
           </div>
-          <div className="best-hand-list">
-            {bestRounds.map((round, idx) => {
+          <div>
+            {bestRounds.map((round) => {
               const winner = session.players.find((p) => p.id === round.winnerId)
               const loser =
                 round.dealInPlayerId != null ? session.players.find((p) => p.id === round.dealInPlayerId) : null

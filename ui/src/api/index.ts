@@ -4,127 +4,120 @@ import {
   SessionDetail,
   PlayerStats,
   PlayerDetail,
+  PlayerTierResponse,
   AddRoundData,
   BestRound,
   FanDiscovery,
+  HomeSummary,
 } from '../types'
 import { MSG } from '../constants'
 
 const API = '/api'
 
-const cache = new Map<string, { data: unknown; expiry: number }>()
-const CACHE_TTL = 30_000
-
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') cache.clear()
-  })
-}
-
-function getCached<T>(key: string): T | null {
-  const entry = cache.get(key)
-  if (entry && Date.now() < entry.expiry) return structuredClone(entry.data) as T
-  cache.delete(key)
-  return null
-}
-
-function setCache(key: string, data: unknown) {
-  cache.set(key, { data, expiry: Date.now() + CACHE_TTL })
-}
-
-export function invalidateCache(prefix?: string) {
-  if (!prefix) {
-    cache.clear()
-    return
+function getAuthHeaders(headers: Record<string, string> = {}): Record<string, string> {
+  const token = localStorage.getItem('mahjong_token')
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
   }
-  for (const key of cache.keys()) {
-    if (key.startsWith(prefix)) cache.delete(key)
-  }
+  return headers
 }
 
 async function handleResponse<T = void>(res: Response): Promise<T> {
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: MSG.ERROR }))
-    throw new Error(error.message || MSG.ERROR)
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error || body.message || MSG.ERROR)
   }
   const text = await res.text()
   if (!text.trim()) return undefined as T
   return JSON.parse(text)
 }
 
-async function cachedFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const cached = getCached<T>(url)
-  if (cached) return cached
-  const res = await fetch(url, signal ? { signal } : undefined)
-  const data = await handleResponse<T>(res)
-  setCache(url, data)
-  return data
+async function authFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(url, { signal, headers: getAuthHeaders() })
+  return handleResponse<T>(res)
+}
+
+export async function loginWithGoogle(credential: string): Promise<{ token: string; player: Player }> {
+  const res = await fetch(`${API}/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential }),
+  })
+  return handleResponse<{ token: string; player: Player }>(res)
+}
+
+export async function fetchCurrentUser(): Promise<Player> {
+  const res = await fetch(`${API}/auth/me`, {
+    headers: getAuthHeaders(),
+  })
+  return handleResponse<Player>(res)
 }
 
 export async function fetchPlayers(): Promise<Player[]> {
-  return cachedFetch(`${API}/players`)
+  return authFetch(`${API}/players`)
 }
 
 export async function createPlayer(userName: string, firstName: string, lastName: string): Promise<Player> {
   const res = await fetch(`${API}/players`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ userName, firstName, lastName }),
   })
-  const data = await handleResponse<Player>(res)
-  invalidateCache()
-  return data
+  return handleResponse<Player>(res)
 }
 
 export async function checkUserName(userName: string): Promise<boolean> {
-  const res = await fetch(`${API}/players/check-username?userName=${encodeURIComponent(userName)}`)
+  const res = await fetch(`${API}/players/check-username?userName=${encodeURIComponent(userName)}`, {
+    headers: getAuthHeaders(),
+  })
   const data = await handleResponse<{ available: boolean }>(res)
   return data.available
 }
 
 export async function fetchSessions(signal?: AbortSignal): Promise<GameSession[]> {
-  return cachedFetch(`${API}/sessions`, signal)
+  return authFetch(`${API}/sessions`, signal)
 }
 
 export async function createSession(name: string, gameMode: string, playerIds: number[]): Promise<GameSession> {
   const res = await fetch(`${API}/sessions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ name, gameMode, playerIds }),
   })
-  const data = await handleResponse<GameSession>(res)
-  invalidateCache()
-  return data
+  return handleResponse<GameSession>(res)
 }
 
 export async function fetchSessionDetail(id: number, signal?: AbortSignal): Promise<SessionDetail> {
-  return cachedFetch(`${API}/sessions/${id}`, signal)
+  return authFetch(`${API}/sessions/${id}`, signal)
 }
 
 export async function addRound(sessionId: number, data: AddRoundData): Promise<void> {
   const res = await fetch(`${API}/sessions/${sessionId}/rounds`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(data),
   })
   await handleResponse(res)
-  invalidateCache()
 }
 
 export async function deleteRound(sessionId: number, roundNumber: number): Promise<void> {
-  const res = await fetch(`${API}/sessions/${sessionId}/rounds/${roundNumber}`, { method: 'DELETE' })
+  const res = await fetch(`${API}/sessions/${sessionId}/rounds/${roundNumber}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  })
   await handleResponse(res)
-  invalidateCache()
 }
 
 export async function completeSession(id: number): Promise<void> {
-  const res = await fetch(`${API}/sessions/${id}/complete`, { method: 'PUT' })
+  const res = await fetch(`${API}/sessions/${id}/complete`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+  })
   await handleResponse(res)
-  invalidateCache()
 }
 
 export async function fetchActiveSeasons(): Promise<{ year: number; month: number }[]> {
-  return cachedFetch(`${API}/stats/seasons`)
+  return authFetch(`${API}/stats/seasons`)
 }
 
 export async function fetchStats(
@@ -140,11 +133,15 @@ export async function fetchStats(
     params.set('month', String(month))
   }
   const qs = params.toString()
-  return cachedFetch(`${API}/stats${qs ? `?${qs}` : ''}`, signal)
+  return authFetch(`${API}/stats${qs ? `?${qs}` : ''}`, signal)
 }
 
 export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {
-  return cachedFetch(`${API}/players/${id}/detail`)
+  return authFetch(`${API}/players/${id}/detail`)
+}
+
+export async function fetchPlayerTier(id: number): Promise<PlayerTierResponse> {
+  return authFetch(`${API}/players/${id}/tier`)
 }
 
 export async function fetchBestRounds(
@@ -160,7 +157,17 @@ export async function fetchBestRounds(
     params.set('month', String(month))
   }
   const qs = params.toString()
-  return cachedFetch(`${API}/stats/best-rounds${qs ? `?${qs}` : ''}`, signal)
+  return authFetch(`${API}/stats/best-rounds${qs ? `?${qs}` : ''}`, signal)
+}
+
+export async function fetchHomeSummary(year?: number, month?: number, signal?: AbortSignal): Promise<HomeSummary> {
+  const params = new URLSearchParams()
+  if (year != null && month != null) {
+    params.set('year', String(year))
+    params.set('month', String(month))
+  }
+  const qs = params.toString()
+  return authFetch(`${API}/home-summary${qs ? `?${qs}` : ''}`, signal)
 }
 
 export async function fetchFanDiscoveries(
@@ -177,5 +184,23 @@ export async function fetchFanDiscoveries(
     params.set('month', String(month))
   }
   const qs = params.toString()
-  return cachedFetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`, signal)
+  return authFetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`, signal)
+}
+
+export async function setupProfile(userName: string, firstName: string, lastName: string): Promise<Player> {
+  const res = await fetch(`${API}/auth/setup-profile`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ userName, firstName, lastName }),
+  })
+  return handleResponse<Player>(res)
+}
+
+export async function lookupClaimablePlayer(userName: string, firstName: string, lastName: string): Promise<boolean> {
+  const params = new URLSearchParams({ userName, firstName, lastName })
+  const res = await fetch(`${API}/auth/lookup-claimable?${params.toString()}`, {
+    headers: getAuthHeaders(),
+  })
+  const data = await handleResponse<{ exists: boolean }>(res)
+  return data.exists
 }

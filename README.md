@@ -35,6 +35,16 @@ Landing page with quick access to start a game
 - React 18 + TypeScript + Vite
 - Gradle with node-gradle plugin for unified builds
 
+## Setup
+
+Activate the in-repo git hooks so every `git commit` auto-runs Spotless / `tsc --noEmit` / `javac` / PMD before letting the commit through:
+
+```bash
+./scripts/install-hooks.sh
+```
+
+This points `core.hooksPath` at `.githooks/` (one-time, local to this clone). Bypass once with `git commit --no-verify` if you really need to.
+
 ## Run
 
 ```bash

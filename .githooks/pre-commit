@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Pre-commit hook — runs the project's pre-flight checks.
+# Activate via: ./scripts/install-hooks.sh   (sets git config core.hooksPath)
+#
+# Skip just this once (emergencies only): git commit --no-verify
+
+set -e
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "▶ Running pre-commit checks..."
+
+echo "  1/5 spotless"
+./gradlew spotlessApply --quiet
+# Re-stage anything spotless reformatted, so the commit captures the formatted version
+git diff --name-only --diff-filter=ACM | grep -E '\.(java|css|ts|tsx)$' | xargs -r git add
+
+echo "  2/5 tsc (frontend type check)"
+(cd ui && npx tsc --noEmit)
+
+echo "  3/5 stylelint (CSS static analysis)"
+(cd ui && npm run lint:css --silent)
+
+echo "  4/5 javac"
+./gradlew compileJava --quiet
+
+echo "  5/5 pmd (Java static analysis)"
+./gradlew pmdMain --quiet
+
+echo "✓ pre-commit checks passed"

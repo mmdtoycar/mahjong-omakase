@@ -2,9 +2,15 @@ package com.mahjong.omakase.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "players")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Player {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,7 +31,36 @@ public class Player {
   @Column(nullable = false, columnDefinition = "boolean default false")
   private boolean bot = false;
 
-  public Player() {}
+  @Column(unique = true)
+  private String email;
+
+  @Column(length = 1024)
+  private String pictureUrl;
+
+  @Column(unique = true)
+  private String token;
+
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private boolean merged = false;
+
+  // ===== Hidden skill rating (per mode) =====
+  @Column(nullable = false, columnDefinition = "double default 1500.0")
+  private double skillGuobiao = 1500.0;
+
+  @Column(nullable = false, columnDefinition = "double default 1500.0")
+  private double skillRiichi = 1500.0;
+
+  @Column(nullable = false, columnDefinition = "int default 0")
+  private int gamesGuobiao = 0;
+
+  @Column(nullable = false, columnDefinition = "int default 0")
+  private int gamesRiichi = 0;
+
+  @Column(nullable = false, columnDefinition = "double default 1500.0")
+  private double peakSkillGuobiao = 1500.0;
+
+  @Column(nullable = false, columnDefinition = "double default 1500.0")
+  private double peakSkillRiichi = 1500.0;
 
   public Player(String userName, String firstName, String lastName) {
     this.userName = userName;
@@ -33,55 +68,15 @@ public class Player {
     this.lastName = lastName;
   }
 
-  public Long getId() {
-    return id;
-  }
-
-  public void setId(Long id) {
-    this.id = id;
-  }
-
-  public String getUserName() {
-    return userName;
-  }
-
-  public void setUserName(String userName) {
-    this.userName = userName;
-  }
-
-  public String getFirstName() {
-    return firstName;
-  }
-
-  public void setFirstName(String firstName) {
-    this.firstName = firstName;
-  }
-
-  public String getLastName() {
-    return lastName;
-  }
-
-  public void setLastName(String lastName) {
-    this.lastName = lastName;
-  }
-
-  public LocalDateTime getCreatedAt() {
-    return createdAt;
-  }
-
-  public void setCreatedAt(LocalDateTime createdAt) {
-    this.createdAt = createdAt;
-  }
-
   public String getDisplayName() {
     return firstName + " " + lastName;
   }
 
   public boolean isBot() {
-    return bot || (this.userName != null && this.userName.equalsIgnoreCase("BOT"));
+    return bot || "BOT".equalsIgnoreCase(this.userName);
   }
 
-  public void setBot(boolean bot) {
-    this.bot = bot;
+  public boolean isHuman() {
+    return !isBot();
   }
 }

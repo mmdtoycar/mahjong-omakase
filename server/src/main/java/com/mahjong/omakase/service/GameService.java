@@ -7,11 +7,15 @@ import com.mahjong.omakase.service.handler.GameModeHandler;
 import com.mahjong.omakase.service.scoring.RpCalculator;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -25,6 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class GameService {
 
+  private static final ZoneId ZONE_UTC = ZoneId.of("UTC");
+  private static final ZoneId ZONE_PACIFIC = ZoneId.of("America/Los_Angeles");
+
   private final PlayerRepository playerRepo;
   private final GameSessionRepository sessionRepo;
   private final RoundRepository roundRepo;
@@ -32,6 +39,10 @@ public class GameService {
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
   private final AppSettingRepository appSettingRepo;
   private final FanDiscoveryRepository fanDiscoveryRepo;
+  private final TierService tierService;
+  private final TableStrengthService tableStrengthService;
+  private final PlayerMonthlySkillRepository monthlySkillRepo;
+  private final CacheManager cacheManager;
   private final Map<GameMode, GameModeHandler> handlers;
   private volatile double participationBonus;
 
@@ -43,6 +54,10 @@ public class GameService {
       GameSessionPlayerRepository gameSessionPlayerRepo,
       AppSettingRepository appSettingRepo,
       FanDiscoveryRepository fanDiscoveryRepo,
+      TierService tierService,
+      TableStrengthService tableStrengthService,
+      PlayerMonthlySkillRepository monthlySkillRepo,
+      CacheManager cacheManager,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
@@ -51,15 +66,56 @@ public class GameService {
     this.gameSessionPlayerRepo = gameSessionPlayerRepo;
     this.appSettingRepo = appSettingRepo;
     this.fanDiscoveryRepo = fanDiscoveryRepo;
+    this.tierService = tierService;
+    this.tableStrengthService = tableStrengthService;
+    this.monthlySkillRepo = monthlySkillRepo;
+    this.cacheManager = cacheManager;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
     this.participationBonus = loadParticipationBonus();
   }
 
+  /**
+   * Wipes every derived-state cache. Called from every write path that could change session list,
+   * player stats, home summary, or active seasons. Cheaper than fine-grained per-cache eviction —
+   * caches refill on the next read.
+   */
+  public void evictAllCaches() {
+    for (String name : cacheManager.getCacheNames()) {
+      var cache = cacheManager.getCache(name);
+      if (cache != null) cache.clear();
+    }
+  }
+
   @EventListener(ApplicationReadyEvent.class)
   public void init() {
     initializeDiscoveries();
+    warmupCaches();
+  }
+
+  /**
+   * Pre-populate the read caches so the first user request after deploy doesn't pay the cold cost.
+   * Without this, deploy + idle hours = the next user gets a slow page even though the Caffeine
+   * cache exists — it would just be empty.
+   */
+  private void warmupCaches() {
+    log.info("Warming up read caches...");
+    try {
+      getAllSessionSummaries();
+      getActiveSeasons();
+      java.time.LocalDate today = java.time.LocalDate.now(ZONE_PACIFIC);
+      LocalDateTime ptStart = YearMonth.from(today).atDay(1).atStartOfDay();
+      LocalDateTime ptEnd = YearMonth.from(today).plusMonths(1).atDay(1).atStartOfDay();
+      getHomeSummary(ptStart, ptEnd);
+      for (GameMode mode : GameMode.values()) {
+        getPlayerStats(mode, ptStart, ptEnd);
+      }
+      log.info("Cache warmup done");
+    } catch (RuntimeException e) {
+      // Don't fail boot if warmup hits an issue — caches will fill on first real request anyway.
+      log.warn("Cache warmup hit an error (caches will fill lazily): {}", e.getMessage());
+    }
   }
 
   public void initializeDiscoveries() {
@@ -68,26 +124,23 @@ public class GameService {
     int page = 0;
     int size = 100;
     int newDiscoveries = 0;
-    boolean hasMore = true;
 
-    while (hasMore) {
+    while (true) {
       Pageable pageable = PageRequest.of(page, size);
       Page<Round> roundPage = roundRepo.findAllOrderByTime(pageable);
       List<Round> rounds = roundPage.getContent();
 
       if (rounds.isEmpty()) {
-        hasMore = false;
         break;
       }
 
       for (Round round : rounds) {
         if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
         if (round.getGameSession().getGameMode() != GameMode.GUOBIAO) continue;
-        Player winner =
-            playerRepo.findById(java.util.Objects.requireNonNull(round.getWinnerId())).orElse(null);
-        if (winner == null || winner.isBot()) continue;
+        Player winner = loadActivePlayer(round.getWinnerId());
+        if (winner == null) continue;
 
-        String season = getSeasonString(round.getGameSession().getCreatedAt());
+        String season = getSeasonStringFromUtc(round.getGameSession().getCreatedAt());
         newDiscoveries +=
             processFanDiscoveries(
                 round.getFanDetails(),
@@ -102,12 +155,53 @@ public class GameService {
     log.info("Fan discoveries initialization complete. Found {} new discoveries.", newDiscoveries);
   }
 
-  private String getSeasonString(LocalDateTime time) {
-    return YearMonth.from(time).toString();
+  private LocalDateTime toUtcTime(LocalDateTime pacificTime) {
+    if (pacificTime == null) return null;
+    return pacificTime.atZone(ZONE_PACIFIC).withZoneSameInstant(ZONE_UTC).toLocalDateTime();
+  }
+
+  private LocalDateTime toPacificTime(LocalDateTime utcTime) {
+    if (utcTime == null) return null;
+    return utcTime.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDateTime();
+  }
+
+  private String getSeasonStringFromUtc(LocalDateTime utcTime) {
+    if (utcTime == null) return null;
+    return getSeasonStringFromPacific(toPacificTime(utcTime));
+  }
+
+  private String getSeasonStringFromPacific(LocalDateTime pacificTime) {
+    if (pacificTime == null) return null;
+    return YearMonth.from(pacificTime).toString();
+  }
+
+  /** Returns the player if found and not a bot, else null. */
+  private Player loadActivePlayer(Long playerId) {
+    if (playerId == null) return null;
+    Player p = playerRepo.findById(playerId).orElse(null);
+    return (p != null && p.isHuman()) ? p : null;
+  }
+
+  /**
+   * Picks one of four query suppliers based on whether mode/date filters are present. Used to
+   * collapse parallel if/else ladders that all branch on (hasMode, hasDate).
+   */
+  private <T> T queryByModeAndDate(
+      boolean hasMode,
+      boolean hasDate,
+      Supplier<T> modeAndDate,
+      Supplier<T> modeOnly,
+      Supplier<T> dateOnly,
+      Supplier<T> none) {
+    if (hasMode && hasDate) return modeAndDate.get();
+    if (hasMode) return modeOnly.get();
+    if (hasDate) return dateOnly.get();
+    return none.get();
   }
 
   public void reloadSettings() {
     this.participationBonus = loadParticipationBonus();
+    evictAllCaches();
   }
 
   private double loadParticipationBonus() {
@@ -146,9 +240,9 @@ public class GameService {
     try {
       return playerRepo.save(
           new Player(request.getUserName(), request.getFirstName(), request.getLastName()));
-    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+    } catch (DataIntegrityViolationException e) {
       throw new IllegalArgumentException(
-          "Username '" + request.getUserName() + "' is already taken");
+          "Username '" + request.getUserName() + "' is already taken", e);
     }
   }
 
@@ -159,7 +253,7 @@ public class GameService {
   public Player updatePlayer(Long id, String firstName, String lastName) {
     Player player =
         playerRepo
-            .findById(java.util.Objects.requireNonNull(id))
+            .findById(Objects.requireNonNull(id))
             .orElseThrow(() -> new IllegalArgumentException("Player not found"));
     if (firstName != null && !firstName.isBlank()) {
       player.setFirstName(firstName.trim());
@@ -168,7 +262,9 @@ public class GameService {
       player.setLastName(lastName.trim());
     }
     log.info("Updated player id={}, name='{} {}'", id, player.getFirstName(), player.getLastName());
-    return playerRepo.save(player);
+    Player saved = playerRepo.save(player);
+    evictAllCaches();
+    return saved;
   }
 
   public void deletePlayer(Long id) {
@@ -186,14 +282,64 @@ public class GameService {
 
     roundScoreRepo.nullifyPlayerScores(id);
     gameSessionPlayerRepo.deleteByPlayerId(id);
-    playerRepo.deleteById(java.util.Objects.requireNonNull(id));
+    monthlySkillRepo.deleteByPlayerId(id);
+    playerRepo.deleteById(Objects.requireNonNull(id));
+    evictAllCaches();
   }
 
-  @org.springframework.transaction.annotation.Transactional(readOnly = true)
+  @Transactional(readOnly = true)
+  @Cacheable("sessionSummaries")
   public List<SessionSummaryResponse> getAllSessionSummaries() {
-    return sessionRepo.findAllByOrderByCreatedAtDesc().stream()
-        .map(SessionSummaryResponse::from)
-        .toList();
+    List<GameSession> sessions = sessionRepo.findAllByOrderByCreatedAtDesc();
+    Map<String, Map<Long, Tier>> tiersCache = new HashMap<>();
+    Map<String, Map<Long, Integer>> monthlyGamesCache = new HashMap<>();
+    return sessions.stream().map(s -> toSummary(s, tiersCache, monthlyGamesCache)).toList();
+  }
+
+  private String monthCacheKey(GameMode mode, LocalDateTime sessionUtc) {
+    java.time.LocalDate pt =
+        sessionUtc.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDate();
+    return mode.name() + ":" + pt.getYear() + "-" + pt.getMonthValue();
+  }
+
+  private SessionSummaryResponse toSummary(
+      GameSession s,
+      Map<String, Map<Long, Tier>> tiersCache,
+      Map<String, Map<Long, Integer>> monthlyGamesCache) {
+    SessionSummaryResponse r = SessionSummaryResponse.from(s);
+    GameMode mode = s.getGameMode();
+    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return r;
+    List<Player> players =
+        s.getPlayers().stream().map(GameSessionPlayer::getPlayer).filter(Objects::nonNull).toList();
+
+    String key = monthCacheKey(mode, s.getCreatedAt());
+    Map<Long, Tier> tiers =
+        tiersCache.computeIfAbsent(
+            key, k -> tierService.resolveTiersForDate(mode, s.getCreatedAt()));
+    Map<Long, Integer> monthly =
+        monthlyGamesCache.computeIfAbsent(
+            key, k -> tierService.monthlyGamesByPlayerForReferenceDate(mode, s.getCreatedAt()));
+
+    r.setTableStrength(
+        tableStrengthService.compute(players, mode, tiers, monthly).getDisplayName());
+    annotateRankingsTier(r.getRankings(), players, tiers, mode);
+    return r;
+  }
+
+  private void annotateRankingsTier(
+      List<PlayerPerformanceDTO> rankings,
+      List<Player> players,
+      Map<Long, Tier> tiers,
+      GameMode mode) {
+    if (rankings == null) return;
+    Map<Long, Player> byId = new HashMap<>();
+    for (Player p : players) byId.put(p.getId(), p);
+    for (PlayerPerformanceDTO row : rankings) {
+      Player p = byId.get(row.getPlayerId());
+      if (p == null) continue;
+      Tier t = tiers.get(p.getId());
+      row.setTier((t != null ? t : tierService.computeTier(p, mode)).name());
+    }
   }
 
   public List<GameSession> getAllSessions() {
@@ -202,8 +348,7 @@ public class GameService {
 
   public GameSession createSession(CreateSessionRequest request) {
     Map<Long, Player> playerMap = new HashMap<>();
-    for (Player p :
-        playerRepo.findAllById(java.util.Objects.requireNonNull(request.getPlayerIds()))) {
+    for (Player p : playerRepo.findAllById(Objects.requireNonNull(request.getPlayerIds()))) {
       playerMap.put(p.getId(), p);
     }
     if (playerMap.size() != request.getPlayerIds().size()) {
@@ -232,13 +377,14 @@ public class GameService {
         session.getId(),
         session.getName(),
         session.getPlayerCount());
+    evictAllCaches();
     return session;
   }
 
   public SessionDetailResponse getSessionDetail(Long sessionId) {
     GameSession session =
         sessionRepo
-            .findById(java.util.Objects.requireNonNull(sessionId))
+            .findById(Objects.requireNonNull(sessionId))
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
 
     SessionDetailResponse resp = new SessionDetailResponse();
@@ -250,18 +396,43 @@ public class GameService {
     resp.setStatus(session.getStatus().name());
     resp.setCreatedAt(session.getCreatedAt());
 
+    GameMode sessionMode = session.getGameMode();
+    final Long sessionThroneId =
+        (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI)
+            ? tierService.findThroneId(sessionMode)
+            : null;
+
     resp.setPlayers(
         session.getPlayers().stream()
             .filter(gsp -> gsp.getPlayer() != null)
             .map(
-                gsp ->
-                    new SessionDetailResponse.PlayerInfo(
-                        gsp.getPlayer().getId(),
-                        gsp.getPlayer().getUserName(),
-                        gsp.getPlayer().getFirstName(),
-                        gsp.getPlayer().getLastName(),
-                        gsp.getSeat()))
+                gsp -> {
+                  Player p = gsp.getPlayer();
+                  SessionDetailResponse.PlayerInfo info =
+                      new SessionDetailResponse.PlayerInfo(
+                          p.getId(),
+                          p.getUserName(),
+                          p.getFirstName(),
+                          p.getLastName(),
+                          gsp.getSeat());
+                  if (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI) {
+                    info.setTier(tierService.computeTier(p, sessionMode, sessionThroneId).name());
+                  }
+                  return info;
+                })
             .collect(Collectors.toList()));
+
+    if (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI) {
+      List<Player> players =
+          session.getPlayers().stream()
+              .map(GameSessionPlayer::getPlayer)
+              .filter(Objects::nonNull)
+              .toList();
+      resp.setTableStrength(
+          tableStrengthService
+              .compute(players, sessionMode, session.getCreatedAt())
+              .getDisplayName());
+    }
 
     Map<Long, String> playerNameMap =
         session.getPlayers().stream()
@@ -342,16 +513,13 @@ public class GameService {
       return bonuses;
     }
 
-    String season = getSeasonString(session.getCreatedAt());
+    YearMonth seasonYm = YearMonth.from(toPacificTime(session.getCreatedAt()));
+    LocalDateTime seasonStartUtc = toUtcTime(seasonYm.atDay(1).atStartOfDay());
+    LocalDateTime seasonEndUtc = toUtcTime(seasonYm.plusMonths(1).atDay(1).atStartOfDay());
 
     List<GameSession> seasonSessions =
-        sessionRepo.findAll().stream()
-            .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
-            .filter(s -> s.getGameMode() == session.getGameMode())
-            .filter(s -> getSeasonString(s.getCreatedAt()).equals(season))
-            .filter(s -> !s.getCreatedAt().isAfter(session.getCreatedAt()))
-            .sorted(Comparator.comparing(GameSession::getCreatedAt))
-            .toList();
+        sessionRepo.findCompletedInSeasonUpTo(
+            session.getGameMode(), seasonStartUtc, seasonEndUtc, session.getCreatedAt());
 
     Map<Long, Integer> gameIndexUpToHere = new HashMap<>();
     if (!seasonSessions.isEmpty()) {
@@ -444,6 +612,7 @@ public class GameService {
         request.getPrevalentWind(),
         request.getRiichiPlayerIds(),
         request.getBackfill());
+    evictAllCaches();
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -460,13 +629,14 @@ public class GameService {
             .orElseThrow(() -> new NoSuchElementException("Round not found"));
 
     session.getRounds().remove(round);
-    roundRepo.delete(java.util.Objects.requireNonNull(round));
+    roundRepo.delete(Objects.requireNonNull(round));
 
     int num = 1;
     for (Round r : session.getRounds()) {
       r.setRoundNumber(num++);
     }
     sessionRepo.save(session);
+    evictAllCaches();
   }
 
   public void completeSession(Long sessionId) {
@@ -474,38 +644,115 @@ public class GameService {
         sessionRepo
             .findByIdForUpdate(sessionId)
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
+    if (session.getStatus() == SessionStatus.COMPLETED) {
+      // Idempotency guard: a retry would otherwise re-apply ELO + games + peak twice.
+      log.info("Session id={} already COMPLETED, skipping tier update", sessionId);
+      return;
+    }
     session.setStatus(SessionStatus.COMPLETED);
     sessionRepo.save(session);
+
+    // Update hidden skill ratings (国标 / 立直 only).
+    Map<Long, Integer> totals = new HashMap<>();
+    for (Object[] row : roundScoreRepo.getTotalScoresBySession(sessionId)) {
+      if (row[0] != null) totals.put((Long) row[0], ((Number) row[1]).intValue());
+    }
+    tierService.onSessionCompleted(session, totals);
+
     log.info("Completed session id={}", sessionId);
+    evictAllCaches();
   }
 
+  public void deleteSession(Long sessionId) {
+    GameSession session =
+        sessionRepo
+            .findById(Objects.requireNonNull(sessionId))
+            .orElseThrow(() -> new NoSuchElementException("Session not found"));
+    GameMode mode = session.getGameMode();
+    LocalDateTime sessionTime = session.getCreatedAt();
+    sessionRepo.delete(session);
+    log.info("Deleted session id={}", sessionId);
+    rederiveDiscoveriesForSeason(mode, sessionTime);
+    evictAllCaches();
+  }
+
+  private void rederiveDiscoveriesForSeason(GameMode mode, LocalDateTime sessionTime) {
+    if (mode != GameMode.GUOBIAO) return;
+    LocalDateTime pacificTime = toPacificTime(sessionTime);
+    YearMonth ym = YearMonth.from(pacificTime);
+    LocalDateTime startPacific = ym.atDay(1).atStartOfDay();
+    LocalDateTime endPacific = ym.plusMonths(1).atDay(1).atStartOfDay();
+    LocalDateTime startUtc = toUtcTime(startPacific);
+    LocalDateTime endUtc = toUtcTime(endPacific);
+    String season = ym.toString();
+    int rederived = 0;
+    for (Round round :
+        roundRepo.findByGameModeAndSessionDateRangeOrderByTime(mode, startUtc, endUtc)) {
+      if (round.getWinnerId() == null || round.getFanDetails() == null) continue;
+      Player winner = loadActivePlayer(round.getWinnerId());
+      if (winner == null) continue;
+      rederived +=
+          processFanDiscoveries(
+              round.getFanDetails(),
+              season,
+              winner,
+              round,
+              round.getWinHand(),
+              round.getGameSession().getCreatedAt());
+    }
+    log.info("Re-derived {} fan discoveries for season '{}' mode={}", rederived, season, mode);
+  }
+
+  /**
+   * Retrieves the best rounds for the specified game mode and date range.
+   *
+   * @param gameMode the game mode to filter by, or null for all
+   * @param start the start date-time, expected in Pacific timezone (or UTC with Pacific conversion)
+   * @param end the end date-time, expected in Pacific timezone (or UTC with Pacific conversion)
+   * @return the list of best round responses
+   *     <p>Note: Callers must supply start/end in Pacific timezone. If start/end are null, it falls
+   *     back to searching all-time best rounds without date range filters.
+   */
   public List<BestRoundResponse> getBestRounds(
       GameMode gameMode, LocalDateTime start, LocalDateTime end) {
     boolean hasMode = gameMode != null;
     boolean hasDate = start != null && end != null;
+    LocalDateTime startUtc = toUtcTime(start);
+    LocalDateTime endUtc = toUtcTime(end);
 
-    Integer maxFan;
-    if (hasMode && hasDate) {
-      maxFan = roundRepo.findMaxFanCountByModeAndDateRange(gameMode, start, end);
-    } else if (hasMode) {
-      maxFan = roundRepo.findMaxFanCountByMode(gameMode);
-    } else if (hasDate) {
-      maxFan = roundRepo.findMaxFanCountByDateRange(start, end);
-    } else {
-      maxFan = roundRepo.findMaxFanCount();
-    }
+    Integer maxFan =
+        queryByModeAndDate(
+            hasMode,
+            hasDate,
+            () -> roundRepo.findMaxFanCountByModeAndDateRange(gameMode, startUtc, endUtc),
+            () -> roundRepo.findMaxFanCountByMode(gameMode),
+            () -> roundRepo.findMaxFanCountByDateRange(startUtc, endUtc),
+            () -> roundRepo.findMaxFanCount());
 
     if (maxFan == null || maxFan == 0) return Collections.emptyList();
 
-    List<Round> bestRounds;
-    if (hasMode && hasDate) {
-      bestRounds = roundRepo.findByFanCountAndModeAndDateRange(maxFan, gameMode, start, end);
-    } else if (hasMode) {
-      bestRounds = roundRepo.findByFanCountAndMode(maxFan, gameMode);
-    } else if (hasDate) {
-      bestRounds = roundRepo.findByFanCountAndDateRange(maxFan, start, end);
-    } else {
-      bestRounds = roundRepo.findByFanCount(maxFan);
+    final Integer fan = maxFan;
+    List<Round> bestRounds =
+        queryByModeAndDate(
+            hasMode,
+            hasDate,
+            () -> roundRepo.findByFanCountAndModeAndDateRange(fan, gameMode, startUtc, endUtc),
+            () -> roundRepo.findByFanCountAndMode(fan, gameMode),
+            () -> roundRepo.findByFanCountAndDateRange(fan, startUtc, endUtc),
+            () -> roundRepo.findByFanCount(fan));
+
+    if (bestRounds.isEmpty()) return Collections.emptyList();
+
+    // Batch-fetch all referenced players in a single query to avoid N+1 lookups
+    // (one findById per winner + dealInPlayer per row).
+    Set<Long> playerIds = new HashSet<>();
+    for (Round r : bestRounds) {
+      if (r.getWinnerId() != null) playerIds.add(r.getWinnerId());
+      if (r.getDealInPlayerId() != null) playerIds.add(r.getDealInPlayerId());
+    }
+    Map<Long, String> userNameById = new HashMap<>();
+    for (Player p : playerRepo.findAllById(playerIds)) {
+      userNameById.put(p.getId(), p.getUserName());
     }
 
     return bestRounds.stream()
@@ -519,19 +766,12 @@ public class GameService {
 
               String winnerName =
                   round.getWinnerId() != null
-                      ? playerRepo
-                          .findById(java.util.Objects.requireNonNull(round.getWinnerId()))
-                          .map(Player::getUserName)
-                          .orElse("?")
+                      ? userNameById.getOrDefault(round.getWinnerId(), "?")
                       : null;
 
-              // Find deal-in player
               Long dealInId = round.getDealInPlayerId();
-
               String dealInName =
-                  dealInId != null
-                      ? playerRepo.findById(dealInId).map(Player::getUserName).orElse("?")
-                      : null;
+                  dealInId != null ? userNameById.getOrDefault(dealInId, "?") : null;
 
               return new BestRoundResponse(
                   round.getGameSession().getId(),
@@ -548,55 +788,103 @@ public class GameService {
         .collect(Collectors.toList());
   }
 
+  @Cacheable("activeSeasons")
   public List<Map<String, Integer>> getActiveSeasons() {
-    return sessionRepo.findDistinctSeasons().stream()
+    List<LocalDateTime> creationTimes = sessionRepo.findSessionCreationTimesWithRounds();
+    Set<YearMonth> seasons = new TreeSet<>(Comparator.reverseOrder());
+    for (LocalDateTime time : creationTimes) {
+      seasons.add(YearMonth.from(toPacificTime(time)));
+    }
+
+    return seasons.stream()
         .map(
-            row -> {
+            ym -> {
               Map<String, Integer> m = new LinkedHashMap<>();
-              m.put("year", ((Number) row[0]).intValue());
-              m.put("month", ((Number) row[1]).intValue());
+              m.put("year", ym.getYear());
+              m.put("month", ym.getMonthValue());
               return m;
             })
         .collect(Collectors.toList());
   }
 
+  /**
+   * Aggregates everything HomePage needs in a single call: in-progress sessions (with full detail)
+   * and per-mode rankings (top 3 by RP + best round). Replaces 1 + N + 2M frontend round-trips with
+   * one response.
+   */
+  @Cacheable("homeSummary")
+  public HomeSummaryResponse getHomeSummary(LocalDateTime start, LocalDateTime end) {
+    List<SessionDetailResponse> activeSessions =
+        sessionRepo.findByStatusOrderByCreatedAtDesc(SessionStatus.IN_PROGRESS).stream()
+            .map(s -> getSessionDetail(s.getId()))
+            .collect(Collectors.toList());
+
+    Map<String, HomeSummaryResponse.ModeRanking> rankings = new LinkedHashMap<>();
+    for (GameMode mode : GameMode.values()) {
+      List<PlayerStatsResponse> stats = getPlayerStats(mode, start, end);
+      stats.sort((a, b) -> Double.compare(b.getTotalRP(), a.getTotalRP()));
+      List<PlayerStatsResponse> top = stats.subList(0, Math.min(3, stats.size()));
+
+      List<BestRoundResponse> bests = getBestRounds(mode, start, end);
+      BestRoundResponse best = bests.isEmpty() ? null : bests.get(0);
+
+      rankings.put(mode.name(), new HomeSummaryResponse.ModeRanking(top, best));
+    }
+
+    return new HomeSummaryResponse(activeSessions, rankings);
+  }
+
+  /**
+   * Retrieves player stats for the specified game mode and date range.
+   *
+   * @param gameMode the game mode (e.g. GUOBIAO) to filter by, or null for all
+   * @param start the start date-time, expected in Pacific timezone (or UTC with Pacific conversion)
+   * @param end the end date-time, expected in Pacific timezone (or UTC with Pacific conversion)
+   * @return the list of player stats responses
+   *     <p>Note: Callers must supply start/end in Pacific timezone. If start/end are null, it falls
+   *     back to returning all-time statistics. The season string is derived consistently using
+   *     getSeasonStringFromUtc.
+   */
+  @Cacheable("playerStats")
   public List<PlayerStatsResponse> getPlayerStats(
       GameMode gameMode, LocalDateTime start, LocalDateTime end) {
     List<Player> players = playerRepo.findAll();
     boolean hasDateRange = start != null && end != null;
+    LocalDateTime startUtc = toUtcTime(start);
+    LocalDateTime endUtc = toUtcTime(end);
+
+    // Historical tier snapshot lookup — only for past PT months in GUOBIAO/RIICHI.
+    // Current/future months keep using live Player state (no snapshot exists yet).
+    Map<Long, TierService.MonthlyTierInfo> historicalTiers = null;
+    if (hasDateRange && (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI)) {
+      YearMonth queryMonth = YearMonth.of(start.getYear(), start.getMonthValue());
+      YearMonth currentPtMonth = YearMonth.from(java.time.LocalDate.now(ZONE_PACIFIC));
+      if (queryMonth.isBefore(currentPtMonth)) {
+        historicalTiers =
+            tierService.computeMonthlySnapshotTiers(
+                gameMode, queryMonth.getYear(), queryMonth.getMonthValue());
+      }
+    }
+    final Map<Long, TierService.MonthlyTierInfo> historicalTiersFinal = historicalTiers;
+
+    final Long liveThroneId =
+        (historicalTiers == null && (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI))
+            ? tierService.findThroneId(gameMode)
+            : null;
 
     Map<Long, Integer> totalScores = new HashMap<>();
-    List<Object[]> scoreRows;
-    if (gameMode != null && hasDateRange) {
-      scoreRows = roundScoreRepo.getTotalScoresByGameModeAndDateRange(gameMode, start, end);
-    } else if (gameMode != null) {
-      scoreRows = roundScoreRepo.getTotalScoresByGameMode(gameMode);
-    } else {
-      scoreRows = roundScoreRepo.getTotalScoresAllTime();
-    }
-    for (Object[] row : scoreRows) {
-      if (row[0] != null) totalScores.put((Long) row[0], ((Number) row[1]).intValue());
-    }
-
     Map<Long, Integer> gamesPlayed = new HashMap<>();
-    List<Object[]> gamesRows;
-    if (gameMode != null && hasDateRange) {
-      gamesRows =
-          roundScoreRepo.getGamesPlayedPerPlayerByGameModeAndDateRange(gameMode, start, end);
-    } else if (gameMode != null) {
-      gamesRows = roundScoreRepo.getGamesPlayedPerPlayerByGameMode(gameMode);
-    } else {
-      gamesRows = roundScoreRepo.getGamesPlayedPerPlayer();
-    }
-    for (Object[] row : gamesRows) {
-      if (row[0] != null) gamesPlayed.put((Long) row[0], ((Number) row[1]).intValue());
-    }
-
     Map<Long, Integer> wins = new HashMap<>();
+    Map<Long, Integer> totalRanks = new HashMap<>();
     Map<Long, Double> totalRP = new HashMap<>();
     Map<Long, Double> tieredBonusPerPlayer = new HashMap<>();
     Map<Long, Double> adminBonusPerPlayer = new HashMap<>();
     Map<Long, Double> fanBonusPerPlayer = new HashMap<>();
+    Map<Long, Integer> roundsPlayed = new HashMap<>();
+    Map<Long, Integer> handWins = new HashMap<>();
+    Map<Long, Integer> dealIns = new HashMap<>();
+    Map<Long, Integer> winPointsSum = new HashMap<>();
+    Map<Long, Integer> dealInPointsSum = new HashMap<>();
     List<GameSession> completedSessions =
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
@@ -604,7 +892,8 @@ public class GameService {
             .filter(
                 s ->
                     !hasDateRange
-                        || (!s.getCreatedAt().isBefore(start) && s.getCreatedAt().isBefore(end)))
+                        || (!s.getCreatedAt().isBefore(startUtc)
+                            && s.getCreatedAt().isBefore(endUtc)))
             .sorted(Comparator.comparing(GameSession::getCreatedAt))
             .toList();
 
@@ -615,7 +904,8 @@ public class GameService {
     // Add Fan Discovery Bonuses (GUOBIAO only)
     if (gameMode == null || gameMode == GameMode.GUOBIAO) {
       if (hasDateRange) {
-        String season = getSeasonString(start);
+        // Callers supply start in Pacific timezone; convert to UTC to consistently derive season
+        String season = getSeasonStringFromUtc(startUtc);
         List<FanDiscovery> discoveries = fanDiscoveryRepo.findBySeason(season);
         for (FanDiscovery fd : discoveries) {
           if (fd.getBonusRp() > 0) {
@@ -633,10 +923,40 @@ public class GameService {
       }
     }
 
+    // Bulk-load total scores per session — replaces N+1 calls to getTotalScoresBySession.
+    Map<Long, List<Object[]>> scoresBySessionId = new HashMap<>();
+    if (!completedSessions.isEmpty()) {
+      List<Long> sessionIds = completedSessions.stream().map(GameSession::getId).toList();
+      for (Object[] row : roundScoreRepo.getTotalScoresBySessions(sessionIds)) {
+        Long sid = (Long) row[0];
+        // Reshape into [playerId, score] tuples to keep the existing inner-loop format.
+        scoresBySessionId
+            .computeIfAbsent(sid, k -> new ArrayList<>())
+            .add(new Object[] {row[1], row[2]});
+      }
+    }
+
+    // Bulk-load Riichi round details — one SQL for all Riichi sessions in scope.
+    Map<Long, List<Object[]>> riichiRoundsBySessionId = new HashMap<>();
+    List<Long> riichiSessionIds =
+        completedSessions.stream()
+            .filter(s -> s.getGameMode() == GameMode.RIICHI)
+            .map(GameSession::getId)
+            .toList();
+    if (!riichiSessionIds.isEmpty()) {
+      for (Object[] row : roundScoreRepo.getRoundDetailsBySessions(riichiSessionIds)) {
+        Long sid = (Long) row[0];
+        // Drop the leading sessionId so the per-session shape matches getRoundDetailsBySession.
+        riichiRoundsBySessionId
+            .computeIfAbsent(sid, k -> new ArrayList<>())
+            .add(new Object[] {row[1], row[2], row[3], row[4], row[5]});
+      }
+    }
+
     for (GameSession session : completedSessions) {
-      List<Object[]> sessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
+      List<Object[]> sessionScores = scoresBySessionId.getOrDefault(session.getId(), List.of());
       if (!sessionScores.isEmpty()) {
-        String season = getSeasonString(session.getCreatedAt());
+        String season = getSeasonStringFromUtc(session.getCreatedAt());
         String seasonModeKey = season + ":" + session.getGameMode().name();
         Map<Long, Integer> seasonCounts =
             gameIndexBySeasonModePlayer.computeIfAbsent(seasonModeKey, k -> new HashMap<>());
@@ -645,6 +965,14 @@ public class GameService {
         for (Object[] row : sessionScores) {
           if (row[0] != null) {
             Long playerId = (Long) row[0];
+            int score = ((Number) row[1]).intValue();
+
+            // Accumulate gamesPlayed and totalScores dynamically so they share the same
+            // session set as wins/bonuses below (otherwise mode-or-date-only filters can
+            // mix all-time totals with date-filtered wins).
+            gamesPlayed.merge(playerId, 1, Integer::sum);
+            totalScores.merge(playerId, score, Integer::sum);
+
             int gameIndex = seasonCounts.merge(playerId, 1, Integer::sum);
             double tieredBonus;
             if (gameIndex <= 10) {
@@ -676,6 +1004,7 @@ public class GameService {
 
         for (var entry : ranked) {
           totalRP.merge(entry.playerId(), entry.rp(), (a, b) -> a + b);
+          totalRanks.merge(entry.playerId(), entry.rank(), Integer::sum);
         }
 
         int topScore = ((Number) sorted.get(0)[1]).intValue();
@@ -683,11 +1012,19 @@ public class GameService {
           if (((Number) row[1]).intValue() != topScore) break;
           if (row[0] != null) wins.merge((Long) row[0], 1, (a, b) -> a + b);
         }
+
+        // Round-level metrics only collected for Riichi (和牌率/放铳率/平均打点/平均铳点).
+        // Other modes have different scoring semantics where these don't translate cleanly.
+        if (session.getGameMode() == GameMode.RIICHI) {
+          List<Object[]> rows = riichiRoundsBySessionId.getOrDefault(session.getId(), List.of());
+          accumulateRiichiRoundStats(
+              rows, roundsPlayed, handWins, dealIns, winPointsSum, dealInPointsSum);
+        }
       }
     }
 
     return players.stream()
-        .filter(p -> !p.isBot())
+        .filter(Player::isHuman)
         .map(
             p -> {
               PlayerStatsResponse stat = new PlayerStatsResponse();
@@ -709,31 +1046,119 @@ public class GameService {
               stat.setTotalRP(total);
               int games = gamesPlayed.getOrDefault(p.getId(), 0);
               stat.setAvgScore(games > 0 ? total / games : 0);
+              stat.setAvgRank(
+                  games > 0 ? (double) totalRanks.getOrDefault(p.getId(), 0) / games : 0);
+
+              int rounds = roundsPlayed.getOrDefault(p.getId(), 0);
+              int hw = handWins.getOrDefault(p.getId(), 0);
+              int di = dealIns.getOrDefault(p.getId(), 0);
+              stat.setRoundsPlayed(rounds);
+              stat.setHandWins(hw);
+              stat.setDealIns(di);
+              stat.setAvgWinPoints(
+                  hw > 0 ? (double) winPointsSum.getOrDefault(p.getId(), 0) / hw : 0);
+              stat.setAvgDealInPoints(
+                  di > 0 ? (double) dealInPointsSum.getOrDefault(p.getId(), 0) / di : 0);
+
+              // Tier in the queried mode (only GUOBIAO/RIICHI track ratings; DONGBEI gets null).
+              if (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI) {
+                if (historicalTiersFinal != null) {
+                  TierService.MonthlyTierInfo info = historicalTiersFinal.get(p.getId());
+                  if (info != null) {
+                    stat.setTier(info.tier().name());
+                    stat.setSkillRating(info.skillRating());
+                    stat.setGamesNeeded(info.gamesNeeded());
+                  } else {
+                    stat.setTier(Tier.UNRANKED.name());
+                    stat.setSkillRating(0);
+                    stat.setGamesNeeded(TierService.RANKED_MIN_GAMES);
+                  }
+                } else {
+                  Tier liveTier = tierService.computeTier(p, gameMode, liveThroneId);
+                  int lifetimeGames =
+                      gameMode == GameMode.GUOBIAO ? p.getGamesGuobiao() : p.getGamesRiichi();
+                  stat.setTier(liveTier.name());
+                  stat.setSkillRating(
+                      gameMode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi());
+                  stat.setGamesNeeded(
+                      liveTier == Tier.UNRANKED
+                          ? Math.max(0, TierService.RANKED_MIN_GAMES - lifetimeGames)
+                          : 0);
+                }
+              } else {
+                stat.setTier(null);
+                stat.setSkillRating(0);
+                stat.setGamesNeeded(0);
+              }
               return stat;
             })
         .collect(Collectors.toList());
   }
 
+  /**
+   * Walks one Riichi session's per-(round × player) score rows and bumps the four metric maps.
+   * roundsPlayed counts each round-participant pair once; handWins/avgWinPoints land on the
+   * round.winnerId; dealIns/avgDealInPoints land on the round.dealInPlayerId (self-draws are
+   * dealInPlayerId == null, so no deal-in is recorded for those rounds).
+   */
+  private void accumulateRiichiRoundStats(
+      List<Object[]> rows,
+      Map<Long, Integer> roundsPlayed,
+      Map<Long, Integer> handWins,
+      Map<Long, Integer> dealIns,
+      Map<Long, Integer> winPointsSum,
+      Map<Long, Integer> dealInPointsSum) {
+    Set<Long> seenRounds = new HashSet<>();
+    for (Object[] row : rows) {
+      Long roundId = (Long) row[0];
+      Long winnerId = (Long) row[1];
+      Long dealInPlayerId = (Long) row[2];
+      Long playerId = (Long) row[3];
+      int score = ((Number) row[4]).intValue();
+
+      roundsPlayed.merge(playerId, 1, Integer::sum);
+
+      if (seenRounds.add(roundId)) {
+        if (winnerId != null) {
+          handWins.merge(winnerId, 1, Integer::sum);
+        }
+        if (dealInPlayerId != null) {
+          dealIns.merge(dealInPlayerId, 1, Integer::sum);
+        }
+      }
+
+      if (playerId.equals(winnerId) && score > 0) {
+        winPointsSum.merge(playerId, score, Integer::sum);
+      }
+      if (playerId.equals(dealInPlayerId) && score < 0) {
+        dealInPointsSum.merge(playerId, -score, Integer::sum);
+      }
+    }
+  }
+
   public PlayerDetailResponse getPlayerDetail(Long playerId) {
     Player player =
         playerRepo
-            .findById(java.util.Objects.requireNonNull(playerId))
+            .findById(Objects.requireNonNull(playerId))
             .orElseThrow(() -> new NoSuchElementException("Player not found"));
 
     List<GameSession> sessions = sessionRepo.findByPlayersPlayerIdOrderByCreatedAtDesc(playerId);
+
+    // Bulk-load this player's score per session — replaces N+1 calls to getTotalScoresBySession.
+    Map<Long, Integer> scoreBySession = new HashMap<>();
+    if (!sessions.isEmpty()) {
+      List<Long> sessionIds = sessions.stream().map(GameSession::getId).toList();
+      for (Object[] row : roundScoreRepo.getTotalScoresBySessions(sessionIds)) {
+        if (row[1] != null && ((Long) row[1]).equals(playerId)) {
+          scoreBySession.put((Long) row[0], ((Number) row[2]).intValue());
+        }
+      }
+    }
 
     List<PlayerDetailResponse.GameEntry> games =
         sessions.stream()
             .map(
                 session -> {
-                  List<Object[]> scores = roundScoreRepo.getTotalScoresBySession(session.getId());
-                  int totalScore =
-                      scores.stream()
-                          .filter(r -> r[0] != null && ((Long) r[0]).equals(playerId))
-                          .map(r -> ((Number) r[1]).intValue())
-                          .findFirst()
-                          .orElse(0);
-
                   PlayerDetailResponse.GameEntry entry = new PlayerDetailResponse.GameEntry();
                   entry.setSessionId(session.getId());
                   entry.setSessionName(session.getName());
@@ -741,7 +1166,7 @@ public class GameService {
                   entry.setGameModeDisplayName(session.getGameMode().getDisplayName());
                   entry.setStatus(session.getStatus().name());
                   entry.setCreatedAt(session.getCreatedAt());
-                  entry.setTotalScore(totalScore);
+                  entry.setTotalScore(scoreBySession.getOrDefault(session.getId(), 0));
                   return entry;
                 })
             .collect(Collectors.toList());
@@ -795,7 +1220,7 @@ public class GameService {
     for (Map.Entry<Long, Integer> entry : computedScores.entrySet()) {
       Player player =
           playerRepo
-              .findById(java.util.Objects.requireNonNull(entry.getKey()))
+              .findById(Objects.requireNonNull(entry.getKey()))
               .orElseThrow(() -> new NoSuchElementException("Player not found: " + entry.getKey()));
       RoundScore rs = new RoundScore();
       rs.setRound(round);
@@ -811,9 +1236,9 @@ public class GameService {
         && session.getGameMode() == GameMode.GUOBIAO) {
       Integer winnerScoreChange = computedScores.get(winnerId);
       if (winnerScoreChange != null && winnerScoreChange > 0) {
-        Player winner = playerRepo.findById(winnerId).orElse(null);
-        if (winner != null && !winner.isBot()) {
-          String season = getSeasonString(session.getCreatedAt());
+        Player winner = loadActivePlayer(winnerId);
+        if (winner != null) {
+          String season = getSeasonStringFromUtc(session.getCreatedAt());
           processFanDiscoveries(fanDetails, season, winner, round, winHand, session.getCreatedAt());
         }
       }
@@ -870,17 +1295,31 @@ public class GameService {
     return count;
   }
 
+  /**
+   * Retrieves fan discoveries for the specified season range derived from start and end.
+   *
+   * @param start the start date-time of the season range, expected in Pacific timezone (or UTC with
+   *     Pacific conversion)
+   * @param end the end date-time of the season range, expected in Pacific timezone (or UTC with
+   *     Pacific conversion)
+   * @return the list of fan discovery responses
+   *     <p>Note: Callers must supply start/end in Pacific timezone. Under the hood,
+   *     getSeasonStringFromUtc (which converts UTC to Pacific time and calls
+   *     getSeasonStringFromPacific) is used to derive the season from the converted start
+   *     date-time. If start/end are null, it falls back to retrieving all fan discoveries
+   *     (findAll).
+   */
   public List<FanDiscoveryResponse> getFanDiscoveries(LocalDateTime start, LocalDateTime end) {
     List<FanDiscovery> discoveries;
     if (start != null && end != null) {
-      String season = getSeasonString(start);
+      String season = getSeasonStringFromUtc(toUtcTime(start));
       discoveries = fanDiscoveryRepo.findBySeason(season);
     } else {
       discoveries = fanDiscoveryRepo.findAll();
     }
 
     return discoveries.stream()
-        .filter(fd -> !fd.getPlayer().isBot())
+        .filter(fd -> fd.getPlayer().isHuman())
         .map(
             fd ->
                 new FanDiscoveryResponse(

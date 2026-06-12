@@ -180,4 +180,33 @@ describe('Guobiao Logic External Engine Compliance', () => {
     expect(names).toContain('四暗刻')
     expect(names).not.toContain('门前清')
   })
+
+  test('Case 22: User Query (34 Fans)', () => {
+    const r = calcHu('chi:s456 pung:s4 m456 p45 s55 p6', { isSelfDraw: false })
+    expect(r).not.toBeNull()
+    expect(r!.totalScore).toBe(34)
+    const names = r!.fans.map((f: any) => f.name)
+    expect(names).toEqual(['全中', '三色三同顺', '四归一'])
+  })
+
+  test('Case 23: Mixed Three-Step Chows must have step = 1 (bugfix)', () => {
+    // User hand: "123s 345m 567p 99s 777m"
+    // Since step is 2 (123, 345, 567), it should NOT be scored as Mixed Three-Step Chows (三色三步高).
+    // Total base score is 3 fan (无字 1 + 门前清 2).
+    const r = calcHu('s123 m345 p567 s99 m777', { isSelfDraw: false })
+    expect(r).not.toBeNull()
+    expect(r!.totalScore).toBe(3)
+    const names = r!.fans.map((f: any) => f.name)
+    expect(names).not.toContain('三色三步高')
+    expect(names).toContain('门前清')
+    expect(names).toContain('无字')
+  })
+
+  test('Case 24: Seven Pairs Zimo (29 Fans)', () => {
+    const r = calcHu('s11224499 p5588 m33', { isSelfDraw: true })
+    expect(r).not.toBeNull()
+    expect(r!.totalScore).toBe(29)
+    const names = r!.fans.map((f: any) => f.name)
+    expect(names).toEqual(['七对', '无字', '不求人'])
+  })
 })

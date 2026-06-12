@@ -1,25 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import {
-  PlayerStats,
-  Player,
-  GameModeKey,
-  GAME_MODES,
-  Season,
-  getCurrentSeason,
-  getSeasonLabel,
-  BestRound,
-} from '../types'
-import { fetchStats, fetchPlayers, fetchBestRounds, fetchActiveSeasons } from '../api'
+import { PlayerStats, Player, GameModeKey, GAME_MODES, getCurrentSeason, BestRound } from '../types'
+import { fetchStats, fetchPlayers, fetchBestRounds } from '../api'
 import { MahjongHand } from '../components/MahjongHand'
+import { RankBadge } from '../components/RankBadge'
 
 type Tab = 'games' | 'players'
 
 const currentSeason = getCurrentSeason()
 
 import { statFontSize } from '../utils/fontSize'
-import { abbrName } from '../utils/format'
+import { abbrName, parseError } from '../utils/format'
 import { MSG } from '../constants'
+import { useActiveSeasons } from '../hooks/useActiveSeasons'
 
 export default function StatsPage() {
   const navigate = useNavigate()
@@ -34,7 +27,7 @@ export default function StatsPage() {
   const [bestRoundsError, setBestRoundsError] = useState('')
   const [monthlyBestRounds, setMonthlyBestRounds] = useState<BestRound[]>([])
   const [monthlyBestRoundsError, setMonthlyBestRoundsError] = useState('')
-  const [seasons, setSeasons] = useState<Season[]>([])
+  const { seasons, error: seasonsError } = useActiveSeasons()
 
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
@@ -55,52 +48,47 @@ export default function StatsPage() {
         setLoading(false)
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : MSG.ERROR)
+        setError(parseError(e))
         setLoading(false)
       })
   }
 
-  const loadPlayers = () => {
+  const loadPlayers = (mode: GameModeKey, sKey: string) => {
     setError('')
     setLoading(true)
-    fetchPlayers()
-      .then((p) => {
+    let year: number | undefined
+    let month: number | undefined
+    if (sKey !== 'all') {
+      const [y, m] = sKey.split('-').map(Number)
+      year = y
+      month = m
+    }
+    Promise.all([fetchPlayers(), fetchStats(mode, year, month)])
+      .then(([p, s]) => {
         setPlayers(p)
+        setStats(s)
         setLoading(false)
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : MSG.ERROR)
+        setError(parseError(e))
         setLoading(false)
       })
   }
 
+  // Snap seasonKey to the first available season once seasons load,
+  // unless the current selection is still valid.
   useEffect(() => {
-    let mounted = true
-    fetchActiveSeasons()
-      .then((data) => {
-        if (!mounted) return
-        const list = data.map((s) => ({ year: s.year, month: s.month, label: getSeasonLabel(s.year, s.month) }))
-        setSeasons(list)
-        if (list.length > 0) {
-          setSeasonKey((prev) =>
-            list.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${list[0].year}-${list[0].month}`
-          )
-        }
-      })
-      .catch((e: unknown) => {
-        if (!mounted) return
-        setError(e instanceof Error ? e.message : MSG.ERROR)
-      })
-    return () => {
-      mounted = false
-    }
-  }, [])
+    if (seasons.length === 0) return
+    setSeasonKey((prev) =>
+      seasons.some((s) => `${s.year}-${s.month}` === prev) ? prev : `${seasons[0].year}-${seasons[0].month}`
+    )
+  }, [seasons])
 
   useEffect(() => {
     if (tab === 'games') {
       loadStats(gameMode, seasonKey)
     } else {
-      loadPlayers()
+      loadPlayers(gameMode, seasonKey)
     }
   }, [gameMode, seasonKey, tab])
 
@@ -113,7 +101,7 @@ export default function StatsPage() {
           if (!controller.signal.aborted) setBestRounds(data)
         })
         .catch((e: unknown) => {
-          if (!controller.signal.aborted) setBestRoundsError(e instanceof Error ? e.message : MSG.ERROR)
+          if (!controller.signal.aborted) setBestRoundsError(parseError(e))
         })
     }
     return () => controller.abort()
@@ -131,7 +119,7 @@ export default function StatsPage() {
         })
         .catch((e: unknown) => {
           if (!controller.signal.aborted) {
-            setMonthlyBestRoundsError(e instanceof Error ? e.message : MSG.ERROR)
+            setMonthlyBestRoundsError(parseError(e))
             setMonthlyBestRounds([])
           }
         })
@@ -142,10 +130,22 @@ export default function StatsPage() {
     return () => controller.abort()
   }, [tab, seasonKey, gameMode])
 
-  const abbr = (s: PlayerStats) => abbrName(s.displayName)
-
   const activeStats = stats.filter((s) => s.gamesPlayed > 0)
   const selectedSeason = seasons.find((s) => `${s.year}-${s.month}` === seasonKey)
+
+  // Sort by skillRating descending so top performers show first.
+  const playerRows = players
+    .map((p) => {
+      const stat = stats.find((s) => s.playerId === p.id)
+      return {
+        ...p,
+        tier: stat?.tier ?? 'UNRANKED',
+        skillRating: stat?.skillRating,
+        totalGames: stat?.gamesPlayed ?? 0,
+        gamesNeeded: stat?.gamesNeeded,
+      }
+    })
+    .sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0))
 
   if (loading)
     return (
@@ -153,10 +153,10 @@ export default function StatsPage() {
         <p>{MSG.LOADING}</p>
       </div>
     )
-  if (error)
+  if (error || seasonsError)
     return (
       <div className="empty-state">
-        <p>{error}</p>
+        <p>{error || seasonsError}</p>
       </div>
     )
 
@@ -180,39 +180,39 @@ export default function StatsPage() {
         </div>
       </div>
 
+      <div className="card">
+        <div className="flex-between">
+          <h2>赛季</h2>
+          <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
+            {seasons.map((s) => (
+              <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
+                {s.label}
+              </option>
+            ))}
+            <option value="all">全部赛季</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="flex-between">
+          <h2>游戏模式</h2>
+          <select
+            value={gameMode}
+            onChange={(e) => setGameMode(e.target.value as GameModeKey)}
+            className="select-inline"
+          >
+            {GAME_MODES.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {tab === 'games' && (
         <>
-          <div className="card">
-            <div className="flex-between">
-              <h2>赛季</h2>
-              <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
-                {seasons.map((s) => (
-                  <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
-                    {s.label}
-                  </option>
-                ))}
-                <option value="all">全部赛季</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex-between">
-              <h2>游戏模式</h2>
-              <select
-                value={gameMode}
-                onChange={(e) => setGameMode(e.target.value as GameModeKey)}
-                className="select-inline"
-              >
-                {GAME_MODES.map((m) => (
-                  <option key={m.key} value={m.key}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-value">{activeStats.length}</div>
@@ -254,9 +254,9 @@ export default function StatsPage() {
                     <tr>
                       <th>名次</th>
                       <th>玩家</th>
-                      <th style={{ textAlign: 'right' }}>场次</th>
-                      <th style={{ textAlign: 'right' }}>胜场</th>
-                      <th style={{ textAlign: 'right' }}>积分(RP)</th>
+                      <th className="text-right">场次</th>
+                      <th className="text-right">胜场</th>
+                      <th className="text-right">积分(RP)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -266,21 +266,23 @@ export default function StatsPage() {
                         onClick={() => navigate(`/player/${s.playerId}?from=games`)}
                         style={{ cursor: 'pointer' }}
                       >
-                        <td className={i < 3 ? `rank-${i + 1}` : ''}>#{i + 1}</td>
                         <td>
-                          {s.userName}
-                          <span className="table-username">{abbr(s)}</span>
+                          {i < 3 ? <span className={`rank-number rank-tag-${i + 1}`}>#{i + 1}</span> : <>#{i + 1}</>}
                         </td>
-                        <td style={{ textAlign: 'right' }}>{s.gamesPlayed}</td>
-                        <td style={{ textAlign: 'right' }}>{s.wins}</td>
-                        <td
-                          style={{
-                            textAlign: 'right',
-                            fontVariantNumeric: 'tabular-nums',
-                            fontWeight: 'bold',
-                            color: 'var(--primary)',
-                          }}
-                        >
+                        <td>
+                          <span className="player-name-with-rank">
+                            <RankBadge
+                              tier={s.tier}
+                              size="sm"
+                              userName={s.userName}
+                              gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
+                            />
+                            <span className="player-name">{s.userName}</span>
+                          </span>
+                        </td>
+                        <td className="text-right">{s.gamesPlayed}</td>
+                        <td className="text-right">{s.wins}</td>
+                        <td className="num-cell-rp">
                           {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
                         </td>
                       </tr>
@@ -303,7 +305,7 @@ export default function StatsPage() {
                   <p>本月无记录</p>
                 </div>
               )}
-              <div className="best-hand-list">
+              <div>
                 {monthlyBestRounds.map((round) => (
                   <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">
@@ -332,7 +334,7 @@ export default function StatsPage() {
                 <h2>历史最高和牌</h2>
               </div>
               {bestRoundsError && <p className="error-text">{bestRoundsError}</p>}
-              <div className="best-hand-list">
+              <div>
                 {bestRounds.map((round) => (
                   <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">
@@ -367,11 +369,12 @@ export default function StatsPage() {
                     <th>#</th>
                     <th>用户名</th>
                     <th>姓名</th>
+                    <th>段位</th>
                     <th>注册日期</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {players.map((p, i) => (
+                  {playerRows.map((p, i) => (
                     <tr
                       key={p.id}
                       onClick={() => navigate(`/player/${p.id}?from=players`)}
@@ -380,13 +383,26 @@ export default function StatsPage() {
                       <td>{i + 1}</td>
                       <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{p.userName}</td>
                       <td>{abbrName(p.firstName + ' ' + p.lastName)}</td>
-                      <td>{new Date(p.createdAt).toLocaleDateString()}</td>
+                      <td>
+                        <span className="player-name-with-rank">
+                          <RankBadge
+                            tier={p.tier ?? 'UNRANKED'}
+                            size="sm"
+                            userName={p.userName}
+                            gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
+                          />
+                          {p.tier && p.tier !== 'UNRANKED' && (
+                            <span className="player-tier-rating">{p.skillRating?.toFixed(0)}</span>
+                          )}
+                        </span>
+                      </td>
+                      <td>{new Date(p.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {players.length === 0 && (
+            {playerRows.length === 0 && (
               <div className="empty-state">
                 <p>暂无注册玩家。</p>
               </div>

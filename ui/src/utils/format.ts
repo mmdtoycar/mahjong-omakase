@@ -1,3 +1,5 @@
+import { MSG } from '../constants'
+
 /**
  * Abbreviates a name to initials.
  * e.g. "John Doe" -> "J.D."
@@ -35,4 +37,8 @@ export function scoreClass(score: number): string {
   if (score > 0) return 'score-positive'
   if (score < 0) return 'score-negative'
   return ''
+}
+
+export function parseError(e: unknown): string {
+  return e instanceof Error ? e.message : MSG.ERROR
 }

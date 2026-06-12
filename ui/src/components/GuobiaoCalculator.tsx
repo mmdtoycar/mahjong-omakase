@@ -84,7 +84,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   initialOptions,
   resetTrigger,
   isSelfDraw,
-  onIsSelfDrawChange,
+  onIsSelfDrawChange: _onIsSelfDrawChange,
 }) => {
   const [concealedTiles, setConcealedTiles] = useState<Tile[]>([])
   const [melds, setMelds] = useState<Meld[]>([])
@@ -382,10 +382,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
             <div className="score-warning-text">⚠️ 状态无效：当前组合仅 {huResult.totalScore} 番，不足 8 番起和。</div>
           ) : (
             chomboInfo?.isChombo && (
-              <div
-                className="score-warning-text chombo-warning"
-                style={{ color: '#e74c3c', marginTop: '4px', textAlign: 'left' }}
-              >
+              <div className="score-warning-text" style={{ color: '#e74c3c', marginTop: '4px', textAlign: 'left' }}>
                 ⚠️ 诈胡预警：当前基本番仅 {chomboInfo.baseScore} 番（花牌不计入起和番数），和牌将判定为【诈胡】！
               </div>
             )

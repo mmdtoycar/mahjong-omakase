@@ -92,7 +92,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
   initialOptions,
   resetTrigger,
   isSelfDraw,
-  onIsSelfDrawChange,
+  onIsSelfDrawChange: _onIsSelfDrawChange,
   playerCount = 4,
 }) => {
   const [concealedTiles, setConcealedTiles] = useState<Tile[]>([])

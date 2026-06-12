@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { GameSession, Season, getCurrentSeason, getSeasonLabel } from '../types'
-import { fetchSessions, fetchActiveSeasons } from '../api'
+import { GameSession } from '../types'
+import { fetchSessions } from '../api'
 import { GameCard } from '../components/GameCard'
 import { MSG } from '../constants'
+import { parseError } from '../utils/format'
+import { useActiveSeasons } from '../hooks/useActiveSeasons'
 
 export default function DashboardPage() {
   const [sessions, setSessions] = useState<GameSession[]>([])
-  const [seasons, setSeasons] = useState<Season[]>([])
+  const { seasons } = useActiveSeasons()
   const [seasonKey, setSeasonKey] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
@@ -23,22 +25,10 @@ export default function DashboardPage() {
       .then((sData) => {
         if (!mounted) return
         setSessions(sData)
-        // If sessions load successfully, we can already stop the main loading spinner
-        // once we also try to get the seasons.
-        return fetchActiveSeasons()
-      })
-      .then((seasonsData) => {
-        if (!mounted || !seasonsData) return
-        const list = seasonsData.map((s) => ({
-          year: s.year,
-          month: s.month,
-          label: getSeasonLabel(s.year, s.month),
-        }))
-        setSeasons(list)
       })
       .catch((e: unknown) => {
         if (!mounted) return
-        setError(e instanceof Error ? e.message : MSG.ERROR)
+        setError(parseError(e))
       })
       .finally(() => {
         if (mounted) setLoading(false)
@@ -59,7 +49,15 @@ export default function DashboardPage() {
     .filter((s) => {
       if (seasonKey === 'all') return true
       const d = new Date(s.createdAt)
-      const key = `${d.getFullYear()}-${d.getMonth() + 1}`
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles',
+        year: 'numeric',
+        month: 'numeric',
+      })
+      const parts = formatter.formatToParts(d)
+      const year = parts.find((p) => p.type === 'year')?.value
+      const month = parts.find((p) => p.type === 'month')?.value
+      const key = `${year}-${month}`
       return key === seasonKey
     })
 
@@ -80,11 +78,8 @@ export default function DashboardPage() {
     )
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div
-        className="flex-between dashboard-header"
-        style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)' }}
-      >
+    <div className="card dashboard-card">
+      <div className="flex-between dashboard-header">
         <h2 style={{ margin: 0, whiteSpace: 'nowrap' }}>历史对局</h2>
         <div className="dashboard-header-actions">
           <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
@@ -115,12 +110,14 @@ export default function DashboardPage() {
               createdAt={s.createdAt}
               roundLabel={`${s.roundCount}局 已结束`}
               isActive={false}
+              tableStrength={s.tableStrength}
               players={
                 s.rankings
                   ? s.rankings.map((p, idx) => ({
                       rank: idx + 1,
                       name: p.userName,
                       score: p.totalScore,
+                      tier: p.tier ?? null,
                     }))
                   : []
               }
