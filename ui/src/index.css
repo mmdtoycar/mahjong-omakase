@@ -1375,7 +1375,6 @@ tr:hover td {
 }
 
 .table-strength-phoenix .table-strength-emoji {
-  /* ⚜️ 默认金黄, 跟背景同色 → 强制变白 (brightness 0 = 黑, 再 invert 翻成白) + 淡阴影撑立体. */
   filter: brightness(0) invert(1) drop-shadow(0 1px 2px rgb(120 30 0 / 60%));
 }
 
@@ -1383,7 +1382,7 @@ tr:hover td {
 .table-strength-qilin {
   background: linear-gradient(135deg, #1a3a3a 0%, #0d2828 100%);
   color: #f4d03f;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 30%), inset 0 0 0 1px rgb(244 208 63 / 45%), inset 0 1px 0 rgb(244 208 63 / 30%);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%), inset 0 1px 0 rgb(244 208 63 / 30%);
   text-shadow: 0 1px 2px rgb(0 0 0 / 50%);
 }
 
