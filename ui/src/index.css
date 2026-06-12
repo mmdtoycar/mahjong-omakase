@@ -1379,17 +1379,17 @@ tr:hover td {
   filter: drop-shadow(0 0 3px rgb(255 200 50 / 80%));
 }
 
-/* 麒麟阁 — 金辉渐变 + 深棕字 */
+/* 麒麟阁 — 第二尊位, 墨青底 + 金字金边, 矜贵不张扬 */
 .table-strength-qilin {
-  background: linear-gradient(135deg, #fcd34d 0%, #d4a017 100%);
-  color: #5b3a0f;
-  border: 1px solid #b88800;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 40%);
-  text-shadow: 0 1px 2px rgb(91 58 15 / 70%);
+  background: linear-gradient(135deg, #1a3a3a 0%, #0d2828 100%);
+  color: #f4d03f;
+  border: 1px solid #d4a017;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%), inset 0 0 0 1px rgb(244 208 63 / 20%), inset 0 1px 0 rgb(244 208 63 / 30%);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 50%);
 }
 
 .table-strength-qilin .table-strength-emoji {
-  filter: drop-shadow(0 1px 2px rgb(91 58 15 / 50%));
+  filter: drop-shadow(0 0 3px rgb(244 208 63 / 70%));
 }
 
 /* 太极殿 — 玉石青绿, 阴阳渐变 */
