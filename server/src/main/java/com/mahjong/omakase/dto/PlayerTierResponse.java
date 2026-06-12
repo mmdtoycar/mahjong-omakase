@@ -5,17 +5,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/** Per-player tier summary covering both ranked modes (国标 / 立直). */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PlayerPerformanceDTO {
+public class PlayerTierResponse {
   private Long playerId;
   private String userName;
-  private Integer totalScore;
-  private Double rp;
-  private Integer rank;
-
-  /** Tier in the session's mode: "UNRANKED|LV1|LV2|LV3|LV4_THRONE", null if mode untracked. */
-  private String tier;
+  private TierInfo guobiao;
+  private TierInfo riichi;
 }

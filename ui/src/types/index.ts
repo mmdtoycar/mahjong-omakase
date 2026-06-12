@@ -19,16 +19,16 @@ export const GAME_MODES: { key: GameModeKey; label: string; fanTableTitle: strin
     fanTableSubtitle: '快速对照查询中国麻将竞赛规则（国标麻将）的81种番型及分数。',
   },
   {
-    key: 'DONGBEI',
-    label: '东北麻将',
-    fanTableTitle: '东北麻将规则',
-    fanTableSubtitle: '学习和查询带有闭门、飘、手把一、旋风杠等浓厚地方特色的沈阳穷胡规则。',
-  },
-  {
     key: 'RIICHI',
     label: '立直麻将',
     fanTableTitle: '立直麻将番表',
     fanTableSubtitle: '快速对照查询立直麻将（以M.League规则为准）的各级役种及番数。',
+  },
+  {
+    key: 'DONGBEI',
+    label: '东北麻将',
+    fanTableTitle: '东北麻将规则',
+    fanTableSubtitle: '学习和查询带有闭门、飘、手把一、旋风杠等浓厚地方特色的沈阳穷胡规则。',
   },
 ]
 
@@ -42,13 +42,50 @@ export interface GameSession {
   createdAt: string
   roundCount: number
   rankings?: PlayerPerformance[]
+  tableStrength?: string | null
+}
+
+export type TierKey = 'UNRANKED' | 'LV1' | 'LV2' | 'LV3' | 'LV4_THRONE'
+
+/** 段位与隐藏分信息 (单一模式). */
+export interface TierInfo {
+  tier: TierKey
+  /** 0-4 — maps to /rank/lv{level}.png (level 0 = 未定段, no image). */
+  level: number
+  rating: number
+  /** Games in this mode (国标 or 立直). */
+  games: number
+  /** When unranked: 10 - games (counts down to ranked debut for THIS mode). 0 once ranked. */
+  gamesNeeded: number
+  peakRating: number
+}
+
+export interface PlayerTierResponse {
+  playerId: number
+  userName: string
+  guobiao: TierInfo
+  riichi: TierInfo
+}
+
+const TIER_LABEL: Record<TierKey, string> = {
+  UNRANKED: '未定段',
+  LV1: '灵明石猴',
+  LV2: '美猴王',
+  LV3: '齐天大圣',
+  LV4_THRONE: '斗战圣佛',
+}
+
+export function tierLabel(tier: TierKey): string {
+  return TIER_LABEL[tier]
 }
 
 export interface PlayerPerformance {
+  playerId?: number
   userName: string
   totalScore: number
   rp: number
   rank: number
+  tier?: TierKey | null
 }
 
 export interface PlayerInfo {
@@ -58,6 +95,7 @@ export interface PlayerInfo {
   lastName: string
   displayName: string
   seat: number
+  tier?: TierKey | null
 }
 
 export interface RoundInfo {
@@ -89,6 +127,7 @@ export interface SessionDetail {
   rpOrigin: number
   umaDist: number[]
   playerBonuses?: Record<number, number>
+  tableStrength?: string | null
 }
 
 export interface AddRoundData {
@@ -131,6 +170,9 @@ export interface PlayerStats {
   dealIns: number
   avgWinPoints: number
   avgDealInPoints: number
+  tier?: TierKey | null
+  skillRating?: number
+  gamesNeeded?: number
 }
 
 export interface Season {

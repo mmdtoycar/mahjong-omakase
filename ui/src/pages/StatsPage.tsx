@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { PlayerStats, Player, GameModeKey, GAME_MODES, getCurrentSeason, BestRound } from '../types'
 import { fetchStats, fetchPlayers, fetchBestRounds } from '../api'
 import { MahjongHand } from '../components/MahjongHand'
+import { RankBadge } from '../components/RankBadge'
 
 type Tab = 'games' | 'players'
 
@@ -52,12 +53,20 @@ export default function StatsPage() {
       })
   }
 
-  const loadPlayers = () => {
+  const loadPlayers = (mode: GameModeKey, sKey: string) => {
     setError('')
     setLoading(true)
-    fetchPlayers()
-      .then((p) => {
+    let year: number | undefined
+    let month: number | undefined
+    if (sKey !== 'all') {
+      const [y, m] = sKey.split('-').map(Number)
+      year = y
+      month = m
+    }
+    Promise.all([fetchPlayers(), fetchStats(mode, year, month)])
+      .then(([p, s]) => {
         setPlayers(p)
+        setStats(s)
         setLoading(false)
       })
       .catch((e: unknown) => {
@@ -79,7 +88,7 @@ export default function StatsPage() {
     if (tab === 'games') {
       loadStats(gameMode, seasonKey)
     } else {
-      loadPlayers()
+      loadPlayers(gameMode, seasonKey)
     }
   }, [gameMode, seasonKey, tab])
 
@@ -121,10 +130,22 @@ export default function StatsPage() {
     return () => controller.abort()
   }, [tab, seasonKey, gameMode])
 
-  const abbr = (s: PlayerStats) => abbrName(s.displayName)
-
   const activeStats = stats.filter((s) => s.gamesPlayed > 0)
   const selectedSeason = seasons.find((s) => `${s.year}-${s.month}` === seasonKey)
+
+  // Sort by skillRating descending so top performers show first.
+  const playerRows = players
+    .map((p) => {
+      const stat = stats.find((s) => s.playerId === p.id)
+      return {
+        ...p,
+        tier: stat?.tier ?? 'UNRANKED',
+        skillRating: stat?.skillRating,
+        totalGames: stat?.gamesPlayed ?? 0,
+        gamesNeeded: stat?.gamesNeeded,
+      }
+    })
+    .sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0))
 
   if (loading)
     return (
@@ -159,39 +180,39 @@ export default function StatsPage() {
         </div>
       </div>
 
+      <div className="card">
+        <div className="flex-between">
+          <h2>赛季</h2>
+          <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
+            {seasons.map((s) => (
+              <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
+                {s.label}
+              </option>
+            ))}
+            <option value="all">全部赛季</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="flex-between">
+          <h2>游戏模式</h2>
+          <select
+            value={gameMode}
+            onChange={(e) => setGameMode(e.target.value as GameModeKey)}
+            className="select-inline"
+          >
+            {GAME_MODES.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {tab === 'games' && (
         <>
-          <div className="card">
-            <div className="flex-between">
-              <h2>赛季</h2>
-              <select value={seasonKey} onChange={(e) => setSeasonKey(e.target.value)} className="select-inline">
-                {seasons.map((s) => (
-                  <option key={`${s.year}-${s.month}`} value={`${s.year}-${s.month}`}>
-                    {s.label}
-                  </option>
-                ))}
-                <option value="all">全部赛季</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex-between">
-              <h2>游戏模式</h2>
-              <select
-                value={gameMode}
-                onChange={(e) => setGameMode(e.target.value as GameModeKey)}
-                className="select-inline"
-              >
-                {GAME_MODES.map((m) => (
-                  <option key={m.key} value={m.key}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-value">{activeStats.length}</div>
@@ -247,8 +268,14 @@ export default function StatsPage() {
                       >
                         <td className={i < 3 ? `rank-${i + 1}` : ''}>#{i + 1}</td>
                         <td>
-                          {s.userName}
-                          <span className="table-username">{abbr(s)}</span>
+                          <span className="player-name-with-rank">
+                            <RankBadge
+                              tier={s.tier}
+                              size="sm"
+                              gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
+                            />
+                            {s.userName}
+                          </span>
                         </td>
                         <td className="text-right">{s.gamesPlayed}</td>
                         <td className="text-right">{s.wins}</td>
@@ -339,11 +366,12 @@ export default function StatsPage() {
                     <th>#</th>
                     <th>用户名</th>
                     <th>姓名</th>
+                    <th>段位</th>
                     <th>注册日期</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {players.map((p, i) => (
+                  {playerRows.map((p, i) => (
                     <tr
                       key={p.id}
                       onClick={() => navigate(`/player/${p.id}?from=players`)}
@@ -352,13 +380,25 @@ export default function StatsPage() {
                       <td>{i + 1}</td>
                       <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{p.userName}</td>
                       <td>{abbrName(p.firstName + ' ' + p.lastName)}</td>
+                      <td>
+                        <span className="player-name-with-rank">
+                          <RankBadge
+                            tier={p.tier ?? 'UNRANKED'}
+                            size="sm"
+                            gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
+                          />
+                          {p.tier && p.tier !== 'UNRANKED' && (
+                            <span className="player-tier-rating">{p.skillRating?.toFixed(0)}</span>
+                          )}
+                        </span>
+                      </td>
                       <td>{new Date(p.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {players.length === 0 && (
+            {playerRows.length === 0 && (
               <div className="empty-state">
                 <p>暂无注册玩家。</p>
               </div>

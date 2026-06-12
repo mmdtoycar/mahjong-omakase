@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchStats, fetchFanDiscoveries, setupProfile, lookupClaimablePlayer } from '../api'
-import { GAME_MODES, GameModeKey, PlayerStats } from '../types'
+import { fetchStats, fetchFanDiscoveries, fetchPlayerTier, setupProfile, lookupClaimablePlayer } from '../api'
+import { GAME_MODES, GameModeKey, PlayerStats, PlayerTierResponse } from '../types'
+import { RankBadge } from '../components/RankBadge'
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -13,6 +14,7 @@ export default function ProfilePage() {
   const [statsByMode, setStatsByMode] = useState<Partial<Record<GameModeKey, PlayerStats>>>({})
   const [discoveries, setDiscoveries] = useState<any[]>([])
   const [selectedMode, setSelectedMode] = useState<GameModeKey>(GAME_MODES[0].key)
+  const [tier, setTier] = useState<PlayerTierResponse | null>(null)
 
   // 账号设置(关联老账号 / 注册新账号)
   const [setupForm, setSetupForm] = useState({ userName: '', firstName: '', lastName: '' })
@@ -23,6 +25,11 @@ export default function ProfilePage() {
   // 异步获取数据
   useEffect(() => {
     if (!me) return
+
+    // 切账号时立即清掉上一个账号的 stale 数据, 避免短暂闪烁错的段位
+    setStatsByMode({})
+    setDiscoveries([])
+    setTier(null)
 
     // 1. 各模式战绩并行拉取
     GAME_MODES.forEach((mode) => {
@@ -41,6 +48,14 @@ export default function ProfilePage() {
         setDiscoveries(myDiscoveries)
       })
       .catch(console.error)
+
+    // 3. 段位 (国标 + 立直)
+    fetchPlayerTier(me.id)
+      .then(setTier)
+      .catch((e) => {
+        console.error(e)
+        setTier(null)
+      })
   }, [me])
 
   if (!me) {
@@ -185,6 +200,25 @@ export default function ProfilePage() {
                 ))}
               </select>
             </div>
+
+            {/* 段位显示: 国标 / 立直 跟随上面 selectedMode 切换 */}
+            {tier && (selectedMode === 'GUOBIAO' || selectedMode === 'RIICHI') && (
+              <div className="profile-tier-section">
+                <RankBadge
+                  tier={selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier}
+                  size="md"
+                  rating={
+                    (selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier) === 'UNRANKED'
+                      ? undefined
+                      : selectedMode === 'GUOBIAO'
+                      ? tier.guobiao.rating
+                      : tier.riichi.rating
+                  }
+                  gamesNeeded={selectedMode === 'GUOBIAO' ? tier.guobiao.gamesNeeded : tier.riichi.gamesNeeded}
+                />
+              </div>
+            )}
+
             {hasStats ? (
               <div className="profile-stats-grid">
                 <div className="profile-stat-card">

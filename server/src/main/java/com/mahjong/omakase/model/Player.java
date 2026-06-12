@@ -43,6 +43,25 @@ public class Player {
   @Column(nullable = false, columnDefinition = "boolean default false")
   private boolean merged = false;
 
+  // ===== Hidden skill rating (per mode) =====
+  @Column(nullable = false, columnDefinition = "double default 1500.0")
+  private double skillGuobiao = 1500.0;
+
+  @Column(nullable = false, columnDefinition = "double default 1500.0")
+  private double skillRiichi = 1500.0;
+
+  @Column(nullable = false, columnDefinition = "int default 0")
+  private int gamesGuobiao = 0;
+
+  @Column(nullable = false, columnDefinition = "int default 0")
+  private int gamesRiichi = 0;
+
+  @Column(nullable = false, columnDefinition = "double default 1500.0")
+  private double peakSkillGuobiao = 1500.0;
+
+  @Column(nullable = false, columnDefinition = "double default 1500.0")
+  private double peakSkillRiichi = 1500.0;
+
   public Player(String userName, String firstName, String lastName) {
     this.userName = userName;
     this.firstName = firstName;

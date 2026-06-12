@@ -4,6 +4,7 @@ import {
   SessionDetail,
   PlayerStats,
   PlayerDetail,
+  PlayerTierResponse,
   AddRoundData,
   BestRound,
   FanDiscovery,
@@ -181,6 +182,10 @@ export async function fetchStats(
 
 export async function fetchPlayerDetail(id: number): Promise<PlayerDetail> {
   return cachedFetch(`${API}/players/${id}/detail`)
+}
+
+export async function fetchPlayerTier(id: number): Promise<PlayerTierResponse> {
+  return cachedFetch(`${API}/players/${id}/tier`)
 }
 
 export async function fetchBestRounds(

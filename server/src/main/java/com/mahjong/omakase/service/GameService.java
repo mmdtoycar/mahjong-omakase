@@ -37,6 +37,9 @@ public class GameService {
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
   private final AppSettingRepository appSettingRepo;
   private final FanDiscoveryRepository fanDiscoveryRepo;
+  private final TierService tierService;
+  private final TableStrengthService tableStrengthService;
+  private final PlayerMonthlySkillRepository monthlySkillRepo;
   private final Map<GameMode, GameModeHandler> handlers;
   private volatile double participationBonus;
 
@@ -48,6 +51,9 @@ public class GameService {
       GameSessionPlayerRepository gameSessionPlayerRepo,
       AppSettingRepository appSettingRepo,
       FanDiscoveryRepository fanDiscoveryRepo,
+      TierService tierService,
+      TableStrengthService tableStrengthService,
+      PlayerMonthlySkillRepository monthlySkillRepo,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
@@ -56,6 +62,9 @@ public class GameService {
     this.gameSessionPlayerRepo = gameSessionPlayerRepo;
     this.appSettingRepo = appSettingRepo;
     this.fanDiscoveryRepo = fanDiscoveryRepo;
+    this.tierService = tierService;
+    this.tableStrengthService = tableStrengthService;
+    this.monthlySkillRepo = monthlySkillRepo;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
@@ -228,14 +237,37 @@ public class GameService {
 
     roundScoreRepo.nullifyPlayerScores(id);
     gameSessionPlayerRepo.deleteByPlayerId(id);
+    monthlySkillRepo.deleteByPlayerId(id);
     playerRepo.deleteById(Objects.requireNonNull(id));
   }
 
   @Transactional(readOnly = true)
   public List<SessionSummaryResponse> getAllSessionSummaries() {
-    return sessionRepo.findAllByOrderByCreatedAtDesc().stream()
-        .map(SessionSummaryResponse::from)
-        .toList();
+    return sessionRepo.findAllByOrderByCreatedAtDesc().stream().map(this::toSummary).toList();
+  }
+
+  private SessionSummaryResponse toSummary(GameSession s) {
+    SessionSummaryResponse r = SessionSummaryResponse.from(s);
+    GameMode mode = s.getGameMode();
+    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return r;
+    List<Player> players =
+        s.getPlayers().stream().map(GameSessionPlayer::getPlayer).filter(Objects::nonNull).toList();
+    r.setTableStrength(
+        tableStrengthService.compute(players, mode, s.getCreatedAt()).getDisplayName());
+    annotateRankingsTier(r.getRankings(), players, mode);
+    return r;
+  }
+
+  private void annotateRankingsTier(
+      List<PlayerPerformanceDTO> rankings, List<Player> players, GameMode mode) {
+    if (rankings == null) return;
+    Map<Long, Player> byId = new HashMap<>();
+    for (Player p : players) byId.put(p.getId(), p);
+    for (PlayerPerformanceDTO row : rankings) {
+      Player p = byId.get(row.getPlayerId());
+      if (p == null) continue;
+      row.setTier(tierService.computeTier(p, mode).name());
+    }
   }
 
   public List<GameSession> getAllSessions() {
@@ -295,14 +327,35 @@ public class GameService {
         session.getPlayers().stream()
             .filter(gsp -> gsp.getPlayer() != null)
             .map(
-                gsp ->
-                    new SessionDetailResponse.PlayerInfo(
-                        gsp.getPlayer().getId(),
-                        gsp.getPlayer().getUserName(),
-                        gsp.getPlayer().getFirstName(),
-                        gsp.getPlayer().getLastName(),
-                        gsp.getSeat()))
+                gsp -> {
+                  Player p = gsp.getPlayer();
+                  SessionDetailResponse.PlayerInfo info =
+                      new SessionDetailResponse.PlayerInfo(
+                          p.getId(),
+                          p.getUserName(),
+                          p.getFirstName(),
+                          p.getLastName(),
+                          gsp.getSeat());
+                  GameMode mode = session.getGameMode();
+                  if (mode == GameMode.GUOBIAO || mode == GameMode.RIICHI) {
+                    info.setTier(tierService.computeTier(p, mode).name());
+                  }
+                  return info;
+                })
             .collect(Collectors.toList()));
+
+    GameMode sessionMode = session.getGameMode();
+    if (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI) {
+      List<Player> players =
+          session.getPlayers().stream()
+              .map(GameSessionPlayer::getPlayer)
+              .filter(Objects::nonNull)
+              .toList();
+      resp.setTableStrength(
+          tableStrengthService
+              .compute(players, sessionMode, session.getCreatedAt())
+              .getDisplayName());
+    }
 
     Map<Long, String> playerNameMap =
         session.getPlayers().stream()
@@ -515,8 +568,21 @@ public class GameService {
         sessionRepo
             .findByIdForUpdate(sessionId)
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
+    if (session.getStatus() == SessionStatus.COMPLETED) {
+      // Idempotency guard: a retry would otherwise re-apply ELO + games + peak twice.
+      log.info("Session id={} already COMPLETED, skipping tier update", sessionId);
+      return;
+    }
     session.setStatus(SessionStatus.COMPLETED);
     sessionRepo.save(session);
+
+    // Update hidden skill ratings (国标 / 立直 only).
+    Map<Long, Integer> totals = new HashMap<>();
+    for (Object[] row : roundScoreRepo.getTotalScoresBySession(sessionId)) {
+      if (row[0] != null) totals.put((Long) row[0], ((Number) row[1]).intValue());
+    }
+    tierService.onSessionCompleted(session, totals);
+
     log.info("Completed session id={}", sessionId);
   }
 
@@ -706,6 +772,20 @@ public class GameService {
     LocalDateTime startUtc = toUtcTime(start);
     LocalDateTime endUtc = toUtcTime(end);
 
+    // Historical tier snapshot lookup — only for past PT months in GUOBIAO/RIICHI.
+    // Current/future months keep using live Player state (no snapshot exists yet).
+    Map<Long, TierService.MonthlyTierInfo> historicalTiers = null;
+    if (hasDateRange && (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI)) {
+      YearMonth queryMonth = YearMonth.of(start.getYear(), start.getMonthValue());
+      YearMonth currentPtMonth = YearMonth.from(java.time.LocalDate.now(ZONE_PACIFIC));
+      if (queryMonth.isBefore(currentPtMonth)) {
+        historicalTiers =
+            tierService.computeMonthlySnapshotTiers(
+                gameMode, queryMonth.getYear(), queryMonth.getMonthValue());
+      }
+    }
+    final Map<Long, TierService.MonthlyTierInfo> historicalTiersFinal = historicalTiers;
+
     Map<Long, Integer> totalScores = new HashMap<>();
     Map<Long, Integer> gamesPlayed = new HashMap<>();
     Map<Long, Integer> wins = new HashMap<>();
@@ -862,6 +942,37 @@ public class GameService {
                   hw > 0 ? (double) winPointsSum.getOrDefault(p.getId(), 0) / hw : 0);
               stat.setAvgDealInPoints(
                   di > 0 ? (double) dealInPointsSum.getOrDefault(p.getId(), 0) / di : 0);
+
+              // Tier in the queried mode (only GUOBIAO/RIICHI track ratings; DONGBEI gets null).
+              if (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI) {
+                if (historicalTiersFinal != null) {
+                  TierService.MonthlyTierInfo info = historicalTiersFinal.get(p.getId());
+                  if (info != null) {
+                    stat.setTier(info.tier().name());
+                    stat.setSkillRating(info.skillRating());
+                    stat.setGamesNeeded(info.gamesNeeded());
+                  } else {
+                    stat.setTier(Tier.UNRANKED.name());
+                    stat.setSkillRating(0);
+                    stat.setGamesNeeded(TierService.RANKED_MIN_GAMES);
+                  }
+                } else {
+                  Tier liveTier = tierService.computeTier(p, gameMode);
+                  int lifetimeGames =
+                      gameMode == GameMode.GUOBIAO ? p.getGamesGuobiao() : p.getGamesRiichi();
+                  stat.setTier(liveTier.name());
+                  stat.setSkillRating(
+                      gameMode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi());
+                  stat.setGamesNeeded(
+                      liveTier == Tier.UNRANKED
+                          ? Math.max(0, TierService.RANKED_MIN_GAMES - lifetimeGames)
+                          : 0);
+                }
+              } else {
+                stat.setTier(null);
+                stat.setSkillRating(0);
+                stat.setGamesNeeded(0);
+              }
               return stat;
             })
         .collect(Collectors.toList());

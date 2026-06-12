@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { fetchHomeSummary } from '../api'
 import { GAME_MODES, SessionDetail, PlayerStats, BestRound, getCurrentSeason } from '../types'
 import { GameCard } from '../components/GameCard'
+import { RankBadge } from '../components/RankBadge'
 import { deriveGameState, getWindName } from '../utils/gameState'
 import { MSG } from '../constants'
 
@@ -77,6 +78,7 @@ export default function HomePage() {
                   createdAt={s.createdAt}
                   roundLabel={`${state.displayName} 进行中`}
                   isActive={true}
+                  tableStrength={s.tableStrength}
                   players={sortedPlayers.map((p) => {
                     const score = s.totalScores[p.id] || 0
                     const rank = sortedScores.indexOf(score) + 1
@@ -88,6 +90,7 @@ export default function HomePage() {
                       score,
                       wind: getWindName(menfeng),
                       isDealer: p.id === state.dealerPlayerId,
+                      tier: p.tier ?? null,
                     }
                   })}
                 />
@@ -120,7 +123,10 @@ export default function HomePage() {
                         <div key={player.playerId} className="rank-item">
                           <span className={`rank-number rank-tag-${idx + 1}`}>#{idx + 1}</span>
                           <div className="rank-info">
-                            <span className="player-name">{player.userName}</span>
+                            <span className="player-name-with-rank">
+                              <RankBadge tier={player.tier} size="sm" gamesNeeded={undefined} />
+                              <span className="player-name">{player.userName}</span>
+                            </span>
                             <span className="player-score">{player.totalRP.toFixed(1)} RP</span>
                           </div>
                         </div>

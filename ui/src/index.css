@@ -85,11 +85,10 @@ body {
 }
 
 .app-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px 16px;
+  gap: 16px;
   padding: 12px 24px;
   background: rgb(26 71 42 / 95%);
   color: white;
@@ -98,6 +97,10 @@ body {
   position: sticky;
   top: 0;
   z-index: 1000;
+}
+
+.app-header .auth-actions {
+  justify-self: end;
 }
 
 .logo-link {
@@ -1113,13 +1116,6 @@ tr:hover td {
   margin-left: 6px;
 }
 
-.warning-text {
-  color: var(--accent);
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
 .player-select-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -1180,6 +1176,228 @@ tr:hover td {
   font-weight: 500;
   font-size: 0.85em;
   margin-left: 4px;
+}
+
+/* ===== RankBadge / 段位徽章 ===== */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.rank-badge-img {
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.rank-badge-sm {
+  font-size: 0.75rem;
+}
+
+.rank-badge-md .rank-badge-img {
+  border-radius: 50%;
+}
+
+.rank-badge-md .rank-badge-meta,
+.rank-badge-lg .rank-badge-meta {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.rank-badge-md .rank-badge-name,
+.rank-badge-lg .rank-badge-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.rank-badge-md .rank-badge-rating,
+.rank-badge-lg .rank-badge-rating {
+  color: var(--text-light);
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rank-badge-throne .rank-badge-img {
+  filter: drop-shadow(0 0 8px rgb(255 200 50 / 60%));
+}
+
+.rank-badge-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-weight: 800;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+}
+
+.rank-badge-throne .rank-badge-name {
+  background: linear-gradient(90deg, #d4a017, #ff9800, #d4a017);
+  background-clip: text;
+  color: transparent;
+}
+
+.rank-badge-unranked,
+.rank-badge-unranked-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.7rem;
+  border: 1px dashed var(--border);
+}
+
+.rank-badge-unranked-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 0.7rem;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.rank-badge-new {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.player-name-with-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Player detail header (PlayerDetailPage) */
+.player-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.player-detail-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-detail-name h2 {
+  margin: 0;
+}
+
+.player-detail-tiers {
+  display: flex;
+  gap: 24px;
+}
+
+.player-detail-tier-cell,
+.profile-tier-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.player-detail-tier-mode,
+.profile-tier-mode {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+/* Profile tier section (inside stats card, follows mode selector) */
+.profile-tier-section {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.player-tier-rating {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-variant-numeric: tabular-nums;
+  margin-left: 4px;
+}
+
+/* Profile tier row (ProfilePage banner) */
+.profile-tier-row {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgb(255 255 255 / 20%);
+}
+
+.profile-tier-row .profile-tier-mode {
+  color: rgb(255 255 255 / 85%);
+}
+
+.profile-tier-row .rank-badge-name,
+.profile-tier-row .rank-badge-rating {
+  color: #fff;
+}
+
+/* ===== TableStrengthTag / 桌力 ===== */
+.table-strength {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--bg-muted);
+  color: var(--text);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table-strength-md {
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.table-strength-emoji {
+  font-size: 0.95em;
+}
+
+/* 凤凰台 — 顶配, 金光高亮 */
+.table-strength-phoenix {
+  background: linear-gradient(90deg, #fff3e0, #ffe0b2);
+  color: #5d4037;
+  border-color: #d4a017;
+  box-shadow: 0 0 6px rgb(212 160 23 / 25%);
+}
+
+/* 其余 4 种保持低调 — 中性背景 + 不同边框点缀色 */
+.table-strength-qilin {
+  border-color: var(--mj-gold-light);
+}
+
+.table-strength-taiji {
+  border-color: var(--sol-base1);
+}
+
+.table-strength-dragon {
+  border-color: var(--mj-green);
+}
+
+.table-strength-sparrow {
+  border-color: var(--sol-base2);
+  color: var(--text-light);
 }
 
 /* ===== Calculator page ===== */
@@ -1286,6 +1504,7 @@ tr:hover td {
   }
 
   .app-header {
+    display: flex;
     flex-flow: row wrap;
     gap: 8px 12px;
     padding: 10px 16px;
