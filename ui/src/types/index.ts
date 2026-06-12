@@ -172,6 +172,7 @@ export interface PlayerStats {
   avgDealInPoints: number
   tier?: TierKey | null
   skillRating?: number
+  gamesNeeded?: number
 }
 
 export interface Season {

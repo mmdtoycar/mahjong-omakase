@@ -26,4 +26,5 @@ public class PlayerStatsResponse {
   private double avgDealInPoints;
   private String tier;
   private double skillRating;
+  private int gamesNeeded;
 }

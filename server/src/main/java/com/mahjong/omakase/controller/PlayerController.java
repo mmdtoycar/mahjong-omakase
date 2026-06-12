@@ -12,9 +12,10 @@ import com.mahjong.omakase.service.TierService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @RestController
@@ -55,7 +56,10 @@ public class PlayerController {
   @GetMapping("/{id}/tier")
   public PlayerTierResponse tier(@PathVariable Long id) {
     Player p =
-        playerRepo.findById(id).orElseThrow(() -> new NoSuchElementException("Player not found"));
+        playerRepo
+            .findById(id)
+            .orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Player not found"));
     return PlayerTierResponse.builder()
         .playerId(p.getId())
         .userName(p.getUserName())

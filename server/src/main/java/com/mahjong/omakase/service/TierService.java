@@ -95,14 +95,23 @@ public class TierService {
 
   private void applyPairwiseElo(GameMode mode, List<Map.Entry<Player, Integer>> ranked) {
     int n = ranked.size();
+    // Snapshot starting ratings + games BEFORE the loop. Reading from the live Player object
+    // inside the nested loop would let earlier pairings perturb later ones, making the result
+    // depend on iteration order instead of just the final standings.
+    double[] startRatings = new double[n];
+    int[] startGames = new int[n];
+    double[] deltas = new double[n];
+    for (int i = 0; i < n; i++) {
+      Player p = ranked.get(i).getKey();
+      startRatings[i] = getRating(p, mode);
+      startGames[i] = getGames(p, mode);
+    }
     for (int i = 0; i < n; i++) {
       for (int j = i + 1; j < n; j++) {
-        Player pi = ranked.get(i).getKey();
-        Player pj = ranked.get(j).getKey();
-        double si = getRating(pi, mode);
-        double sj = getRating(pj, mode);
-        int gi = getGames(pi, mode);
-        int gj = getGames(pj, mode);
+        double si = startRatings[i];
+        double sj = startRatings[j];
+        int gi = startGames[i];
+        int gj = startGames[j];
 
         double actual = ranked.get(i).getValue().equals(ranked.get(j).getValue()) ? 0.5 : 1.0;
         double expected = 1.0 / (1.0 + Math.pow(10, (sj - si) / 400.0));
@@ -111,9 +120,12 @@ public class TierService {
         double kI = (gi < NEW_PLAYER_GAMES) ? K_NEW : K_STABLE;
         double kJ = (gj < NEW_PLAYER_GAMES) ? K_NEW : K_STABLE;
 
-        setRating(pi, mode, si + kI * softDelta);
-        setRating(pj, mode, sj - kJ * softDelta);
+        deltas[i] += kI * softDelta;
+        deltas[j] -= kJ * softDelta;
       }
+    }
+    for (int i = 0; i < n; i++) {
+      setRating(ranked.get(i).getKey(), mode, startRatings[i] + deltas[i]);
     }
   }
 
@@ -187,21 +199,30 @@ public class TierService {
     return (throne != null && throne.getId().equals(p.getId())) ? Tier.LV4_THRONE : Tier.LV3;
   }
 
-  /** Find the throne holder for a mode. 王座 还要求本月活跃 (≥ THRONE_MONTHLY_MIN_GAMES 场). */
+  /**
+   * Find the throne holder for a mode. 王座 还要求本月活跃 (≥ THRONE_MONTHLY_MIN_GAMES 场). Ties at the top
+   * rating produce no throne holder, so the result is deterministic and 不随 iteration order 摆动.
+   */
   public Player findThrone(GameMode mode) {
     LocalDateTime[] monthRange = currentMonthUtcRange();
-    return playerRepo.findAll().stream()
-        .filter(p -> !p.isBot())
-        .filter(p -> getGames(p, mode) >= RANKED_MIN_GAMES)
-        .filter(p -> getRating(p, mode) >= LV3_CUTOFF)
-        .filter(
-            p -> monthlyGames(p, mode, monthRange[0], monthRange[1]) >= THRONE_MONTHLY_MIN_GAMES)
-        .max(Comparator.comparingDouble(p -> getRating(p, mode)))
-        .orElse(null);
+    List<Player> qualified =
+        playerRepo.findAll().stream()
+            .filter(p -> !p.isBot())
+            .filter(p -> getGames(p, mode) >= RANKED_MIN_GAMES)
+            .filter(p -> getRating(p, mode) >= LV3_CUTOFF)
+            .filter(
+                p ->
+                    monthlyGames(p, mode, monthRange[0], monthRange[1]) >= THRONE_MONTHLY_MIN_GAMES)
+            .toList();
+    if (qualified.isEmpty()) return null;
+    double topRating =
+        qualified.stream().mapToDouble(p -> getRating(p, mode)).max().orElse(Double.NaN);
+    List<Player> top = qualified.stream().filter(p -> getRating(p, mode) == topRating).toList();
+    return top.size() == 1 ? top.get(0) : null;
   }
 
   /** Snapshot of one player's tier for a historical month. */
-  public record MonthlyTierInfo(Tier tier, double skillRating) {}
+  public record MonthlyTierInfo(Tier tier, double skillRating, int gamesNeeded) {}
 
   /**
    * Look up historical tiers for every player who has a snapshot for (mode, year, month). Throne =
@@ -214,14 +235,25 @@ public class TierService {
     List<PlayerMonthlySkill> rows = monthlySkillRepo.findByModeAndYearAndMonth(mode, year, month);
     if (rows.isEmpty()) return Map.of();
 
-    Long throneId =
+    List<PlayerMonthlySkill> throneCandidates =
         rows.stream()
             .filter(s -> s.getSkillRating() >= LV3_CUTOFF)
             .filter(s -> s.getGames() >= RANKED_MIN_GAMES)
             .filter(s -> s.getMonthlyGames() >= THRONE_MONTHLY_MIN_GAMES)
-            .max(Comparator.comparingDouble(PlayerMonthlySkill::getSkillRating))
-            .map(s -> s.getPlayer().getId())
-            .orElse(null);
+            .toList();
+    Long throneId = null;
+    if (!throneCandidates.isEmpty()) {
+      double topRating =
+          throneCandidates.stream()
+              .mapToDouble(PlayerMonthlySkill::getSkillRating)
+              .max()
+              .orElse(Double.NaN);
+      List<PlayerMonthlySkill> top =
+          throneCandidates.stream().filter(s -> s.getSkillRating() == topRating).toList();
+      if (top.size() == 1) {
+        throneId = top.get(0).getPlayer().getId();
+      }
+    }
 
     Map<Long, MonthlyTierInfo> result = new HashMap<>();
     for (PlayerMonthlySkill s : rows) {
@@ -237,7 +269,8 @@ public class TierService {
       } else {
         tier = Tier.LV3;
       }
-      result.put(s.getPlayer().getId(), new MonthlyTierInfo(tier, s.getSkillRating()));
+      int needed = tier == Tier.UNRANKED ? Math.max(0, RANKED_MIN_GAMES - s.getGames()) : 0;
+      result.put(s.getPlayer().getId(), new MonthlyTierInfo(tier, s.getSkillRating(), needed));
     }
     return result;
   }

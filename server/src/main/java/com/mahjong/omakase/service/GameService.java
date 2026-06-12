@@ -941,18 +941,28 @@ public class GameService {
                   if (info != null) {
                     stat.setTier(info.tier().name());
                     stat.setSkillRating(info.skillRating());
+                    stat.setGamesNeeded(info.gamesNeeded());
                   } else {
                     stat.setTier(Tier.UNRANKED.name());
                     stat.setSkillRating(0);
+                    stat.setGamesNeeded(TierService.RANKED_MIN_GAMES);
                   }
                 } else {
-                  stat.setTier(tierService.computeTier(p, gameMode).name());
+                  Tier liveTier = tierService.computeTier(p, gameMode);
+                  int lifetimeGames =
+                      gameMode == GameMode.GUOBIAO ? p.getGamesGuobiao() : p.getGamesRiichi();
+                  stat.setTier(liveTier.name());
                   stat.setSkillRating(
                       gameMode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi());
+                  stat.setGamesNeeded(
+                      liveTier == Tier.UNRANKED
+                          ? Math.max(0, TierService.RANKED_MIN_GAMES - lifetimeGames)
+                          : 0);
                 }
               } else {
                 stat.setTier(null);
                 stat.setSkillRating(0);
+                stat.setGamesNeeded(0);
               }
               return stat;
             })

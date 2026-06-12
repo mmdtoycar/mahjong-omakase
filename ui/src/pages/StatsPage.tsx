@@ -142,6 +142,7 @@ export default function StatsPage() {
         tier: stat?.tier ?? 'UNRANKED',
         skillRating: stat?.skillRating,
         totalGames: stat?.gamesPlayed ?? 0,
+        gamesNeeded: stat?.gamesNeeded,
       }
     })
     .sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0))
@@ -271,7 +272,7 @@ export default function StatsPage() {
                             <RankBadge
                               tier={s.tier}
                               size="sm"
-                              gamesNeeded={s.tier === 'UNRANKED' ? Math.max(0, 5 - s.gamesPlayed) : undefined}
+                              gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
                             />
                             {s.userName}
                           </span>
@@ -384,9 +385,7 @@ export default function StatsPage() {
                           <RankBadge
                             tier={p.tier ?? 'UNRANKED'}
                             size="sm"
-                            gamesNeeded={
-                              p.tier === 'UNRANKED' || !p.tier ? Math.max(0, 5 - (p.totalGames ?? 0)) : undefined
-                            }
+                            gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
                           />
                           {p.tier && p.tier !== 'UNRANKED' && (
                             <span className="player-tier-rating">{p.skillRating?.toFixed(0)}</span>

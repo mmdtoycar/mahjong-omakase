@@ -26,6 +26,11 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!me) return
 
+    // 切账号时立即清掉上一个账号的 stale 数据, 避免短暂闪烁错的段位
+    setStatsByMode({})
+    setDiscoveries([])
+    setTier(null)
+
     // 1. 各模式战绩并行拉取
     GAME_MODES.forEach((mode) => {
       fetchStats(mode.key)
@@ -45,7 +50,12 @@ export default function ProfilePage() {
       .catch(console.error)
 
     // 3. 段位 (国标 + 立直)
-    fetchPlayerTier(me.id).then(setTier).catch(console.error)
+    fetchPlayerTier(me.id)
+      .then(setTier)
+      .catch((e) => {
+        console.error(e)
+        setTier(null)
+      })
   }, [me])
 
   if (!me) {
