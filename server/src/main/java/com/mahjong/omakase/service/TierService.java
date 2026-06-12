@@ -168,6 +168,12 @@ public class TierService {
     return new LocalDateTime[] {startUtc, endUtc};
   }
 
+  /** Count completed sessions THIS MONTH (Pacific) where player participated, in given mode. */
+  public int monthlyGames(Player p, GameMode mode) {
+    LocalDateTime[] r = currentMonthUtcRange();
+    return monthlyGames(p, mode, r[0], r[1]);
+  }
+
   private int monthlyGames(Player p, GameMode mode, LocalDateTime startUtc, LocalDateTime endUtc) {
     return (int)
         sessionRepo.findAll().stream()

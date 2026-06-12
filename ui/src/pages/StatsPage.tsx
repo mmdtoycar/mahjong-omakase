@@ -128,7 +128,6 @@ export default function StatsPage() {
   const activeStats = stats.filter((s) => s.gamesPlayed > 0)
   const selectedSeason = seasons.find((s) => `${s.year}-${s.month}` === seasonKey)
 
-  // For 玩家 tab: merge registration info (from fetchPlayers) with current-mode tier (from fetchStats).
   // Sort by skillRating descending so top performers show first.
   const playerRows = players
     .map((p) => {
