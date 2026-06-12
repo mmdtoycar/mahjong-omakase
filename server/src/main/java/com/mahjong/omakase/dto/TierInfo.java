@@ -34,7 +34,15 @@ public class TierInfo {
   private double peakRating;
 
   public static TierInfo of(TierService tierService, Player p, GameMode mode) {
-    Tier t = tierService.computeTier(p, mode);
+    Long throneId =
+        (mode == GameMode.GUOBIAO || mode == GameMode.RIICHI)
+            ? tierService.findThroneId(mode)
+            : null;
+    return of(tierService, p, mode, throneId);
+  }
+
+  public static TierInfo of(TierService tierService, Player p, GameMode mode, Long throneId) {
+    Tier t = tierService.computeTier(p, mode, throneId);
     int level =
         switch (t) {
           case UNRANKED -> 0;

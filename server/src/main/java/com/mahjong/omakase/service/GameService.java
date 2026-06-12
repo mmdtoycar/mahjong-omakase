@@ -786,6 +786,11 @@ public class GameService {
     }
     final Map<Long, TierService.MonthlyTierInfo> historicalTiersFinal = historicalTiers;
 
+    final Long liveThroneId =
+        (historicalTiers == null && (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI))
+            ? tierService.findThroneId(gameMode)
+            : null;
+
     Map<Long, Integer> totalScores = new HashMap<>();
     Map<Long, Integer> gamesPlayed = new HashMap<>();
     Map<Long, Integer> wins = new HashMap<>();
@@ -957,7 +962,7 @@ public class GameService {
                     stat.setGamesNeeded(TierService.RANKED_MIN_GAMES);
                   }
                 } else {
-                  Tier liveTier = tierService.computeTier(p, gameMode);
+                  Tier liveTier = tierService.computeTier(p, gameMode, liveThroneId);
                   int lifetimeGames =
                       gameMode == GameMode.GUOBIAO ? p.getGamesGuobiao() : p.getGamesRiichi();
                   stat.setTier(liveTier.name());

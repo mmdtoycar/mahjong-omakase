@@ -156,13 +156,18 @@ public class TierService {
    */
   public void snapshotMonth(int year, int month) {
     LocalDateTime[] range = monthUtcRangeFor(java.time.LocalDate.of(year, month, 1));
+    // Bulk: 1 SQL per mode for the whole month, then map.get per (player, mode).
+    Map<GameMode, Map<Long, Integer>> monthlyByMode = new java.util.EnumMap<>(GameMode.class);
+    for (GameMode mode : List.of(GameMode.GUOBIAO, GameMode.RIICHI)) {
+      monthlyByMode.put(mode, monthlyGamesByPlayer(mode, range[0], range[1]));
+    }
     List<Player> all = playerRepo.findAll();
     int written = 0;
     for (Player p : all) {
       if (p.isBot()) continue;
       for (GameMode mode : List.of(GameMode.GUOBIAO, GameMode.RIICHI)) {
         if (getGames(p, mode) == 0) continue;
-        int mgames = monthlyGames(p, mode, range[0], range[1]);
+        int mgames = monthlyByMode.get(mode).getOrDefault(p.getId(), 0);
         double rating = getRating(p, mode);
         double peak = mode == GameMode.GUOBIAO ? p.getPeakSkillGuobiao() : p.getPeakSkillRiichi();
         PlayerMonthlySkill snap =
@@ -186,17 +191,23 @@ public class TierService {
 
   /** Compute tier for a player in a given mode, factoring in the throne (单 1 位). */
   public Tier computeTier(Player p, GameMode mode) {
-    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return Tier.UNRANKED;
-    // 该模式累计 ≥ 10 场才入段.
-    if (getGames(p, mode) < RANKED_MIN_GAMES) return Tier.UNRANKED;
+    Long throneId =
+        (mode == GameMode.GUOBIAO || mode == GameMode.RIICHI) ? findThroneId(mode) : null;
+    return computeTier(p, mode, throneId);
+  }
 
+  /**
+   * Throne-aware overload — caller passes the precomputed throne id so we don't redo {@code
+   * findThrone} (= {@code playerRepo.findAll()} + monthly count) for every player in a stats
+   * response. Pass {@code null} when no qualified throne holder exists.
+   */
+  public Tier computeTier(Player p, GameMode mode, Long throneId) {
+    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return Tier.UNRANKED;
+    if (getGames(p, mode) < RANKED_MIN_GAMES) return Tier.UNRANKED;
     double rating = getRating(p, mode);
     if (rating < LV2_CUTOFF) return Tier.LV1;
     if (rating < LV3_CUTOFF) return Tier.LV2;
-
-    // LV3 vs LV4_THRONE: only the single highest-rated qualified player gets the throne.
-    Player throne = findThrone(mode);
-    return (throne != null && throne.getId().equals(p.getId())) ? Tier.LV4_THRONE : Tier.LV3;
+    return (throneId != null && throneId.equals(p.getId())) ? Tier.LV4_THRONE : Tier.LV3;
   }
 
   /**
@@ -205,20 +216,28 @@ public class TierService {
    */
   public Player findThrone(GameMode mode) {
     LocalDateTime[] monthRange = currentMonthUtcRange();
+    Map<Long, Integer> monthly = monthlyGamesByPlayer(mode, monthRange[0], monthRange[1]);
     List<Player> qualified =
         playerRepo.findAll().stream()
             .filter(p -> !p.isBot())
             .filter(p -> getGames(p, mode) >= RANKED_MIN_GAMES)
             .filter(p -> getRating(p, mode) >= LV3_CUTOFF)
-            .filter(
-                p ->
-                    monthlyGames(p, mode, monthRange[0], monthRange[1]) >= THRONE_MONTHLY_MIN_GAMES)
+            .filter(p -> monthly.getOrDefault(p.getId(), 0) >= THRONE_MONTHLY_MIN_GAMES)
             .toList();
     if (qualified.isEmpty()) return null;
     double topRating =
         qualified.stream().mapToDouble(p -> getRating(p, mode)).max().orElse(Double.NaN);
     List<Player> top = qualified.stream().filter(p -> getRating(p, mode) == topRating).toList();
     return top.size() == 1 ? top.get(0) : null;
+  }
+
+  /**
+   * Just the throne's player id (or null) — saves loading the full Player when only the id is
+   * needed.
+   */
+  public Long findThroneId(GameMode mode) {
+    Player throne = findThrone(mode);
+    return throne != null ? throne.getId() : null;
   }
 
   /** Snapshot of one player's tier for a historical month. */
@@ -295,9 +314,10 @@ public class TierService {
       return out;
     }
     Map<Long, Tier> out = new HashMap<>();
+    Long throneId = findThroneId(mode);
     for (Player p : playerRepo.findAll()) {
       if (p.isBot()) continue;
-      out.put(p.getId(), computeTier(p, mode));
+      out.put(p.getId(), computeTier(p, mode, throneId));
     }
     return out;
   }
@@ -330,20 +350,22 @@ public class TierService {
     return monthlyGames(p, mode, r[0], r[1]);
   }
 
+  /**
+   * Bulk: per-player count of completed sessions in [start, end) for a mode. One SQL — replaces
+   * per-player {@code findAll}+filter scans that were causing N+1 lazy collection loads on the
+   * stats / session-list / profile pages.
+   */
+  public Map<Long, Integer> monthlyGamesByPlayer(
+      GameMode mode, LocalDateTime startUtc, LocalDateTime endUtc) {
+    Map<Long, Integer> out = new HashMap<>();
+    for (Object[] row : sessionRepo.countMonthlyGamesByPlayer(mode, startUtc, endUtc)) {
+      out.put((Long) row[0], ((Number) row[1]).intValue());
+    }
+    return out;
+  }
+
   private int monthlyGames(Player p, GameMode mode, LocalDateTime startUtc, LocalDateTime endUtc) {
-    return (int)
-        sessionRepo.findAll().stream()
-            .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
-            .filter(s -> s.getGameMode() == mode)
-            .filter(s -> !s.getCreatedAt().isBefore(startUtc) && s.getCreatedAt().isBefore(endUtc))
-            .filter(
-                s ->
-                    s.getPlayers().stream()
-                        .anyMatch(
-                            gsp ->
-                                gsp.getPlayer() != null
-                                    && gsp.getPlayer().getId().equals(p.getId())))
-            .count();
+    return monthlyGamesByPlayer(mode, startUtc, endUtc).getOrDefault(p.getId(), 0);
   }
 
   // ===== Backfill =====
