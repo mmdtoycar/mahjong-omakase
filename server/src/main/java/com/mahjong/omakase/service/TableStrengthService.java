@@ -60,14 +60,31 @@ public class TableStrengthService {
    */
   public TableStrength compute(List<Player> players, GameMode mode, LocalDateTime sessionDate) {
     if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return null;
+    Map<Long, Tier> tierByPlayer =
+        sessionDate != null ? tierService.resolveTiersForDate(mode, sessionDate) : Map.of();
+    Map<Long, Integer> monthlyByPlayer =
+        sessionDate != null
+            ? tierService.monthlyGamesByPlayerForReferenceDate(mode, sessionDate)
+            : Map.of();
+    return compute(players, mode, tierByPlayer, monthlyByPlayer);
+  }
+
+  /**
+   * Precomputed-map overload — caller provides the per-(mode, month) tier and monthly-games maps so
+   * a request that summarizes 150 sessions doesn't redo {@code resolveTiersForDate} + {@code
+   * monthlyGamesByPlayer} 150 times. {@link GameService#getAllSessionSummaries} groups sessions by
+   * (mode, PT year-month) and reuses one map per group.
+   */
+  public TableStrength compute(
+      List<Player> players,
+      GameMode mode,
+      Map<Long, Tier> tierByPlayer,
+      Map<Long, Integer> monthlyByPlayer) {
+    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return null;
     if (players == null) return TableStrength.BAI_QUE_LIN;
 
     List<Player> humans = players.stream().filter(p -> p != null && !p.isBot()).toList();
     if (humans.size() < 2) return TableStrength.BAI_QUE_LIN;
-
-    // Tier per player AT THE TIME of the session — snapshot for past months, live for current.
-    Map<Long, Tier> tierByPlayer =
-        sessionDate != null ? tierService.resolveTiersForDate(mode, sessionDate) : Map.of();
 
     int stableTop = 0;
     int lv3Count = 0;
@@ -77,10 +94,7 @@ public class TableStrengthService {
       Tier t = tierByPlayer.getOrDefault(p.getId(), tierService.computeTier(p, mode));
       if (t == Tier.LV3 || t == Tier.LV4_THRONE) {
         lv3Count++;
-        int monthlyGames =
-            sessionDate != null
-                ? tierService.monthlyGamesForReferenceDate(p, mode, sessionDate)
-                : tierService.monthlyGames(p, mode);
+        int monthlyGames = monthlyByPlayer.getOrDefault(p.getId(), 0);
         if (monthlyGames >= STABLE_TOP_MONTHLY_GAMES) {
           stableTop++;
         }

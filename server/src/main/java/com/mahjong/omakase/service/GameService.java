@@ -243,30 +243,55 @@ public class GameService {
 
   @Transactional(readOnly = true)
   public List<SessionSummaryResponse> getAllSessionSummaries() {
-    return sessionRepo.findAllByOrderByCreatedAtDesc().stream().map(this::toSummary).toList();
+    List<GameSession> sessions = sessionRepo.findAllByOrderByCreatedAtDesc();
+    Map<String, Map<Long, Tier>> tiersCache = new HashMap<>();
+    Map<String, Map<Long, Integer>> monthlyGamesCache = new HashMap<>();
+    return sessions.stream().map(s -> toSummary(s, tiersCache, monthlyGamesCache)).toList();
   }
 
-  private SessionSummaryResponse toSummary(GameSession s) {
+  private String monthCacheKey(GameMode mode, LocalDateTime sessionUtc) {
+    java.time.LocalDate pt =
+        sessionUtc.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDate();
+    return mode.name() + ":" + pt.getYear() + "-" + pt.getMonthValue();
+  }
+
+  private SessionSummaryResponse toSummary(
+      GameSession s,
+      Map<String, Map<Long, Tier>> tiersCache,
+      Map<String, Map<Long, Integer>> monthlyGamesCache) {
     SessionSummaryResponse r = SessionSummaryResponse.from(s);
     GameMode mode = s.getGameMode();
     if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return r;
     List<Player> players =
         s.getPlayers().stream().map(GameSessionPlayer::getPlayer).filter(Objects::nonNull).toList();
+
+    String key = monthCacheKey(mode, s.getCreatedAt());
+    Map<Long, Tier> tiers =
+        tiersCache.computeIfAbsent(
+            key, k -> tierService.resolveTiersForDate(mode, s.getCreatedAt()));
+    Map<Long, Integer> monthly =
+        monthlyGamesCache.computeIfAbsent(
+            key, k -> tierService.monthlyGamesByPlayerForReferenceDate(mode, s.getCreatedAt()));
+
     r.setTableStrength(
-        tableStrengthService.compute(players, mode, s.getCreatedAt()).getDisplayName());
-    annotateRankingsTier(r.getRankings(), players, mode);
+        tableStrengthService.compute(players, mode, tiers, monthly).getDisplayName());
+    annotateRankingsTier(r.getRankings(), players, tiers, mode);
     return r;
   }
 
   private void annotateRankingsTier(
-      List<PlayerPerformanceDTO> rankings, List<Player> players, GameMode mode) {
+      List<PlayerPerformanceDTO> rankings,
+      List<Player> players,
+      Map<Long, Tier> tiers,
+      GameMode mode) {
     if (rankings == null) return;
     Map<Long, Player> byId = new HashMap<>();
     for (Player p : players) byId.put(p.getId(), p);
     for (PlayerPerformanceDTO row : rankings) {
       Player p = byId.get(row.getPlayerId());
       if (p == null) continue;
-      row.setTier(tierService.computeTier(p, mode).name());
+      Tier t = tiers.get(p.getId());
+      row.setTier((t != null ? t : tierService.computeTier(p, mode)).name());
     }
   }
 

@@ -364,6 +364,15 @@ public class TierService {
     return out;
   }
 
+  /** Convenience: bulk monthly games for the PT month containing the given UTC reference date. */
+  public Map<Long, Integer> monthlyGamesByPlayerForReferenceDate(
+      GameMode mode, LocalDateTime referenceUtc) {
+    java.time.LocalDate pacificDate =
+        referenceUtc.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDate();
+    LocalDateTime[] r = monthUtcRangeFor(pacificDate);
+    return monthlyGamesByPlayer(mode, r[0], r[1]);
+  }
+
   private int monthlyGames(Player p, GameMode mode, LocalDateTime startUtc, LocalDateTime endUtc) {
     return monthlyGamesByPlayer(mode, startUtc, endUtc).getOrDefault(p.getId(), 0);
   }
