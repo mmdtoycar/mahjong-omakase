@@ -8,7 +8,7 @@ interface Props {
 }
 
 const TABLE_META: Record<string, { emoji: string; theme: string }> = {
-  凤凰台: { emoji: '🐦‍🔥', theme: 'phoenix' },
+  凤凰台: { emoji: '🦚', theme: 'phoenix' },
   麒麟阁: { emoji: '🦄', theme: 'qilin' },
   太极殿: { emoji: '☯️', theme: 'taiji' },
   困龙阙: { emoji: '🐉', theme: 'dragon' },
