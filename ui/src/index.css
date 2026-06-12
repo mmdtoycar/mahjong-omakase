@@ -1369,17 +1369,16 @@ tr:hover td {
   filter: drop-shadow(0 0 3px rgb(255 200 50 / 80%));
 }
 
-/* 麒麟阁 — 深金渐变 + 白字, emoji 跟金色背景对比拉满 */
+/* 麒麟阁 — 金辉渐变 + 深棕字 */
 .table-strength-qilin {
-  background: linear-gradient(135deg, #d4a017 0%, #8b6500 100%);
-  color: #fff;
-  border: 1px solid #6b4f00;
-  box-shadow: 0 1px 3px rgb(139 101 0 / 30%), inset 0 1px 0 rgb(255 255 255 / 25%);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  background: linear-gradient(135deg, #fcd34d 0%, #d4a017 100%);
+  color: #5b3a0f;
+  border: 1px solid #b88800;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 40%);
 }
 
 .table-strength-qilin .table-strength-emoji {
-  filter: drop-shadow(0 0 2px rgb(255 255 255 / 60%));
+  filter: drop-shadow(0 1px 2px rgb(91 58 15 / 50%));
 }
 
 /* 太极殿 — 玉石青绿, 阴阳渐变 */
