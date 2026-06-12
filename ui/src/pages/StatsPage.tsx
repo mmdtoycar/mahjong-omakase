@@ -129,15 +129,18 @@ export default function StatsPage() {
   const selectedSeason = seasons.find((s) => `${s.year}-${s.month}` === seasonKey)
 
   // For 玩家 tab: merge registration info (from fetchPlayers) with current-mode tier (from fetchStats).
-  const playerRows = players.map((p) => {
-    const stat = stats.find((s) => s.playerId === p.id)
-    return {
-      ...p,
-      tier: stat?.tier ?? 'UNRANKED',
-      skillRating: stat?.skillRating,
-      totalGames: stat?.gamesPlayed ?? 0,
-    }
-  })
+  // Sort by skillRating descending so top performers show first.
+  const playerRows = players
+    .map((p) => {
+      const stat = stats.find((s) => s.playerId === p.id)
+      return {
+        ...p,
+        tier: stat?.tier ?? 'UNRANKED',
+        skillRating: stat?.skillRating,
+        totalGames: stat?.gamesPlayed ?? 0,
+      }
+    })
+    .sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0))
 
   if (loading)
     return (

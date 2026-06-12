@@ -14,7 +14,7 @@ interface Props {
   className?: string
 }
 
-const SIZE_PX: Record<'sm' | 'md' | 'lg', number> = { sm: 22, md: 56, lg: 140 }
+const SIZE_PX: Record<'sm' | 'md' | 'lg', number> = { sm: 32, md: 56, lg: 140 }
 
 const TIER_TO_IMAGE: Record<TierKey, string | null> = {
   UNRANKED: null,

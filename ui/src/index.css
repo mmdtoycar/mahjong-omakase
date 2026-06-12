@@ -1261,9 +1261,9 @@ tr:hover td {
 }
 
 .rank-badge-unranked-sm {
-  width: 22px;
-  height: 22px;
-  font-size: 0.65rem;
+  width: 32px;
+  height: 32px;
+  font-size: 0.7rem;
   padding: 0 4px;
   white-space: nowrap;
 }

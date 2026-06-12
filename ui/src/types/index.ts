@@ -19,16 +19,16 @@ export const GAME_MODES: { key: GameModeKey; label: string; fanTableTitle: strin
     fanTableSubtitle: '快速对照查询中国麻将竞赛规则（国标麻将）的81种番型及分数。',
   },
   {
-    key: 'DONGBEI',
-    label: '东北麻将',
-    fanTableTitle: '东北麻将规则',
-    fanTableSubtitle: '学习和查询带有闭门、飘、手把一、旋风杠等浓厚地方特色的沈阳穷胡规则。',
-  },
-  {
     key: 'RIICHI',
     label: '立直麻将',
     fanTableTitle: '立直麻将番表',
     fanTableSubtitle: '快速对照查询立直麻将（以M.League规则为准）的各级役种及番数。',
+  },
+  {
+    key: 'DONGBEI',
+    label: '东北麻将',
+    fanTableTitle: '东北麻将规则',
+    fanTableSubtitle: '学习和查询带有闭门、飘、手把一、旋风杠等浓厚地方特色的沈阳穷胡规则。',
   },
 ]
 

@@ -8,6 +8,7 @@ import com.mahjong.omakase.model.SessionStatus;
 import com.mahjong.omakase.model.Tier;
 import com.mahjong.omakase.repository.GameSessionRepository;
 import com.mahjong.omakase.repository.PlayerRepository;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -41,7 +42,14 @@ public class TierService {
   // Tier cutoffs (locked: < 1400 / 1400-1500 / > 1500 + throne).
   public static final double LV2_CUTOFF = 1400.0;
   public static final double LV3_CUTOFF = 1500.0;
-  public static final int RANKED_MIN_GAMES = 10;
+  public static final int RANKED_MIN_GAMES = 5;
+
+  /** 王座(斗战圣佛)还要本月至少 N 场, 否则不流转给不活跃高分玩家. */
+  public static final int THRONE_MONTHLY_MIN_GAMES = 5;
+
+  // Pacific timezone — month boundary uses PT.
+  private static final java.time.ZoneId ZONE_PACIFIC = java.time.ZoneId.of("America/Los_Angeles");
+  private static final java.time.ZoneId ZONE_UTC = java.time.ZoneId.of("UTC");
 
   // Monthly soft reset: new = MEAN + ALPHA * (old - MEAN). 0.7 = mild regression to the mean.
   public static final double RESET_ALPHA = 0.7;
@@ -135,14 +143,45 @@ public class TierService {
     return (throne != null && throne.getId().equals(p.getId())) ? Tier.LV4_THRONE : Tier.LV3;
   }
 
-  /** Find the throne holder for a mode, or null if no qualified player. */
+  /** Find the throne holder for a mode. 王座 还要求本月活跃 (≥ THRONE_MONTHLY_MIN_GAMES 场). */
   public Player findThrone(GameMode mode) {
+    LocalDateTime[] monthRange = currentMonthUtcRange();
     return playerRepo.findAll().stream()
         .filter(p -> !p.isBot())
         .filter(p -> getGames(p, mode) >= RANKED_MIN_GAMES)
         .filter(p -> getRating(p, mode) >= LV3_CUTOFF)
+        .filter(
+            p -> monthlyGames(p, mode, monthRange[0], monthRange[1]) >= THRONE_MONTHLY_MIN_GAMES)
         .max(Comparator.comparingDouble(p -> getRating(p, mode)))
         .orElse(null);
+  }
+
+  private LocalDateTime[] currentMonthUtcRange() {
+    java.time.LocalDate today = java.time.LocalDate.now(ZONE_PACIFIC);
+    java.time.YearMonth ym = java.time.YearMonth.from(today);
+    LocalDateTime startPacific = ym.atDay(1).atStartOfDay();
+    LocalDateTime endPacific = ym.plusMonths(1).atDay(1).atStartOfDay();
+    LocalDateTime startUtc =
+        startPacific.atZone(ZONE_PACIFIC).withZoneSameInstant(ZONE_UTC).toLocalDateTime();
+    LocalDateTime endUtc =
+        endPacific.atZone(ZONE_PACIFIC).withZoneSameInstant(ZONE_UTC).toLocalDateTime();
+    return new LocalDateTime[] {startUtc, endUtc};
+  }
+
+  private int monthlyGames(Player p, GameMode mode, LocalDateTime startUtc, LocalDateTime endUtc) {
+    return (int)
+        sessionRepo.findAll().stream()
+            .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
+            .filter(s -> s.getGameMode() == mode)
+            .filter(s -> !s.getCreatedAt().isBefore(startUtc) && s.getCreatedAt().isBefore(endUtc))
+            .filter(
+                s ->
+                    s.getPlayers().stream()
+                        .anyMatch(
+                            gsp ->
+                                gsp.getPlayer() != null
+                                    && gsp.getPlayer().getId().equals(p.getId())))
+            .count();
   }
 
   // ===== Backfill =====

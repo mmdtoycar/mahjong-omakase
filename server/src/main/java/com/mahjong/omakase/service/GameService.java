@@ -916,13 +916,13 @@ public class GameService {
               stat.setAvgDealInPoints(
                   di > 0 ? (double) dealInPointsSum.getOrDefault(p.getId(), 0) / di : 0);
 
-              // Tier in the queried mode (only GUOBIAO/RIICHI track ratings).
+              // Tier in the queried mode (only GUOBIAO/RIICHI track ratings; DONGBEI gets null).
               if (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI) {
                 stat.setTier(tierService.computeTier(p, gameMode).name());
                 stat.setSkillRating(
                     gameMode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi());
               } else {
-                stat.setTier("UNRANKED");
+                stat.setTier(null);
                 stat.setSkillRating(0);
               }
               return stat;
