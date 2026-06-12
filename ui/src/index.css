@@ -1335,22 +1335,22 @@ tr:hover td {
 .table-strength {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
+  gap: 6px;
+  padding: 5px 14px;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.3px;
   white-space: nowrap;
 }
 
 .table-strength-md {
-  font-size: 0.85rem;
-  padding: 4px 12px;
+  font-size: 1.1rem;
+  padding: 7px 18px;
 }
 
 .table-strength-emoji {
-  font-size: 1em;
+  font-size: 1.15em;
 }
 
 /* 凤凰台 — 顶配, 烈焰红金 + 动态火焰外圈 */
