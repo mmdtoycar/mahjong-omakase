@@ -14,6 +14,11 @@ public class PlayerStatsResponse {
   private double tieredBonus;
   private double adminBonus;
   private double fanDiscoveryBonus;
+  private int roundsPlayed;
+  private int handWins;
+  private int dealIns;
+  private double avgWinPoints;
+  private double avgDealInPoints;
 
   public Long getPlayerId() {
     return playerId;
@@ -117,5 +122,45 @@ public class PlayerStatsResponse {
 
   public void setFanDiscoveryBonus(double fanDiscoveryBonus) {
     this.fanDiscoveryBonus = fanDiscoveryBonus;
+  }
+
+  public int getRoundsPlayed() {
+    return roundsPlayed;
+  }
+
+  public void setRoundsPlayed(int roundsPlayed) {
+    this.roundsPlayed = roundsPlayed;
+  }
+
+  public int getHandWins() {
+    return handWins;
+  }
+
+  public void setHandWins(int handWins) {
+    this.handWins = handWins;
+  }
+
+  public int getDealIns() {
+    return dealIns;
+  }
+
+  public void setDealIns(int dealIns) {
+    this.dealIns = dealIns;
+  }
+
+  public double getAvgWinPoints() {
+    return avgWinPoints;
+  }
+
+  public void setAvgWinPoints(double avgWinPoints) {
+    this.avgWinPoints = avgWinPoints;
+  }
+
+  public double getAvgDealInPoints() {
+    return avgDealInPoints;
+  }
+
+  public void setAvgDealInPoints(double avgDealInPoints) {
+    this.avgDealInPoints = avgDealInPoints;
   }
 }

@@ -223,6 +223,51 @@ export default function ProfilePage() {
               </div>
             )}
 
+            {/* 立直专属数据统计:和牌率/放铳率/平均打点/平均铳点。其他模式有不同的计分语义,
+                这些指标在国标/东北下意义不大,所以不渲染。 */}
+            {selectedMode === 'RIICHI' && hasStats && stats.roundsPlayed > 0 && (
+              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
+                <h4
+                  style={{
+                    margin: '0 0 16px 0',
+                    fontSize: '15px',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  📈 数据统计
+                </h4>
+                <div className="profile-stats-grid">
+                  <div className="profile-stat-card">
+                    <div className="profile-stat-value profile-stat-value-teal">
+                      {((stats.handWins / stats.roundsPlayed) * 100).toFixed(1)}%
+                    </div>
+                    <div className="profile-stat-label">和牌率</div>
+                  </div>
+                  <div className="profile-stat-card">
+                    <div className="profile-stat-value profile-stat-value-teal">
+                      {((stats.dealIns / stats.roundsPlayed) * 100).toFixed(1)}%
+                    </div>
+                    <div className="profile-stat-label">放铳率</div>
+                  </div>
+                  <div className="profile-stat-card">
+                    <div className="profile-stat-value profile-stat-value-gold">
+                      {stats.handWins > 0 ? Math.round(stats.avgWinPoints).toLocaleString() : '-'}
+                    </div>
+                    <div className="profile-stat-label">平均打点</div>
+                  </div>
+                  <div className="profile-stat-card">
+                    <div className="profile-stat-value profile-stat-value-gold">
+                      {stats.dealIns > 0 ? Math.round(stats.avgDealInPoints).toLocaleString() : '-'}
+                    </div>
+                    <div className="profile-stat-label">平均铳点</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 稀有番种成就只在国标模式下显示(其他模式没有番种系统) */}
             {selectedMode === 'GUOBIAO' && (
               <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
