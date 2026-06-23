@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -15,12 +16,12 @@ import org.springframework.context.annotation.Configuration;
  * 没有时区标记的 ISO 字符串在浏览器里会被当成本地时间, 在 PT 浏览器上会把 UTC 时间显示成 PT 数字, 即 main 页"显示成 UTC". 加上 'Z' 后 `new
  * Date(...)` 准确解析为 UTC instant, 前端再用 `toLocaleString({ timeZone: 'America/Los_Angeles' })` 转成 PT
  * 即可.
+ *
+ * <p>使用 {@link DateTimeFormatter#ISO_INSTANT} 保留源 {@code LocalDateTime} 自带的精度 (秒 / 毫秒 / 纳秒 都按需输出),
+ * 不强行截到秒.
  */
 @Configuration
 public class JacksonConfig {
-
-  private static final DateTimeFormatter UTC_ISO =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
   @Bean
   Jackson2ObjectMapperBuilderCustomizer localDateTimeAsUtcCustomizer() {
@@ -36,7 +37,7 @@ public class JacksonConfig {
     @Override
     public void serialize(LocalDateTime value, JsonGenerator gen, SerializerProvider provider)
         throws IOException {
-      gen.writeString(value.format(UTC_ISO));
+      gen.writeString(DateTimeFormatter.ISO_INSTANT.format(value.toInstant(ZoneOffset.UTC)));
     }
   }
 }
