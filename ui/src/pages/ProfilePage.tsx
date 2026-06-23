@@ -71,7 +71,9 @@ export default function ProfilePage() {
     )
   }
 
-  const formattedDate = me.createdAt ? new Date(me.createdAt).toLocaleString('zh-CN') : '未知时间'
+  const formattedDate = me.createdAt
+    ? new Date(me.createdAt).toLocaleString('zh-CN', { timeZone: 'America/Los_Angeles' })
+    : '未知时间'
   const displayName = me.firstName ? `${me.firstName} ${me.lastName}`.trim() : me.userName
 
   // 提交账号设置:先查后端有没有匹配的老账号,再用对应文案确认
@@ -337,7 +339,8 @@ export default function ProfilePage() {
                             🏅 {fd.fanName}
                           </div>
                           <div style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '4px' }}>
-                            发现日期: {new Date(fd.discoveredAt).toLocaleDateString()}
+                            发现日期:{' '}
+                            {new Date(fd.discoveredAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}
                           </div>
                         </div>
                         <span className="profile-status-pill profile-status-pill-warning">+{fd.bonusRp || 0} RP</span>
