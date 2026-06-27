@@ -4,6 +4,8 @@ import com.mahjong.omakase.model.FanDiscovery;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -15,4 +17,8 @@ public interface FanDiscoveryRepository extends JpaRepository<FanDiscovery, Long
   List<FanDiscovery> findBySeason(String season);
 
   List<FanDiscovery> findByRoundGameSessionId(Long sessionId);
+
+  @Modifying(clearAutomatically = true)
+  @Query("UPDATE FanDiscovery fd SET fd.player.id = :toId WHERE fd.player.id = :fromId")
+  void reassignPlayer(Long fromId, Long toId);
 }

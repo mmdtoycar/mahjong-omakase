@@ -5,7 +5,11 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.mahjong.omakase.model.Player;
+import com.mahjong.omakase.repository.FanDiscoveryRepository;
+import com.mahjong.omakase.repository.GameSessionPlayerRepository;
+import com.mahjong.omakase.repository.PlayerMonthlySkillRepository;
 import com.mahjong.omakase.repository.PlayerRepository;
+import com.mahjong.omakase.repository.RoundScoreRepository;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -23,12 +27,25 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
   private final PlayerRepository playerRepo;
+  private final GameSessionPlayerRepository gameSessionPlayerRepo;
+  private final RoundScoreRepository roundScoreRepo;
+  private final FanDiscoveryRepository fanDiscoveryRepo;
+  private final PlayerMonthlySkillRepository monthlySkillRepo;
 
   @Value("${google.client-id:123456-dummy.apps.googleusercontent.com}")
   private String googleClientId;
 
-  public AuthController(PlayerRepository playerRepo) {
+  public AuthController(
+      PlayerRepository playerRepo,
+      GameSessionPlayerRepository gameSessionPlayerRepo,
+      RoundScoreRepository roundScoreRepo,
+      FanDiscoveryRepository fanDiscoveryRepo,
+      PlayerMonthlySkillRepository monthlySkillRepo) {
     this.playerRepo = playerRepo;
+    this.gameSessionPlayerRepo = gameSessionPlayerRepo;
+    this.roundScoreRepo = roundScoreRepo;
+    this.fanDiscoveryRepo = fanDiscoveryRepo;
+    this.monthlySkillRepo = monthlySkillRepo;
   }
 
   private String redactEmail(String email) {
@@ -211,33 +228,43 @@ public class AuthController {
 
     boolean claimedExisting = target != null;
 
-    // 2. Fall back to creating a fresh player record.
-    if (target == null) {
-      // Reject if the userName collides with someone else's bound (email != null) account.
-      // Case-insensitive to match the lookup above and the typical DB collation.
-      if (playerRepo.existsByUserNameIgnoreCase(trimmedUserName)) {
-        return ResponseEntity.badRequest()
-            .body(Map.of("error", "用户名「" + trimmedUserName + "」已被占用,请换一个"));
+    if (claimedExisting) {
+      // Claim path: merge current's identity (and any in-flight game references) into the
+      // legacy target, then delete current. Reassigning FKs first is required because current
+      // may already be sitting at a table / have round scores from the brief temp window.
+      gameSessionPlayerRepo.reassignPlayer(current.getId(), target.getId());
+      roundScoreRepo.reassignPlayer(current.getId(), target.getId());
+      fanDiscoveryRepo.reassignPlayer(current.getId(), target.getId());
+      monthlySkillRepo.deleteByPlayerId(current.getId());
+
+      String currentEmail = current.getEmail();
+      String currentPicture = current.getPictureUrl();
+      current.setEmail(null);
+      current.setToken(null);
+      playerRepo.saveAndFlush(current);
+
+      target.setEmail(currentEmail);
+      target.setPictureUrl(currentPicture);
+      target.setToken(token);
+      target.setMerged(true);
+      playerRepo.saveAndFlush(target);
+
+      playerRepo.delete(current);
+    } else {
+      // Register path: rename current in place. No new Player record and no delete — avoids the
+      // FK violation when current is already referenced by game_session_players / round_scores
+      // from a game that started during the onboarding window.
+      if (playerRepo.existsByUserNameIgnoreCase(trimmedUserName)
+          && !trimmedUserName.equalsIgnoreCase(current.getUserName())) {
+        return ResponseEntity.badRequest().body(Map.of("error", "用户名已被占用,请换一个"));
       }
-      target = playerRepo.save(new Player(trimmedUserName, trimmedFirstName, trimmedLastName));
+      current.setUserName(trimmedUserName);
+      current.setFirstName(trimmedFirstName);
+      current.setLastName(trimmedLastName);
+      current.setMerged(true);
+      playerRepo.saveAndFlush(current);
+      target = current;
     }
-
-    // 3. Merge current Google identity (email/picture/token) into target, mark merged, delete temp.
-    String currentEmail = current.getEmail();
-    String currentPicture = current.getPictureUrl();
-
-    // Release current's email/token first so the unique-index constraint doesn't trip on flush.
-    current.setEmail(null);
-    current.setToken(null);
-    playerRepo.saveAndFlush(current);
-
-    target.setEmail(currentEmail);
-    target.setPictureUrl(currentPicture);
-    target.setToken(token);
-    target.setMerged(true);
-    playerRepo.saveAndFlush(target);
-
-    playerRepo.delete(current);
 
     log.info(
         "Profile setup complete (mode={}) for username={}, id={}",

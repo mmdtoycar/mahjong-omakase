@@ -39,7 +39,11 @@ public interface RoundScoreRepository extends JpaRepository<RoundScore, Long> {
           + "WHERE r.gameSession.id IN :sessionIds AND rs.player IS NOT NULL")
   List<Object[]> getRoundDetailsBySessions(List<Long> sessionIds);
 
-  @Modifying
+  @Modifying(clearAutomatically = true)
   @Query("UPDATE RoundScore rs SET rs.player = null WHERE rs.player.id = :playerId")
   void nullifyPlayerScores(Long playerId);
+
+  @Modifying(clearAutomatically = true)
+  @Query("UPDATE RoundScore rs SET rs.player.id = :toId WHERE rs.player.id = :fromId")
+  void reassignPlayer(Long fromId, Long toId);
 }

@@ -50,6 +50,10 @@ export default function SessionPage() {
     }
   }, [])
 
+  const handleCalcError = useCallback((msg: string | null) => {
+    setCalcError(msg || '')
+  }, [])
+
   const handleRiichiCalcSelect = useCallback(
     (
       s: number | null,
@@ -598,7 +602,7 @@ export default function SessionPage() {
                       <RiichiCalculator
                         key="riichi-calc"
                         onSelectScore={handleRiichiCalcSelect}
-                        onError={(msg) => setCalcError(msg || '')}
+                        onError={handleCalcError}
                         initialOptions={{
                           changfeng: gameState.prevalentWind,
                           zifeng: winnerMenfeng,

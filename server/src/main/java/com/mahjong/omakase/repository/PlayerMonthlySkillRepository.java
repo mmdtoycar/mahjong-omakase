@@ -16,7 +16,7 @@ public interface PlayerMonthlySkillRepository extends JpaRepository<PlayerMonthl
   Optional<PlayerMonthlySkill> findByPlayerIdAndModeAndYearAndMonth(
       Long playerId, GameMode mode, int year, int month);
 
-  @Modifying
+  @Modifying(clearAutomatically = true)
   @Query("DELETE FROM PlayerMonthlySkill p WHERE p.player.id = :playerId")
   void deleteByPlayerId(@Param("playerId") Long playerId);
 }
