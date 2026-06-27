@@ -42,14 +42,4 @@ public interface RoundScoreRepository extends JpaRepository<RoundScore, Long> {
   @Modifying(clearAutomatically = true)
   @Query("UPDATE RoundScore rs SET rs.player = null WHERE rs.player.id = :playerId")
   void nullifyPlayerScores(Long playerId);
-
-  /**
-   * Native bulk FK reassign. JPQL "SET rs.player.id = :toId" is not portably supported by Hibernate
-   * for path expressions in the SET clause, so we update the FK column directly.
-   */
-  @Modifying(clearAutomatically = true)
-  @Query(
-      value = "UPDATE round_scores SET player_id = :toId WHERE player_id = :fromId",
-      nativeQuery = true)
-  void reassignPlayer(Long fromId, Long toId);
 }

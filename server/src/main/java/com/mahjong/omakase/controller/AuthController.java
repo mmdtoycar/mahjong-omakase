@@ -5,12 +5,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.mahjong.omakase.model.Player;
-import com.mahjong.omakase.repository.FanDiscoveryRepository;
-import com.mahjong.omakase.repository.GameSessionPlayerRepository;
-import com.mahjong.omakase.repository.PlayerMonthlySkillRepository;
 import com.mahjong.omakase.repository.PlayerRepository;
-import com.mahjong.omakase.repository.RoundRepository;
-import com.mahjong.omakase.repository.RoundScoreRepository;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
@@ -31,28 +26,12 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
   private final PlayerRepository playerRepo;
-  private final GameSessionPlayerRepository gameSessionPlayerRepo;
-  private final RoundRepository roundRepo;
-  private final RoundScoreRepository roundScoreRepo;
-  private final FanDiscoveryRepository fanDiscoveryRepo;
-  private final PlayerMonthlySkillRepository monthlySkillRepo;
 
   @Value("${google.client-id:123456-dummy.apps.googleusercontent.com}")
   private String googleClientId;
 
-  public AuthController(
-      PlayerRepository playerRepo,
-      GameSessionPlayerRepository gameSessionPlayerRepo,
-      RoundRepository roundRepo,
-      RoundScoreRepository roundScoreRepo,
-      FanDiscoveryRepository fanDiscoveryRepo,
-      PlayerMonthlySkillRepository monthlySkillRepo) {
+  public AuthController(PlayerRepository playerRepo) {
     this.playerRepo = playerRepo;
-    this.gameSessionPlayerRepo = gameSessionPlayerRepo;
-    this.roundRepo = roundRepo;
-    this.roundScoreRepo = roundScoreRepo;
-    this.fanDiscoveryRepo = fanDiscoveryRepo;
-    this.monthlySkillRepo = monthlySkillRepo;
   }
 
   private String redactEmail(String email) {
@@ -110,10 +89,10 @@ public class AuthController {
    * <ul>
    *   <li>If a fully bound Player exists (merged=true) — rotate session token and return {token,
    *       player}.
-   *   <li>Otherwise (no Player, or a legacy unmerged Player from the old auto-create flow) — do NOT
-   *       touch the database. Return {pendingAuth: true, profile} so the frontend can route to
-   *       setup-profile. The Player record will be created or claimed only when the user commits to
-   *       a userName/firstName/lastName in setupProfile.
+   *   <li>Otherwise (no Player at all) — do NOT touch the database. Return {pendingAuth: true,
+   *       profile} so the frontend can route to setup-profile. The Player record is created (or a
+   *       legacy unbound row is claimed) only when the user commits to a
+   *       userName/firstName/lastName in setupProfile.
    * </ul>
    */
   @PostMapping("/google")
@@ -153,8 +132,7 @@ public class AuthController {
       return ResponseEntity.ok(Map.of("token", sessionToken, "player", player));
     }
 
-    // No bound Player yet (either first time, or a legacy unmerged Player from the old code).
-    // Do NOT write anything. Frontend will keep the credential and call setupProfile.
+    // No bound Player. Do NOT write anything; frontend keeps the credential and calls setupProfile.
     Map<String, Object> profileMap = new HashMap<>();
     profileMap.put("email", profile.email);
     profileMap.put("firstName", profile.firstName);
@@ -206,20 +184,21 @@ public class AuthController {
   /**
    * Atomic profile finalization. The frontend resends the Google credential alongside the desired
    * userName/firstName/lastName; we re-verify it here so the server is the sole authority on
-   * email/picture. Four cases:
+   * email/picture. Two cases:
    *
-   * <ol>
-   *   <li><b>register (clean)</b>: no Player for this email and no matching legacy → INSERT new.
-   *   <li><b>claim (clean)</b>: no Player for this email, matching legacy unbound player exists →
-   *       attach email/token/picture to that legacy row.
-   *   <li><b>legacy-register</b>: an unmerged Player already exists for this email (created by the
-   *       old auto-create code), no matching legacy → rename in place, mark merged.
-   *   <li><b>legacy-claim</b>: an unmerged Player + matching legacy → reassign all FK references
-   *       from the temp to legacy, then delete temp. Same migration logic as before.
-   * </ol>
+   * <ul>
+   *   <li><b>register</b>: no claimable legacy match → INSERT a brand-new Player carrying the
+   *       Google identity.
+   *   <li><b>claim</b>: a legacy unbound Player matches the form → UPDATE that row with
+   *       email/picture/token, mark merged.
+   * </ul>
    *
-   * Once the database stops accumulating new unmerged Players (this PR removes the auto-create
-   * branch from googleLogin), the legacy-* cases naturally drain and can be removed.
+   * <p>Pre-condition: no merged-or-unmerged Player already exists for this Google email. The
+   * preceding {@link #googleLogin} path lets fully-merged users in directly, so this endpoint
+   * should only ever see emails that don't yet have a Player row. As a safety net, we reject with
+   * 400 if an unmerged Player for this email is somehow still around (would only happen for users
+   * created by the pre-#136 auto-create code who haven't completed onboarding yet — admin monitors
+   * and they finish setup on the previous code path).
    */
   @Transactional
   @PostMapping("/setup-profile")
@@ -257,23 +236,30 @@ public class AuthController {
     String trimmedFirstName = firstName.trim();
     String trimmedLastName = lastName.trim();
 
-    Player existing = playerRepo.findByEmail(google.email).orElse(null);
-    if (existing != null && existing.isMerged()) {
-      return ResponseEntity.badRequest().body(Map.of("error", "该账户已经完成绑定，无法再次设置"));
+    Optional<Player> existing = playerRepo.findByEmail(google.email);
+    if (existing.isPresent()) {
+      // merged=true should never reach here (googleLogin path handles them), but defend anyway.
+      // merged=false means an unmerged holdover from the pre-#136 auto-create code — those have
+      // to complete onboarding via the old token-based code path before this PR ships, or via an
+      // out-of-band admin fix. Either way, /setup-profile in the new flow should not see them.
+      log.warn(
+          "setupProfile blocked: Player id={} already exists for email={} (merged={})",
+          existing.get().getId(),
+          redactEmail(google.email),
+          existing.get().isMerged());
+      return ResponseEntity.badRequest().body(Map.of("error", "该 Google 账号已存在历史记录, 请联系管理员"));
     }
 
     Player legacy =
         playerRepo
             .findClaimableLegacyPlayer(trimmedUserName, trimmedFirstName, trimmedLastName)
             .orElse(null);
-
     String sessionToken = newSessionToken();
     Player result;
     String mode;
 
-    if (existing == null && legacy == null) {
-      // Clean register: brand new user, no legacy to inherit. Single INSERT.
-      // Reject username collisions against bound accounts (case-insensitive).
+    if (legacy == null) {
+      // register: brand new user, no legacy match. Single INSERT.
       if (playerRepo.existsByUserNameIgnoreCase(trimmedUserName)) {
         return ResponseEntity.badRequest().body(Map.of("error", "用户名已被占用,请换一个"));
       }
@@ -284,60 +270,14 @@ public class AuthController {
       p.setMerged(true);
       result = playerRepo.saveAndFlush(p);
       mode = "register";
-
-    } else if (existing == null) {
-      // Clean claim: legacy != null here (previous branch ruled out both-null).
-      // No temp Player to clean up, just attach identity to the legacy row.
+    } else {
+      // claim: attach Google identity to the matching unbound legacy row.
       legacy.setEmail(google.email);
       legacy.setPictureUrl(google.pictureUrl);
       legacy.setToken(sessionToken);
       legacy.setMerged(true);
       result = playerRepo.saveAndFlush(legacy);
       mode = "claim";
-
-    } else if (legacy == null) {
-      // Legacy holdover, register path: an unmerged Player already exists (old auto-create code)
-      // and no claimable legacy matches the form. Rename in place — preserves all FK references.
-      if (playerRepo.existsByUserNameIgnoreCase(trimmedUserName)
-          && !trimmedUserName.equalsIgnoreCase(existing.getUserName())) {
-        return ResponseEntity.badRequest().body(Map.of("error", "用户名已被占用,请换一个"));
-      }
-      existing.setUserName(trimmedUserName);
-      existing.setFirstName(trimmedFirstName);
-      existing.setLastName(trimmedLastName);
-      if (google.pictureUrl != null) {
-        existing.setPictureUrl(google.pictureUrl);
-      }
-      existing.setToken(sessionToken);
-      existing.setMerged(true);
-      result = playerRepo.saveAndFlush(existing);
-      mode = "legacy-register";
-
-    } else {
-      // Legacy holdover, claim path: unmerged Player + claimable legacy match. Migrate all FK
-      // references from existing → legacy, then delete existing. See repository methods for the
-      // four tables involved (game_session_players, round_scores, fan_discoveries, rounds.winner_id
-      // / deal_in_player_id) and the monthly_skill snapshot invalidation on both sides.
-      gameSessionPlayerRepo.reassignPlayer(existing.getId(), legacy.getId());
-      roundScoreRepo.reassignPlayer(existing.getId(), legacy.getId());
-      fanDiscoveryRepo.reassignPlayer(existing.getId(), legacy.getId());
-      roundRepo.reassignWinner(existing.getId(), legacy.getId());
-      roundRepo.reassignDealInPlayer(existing.getId(), legacy.getId());
-      monthlySkillRepo.deleteByPlayerId(existing.getId());
-      monthlySkillRepo.deleteByPlayerId(legacy.getId());
-
-      existing.setEmail(null);
-      existing.setToken(null);
-      playerRepo.saveAndFlush(existing);
-
-      legacy.setEmail(google.email);
-      legacy.setPictureUrl(google.pictureUrl);
-      legacy.setToken(sessionToken);
-      legacy.setMerged(true);
-      result = playerRepo.saveAndFlush(legacy);
-
-      playerRepo.delete(existing);
-      mode = "legacy-claim";
     }
 
     log.info(
