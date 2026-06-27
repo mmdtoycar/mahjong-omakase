@@ -22,10 +22,28 @@ export default function LoginPage() {
       setLoading(true)
       try {
         const data = await loginWithGoogle(response.credential)
-        localStorage.setItem('mahjong_token', data.token)
-        sessionStorage.setItem('mahjong_me', JSON.stringify(data.player))
-        window.dispatchEvent(new Event('auth-change'))
-        navigate('/home', { replace: true })
+        if (data.pendingAuth) {
+          // No bound Player yet — server didn't write anything. Stash the credential
+          // (we'll re-send it from the setup-profile form) and route to /profile, where
+          // ProfilePage renders the 找回 / 新建 form for unmerged users.
+          sessionStorage.setItem('mahjong_google_credential', response.credential)
+          const pendingMe = {
+            pendingAuth: true,
+            email: data.profile.email,
+            firstName: data.profile.firstName,
+            lastName: data.profile.lastName,
+            pictureUrl: data.profile.picture,
+            merged: false,
+          }
+          sessionStorage.setItem('mahjong_me', JSON.stringify(pendingMe))
+          window.dispatchEvent(new Event('auth-change'))
+          navigate('/profile', { replace: true })
+        } else {
+          localStorage.setItem('mahjong_token', data.token)
+          sessionStorage.setItem('mahjong_me', JSON.stringify(data.player))
+          window.dispatchEvent(new Event('auth-change'))
+          navigate('/home', { replace: true })
+        }
       } catch (err: any) {
         setError(err.message || '登录验证失败，请重试')
       } finally {

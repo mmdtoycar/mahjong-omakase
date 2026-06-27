@@ -25,6 +25,9 @@ export default function ProfilePage() {
   // 异步获取数据
   useEffect(() => {
     if (!me) return
+    // pendingAuth 状态下 me 是从 Google profile 拼出来的占位对象, 没 id, 不能调任何
+    // 用 me.id 的接口 (会 NPE 或 401), 等用户在本页提交 setup-profile 走完之后再拉数据
+    if (me.pendingAuth || !me.id) return
 
     // 切账号时立即清掉上一个账号的 stale 数据, 避免短暂闪烁错的段位
     setStatsByMode({})
@@ -51,6 +54,7 @@ export default function ProfilePage() {
   // 个人战绩按需拉取: 只拉当前选中模式的, 切模式时再拉. 避免开页就触发 3 次重的 stats 请求.
   useEffect(() => {
     if (!me) return
+    if (me.pendingAuth || !me.id) return
     if (statsByMode[selectedMode]) return
     fetchStats(selectedMode)
       .then((data) => {
@@ -93,6 +97,13 @@ export default function ProfilePage() {
 
     setSubmitting(true)
     try {
+      const credential = sessionStorage.getItem('mahjong_google_credential')
+      if (!credential) {
+        setSetupError('Google 凭证已失效, 请重新登录')
+        setSubmitting(false)
+        return
+      }
+
       const claimable = await lookupClaimablePlayer(userName, firstName, lastName)
 
       const confirmMsg = claimable
@@ -104,11 +115,12 @@ export default function ProfilePage() {
         return
       }
 
-      let mergedMe: any
-      mergedMe = await setupProfile(userName, firstName, lastName)
+      const result = await setupProfile(credential, userName, firstName, lastName)
 
-      sessionStorage.setItem('mahjong_me', JSON.stringify(mergedMe))
-      setMe(mergedMe)
+      localStorage.setItem('mahjong_token', result.token)
+      sessionStorage.setItem('mahjong_me', JSON.stringify(result.player))
+      sessionStorage.removeItem('mahjong_google_credential')
+      setMe(result.player)
       setSetupSuccess(claimable ? '绑定成功!历史战绩已同步继承。' : '注册成功!您的雀士档案已创建。')
       setSetupForm({ userName: '', firstName: '', lastName: '' })
       window.dispatchEvent(new Event('auth-change'))

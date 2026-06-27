@@ -11,7 +11,10 @@ import com.mahjong.omakase.repository.PlayerMonthlySkillRepository;
 import com.mahjong.omakase.repository.PlayerRepository;
 import com.mahjong.omakase.repository.RoundRepository;
 import com.mahjong.omakase.repository.RoundScoreRepository;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -56,9 +59,63 @@ public class AuthController {
     if (email == null) return null;
     int atIdx = email.indexOf('@');
     if (atIdx <= 1) return "***";
-    return email.substring(0, 1) + "***" + email.substring(atIdx);
+    return email.charAt(0) + "***" + email.substring(atIdx);
   }
 
+  /** Holds the bits of a verified Google ID Token we actually care about. */
+  private static final class GoogleProfile {
+    final String email;
+    final String firstName;
+    final String lastName;
+    final String pictureUrl;
+
+    GoogleProfile(String email, String fullName, String pictureUrl) {
+      this.email = email;
+      String[] parts =
+          (fullName != null && !fullName.isBlank()) ? fullName.split(" ", 2) : new String[] {""};
+      this.firstName = parts[0];
+      this.lastName = parts.length > 1 ? parts[1] : "";
+      this.pictureUrl = pictureUrl;
+    }
+  }
+
+  private GoogleIdTokenVerifier newVerifier() {
+    return new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+        .setAudience(Collections.singletonList(googleClientId))
+        .build();
+  }
+
+  /**
+   * Verify the Google ID Token and extract the bits we care about. Returns null if the token is
+   * invalid (caller should map to 401). Throws if verifier infrastructure (network / crypto) fails.
+   */
+  private GoogleProfile verifyCredential(String credential)
+      throws GeneralSecurityException, IOException {
+    GoogleIdToken idToken = newVerifier().verify(credential);
+    if (idToken == null) return null;
+    GoogleIdToken.Payload payload = idToken.getPayload();
+    return new GoogleProfile(
+        payload.getEmail(), (String) payload.get("name"), (String) payload.get("picture"));
+  }
+
+  private static String newSessionToken() {
+    return "token_" + UUID.randomUUID().toString().replace("-", "");
+  }
+
+  /**
+   * Google sign-in entry point.
+   *
+   * <p>Verifies the Google credential and routes by what we already know about this email:
+   *
+   * <ul>
+   *   <li>If a fully bound Player exists (merged=true) — rotate session token and return {token,
+   *       player}.
+   *   <li>Otherwise (no Player, or a legacy unmerged Player from the old auto-create flow) — do NOT
+   *       touch the database. Return {pendingAuth: true, profile} so the frontend can route to
+   *       setup-profile. The Player record will be created or claimed only when the user commits to
+   *       a userName/firstName/lastName in setupProfile.
+   * </ul>
+   */
   @PostMapping("/google")
   public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> request) {
     String idTokenString = request.get("credential");
@@ -66,79 +123,44 @@ public class AuthController {
       return ResponseEntity.badRequest().body(Map.of("error", "Missing credential"));
     }
 
-    String email;
-    String name;
-    String pictureUrl;
-
-    // 正常校验模式 (Google Sign-In JWT Verification)
+    GoogleProfile profile;
     try {
-      GoogleIdTokenVerifier verifier =
-          new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-              .setAudience(Collections.singletonList(googleClientId))
-              .build();
-
-      GoogleIdToken idToken = verifier.verify(idTokenString);
-      if (idToken != null) {
-        GoogleIdToken.Payload payload = idToken.getPayload();
-        email = payload.getEmail();
-        name = (String) payload.get("name");
-        pictureUrl = (String) payload.get("picture");
-        log.info("Google Auth verified successfully for email={}", redactEmail(email));
-      } else {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("error", "Invalid ID Token"));
-      }
-    } catch (Exception e) {
+      profile = verifyCredential(idTokenString);
+    } catch (GeneralSecurityException | IOException e) {
       log.error("Failed to verify Google ID Token", e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
           .body(Map.of("error", "Verification failed: " + e.getMessage()));
     }
+    if (profile == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "Invalid ID Token"));
+    }
+    log.info("Google Auth verified successfully for email={}", redactEmail(profile.email));
 
-    // 3. 匹配已有账号或自动创建新账号
-    Optional<Player> playerOpt = playerRepo.findByEmail(email);
-    Player player;
+    Optional<Player> playerOpt = playerRepo.findByEmail(profile.email);
 
-    if (playerOpt.isPresent()) {
-      player = playerOpt.get();
-      // 同步更新最新的 Google 个人 Profile 信息
-      if (name != null) {
-        String[] parts = name.split(" ", 2);
-        player.setFirstName(parts[0]);
-        if (parts.length > 1) {
-          player.setLastName(parts[1]);
-        } else {
-          player.setLastName("");
-        }
+    if (playerOpt.isPresent() && playerOpt.get().isMerged()) {
+      // Fully bound returning user — rotate token, sync Google profile fields, done.
+      Player player = playerOpt.get();
+      player.setFirstName(profile.firstName);
+      player.setLastName(profile.lastName);
+      if (profile.pictureUrl != null) {
+        player.setPictureUrl(profile.pictureUrl);
       }
-      if (pictureUrl != null) {
-        player.setPictureUrl(pictureUrl);
-      }
-    } else {
-      String preferredUserName = email.split("@")[0];
-      // 创建全新玩家
-      String firstName = name != null ? name.split(" ", 2)[0] : preferredUserName;
-      String lastName = (name != null && name.contains(" ")) ? name.split(" ", 2)[1] : "";
-
-      // 保证唯一的唯一用户名
-      String uniqueUserName = preferredUserName;
-      int suffix = 1;
-      while (playerRepo.existsByUserName(uniqueUserName)) {
-        uniqueUserName = preferredUserName + suffix;
-        suffix++;
-      }
-
-      player = new Player(uniqueUserName, firstName, lastName);
-      player.setEmail(email);
-      player.setPictureUrl(pictureUrl);
-      log.info("Created new Google Player userName={}", uniqueUserName);
+      String sessionToken = newSessionToken();
+      player.setToken(sessionToken);
+      playerRepo.save(player);
+      return ResponseEntity.ok(Map.of("token", sessionToken, "player", player));
     }
 
-    // 4. 分配会话 Token 并更新数据库
-    String sessionToken = "token_" + UUID.randomUUID().toString().replace("-", "");
-    player.setToken(sessionToken);
-    playerRepo.save(player);
-
-    return ResponseEntity.ok(Map.of("token", sessionToken, "player", player));
+    // No bound Player yet (either first time, or a legacy unmerged Player from the old code).
+    // Do NOT write anything. Frontend will keep the credential and call setupProfile.
+    Map<String, Object> profileMap = new HashMap<>();
+    profileMap.put("email", profile.email);
+    profileMap.put("firstName", profile.firstName);
+    profileMap.put("lastName", profile.lastName);
+    profileMap.put("picture", profile.pictureUrl);
+    return ResponseEntity.ok(Map.of("pendingAuth", true, "profile", profileMap));
   }
 
   @GetMapping("/me")
@@ -182,35 +204,47 @@ public class AuthController {
   }
 
   /**
-   * Atomic profile finalization: claim a matching legacy player if one exists, otherwise create a
-   * brand-new player with the supplied name fields. Either path ends with the current Google
-   * identity merged into the target player and the auto-created Google player deleted. The whole
-   * thing runs in a single transaction so a failure can't leave a half-created player record
-   * behind.
+   * Atomic profile finalization. The frontend resends the Google credential alongside the desired
+   * userName/firstName/lastName; we re-verify it here so the server is the sole authority on
+   * email/picture. Four cases:
+   *
+   * <ol>
+   *   <li><b>register (clean)</b>: no Player for this email and no matching legacy → INSERT new.
+   *   <li><b>claim (clean)</b>: no Player for this email, matching legacy unbound player exists →
+   *       attach email/token/picture to that legacy row.
+   *   <li><b>legacy-register</b>: an unmerged Player already exists for this email (created by the
+   *       old auto-create code), no matching legacy → rename in place, mark merged.
+   *   <li><b>legacy-claim</b>: an unmerged Player + matching legacy → reassign all FK references
+   *       from the temp to legacy, then delete temp. Same migration logic as before.
+   * </ol>
+   *
+   * Once the database stops accumulating new unmerged Players (this PR removes the auto-create
+   * branch from googleLogin), the legacy-* cases naturally drain and can be removed.
    */
   @Transactional
   @PostMapping("/setup-profile")
-  public ResponseEntity<?> setupProfile(
-      @RequestHeader(value = "Authorization", required = false) String authHeader,
-      @RequestBody Map<String, String> request) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Missing token"));
-    }
-    String token = authHeader.substring(7);
-    Optional<Player> currentOpt = playerRepo.findByToken(token);
-    if (currentOpt.isEmpty()) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid token"));
+  public ResponseEntity<?> setupProfile(@RequestBody Map<String, String> request) {
+    String credential = request.get("credential");
+    if (credential == null || credential.isBlank()) {
+      return ResponseEntity.badRequest().body(Map.of("error", "缺少 Google 凭证, 请重新登录"));
     }
 
-    Player current = currentOpt.get();
-    if (current.isMerged()) {
-      return ResponseEntity.badRequest().body(Map.of("error", "该账户已经完成绑定，无法再次设置"));
+    GoogleProfile google;
+    try {
+      google = verifyCredential(credential);
+    } catch (GeneralSecurityException | IOException e) {
+      log.error("Failed to re-verify Google ID Token in setupProfile", e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Verification failed: " + e.getMessage()));
+    }
+    if (google == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(Map.of("error", "Google 凭证已失效, 请重新登录"));
     }
 
     String userName = request.get("userName");
     String firstName = request.get("firstName");
     String lastName = request.get("lastName");
-
     if (userName == null
         || userName.isBlank()
         || firstName == null
@@ -219,71 +253,99 @@ public class AuthController {
         || lastName.isBlank()) {
       return ResponseEntity.badRequest().body(Map.of("error", "请完整填写用户名、名、姓信息"));
     }
-
     String trimmedUserName = userName.trim();
     String trimmedFirstName = firstName.trim();
     String trimmedLastName = lastName.trim();
 
-    // 1. Try to find a matching unbound legacy player.
-    Player target =
+    Player existing = playerRepo.findByEmail(google.email).orElse(null);
+    if (existing != null && existing.isMerged()) {
+      return ResponseEntity.badRequest().body(Map.of("error", "该账户已经完成绑定，无法再次设置"));
+    }
+
+    Player legacy =
         playerRepo
             .findClaimableLegacyPlayer(trimmedUserName, trimmedFirstName, trimmedLastName)
             .orElse(null);
 
-    boolean claimedExisting = target != null;
+    String sessionToken = newSessionToken();
+    Player result;
+    String mode;
 
-    if (claimedExisting) {
-      // Claim path: merge current's identity (and any in-flight game references) into the
-      // legacy target, then delete current. Reassigning FKs first is required because current
-      // may already be sitting at a table / have round scores from the brief temp window.
-      gameSessionPlayerRepo.reassignPlayer(current.getId(), target.getId());
-      roundScoreRepo.reassignPlayer(current.getId(), target.getId());
-      fanDiscoveryRepo.reassignPlayer(current.getId(), target.getId());
-      // Round.winnerId / dealInPlayerId are loose-FK scalar Longs (not JPA associations) but they
-      // are still read by Riichi round-level stats — must follow the merge or histograms break.
-      roundRepo.reassignWinner(current.getId(), target.getId());
-      roundRepo.reassignDealInPlayer(current.getId(), target.getId());
-      // Monthly skill snapshots are derived; clear BOTH sides so TierService rebuilds them on next
-      // read. current's rows would otherwise FK-block the delete; target's rows would otherwise
-      // be stale because round_scores just shifted.
-      monthlySkillRepo.deleteByPlayerId(current.getId());
-      monthlySkillRepo.deleteByPlayerId(target.getId());
-
-      String currentEmail = current.getEmail();
-      String currentPicture = current.getPictureUrl();
-      current.setEmail(null);
-      current.setToken(null);
-      playerRepo.saveAndFlush(current);
-
-      target.setEmail(currentEmail);
-      target.setPictureUrl(currentPicture);
-      target.setToken(token);
-      target.setMerged(true);
-      playerRepo.saveAndFlush(target);
-
-      playerRepo.delete(current);
-    } else {
-      // Register path: rename current in place. No new Player record and no delete — avoids the
-      // FK violation when current is already referenced by game_session_players / round_scores
-      // from a game that started during the onboarding window.
-      if (playerRepo.existsByUserNameIgnoreCase(trimmedUserName)
-          && !trimmedUserName.equalsIgnoreCase(current.getUserName())) {
+    if (existing == null && legacy == null) {
+      // Clean register: brand new user, no legacy to inherit. Single INSERT.
+      // Reject username collisions against bound accounts (case-insensitive).
+      if (playerRepo.existsByUserNameIgnoreCase(trimmedUserName)) {
         return ResponseEntity.badRequest().body(Map.of("error", "用户名已被占用,请换一个"));
       }
-      current.setUserName(trimmedUserName);
-      current.setFirstName(trimmedFirstName);
-      current.setLastName(trimmedLastName);
-      current.setMerged(true);
-      playerRepo.saveAndFlush(current);
-      target = current;
+      Player p = new Player(trimmedUserName, trimmedFirstName, trimmedLastName);
+      p.setEmail(google.email);
+      p.setPictureUrl(google.pictureUrl);
+      p.setToken(sessionToken);
+      p.setMerged(true);
+      result = playerRepo.saveAndFlush(p);
+      mode = "register";
+
+    } else if (existing == null) {
+      // Clean claim: legacy != null here (previous branch ruled out both-null).
+      // No temp Player to clean up, just attach identity to the legacy row.
+      legacy.setEmail(google.email);
+      legacy.setPictureUrl(google.pictureUrl);
+      legacy.setToken(sessionToken);
+      legacy.setMerged(true);
+      result = playerRepo.saveAndFlush(legacy);
+      mode = "claim";
+
+    } else if (legacy == null) {
+      // Legacy holdover, register path: an unmerged Player already exists (old auto-create code)
+      // and no claimable legacy matches the form. Rename in place — preserves all FK references.
+      if (playerRepo.existsByUserNameIgnoreCase(trimmedUserName)
+          && !trimmedUserName.equalsIgnoreCase(existing.getUserName())) {
+        return ResponseEntity.badRequest().body(Map.of("error", "用户名已被占用,请换一个"));
+      }
+      existing.setUserName(trimmedUserName);
+      existing.setFirstName(trimmedFirstName);
+      existing.setLastName(trimmedLastName);
+      if (google.pictureUrl != null) {
+        existing.setPictureUrl(google.pictureUrl);
+      }
+      existing.setToken(sessionToken);
+      existing.setMerged(true);
+      result = playerRepo.saveAndFlush(existing);
+      mode = "legacy-register";
+
+    } else {
+      // Legacy holdover, claim path: unmerged Player + claimable legacy match. Migrate all FK
+      // references from existing → legacy, then delete existing. See repository methods for the
+      // four tables involved (game_session_players, round_scores, fan_discoveries, rounds.winner_id
+      // / deal_in_player_id) and the monthly_skill snapshot invalidation on both sides.
+      gameSessionPlayerRepo.reassignPlayer(existing.getId(), legacy.getId());
+      roundScoreRepo.reassignPlayer(existing.getId(), legacy.getId());
+      fanDiscoveryRepo.reassignPlayer(existing.getId(), legacy.getId());
+      roundRepo.reassignWinner(existing.getId(), legacy.getId());
+      roundRepo.reassignDealInPlayer(existing.getId(), legacy.getId());
+      monthlySkillRepo.deleteByPlayerId(existing.getId());
+      monthlySkillRepo.deleteByPlayerId(legacy.getId());
+
+      existing.setEmail(null);
+      existing.setToken(null);
+      playerRepo.saveAndFlush(existing);
+
+      legacy.setEmail(google.email);
+      legacy.setPictureUrl(google.pictureUrl);
+      legacy.setToken(sessionToken);
+      legacy.setMerged(true);
+      result = playerRepo.saveAndFlush(legacy);
+
+      playerRepo.delete(existing);
+      mode = "legacy-claim";
     }
 
     log.info(
         "Profile setup complete (mode={}) for username={}, id={}",
-        claimedExisting ? "claim" : "register",
-        target.getUserName(),
-        target.getId());
+        mode,
+        result.getUserName(),
+        result.getId());
 
-    return ResponseEntity.ok(target);
+    return ResponseEntity.ok(Map.of("token", sessionToken, "player", result));
   }
 }
