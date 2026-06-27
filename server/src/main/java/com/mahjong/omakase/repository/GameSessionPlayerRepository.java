@@ -10,7 +10,13 @@ public interface GameSessionPlayerRepository extends JpaRepository<GameSessionPl
   @Query("DELETE FROM GameSessionPlayer gsp WHERE gsp.player.id = :playerId")
   void deleteByPlayerId(Long playerId);
 
+  /**
+   * Native bulk FK reassign. JPQL "SET gsp.player.id = :toId" is not portably supported by
+   * Hibernate for path expressions in the SET clause, so we update the FK column directly.
+   */
   @Modifying(clearAutomatically = true)
-  @Query("UPDATE GameSessionPlayer gsp SET gsp.player.id = :toId WHERE gsp.player.id = :fromId")
+  @Query(
+      value = "UPDATE game_session_players SET player_id = :toId WHERE player_id = :fromId",
+      nativeQuery = true)
   void reassignPlayer(Long fromId, Long toId);
 }

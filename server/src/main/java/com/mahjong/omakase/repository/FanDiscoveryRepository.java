@@ -18,7 +18,13 @@ public interface FanDiscoveryRepository extends JpaRepository<FanDiscovery, Long
 
   List<FanDiscovery> findByRoundGameSessionId(Long sessionId);
 
+  /**
+   * Native bulk FK reassign. JPQL "SET fd.player.id = :toId" is not portably supported by Hibernate
+   * for path expressions in the SET clause, so we update the FK column directly.
+   */
   @Modifying(clearAutomatically = true)
-  @Query("UPDATE FanDiscovery fd SET fd.player.id = :toId WHERE fd.player.id = :fromId")
+  @Query(
+      value = "UPDATE fan_discoveries SET player_id = :toId WHERE player_id = :fromId",
+      nativeQuery = true)
   void reassignPlayer(Long fromId, Long toId);
 }

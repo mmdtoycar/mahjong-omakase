@@ -9,6 +9,7 @@ import com.mahjong.omakase.repository.FanDiscoveryRepository;
 import com.mahjong.omakase.repository.GameSessionPlayerRepository;
 import com.mahjong.omakase.repository.PlayerMonthlySkillRepository;
 import com.mahjong.omakase.repository.PlayerRepository;
+import com.mahjong.omakase.repository.RoundRepository;
 import com.mahjong.omakase.repository.RoundScoreRepository;
 import java.util.Collections;
 import java.util.Map;
@@ -28,6 +29,7 @@ public class AuthController {
 
   private final PlayerRepository playerRepo;
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
+  private final RoundRepository roundRepo;
   private final RoundScoreRepository roundScoreRepo;
   private final FanDiscoveryRepository fanDiscoveryRepo;
   private final PlayerMonthlySkillRepository monthlySkillRepo;
@@ -38,11 +40,13 @@ public class AuthController {
   public AuthController(
       PlayerRepository playerRepo,
       GameSessionPlayerRepository gameSessionPlayerRepo,
+      RoundRepository roundRepo,
       RoundScoreRepository roundScoreRepo,
       FanDiscoveryRepository fanDiscoveryRepo,
       PlayerMonthlySkillRepository monthlySkillRepo) {
     this.playerRepo = playerRepo;
     this.gameSessionPlayerRepo = gameSessionPlayerRepo;
+    this.roundRepo = roundRepo;
     this.roundScoreRepo = roundScoreRepo;
     this.fanDiscoveryRepo = fanDiscoveryRepo;
     this.monthlySkillRepo = monthlySkillRepo;
@@ -235,7 +239,15 @@ public class AuthController {
       gameSessionPlayerRepo.reassignPlayer(current.getId(), target.getId());
       roundScoreRepo.reassignPlayer(current.getId(), target.getId());
       fanDiscoveryRepo.reassignPlayer(current.getId(), target.getId());
+      // Round.winnerId / dealInPlayerId are loose-FK scalar Longs (not JPA associations) but they
+      // are still read by Riichi round-level stats — must follow the merge or histograms break.
+      roundRepo.reassignWinner(current.getId(), target.getId());
+      roundRepo.reassignDealInPlayer(current.getId(), target.getId());
+      // Monthly skill snapshots are derived; clear BOTH sides so TierService rebuilds them on next
+      // read. current's rows would otherwise FK-block the delete; target's rows would otherwise
+      // be stale because round_scores just shifted.
       monthlySkillRepo.deleteByPlayerId(current.getId());
+      monthlySkillRepo.deleteByPlayerId(target.getId());
 
       String currentEmail = current.getEmail();
       String currentPicture = current.getPictureUrl();
