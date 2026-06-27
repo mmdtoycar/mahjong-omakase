@@ -7,11 +7,26 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface RoundRepository extends JpaRepository<Round, Long> {
   int countByGameSessionId(Long gameSessionId);
+
+  /**
+   * Reassign the loose-FK player references stored directly on {@code Round} (winnerId and
+   * dealInPlayerId — scalar Longs, not JPA associations). Used by the auth merge flow so that
+   * Riichi round-level stats (and 牌率/放铳率, accumulated via getRoundDetailsBySessions) keep resolving
+   * to the surviving player after a temp Player is merged away.
+   */
+  @Modifying(clearAutomatically = true)
+  @Query("UPDATE Round r SET r.winnerId = :toId WHERE r.winnerId = :fromId")
+  void reassignWinner(@Param("fromId") Long fromId, @Param("toId") Long toId);
+
+  @Modifying(clearAutomatically = true)
+  @Query("UPDATE Round r SET r.dealInPlayerId = :toId WHERE r.dealInPlayerId = :fromId")
+  void reassignDealInPlayer(@Param("fromId") Long fromId, @Param("toId") Long toId);
 
   @Query("SELECT MAX(r.fanCount) FROM Round r")
   Integer findMaxFanCount();
