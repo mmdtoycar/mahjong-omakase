@@ -3,13 +3,16 @@ import { Player, GameSession } from '../types'
 
 const API = '/api/admin'
 
+function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const token = localStorage.getItem('mahjong_token')
+  if (token) extra.Authorization = `Bearer ${token}`
+  return extra
+}
+
 export default function AdminPage() {
-  const [password, setPassword] = useState('')
-  const [authenticated, setAuthenticated] = useState(false)
-  const [error, setError] = useState('')
   const [players, setPlayers] = useState<Player[]>([])
   const [sessions, setSessions] = useState<GameSession[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editUserName, setEditUserName] = useState('')
   const [editFirst, setEditFirst] = useState('')
@@ -19,49 +22,22 @@ export default function AdminPage() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [deletingSessionId, setDeletingSessionId] = useState<number | null>(null)
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    try {
-      const res = await fetch(`${API}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      })
-      if (!res.ok) {
-        setError('Invalid password')
-        return
-      }
-      setAuthenticated(true)
-    } catch {
-      setError('Login failed')
-    }
-  }
-
   const loadPlayers = async () => {
-    setLoading(true)
-    const res = await fetch(`${API}/players`, {
-      headers: { 'X-Admin-Password': password },
-    })
+    const res = await fetch(`${API}/players`, { headers: authHeaders() })
     if (res.ok) {
       setPlayers(await res.json())
     }
-    setLoading(false)
   }
 
   const loadSessions = async () => {
-    const res = await fetch(`${API}/sessions`, {
-      headers: { 'X-Admin-Password': password },
-    })
+    const res = await fetch(`${API}/sessions`, { headers: authHeaders() })
     if (res.ok) {
       setSessions(await res.json())
     }
   }
 
   const loadSettings = async () => {
-    const res = await fetch(`${API}/settings`, {
-      headers: { 'X-Admin-Password': password },
-    })
+    const res = await fetch(`${API}/settings`, { headers: authHeaders() })
     if (res.ok) {
       const data = await res.json()
       if (data.participation_bonus !== undefined) {
@@ -75,12 +51,8 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    if (authenticated) {
-      loadPlayers()
-      loadSessions()
-      loadSettings()
-    }
-  }, [authenticated])
+    Promise.all([loadPlayers(), loadSessions(), loadSettings()]).finally(() => setLoading(false))
+  }, [])
 
   const handleSaveSettings = async () => {
     if (!/^\d+(\.\d+)?$/.test(bonus.trim())) {
@@ -95,10 +67,7 @@ export default function AdminPage() {
     setSavingSettings(true)
     const res = await fetch(`${API}/settings`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Admin-Password': password,
-      },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ participation_bonus: bonusVal }),
     })
     if (res.ok) {
@@ -112,15 +81,10 @@ export default function AdminPage() {
   }
 
   const handleDelete = async (id: number, userName: string) => {
-    if (
-      !confirm(
-        `Delete ${userName}? This cannot be undone. Game scores will be kept but player will be removed from stats.`
-      )
-    )
-      return
+    if (!confirm(`Delete ${userName}?`)) return
     const res = await fetch(`${API}/players/${id}`, {
       method: 'DELETE',
-      headers: { 'X-Admin-Password': password },
+      headers: authHeaders(),
     })
     if (res.ok) {
       setPlayers(players.filter((p) => p.id !== id))
@@ -140,7 +104,7 @@ export default function AdminPage() {
     setDeletingSessionId(id)
     const res = await fetch(`${API}/sessions/${id}`, {
       method: 'DELETE',
-      headers: { 'X-Admin-Password': password },
+      headers: authHeaders(),
     })
     if (res.ok) {
       setSessions(sessions.filter((s) => s.id !== id))
@@ -169,10 +133,7 @@ export default function AdminPage() {
     if (!editUserName.trim() || !editFirst.trim() || !editLast.trim()) return
     const res = await fetch(`${API}/players/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Admin-Password': password,
-      },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         userName: editUserName.trim(),
         firstName: editFirst.trim(),
@@ -189,32 +150,6 @@ export default function AdminPage() {
     }
   }
 
-  if (!authenticated) {
-    return (
-      <div className="signup-container">
-        <div className="card signup-card">
-          <p className="signup-title">Admin Access</p>
-          {error && <div className="error-banner">{error}</div>}
-          <form onSubmit={handleLogin}>
-            <div className="form-group">
-              <label>Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password"
-                autoFocus
-              />
-            </div>
-            <button type="submit" className="btn btn-primary signup-btn">
-              Login
-            </button>
-          </form>
-        </div>
-      </div>
-    )
-  }
-
   if (loading)
     return (
       <div className="empty-state">
@@ -226,9 +161,6 @@ export default function AdminPage() {
     <>
       <div className="card">
         <h2>Admin Panel</h2>
-        <p className="page-subtitle">
-          Deleting a player removes them from stats and player list. Game round scores are preserved.
-        </p>
       </div>
 
       <div className="card">

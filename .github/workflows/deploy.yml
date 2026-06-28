@@ -69,7 +69,7 @@ jobs:
               --restart always \
               -p 8080:8080 \
               -v mahjong-data:/app/data \
-              -e ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
+              -e ADMIN_EMAILS="${{ secrets.ADMIN_EMAILS }}" \
               -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
               "$IMAGE:latest"
 

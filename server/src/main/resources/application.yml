@@ -34,6 +34,7 @@ server:
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  admin-emails: ${ADMIN_EMAILS:}
 
 google:
   client-id: 471645797225-qtqf1nlv8l807tblfhpa9d36p5q456l3.apps.googleusercontent.com
