@@ -576,7 +576,7 @@ export default function SessionPage() {
                 </div>
 
                 {isRiichi && (
-                  <div className="form-group score-inline-group-container">
+                  <div className="form-group">
                     <div className="score-inline-group">
                       <label>分数</label>
                       <input
@@ -641,7 +641,7 @@ export default function SessionPage() {
                 )}
 
                 {!isRiichi && isGuobiao && (
-                  <div className="form-group score-inline-group-container">
+                  <div className="form-group">
                     <div className="score-inline-group">
                       <label>分数</label>
                       <input
