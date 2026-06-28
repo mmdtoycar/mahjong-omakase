@@ -72,15 +72,11 @@ public class AdminController {
       @RequestHeader("X-Admin-Password") String password,
       @RequestBody Map<String, String> body) {
     checkPassword(password);
-    try {
-      Player updated =
-          gameService.updatePlayer(
-              id, body.get("userName"), body.get("firstName"), body.get("lastName"));
-      log.info("Admin updated player id={}", id);
-      return updated;
-    } catch (IllegalArgumentException e) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-    }
+    Player updated =
+        gameService.updatePlayer(
+            id, body.get("userName"), body.get("firstName"), body.get("lastName"));
+    log.info("Admin updated player id={}", id);
+    return updated;
   }
 
   @GetMapping("/sessions")

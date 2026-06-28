@@ -23,9 +23,6 @@ export default function LoginPage() {
       try {
         const data = await loginWithGoogle(response.credential)
         if (data.pendingAuth) {
-          // No bound Player yet — server didn't write anything. Stash the credential
-          // (we'll re-send it from the setup-profile form) and route to /profile, where
-          // ProfilePage renders the 找回 / 新建 form for unmerged users.
           sessionStorage.setItem('mahjong_google_credential', response.credential)
           const pendingMe = {
             pendingAuth: true,

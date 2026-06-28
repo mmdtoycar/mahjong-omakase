@@ -48,12 +48,10 @@ public class AuthController {
     final String lastName;
     final String pictureUrl;
 
-    GoogleProfile(String email, String fullName, String pictureUrl) {
+    GoogleProfile(String email, String firstName, String lastName, String pictureUrl) {
       this.email = email;
-      String[] parts =
-          (fullName != null && !fullName.isBlank()) ? fullName.split(" ", 2) : new String[] {""};
-      this.firstName = parts[0];
-      this.lastName = parts.length > 1 ? parts[1] : "";
+      this.firstName = firstName == null ? "" : firstName;
+      this.lastName = lastName == null ? "" : lastName;
       this.pictureUrl = pictureUrl;
     }
   }
@@ -66,15 +64,33 @@ public class AuthController {
 
   /**
    * Verify the Google ID Token and extract the bits we care about. Returns null if the token is
-   * invalid (caller should map to 401). Throws if verifier infrastructure (network / crypto) fails.
+   * invalid, the email claim is missing, or the email is not verified by Google (caller should map
+   * to 401). Throws if verifier infrastructure (network / crypto) fails.
+   *
+   * <p>Prefers the OIDC {@code given_name}/{@code family_name} claims; falls back to splitting
+   * {@code name} on the first space when those aren't present. Either of firstName/lastName can
+   * still come back blank — callers that mutate an existing Player record must avoid overwriting
+   * stored values with blanks.
    */
   private GoogleProfile verifyCredential(String credential)
       throws GeneralSecurityException, IOException {
     GoogleIdToken idToken = newVerifier().verify(credential);
     if (idToken == null) return null;
     GoogleIdToken.Payload payload = idToken.getPayload();
-    return new GoogleProfile(
-        payload.getEmail(), (String) payload.get("name"), (String) payload.get("picture"));
+    String email = payload.getEmail();
+    if (email == null || email.isBlank()) return null;
+    if (!Boolean.TRUE.equals(payload.getEmailVerified())) return null;
+    String firstName = (String) payload.get("given_name");
+    String lastName = (String) payload.get("family_name");
+    if ((firstName == null || firstName.isBlank()) && (lastName == null || lastName.isBlank())) {
+      String fullName = (String) payload.get("name");
+      if (fullName != null && !fullName.isBlank()) {
+        String[] parts = fullName.split(" ", 2);
+        firstName = parts[0];
+        lastName = parts.length > 1 ? parts[1] : "";
+      }
+    }
+    return new GoogleProfile(email, firstName, lastName, (String) payload.get("picture"));
   }
 
   private static String newSessionToken() {
@@ -108,7 +124,7 @@ public class AuthController {
     } catch (GeneralSecurityException | IOException e) {
       log.error("Failed to verify Google ID Token", e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body(Map.of("error", "Verification failed: " + e.getMessage()));
+          .body(Map.of("error", "Verification failed"));
     }
     if (profile == null) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -120,9 +136,15 @@ public class AuthController {
 
     if (playerOpt.isPresent() && playerOpt.get().isMerged()) {
       // Fully bound returning user — rotate token, sync Google profile fields, done.
+      // Only update names if Google actually returned a value, otherwise a partial profile
+      // (no given_name/family_name, no name) would wipe what the user has on record.
       Player player = playerOpt.get();
-      player.setFirstName(profile.firstName);
-      player.setLastName(profile.lastName);
+      if (!profile.firstName.isBlank()) {
+        player.setFirstName(profile.firstName);
+      }
+      if (!profile.lastName.isBlank()) {
+        player.setLastName(profile.lastName);
+      }
       if (profile.pictureUrl != null) {
         player.setPictureUrl(profile.pictureUrl);
       }
@@ -212,7 +234,7 @@ public class AuthController {
     } catch (GeneralSecurityException | IOException e) {
       log.error("Failed to re-verify Google ID Token in setupProfile", e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body(Map.of("error", "Verification failed: " + e.getMessage()));
+          .body(Map.of("error", "Verification failed"));
     }
     if (google == null) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

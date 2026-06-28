@@ -257,6 +257,9 @@ public class GameService {
             .orElseThrow(() -> new IllegalArgumentException("Player not found"));
     if (userName != null && !userName.isBlank()) {
       String trimmed = userName.trim();
+      if ("BOT".equalsIgnoreCase(trimmed)) {
+        throw new IllegalArgumentException("Username 'BOT' is reserved");
+      }
       if (!trimmed.equalsIgnoreCase(player.getUserName())
           && playerRepo.existsByUserNameIgnoreCase(trimmed)) {
         throw new IllegalArgumentException("Username already taken");
