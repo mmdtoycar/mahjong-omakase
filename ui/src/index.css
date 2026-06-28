@@ -409,7 +409,7 @@ table.fixed-table .col-rank {
   width: 44px;
 }
 
-table.fixed-table .col-num-narrow {
+table.fixed-table .col-num {
   width: 52px;
   text-align: right;
 }
