@@ -22,10 +22,25 @@ export default function LoginPage() {
       setLoading(true)
       try {
         const data = await loginWithGoogle(response.credential)
-        localStorage.setItem('mahjong_token', data.token)
-        sessionStorage.setItem('mahjong_me', JSON.stringify(data.player))
-        window.dispatchEvent(new Event('auth-change'))
-        navigate('/home', { replace: true })
+        if (data.pendingAuth) {
+          sessionStorage.setItem('mahjong_google_credential', response.credential)
+          const pendingMe = {
+            pendingAuth: true,
+            email: data.profile.email,
+            firstName: data.profile.firstName,
+            lastName: data.profile.lastName,
+            pictureUrl: data.profile.picture,
+            merged: false,
+          }
+          sessionStorage.setItem('mahjong_me', JSON.stringify(pendingMe))
+          window.dispatchEvent(new Event('auth-change'))
+          navigate('/profile', { replace: true })
+        } else {
+          localStorage.setItem('mahjong_token', data.token)
+          sessionStorage.setItem('mahjong_me', JSON.stringify(data.player))
+          window.dispatchEvent(new Event('auth-change'))
+          navigate('/home', { replace: true })
+        }
       } catch (err: any) {
         setError(err.message || '登录验证失败，请重试')
       } finally {

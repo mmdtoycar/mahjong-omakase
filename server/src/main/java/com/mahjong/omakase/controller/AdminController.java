@@ -72,7 +72,9 @@ public class AdminController {
       @RequestHeader("X-Admin-Password") String password,
       @RequestBody Map<String, String> body) {
     checkPassword(password);
-    Player updated = gameService.updatePlayer(id, body.get("firstName"), body.get("lastName"));
+    Player updated =
+        gameService.updatePlayer(
+            id, body.get("userName"), body.get("firstName"), body.get("lastName"));
     log.info("Admin updated player id={}", id);
     return updated;
   }

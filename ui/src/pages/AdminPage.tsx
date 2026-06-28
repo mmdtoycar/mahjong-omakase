@@ -11,6 +11,7 @@ export default function AdminPage() {
   const [sessions, setSessions] = useState<GameSession[]>([])
   const [loading, setLoading] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [editUserName, setEditUserName] = useState('')
   const [editFirst, setEditFirst] = useState('')
   const [editLast, setEditLast] = useState('')
   const [bonus, setBonus] = useState('0')
@@ -152,25 +153,31 @@ export default function AdminPage() {
 
   const startEdit = (p: Player) => {
     setEditingId(p.id)
+    setEditUserName(p.userName)
     setEditFirst(p.firstName)
     setEditLast(p.lastName)
   }
 
   const cancelEdit = () => {
     setEditingId(null)
+    setEditUserName('')
     setEditFirst('')
     setEditLast('')
   }
 
   const handleSave = async (id: number) => {
-    if (!editFirst.trim() || !editLast.trim()) return
+    if (!editUserName.trim() || !editFirst.trim() || !editLast.trim()) return
     const res = await fetch(`${API}/players/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'X-Admin-Password': password,
       },
-      body: JSON.stringify({ firstName: editFirst.trim(), lastName: editLast.trim() }),
+      body: JSON.stringify({
+        userName: editUserName.trim(),
+        firstName: editFirst.trim(),
+        lastName: editLast.trim(),
+      }),
     })
     if (res.ok) {
       const updated = await res.json()
@@ -265,7 +272,19 @@ export default function AdminPage() {
               {players.map((p) => (
                 <tr key={p.id}>
                   <td>{p.id}</td>
-                  <td>{p.userName}</td>
+                  <td>
+                    {editingId === p.id ? (
+                      <input
+                        value={editUserName}
+                        onChange={(e) => setEditUserName(e.target.value)}
+                        style={{ width: '100%', maxWidth: 120 }}
+                        placeholder="Username"
+                        autoFocus
+                      />
+                    ) : (
+                      p.userName
+                    )}
+                  </td>
                   <td>
                     {editingId === p.id ? (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -274,7 +293,6 @@ export default function AdminPage() {
                           onChange={(e) => setEditFirst(e.target.value)}
                           style={{ width: '100%', maxWidth: 80 }}
                           placeholder="First"
-                          autoFocus
                         />
                         <input
                           value={editLast}

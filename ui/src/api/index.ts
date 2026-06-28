@@ -37,13 +37,33 @@ async function authFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
   return handleResponse<T>(res)
 }
 
-export async function loginWithGoogle(credential: string): Promise<{ token: string; player: Player }> {
+export type PendingAuthProfile = {
+  email: string
+  firstName: string
+  lastName: string
+  picture: string | null
+}
+
+export type LoginResponse =
+  | { pendingAuth: false; token: string; player: Player }
+  | { pendingAuth: true; profile: PendingAuthProfile }
+
+export async function loginWithGoogle(credential: string): Promise<LoginResponse> {
   const res = await fetch(`${API}/auth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ credential }),
   })
-  return handleResponse<{ token: string; player: Player }>(res)
+  const data = await handleResponse<{
+    pendingAuth?: boolean
+    profile?: PendingAuthProfile
+    token?: string
+    player?: Player
+  }>(res)
+  if (data.pendingAuth) {
+    return { pendingAuth: true, profile: data.profile as PendingAuthProfile }
+  }
+  return { pendingAuth: false, token: data.token as string, player: data.player as Player }
 }
 
 export async function fetchCurrentUser(): Promise<Player> {
@@ -187,13 +207,18 @@ export async function fetchFanDiscoveries(
   return authFetch(`${API}/stats/fan-discoveries${qs ? `?${qs}` : ''}`, signal)
 }
 
-export async function setupProfile(userName: string, firstName: string, lastName: string): Promise<Player> {
+export async function setupProfile(
+  credential: string,
+  userName: string,
+  firstName: string,
+  lastName: string
+): Promise<{ token: string; player: Player }> {
   const res = await fetch(`${API}/auth/setup-profile`, {
     method: 'POST',
-    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ userName, firstName, lastName }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential, userName, firstName, lastName }),
   })
-  return handleResponse<Player>(res)
+  return handleResponse<{ token: string; player: Player }>(res)
 }
 
 export async function lookupClaimablePlayer(userName: string, firstName: string, lastName: string): Promise<boolean> {
