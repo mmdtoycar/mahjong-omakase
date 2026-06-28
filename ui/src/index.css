@@ -2999,12 +2999,6 @@ table.auto-table {
   .fan-item-example-real {
     padding: 12px 6px 6px;
   }
-
-  .profile-info-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
 }
 
 .pagination-container {
