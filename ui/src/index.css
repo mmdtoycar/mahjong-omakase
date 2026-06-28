@@ -380,50 +380,54 @@ tr:hover td {
   opacity: 1;
 }
 
-.score-table {
+.table-wrap {
   overflow-x: auto;
 }
 
-.score-table table {
+.table-wrap table {
   min-width: 100%;
 }
 
-.score-table th,
-.score-table td {
+.table-wrap th,
+.table-wrap td {
   vertical-align: middle;
 }
 
-.score-table table.fixed-table {
+table.fixed-table {
   table-layout: fixed;
   width: 100%;
   min-width: 0;
 }
 
-.score-table table.fixed-table th,
-.score-table table.fixed-table td {
+table.fixed-table th,
+table.fixed-table td {
   padding-left: 6px;
   padding-right: 6px;
 }
 
-.score-table table.fixed-table .col-rank {
+table.fixed-table .col-rank {
   width: 44px;
 }
 
-.score-table table.fixed-table .col-num {
+table.fixed-table .col-num {
   width: 52px;
   text-align: right;
 }
 
-.score-table table.fixed-table .col-num-wide {
+table.fixed-table .col-num-wide {
   width: 68px;
   text-align: right;
 }
 
-.score-table table.fixed-table .col-name {
+table.fixed-table .col-name {
   padding-left: 12px;
 }
 
-.score-table td.score-cell {
+table.flex-table {
+  table-layout: auto;
+}
+
+.table-wrap td.score-cell {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -438,7 +442,7 @@ tr:hover td {
   color: var(--danger);
 }
 
-.score-table .total-row td {
+.table-wrap .total-row td {
   font-weight: 700;
   background: var(--bg);
   border-top: 2px solid var(--primary);

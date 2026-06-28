@@ -249,7 +249,7 @@ export default function StatsPage() {
           ) : (
             <div className="card">
               <h2>排行榜</h2>
-              <div className="score-table">
+              <div className="table-wrap">
                 <table className="fixed-table">
                   <thead>
                     <tr>
@@ -384,7 +384,7 @@ export default function StatsPage() {
         <>
           <div className="card">
             <h2>全部玩家</h2>
-            <div className="score-table">
+            <div className="table-wrap">
               <table className="fixed-table">
                 <thead>
                   <tr>

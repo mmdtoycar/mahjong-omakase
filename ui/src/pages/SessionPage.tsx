@@ -766,7 +766,7 @@ export default function SessionPage() {
             )}
           </div>
         </div>
-        <div className="score-table">
+        <div className="table-wrap">
           <table className="fixed-table">
             <thead>
               <tr>
@@ -897,7 +897,7 @@ export default function SessionPage() {
       {session.rounds.length > 0 && (
         <div className="card">
           <h2>排名</h2>
-          <div className="score-table">
+          <div className="table-wrap">
             <table className="fixed-table">
               <thead>
                 <tr>

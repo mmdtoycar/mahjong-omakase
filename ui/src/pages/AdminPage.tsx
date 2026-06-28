@@ -195,8 +195,8 @@ export default function AdminPage() {
 
       <div className="card">
         <h2>Players ({players.length})</h2>
-        <div className="score-table">
-          <table>
+        <div className="table-wrap">
+          <table className="flex-table">
             <thead>
               <tr>
                 <th>ID</th>
@@ -286,8 +286,8 @@ export default function AdminPage() {
           Deleting a session permanently removes all of its rounds, round scores, and fan discoveries (achievements).
           This cannot be undone. In-progress sessions are not shown.
         </p>
-        <div className="score-table">
-          <table>
+        <div className="table-wrap">
+          <table className="flex-table">
             <thead>
               <tr>
                 <th>ID</th>

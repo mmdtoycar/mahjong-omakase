@@ -86,7 +86,7 @@ export default function PlayerDetailPage() {
             <p>暂无游戏记录。</p>
           </div>
         ) : (
-          <div className="score-table">
+          <div className="table-wrap">
             <table className="fixed-table">
               <thead>
                 <tr>
