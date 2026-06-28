@@ -366,10 +366,10 @@ export default function StatsPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>#</th>
+                    <th>排名</th>
                     <th>用户名</th>
                     <th>姓名</th>
-                    <th>段位</th>
+                    {gameMode !== 'DONGBEI' && <th>段位</th>}
                     <th>注册日期</th>
                   </tr>
                 </thead>
@@ -383,19 +383,21 @@ export default function StatsPage() {
                       <td>{i + 1}</td>
                       <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{p.userName}</td>
                       <td>{abbrName(p.firstName + ' ' + p.lastName)}</td>
-                      <td>
-                        <span className="player-name-with-rank">
-                          <RankBadge
-                            tier={p.tier ?? 'UNRANKED'}
-                            size="sm"
-                            userName={p.userName}
-                            gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
-                          />
-                          {p.tier && p.tier !== 'UNRANKED' && (
-                            <span className="player-tier-rating">{p.skillRating?.toFixed(0)}</span>
-                          )}
-                        </span>
-                      </td>
+                      {gameMode !== 'DONGBEI' && (
+                        <td>
+                          <span className="player-name-with-rank">
+                            <RankBadge
+                              tier={p.tier ?? 'UNRANKED'}
+                              size="sm"
+                              userName={p.userName}
+                              gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
+                            />
+                            {p.tier && p.tier !== 'UNRANKED' && (
+                              <span className="player-tier-rating">{p.skillRating?.toFixed(0)}</span>
+                            )}
+                          </span>
+                        </td>
+                      )}
                       <td>{new Date(p.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
                     </tr>
                   ))}
