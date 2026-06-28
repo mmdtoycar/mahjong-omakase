@@ -87,14 +87,16 @@ export default function PlayerDetailPage() {
           </div>
         ) : (
           <div className="score-table">
-            <table>
+            <table className="fixed-table">
               <thead>
                 <tr>
                   <th>游戏</th>
-                  <th>模式</th>
-                  <th>日期</th>
-                  <th>状态</th>
-                  <th className="text-right">分数</th>
+                  <th style={{ width: '56px' }}>模式</th>
+                  <th style={{ width: '80px' }}>日期</th>
+                  <th style={{ width: '60px' }}>状态</th>
+                  <th className="text-right" style={{ width: '68px' }}>
+                    分数
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -104,7 +106,9 @@ export default function PlayerDetailPage() {
                     onClick={() => navigate(`/session/${g.sessionId}`)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <td>{g.sessionName || `Game #${g.sessionId}`}</td>
+                    <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {g.sessionName || `Game #${g.sessionId}`}
+                    </td>
                     <td>{g.gameModeDisplayName}</td>
                     <td>{new Date(g.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
                     <td>

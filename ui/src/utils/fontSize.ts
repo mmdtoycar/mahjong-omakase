@@ -32,10 +32,11 @@ export function nameFontSize(text: string) {
     text,
     [
       { maxLen: 6, desktop: '0.95rem', mobile: '0.85rem' },
-      { maxLen: 8, desktop: '0.95rem', mobile: '0.7rem' },
-      { maxLen: 12, desktop: '0.8rem', mobile: '0.7rem' },
+      { maxLen: 8, desktop: '0.95rem', mobile: '0.8rem' },
+      { maxLen: 12, desktop: '0.8rem', mobile: '0.75rem' },
+      { maxLen: 16, desktop: '0.7rem', mobile: '0.6rem' },
     ],
-    { desktop: '0.7rem', mobile: '0.6rem' }
+    { desktop: '0.65rem', mobile: '0.45rem' }
   )
 }
 

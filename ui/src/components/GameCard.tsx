@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { scoreClass } from '../utils/format'
+import { nameFontSize } from '../utils/fontSize'
 import { TierKey } from '../types'
 import { RankBadge } from './RankBadge'
 import { TableStrengthTag } from './TableStrengthTag'
@@ -55,13 +56,15 @@ export const GameCard: React.FC<Props> = ({
       </div>
       <div className="session-card-players">
         {players.map((p, idx) => (
-          <div key={idx} className={`player-rank-item rank-${p.rank}`}>
-            <div className="player-rank-main">
-              <span className="rank-number">#{p.rank}</span>
+          <div key={idx} className="player-rank-item">
+            <span className="player-name-with-rank">
+              <span className={`rank-number${p.rank <= 3 ? ` rank-tag-${p.rank}` : ''}`}>#{p.rank}</span>
               {p.wind && <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>{p.wind}</span>}
               <RankBadge tier={p.tier} size="sm" userName={p.name} />
-              <span className="player-name">{p.name}</span>
-            </div>
+              <span className="player-name" style={{ fontSize: nameFontSize(p.name) }}>
+                {p.name}
+              </span>
+            </span>
             <span className={`player-score ${scoreClass(p.score)}`}>{p.score > 0 ? `+${p.score}` : p.score}</span>
           </div>
         ))}

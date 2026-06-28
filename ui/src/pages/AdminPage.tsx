@@ -173,7 +173,7 @@ export default function AdminPage() {
               inputMode="decimal"
               value={bonus}
               onChange={(e) => setBonus(e.target.value)}
-              style={{ width: '100%', maxWidth: 120 }}
+              style={{ flex: '0 1 120px', minWidth: 0 }}
             />
             <button
               className="btn btn-primary btn-small"
@@ -213,7 +213,7 @@ export default function AdminPage() {
                         <input
                           value={editUserName}
                           onChange={(e) => setEditUserName(e.target.value)}
-                          style={{ width: '100%', maxWidth: 120 }}
+                          style={{ width: '100%', maxWidth: 120, minWidth: 0 }}
                           placeholder="Username"
                           autoFocus
                         />
@@ -227,13 +227,13 @@ export default function AdminPage() {
                           <input
                             value={editFirst}
                             onChange={(e) => setEditFirst(e.target.value)}
-                            style={{ width: '100%', maxWidth: 80 }}
+                            style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
                             placeholder="First"
                           />
                           <input
                             value={editLast}
                             onChange={(e) => setEditLast(e.target.value)}
-                            style={{ width: '100%', maxWidth: 80 }}
+                            style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
                             placeholder="Last"
                             onKeyDown={(e) => e.key === 'Enter' && handleSave(p.id)}
                           />

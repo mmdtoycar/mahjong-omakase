@@ -9,8 +9,8 @@ type Tab = 'games' | 'players'
 
 const currentSeason = getCurrentSeason()
 
-import { statFontSize } from '../utils/fontSize'
-import { abbrName, parseError } from '../utils/format'
+import { statFontSize, nameFontSize } from '../utils/fontSize'
+import { parseError } from '../utils/format'
 import { MSG } from '../constants'
 import { useActiveSeasons } from '../hooks/useActiveSeasons'
 
@@ -143,6 +143,7 @@ export default function StatsPage() {
         skillRating: stat?.skillRating,
         totalGames: stat?.gamesPlayed ?? 0,
         gamesNeeded: stat?.gamesNeeded,
+        avgRank: stat?.avgRank,
       }
     })
     .sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0))
@@ -249,14 +250,14 @@ export default function StatsPage() {
             <div className="card">
               <h2>排行榜</h2>
               <div className="score-table">
-                <table>
+                <table className="fixed-table">
                   <thead>
                     <tr>
-                      <th>名次</th>
-                      <th>玩家</th>
-                      <th className="text-right">场次</th>
-                      <th className="text-right">胜场</th>
-                      <th className="text-right">积分(RP)</th>
+                      <th className="col-rank">排名</th>
+                      <th className="col-name">玩家</th>
+                      <th className="col-num">胜场</th>
+                      <th className="col-num">场均</th>
+                      <th className="col-num-wide">积分</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -267,7 +268,7 @@ export default function StatsPage() {
                         style={{ cursor: 'pointer' }}
                       >
                         <td>
-                          {i < 3 ? <span className={`rank-number rank-tag-${i + 1}`}>#{i + 1}</span> : <>#{i + 1}</>}
+                          {i < 3 ? <span className={`rank-tag rank-tag-${i + 1}`}>#{i + 1}</span> : <>#{i + 1}</>}
                         </td>
                         <td>
                           <span className="player-name-with-rank">
@@ -277,11 +278,32 @@ export default function StatsPage() {
                               userName={s.userName}
                               gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
                             />
-                            <span className="player-name">{s.userName}</span>
+                            <span className="player-name" style={{ fontSize: nameFontSize(s.userName) }}>
+                              {s.userName}
+                            </span>
                           </span>
                         </td>
-                        <td className="text-right">{s.gamesPlayed}</td>
-                        <td className="text-right">{s.wins}</td>
+                        <td className="num-cell">
+                          {s.wins}
+                          <span
+                            style={{
+                              fontSize: '0.6rem',
+                              color: 'var(--text-light)',
+                              verticalAlign: 'bottom',
+                              marginLeft: 2,
+                            }}
+                          >
+                            ({((s.wins / s.gamesPlayed) * 100).toFixed(0)}%)
+                          </span>
+                        </td>
+                        <td
+                          className="num-cell"
+                          style={{
+                            color: s.avgScore > 0 ? 'var(--success)' : s.avgScore < 0 ? 'var(--danger)' : undefined,
+                          }}
+                        >
+                          {s.avgScore > 0 ? `+${s.avgScore.toFixed(0)}` : s.avgScore.toFixed(0)}
+                        </td>
                         <td className="num-cell-rp">
                           {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
                         </td>
@@ -363,13 +385,13 @@ export default function StatsPage() {
           <div className="card">
             <h2>全部玩家</h2>
             <div className="score-table">
-              <table>
+              <table className="fixed-table">
                 <thead>
                   <tr>
-                    <th>排名</th>
-                    <th>用户名</th>
-                    <th>姓名</th>
-                    {gameMode !== 'DONGBEI' && <th>段位</th>}
+                    <th className="col-rank">排名</th>
+                    <th className="col-name">玩家</th>
+                    <th className="col-num">平均排名</th>
+                    <th className="col-num">段位分</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -379,24 +401,24 @@ export default function StatsPage() {
                       onClick={() => navigate(`/player/${p.id}?from=players`)}
                       style={{ cursor: 'pointer' }}
                     >
-                      <td>{i + 1}</td>
-                      <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{p.userName}</td>
-                      <td>{abbrName(p.firstName + ' ' + p.lastName)}</td>
-                      {gameMode !== 'DONGBEI' && (
-                        <td>
-                          <span className="player-name-with-rank">
-                            <RankBadge
-                              tier={p.tier ?? 'UNRANKED'}
-                              size="sm"
-                              userName={p.userName}
-                              gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
-                            />
-                            {p.tier && p.tier !== 'UNRANKED' && (
-                              <span className="player-tier-rating">{p.skillRating?.toFixed(0)}</span>
-                            )}
+                      <td>{i < 3 ? <span className={`rank-tag rank-tag-${i + 1}`}>#{i + 1}</span> : <>#{i + 1}</>}</td>
+                      <td>
+                        <span className="player-name-with-rank">
+                          <RankBadge
+                            tier={p.tier ?? 'UNRANKED'}
+                            size="sm"
+                            userName={p.userName}
+                            gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
+                          />
+                          <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
+                            {p.userName}
                           </span>
-                        </td>
-                      )}
+                        </span>
+                      </td>
+                      <td className="num-cell">{p.totalGames > 0 ? p.avgRank?.toFixed(2) : '-'}</td>
+                      <td className="num-cell-rp">
+                        {p.tier && p.tier !== 'UNRANKED' ? p.skillRating?.toFixed(0) : '-'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
