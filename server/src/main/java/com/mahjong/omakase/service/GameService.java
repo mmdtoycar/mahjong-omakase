@@ -250,18 +250,31 @@ public class GameService {
     return playerRepo.existsByUserName(userName);
   }
 
-  public Player updatePlayer(Long id, String firstName, String lastName) {
+  public Player updatePlayer(Long id, String userName, String firstName, String lastName) {
     Player player =
         playerRepo
             .findById(Objects.requireNonNull(id))
             .orElseThrow(() -> new IllegalArgumentException("Player not found"));
+    if (userName != null && !userName.isBlank()) {
+      String trimmed = userName.trim();
+      if (!trimmed.equalsIgnoreCase(player.getUserName())
+          && playerRepo.existsByUserNameIgnoreCase(trimmed)) {
+        throw new IllegalArgumentException("Username already taken");
+      }
+      player.setUserName(trimmed);
+    }
     if (firstName != null && !firstName.isBlank()) {
       player.setFirstName(firstName.trim());
     }
     if (lastName != null && !lastName.isBlank()) {
       player.setLastName(lastName.trim());
     }
-    log.info("Updated player id={}, name='{} {}'", id, player.getFirstName(), player.getLastName());
+    log.info(
+        "Updated player id={}, userName='{}', name='{} {}'",
+        id,
+        player.getUserName(),
+        player.getFirstName(),
+        player.getLastName());
     Player saved = playerRepo.save(player);
     evictAllCaches();
     return saved;

@@ -16,16 +16,16 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
   Optional<Player> findByToken(String token);
 
   /**
-   * Finds a legacy player record (no Google email bound) whose userName/firstName/lastName all
-   * match case-insensitively. Used by the profile-setup flow to decide whether the user is claiming
-   * an existing record or registering a fresh one.
+   * Finds any player whose userName/firstName/lastName all match case-insensitively, regardless of
+   * email/merged state. The setup-profile flow uses this as the entry point: a match means
+   * "rename/claim this row (if your Google email matches its bound email, or it is unbound)", a
+   * miss means "register a new row".
    */
   @Query(
       "SELECT p FROM Player p WHERE LOWER(p.userName) = LOWER(:userName) "
           + "AND LOWER(p.firstName) = LOWER(:firstName) "
-          + "AND LOWER(p.lastName) = LOWER(:lastName) "
-          + "AND p.email IS NULL")
-  Optional<Player> findClaimableLegacyPlayer(
+          + "AND LOWER(p.lastName) = LOWER(:lastName)")
+  Optional<Player> findByExactName(
       @Param("userName") String userName,
       @Param("firstName") String firstName,
       @Param("lastName") String lastName);

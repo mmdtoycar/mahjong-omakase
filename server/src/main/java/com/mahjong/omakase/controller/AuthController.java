@@ -157,8 +157,8 @@ public class AuthController {
   }
 
   /**
-   * Read-only check: does a claimable legacy player (matching userName/firstName/lastName, with no
-   * bound email) exist? Used by the profile setup form to show the right confirmation copy (绑定 vs
+   * Read-only check: does any player record exist matching userName/firstName/lastName exactly
+   * (case-insensitive)? Used by the profile setup form to show the right confirmation copy (绑定 vs
    * 注册) before submitting.
    */
   @GetMapping("/lookup-claimable")
@@ -175,30 +175,28 @@ public class AuthController {
       return ResponseEntity.badRequest().body(Map.of("error", "All fields are required"));
     }
     boolean exists =
-        playerRepo
-            .findClaimableLegacyPlayer(userName.trim(), firstName.trim(), lastName.trim())
-            .isPresent();
+        playerRepo.findByExactName(userName.trim(), firstName.trim(), lastName.trim()).isPresent();
     return ResponseEntity.ok(Map.of("exists", exists));
   }
 
   /**
    * Atomic profile finalization. The frontend resends the Google credential alongside the desired
    * userName/firstName/lastName; we re-verify it here so the server is the sole authority on
-   * email/picture. Two cases:
+   * email/picture. Two branches based on whether the typed (userName, firstName, lastName) exactly
+   * matches an existing row:
    *
    * <ul>
-   *   <li><b>register</b>: no claimable legacy match → INSERT a brand-new Player carrying the
-   *       Google identity.
-   *   <li><b>claim</b>: a legacy unbound Player matches the form → UPDATE that row with
-   *       email/picture/token, mark merged.
+   *   <li><b>claim</b>: exact-name match exists. Allowed only if the row's email is unset OR the
+   *       row's email equals the verified Google email; otherwise rejected (would let anyone with a
+   *       guessed name overwrite someone else's bound account). The row gets email/picture/token
+   *       attached and merged flipped to true.
+   *   <li><b>register</b>: no exact-name match. INSERT a brand-new Player. A defensive findByEmail
+   *       check first catches "user mistyped their name but their email is already bound" — would
+   *       otherwise crash on the email UNIQUE constraint with a 500.
    * </ul>
    *
-   * <p>Pre-condition: no merged-or-unmerged Player already exists for this Google email. The
-   * preceding {@link #googleLogin} path lets fully-merged users in directly, so this endpoint
-   * should only ever see emails that don't yet have a Player row. As a safety net, we reject with
-   * 400 if an unmerged Player for this email is somehow still around (would only happen for users
-   * created by the pre-#136 auto-create code who haven't completed onboarding yet — admin monitors
-   * and they finish setup on the previous code path).
+   * <p>All security-relevant rejections use generic "请联系管理员" text — we deliberately do not leak the
+   * other row's stored userName/firstName/lastName back to the caller.
    */
   @Transactional
   @PostMapping("/setup-profile")
@@ -236,30 +234,44 @@ public class AuthController {
     String trimmedFirstName = firstName.trim();
     String trimmedLastName = lastName.trim();
 
-    Optional<Player> existing = playerRepo.findByEmail(google.email);
-    if (existing.isPresent()) {
-      // merged=true should never reach here (googleLogin path handles them), but defend anyway.
-      // merged=false means an unmerged holdover from the pre-#136 auto-create code — those have
-      // to complete onboarding via the old token-based code path before this PR ships, or via an
-      // out-of-band admin fix. Either way, /setup-profile in the new flow should not see them.
-      log.warn(
-          "setupProfile blocked: Player id={} already exists for email={} (merged={})",
-          existing.get().getId(),
-          redactEmail(google.email),
-          existing.get().isMerged());
-      return ResponseEntity.badRequest().body(Map.of("error", "该 Google 账号已存在历史记录, 请联系管理员"));
-    }
-
-    Player legacy =
-        playerRepo
-            .findClaimableLegacyPlayer(trimmedUserName, trimmedFirstName, trimmedLastName)
-            .orElse(null);
+    Player match =
+        playerRepo.findByExactName(trimmedUserName, trimmedFirstName, trimmedLastName).orElse(null);
     String sessionToken = newSessionToken();
     Player result;
     String mode;
 
-    if (legacy == null) {
-      // register: brand new user, no legacy match. Single INSERT.
+    if (match != null) {
+      // claim/rename branch — name matched an existing row.
+      if (match.getEmail() != null && !match.getEmail().equals(google.email)) {
+        log.warn(
+            "setupProfile claim blocked (email mismatch): match.id={} for credential email={}",
+            match.getId(),
+            redactEmail(google.email));
+        return ResponseEntity.badRequest().body(Map.of("error", "无法完成绑定, 请联系管理员"));
+      }
+      if (match.isMerged()) {
+        log.warn("setupProfile claim blocked (already merged): match.id={}", match.getId());
+        return ResponseEntity.badRequest().body(Map.of("error", "该账号已完成绑定, 请联系管理员"));
+      }
+      mode = match.getEmail() == null ? "claim" : "rebind";
+      match.setEmail(google.email);
+      if (google.pictureUrl != null) {
+        match.setPictureUrl(google.pictureUrl);
+      }
+      match.setToken(sessionToken);
+      match.setMerged(true);
+      result = playerRepo.saveAndFlush(match);
+    } else {
+      // register branch — no exact-name match.
+      // Defensive: if this Google email is already bound to a different (name-mismatching) row,
+      // the INSERT below would crash on the email UNIQUE constraint with a 500. Friendly 400
+      // instead. Typical trigger: user mistyped their old account's name during setup.
+      if (playerRepo.findByEmail(google.email).isPresent()) {
+        log.warn(
+            "setupProfile register blocked (email already bound, name mismatch): email={}",
+            redactEmail(google.email));
+        return ResponseEntity.badRequest().body(Map.of("error", "无法完成绑定, 请联系管理员"));
+      }
       if (playerRepo.existsByUserNameIgnoreCase(trimmedUserName)) {
         return ResponseEntity.badRequest().body(Map.of("error", "用户名已被占用,请换一个"));
       }
@@ -270,14 +282,6 @@ public class AuthController {
       p.setMerged(true);
       result = playerRepo.saveAndFlush(p);
       mode = "register";
-    } else {
-      // claim: attach Google identity to the matching unbound legacy row.
-      legacy.setEmail(google.email);
-      legacy.setPictureUrl(google.pictureUrl);
-      legacy.setToken(sessionToken);
-      legacy.setMerged(true);
-      result = playerRepo.saveAndFlush(legacy);
-      mode = "claim";
     }
 
     log.info(
