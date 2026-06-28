@@ -107,7 +107,7 @@ export default function ProfilePage() {
       const claimable = await lookupClaimablePlayer(userName, firstName, lastName)
 
       const confirmMsg = claimable
-        ? `确认提交「${userName}」吗?\n\n如该名字已对应历史账号且邮箱归属验证通过, 战绩会自动归入您的 Google 身份。`
+        ? `确认绑定老账号「${userName}」吗?\n\n该账号下的历史战绩与积分将合并到您当前的 Google 身份。`
         : `确认使用「${userName}」作为新账号吗?\n\n系统将注册一个全新雀士档案并绑定您的 Google 身份。`
 
       if (!window.confirm(confirmMsg)) {
@@ -121,7 +121,7 @@ export default function ProfilePage() {
       sessionStorage.setItem('mahjong_me', JSON.stringify(result.player))
       sessionStorage.removeItem('mahjong_google_credential')
       setMe(result.player)
-      setSetupSuccess(claimable ? '完成! 账号已就位。' : '注册成功!您的雀士档案已创建。')
+      setSetupSuccess(claimable ? '绑定成功!历史战绩已同步继承。' : '注册成功!您的雀士档案已创建。')
       setSetupForm({ userName: '', firstName: '', lastName: '' })
       window.dispatchEvent(new Event('auth-change'))
     } catch (err: any) {
@@ -176,201 +176,199 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* 2. 个人战绩(下拉切换模式) — 占位 me 时整块不渲染, 避免显示空 card */}
-      {!me.pendingAuth &&
-        me.id &&
-        (() => {
-          const stats = statsByMode[selectedMode]
-          const hasStats = stats && stats.gamesPlayed > 0
-          return (
-            <div className="profile-card">
-              <div
+      {/* 2. 个人战绩(下拉切换模式) */}
+      {(() => {
+        const stats = statsByMode[selectedMode]
+        const hasStats = stats && stats.gamesPlayed > 0
+        return (
+          <div className="profile-card">
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '20px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <h3
                 style={{
+                  margin: 0,
+                  fontSize: '18px',
+                  color: 'var(--primary)',
                   display: 'flex',
-                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '20px',
-                  flexWrap: 'wrap',
+                  gap: '8px',
                 }}
               >
-                <h3
+                📊 个人战绩
+              </h3>
+              <select
+                value={selectedMode}
+                onChange={(e) => setSelectedMode(e.target.value as GameModeKey)}
+                className="select-inline"
+              >
+                {GAME_MODES.map((m) => (
+                  <option key={m.key} value={m.key}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 段位显示: 国标 / 立直 跟随上面 selectedMode 切换 */}
+            {tier && (selectedMode === 'GUOBIAO' || selectedMode === 'RIICHI') && (
+              <div className="profile-tier-section">
+                <RankBadge
+                  tier={selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier}
+                  size="lg"
+                  rating={
+                    (selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier) === 'UNRANKED'
+                      ? undefined
+                      : selectedMode === 'GUOBIAO'
+                      ? tier.guobiao.rating
+                      : tier.riichi.rating
+                  }
+                  gamesNeeded={selectedMode === 'GUOBIAO' ? tier.guobiao.gamesNeeded : tier.riichi.gamesNeeded}
+                />
+              </div>
+            )}
+
+            {hasStats ? (
+              <div className="profile-stats-grid">
+                <div className="profile-stat-card">
+                  <div className="profile-stat-value profile-stat-value-teal">{stats.gamesPlayed}</div>
+                  <div className="profile-stat-label">总局数</div>
+                </div>
+                <div className="profile-stat-card">
+                  <div className="profile-stat-value profile-stat-value-teal">
+                    {stats.wins}{' '}
+                    <span className="profile-stat-suffix">
+                      ({((stats.wins / stats.gamesPlayed) * 100).toFixed(0)}%)
+                    </span>
+                  </div>
+                  <div className="profile-stat-label">胜场 (胜率)</div>
+                </div>
+                <div className="profile-stat-card">
+                  <div className="profile-stat-value profile-stat-value-gold">
+                    {stats.totalRP > 0 ? `+${stats.totalRP.toFixed(1)}` : stats.totalRP.toFixed(1)}
+                  </div>
+                  <div className="profile-stat-label">总积分 (RP)</div>
+                </div>
+                <div className="profile-stat-card">
+                  <div className="profile-stat-value profile-stat-value-gold">
+                    {stats.avgScore > 0 ? `+${stats.avgScore.toFixed(0)}` : stats.avgScore.toFixed(0)}
+                  </div>
+                  <div className="profile-stat-label">场均表现</div>
+                </div>
+                <div className="profile-stat-card">
+                  <div className="profile-stat-value profile-stat-value-teal">{stats.avgRank.toFixed(2)}</div>
+                  <div className="profile-stat-label">平均排名</div>
+                </div>
+              </div>
+            ) : (
+              <div className="empty-state empty-state-compact">
+                <p>本模式暂无对局统计。</p>
+              </div>
+            )}
+
+            {selectedMode === 'RIICHI' && hasStats && stats.roundsPlayed > 0 && (
+              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
+                <h4
                   style={{
-                    margin: 0,
-                    fontSize: '18px',
+                    margin: '0 0 16px 0',
+                    fontSize: '15px',
                     color: 'var(--primary)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '6px',
                   }}
                 >
-                  📊 个人战绩
-                </h3>
-                <select
-                  value={selectedMode}
-                  onChange={(e) => setSelectedMode(e.target.value as GameModeKey)}
-                  className="select-inline"
-                >
-                  {GAME_MODES.map((m) => (
-                    <option key={m.key} value={m.key}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 段位显示: 国标 / 立直 跟随上面 selectedMode 切换 */}
-              {tier && (selectedMode === 'GUOBIAO' || selectedMode === 'RIICHI') && (
-                <div className="profile-tier-section">
-                  <RankBadge
-                    tier={selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier}
-                    size="lg"
-                    rating={
-                      (selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier) === 'UNRANKED'
-                        ? undefined
-                        : selectedMode === 'GUOBIAO'
-                        ? tier.guobiao.rating
-                        : tier.riichi.rating
-                    }
-                    gamesNeeded={selectedMode === 'GUOBIAO' ? tier.guobiao.gamesNeeded : tier.riichi.gamesNeeded}
-                  />
-                </div>
-              )}
-
-              {hasStats ? (
+                  📈 数据统计
+                </h4>
                 <div className="profile-stats-grid">
                   <div className="profile-stat-card">
-                    <div className="profile-stat-value profile-stat-value-teal">{stats.gamesPlayed}</div>
-                    <div className="profile-stat-label">总局数</div>
+                    <div className="profile-stat-value profile-stat-value-teal">
+                      {((stats.handWins / stats.roundsPlayed) * 100).toFixed(1)}%
+                    </div>
+                    <div className="profile-stat-label">和牌率</div>
                   </div>
                   <div className="profile-stat-card">
                     <div className="profile-stat-value profile-stat-value-teal">
-                      {stats.wins}{' '}
-                      <span className="profile-stat-suffix">
-                        ({((stats.wins / stats.gamesPlayed) * 100).toFixed(0)}%)
-                      </span>
+                      {((stats.dealIns / stats.roundsPlayed) * 100).toFixed(1)}%
                     </div>
-                    <div className="profile-stat-label">胜场 (胜率)</div>
+                    <div className="profile-stat-label">放铳率</div>
                   </div>
                   <div className="profile-stat-card">
                     <div className="profile-stat-value profile-stat-value-gold">
-                      {stats.totalRP > 0 ? `+${stats.totalRP.toFixed(1)}` : stats.totalRP.toFixed(1)}
+                      {stats.handWins > 0 ? Math.round(stats.avgWinPoints).toLocaleString() : '-'}
                     </div>
-                    <div className="profile-stat-label">总积分 (RP)</div>
+                    <div className="profile-stat-label">平均打点</div>
                   </div>
                   <div className="profile-stat-card">
                     <div className="profile-stat-value profile-stat-value-gold">
-                      {stats.avgScore > 0 ? `+${stats.avgScore.toFixed(0)}` : stats.avgScore.toFixed(0)}
+                      {stats.dealIns > 0 ? Math.round(stats.avgDealInPoints).toLocaleString() : '-'}
                     </div>
-                    <div className="profile-stat-label">场均表现</div>
-                  </div>
-                  <div className="profile-stat-card">
-                    <div className="profile-stat-value profile-stat-value-teal">{stats.avgRank.toFixed(2)}</div>
-                    <div className="profile-stat-label">平均排名</div>
+                    <div className="profile-stat-label">平均铳点</div>
                   </div>
                 </div>
-              ) : (
-                <div className="empty-state empty-state-compact">
-                  <p>本模式暂无对局统计。</p>
-                </div>
-              )}
+              </div>
+            )}
 
-              {selectedMode === 'RIICHI' && hasStats && stats.roundsPlayed > 0 && (
-                <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
-                  <h4
-                    style={{
-                      margin: '0 0 16px 0',
-                      fontSize: '15px',
-                      color: 'var(--primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    📈 数据统计
-                  </h4>
-                  <div className="profile-stats-grid">
-                    <div className="profile-stat-card">
-                      <div className="profile-stat-value profile-stat-value-teal">
-                        {((stats.handWins / stats.roundsPlayed) * 100).toFixed(1)}%
-                      </div>
-                      <div className="profile-stat-label">和牌率</div>
-                    </div>
-                    <div className="profile-stat-card">
-                      <div className="profile-stat-value profile-stat-value-teal">
-                        {((stats.dealIns / stats.roundsPlayed) * 100).toFixed(1)}%
-                      </div>
-                      <div className="profile-stat-label">放铳率</div>
-                    </div>
-                    <div className="profile-stat-card">
-                      <div className="profile-stat-value profile-stat-value-gold">
-                        {stats.handWins > 0 ? Math.round(stats.avgWinPoints).toLocaleString() : '-'}
-                      </div>
-                      <div className="profile-stat-label">平均打点</div>
-                    </div>
-                    <div className="profile-stat-card">
-                      <div className="profile-stat-value profile-stat-value-gold">
-                        {stats.dealIns > 0 ? Math.round(stats.avgDealInPoints).toLocaleString() : '-'}
-                      </div>
-                      <div className="profile-stat-label">平均铳点</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 番种成就只在国标模式下显示(其他模式没有番种系统) */}
-              {selectedMode === 'GUOBIAO' && (
-                <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
-                  <h4
-                    style={{
-                      margin: '0 0 16px 0',
-                      fontSize: '15px',
-                      color: 'var(--primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    🏆 番种成就
-                  </h4>
-                  {discoveries.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {discoveries.map((fd, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            background: 'linear-gradient(135deg, rgba(33, 140, 116, 0.02), rgba(181, 137, 0, 0.02))',
-                            border: '1px solid #eef7f4',
-                            borderRadius: '10px',
-                            padding: '12px 16px',
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontWeight: 700, color: 'var(--mj-teal)', fontSize: '15px' }}>
-                              🏅 {fd.fanName}
-                            </div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '4px' }}>
-                              发现日期:{' '}
-                              {new Date(fd.discoveredAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}
-                            </div>
+            {/* 番种成就只在国标模式下显示(其他模式没有番种系统) */}
+            {selectedMode === 'GUOBIAO' && (
+              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
+                <h4
+                  style={{
+                    margin: '0 0 16px 0',
+                    fontSize: '15px',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  🏆 番种成就
+                </h4>
+                {discoveries.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {discoveries.map((fd, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          background: 'linear-gradient(135deg, rgba(33, 140, 116, 0.02), rgba(181, 137, 0, 0.02))',
+                          border: '1px solid #eef7f4',
+                          borderRadius: '10px',
+                          padding: '12px 16px',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, color: 'var(--mj-teal)', fontSize: '15px' }}>
+                            🏅 {fd.fanName}
                           </div>
-                          <span className="profile-status-pill profile-status-pill-warning">+{fd.bonusRp || 0} RP</span>
+                          <div style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '4px' }}>
+                            发现日期:{' '}
+                            {new Date(fd.discoveredAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="empty-state empty-state-compact">
-                      <p>暂未发现首和番种成就。</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })()}
+                        <span className="profile-status-pill profile-status-pill-warning">+{fd.bonusRp || 0} RP</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state empty-state-compact">
+                    <p>暂未发现首和番种成就。</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* 4. 完善账号:关联老账号 / 注册新账号 */}
       {!me.merged && (
