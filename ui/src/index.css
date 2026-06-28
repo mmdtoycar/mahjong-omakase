@@ -380,6 +380,10 @@ tr:hover td {
   opacity: 1;
 }
 
+.score-table {
+  overflow-x: auto;
+}
+
 .score-table table {
   min-width: 100%;
 }

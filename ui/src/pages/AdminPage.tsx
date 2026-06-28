@@ -196,14 +196,14 @@ export default function AdminPage() {
       <div className="card">
         <h2>Players ({players.length})</h2>
         <div className="score-table">
-          <table className="fixed-table">
+          <table>
             <thead>
               <tr>
-                <th style={{ width: '48px' }}>ID</th>
+                <th>ID</th>
                 <th>Username</th>
                 <th>Name</th>
-                <th style={{ width: '90px' }}>Joined</th>
-                <th style={{ width: '130px' }}></th>
+                <th>Joined</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -287,15 +287,15 @@ export default function AdminPage() {
           This cannot be undone. In-progress sessions are not shown.
         </p>
         <div className="score-table">
-          <table className="fixed-table">
+          <table>
             <thead>
               <tr>
-                <th style={{ width: '48px' }}>ID</th>
+                <th>ID</th>
                 <th>Name</th>
-                <th style={{ width: '64px' }}>Mode</th>
-                <th style={{ width: '56px' }}>Rounds</th>
-                <th style={{ width: '90px' }}>Created</th>
-                <th style={{ width: '80px' }}></th>
+                <th>Mode</th>
+                <th>Rounds</th>
+                <th>Created</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
