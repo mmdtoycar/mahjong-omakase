@@ -188,28 +188,7 @@ export default function AdminPage() {
       </div>
 
       <div className="card">
-        <h2>
-          Players ({players.length})
-          {(() => {
-            const unbound = players.filter((p) => !p.merged && !p.bot).length
-            return unbound > 0 ? (
-              <span
-                style={{
-                  marginLeft: 10,
-                  fontSize: '0.7em',
-                  padding: '2px 8px',
-                  borderRadius: 4,
-                  background: 'var(--danger, #c0392b)',
-                  color: '#fff',
-                  fontWeight: 600,
-                }}
-                title="merged=false 且非 BOT: 未绑定 Google 账号, 需要通知用户登录完成绑定"
-              >
-                {unbound} 未绑定
-              </span>
-            ) : null
-          })()}
-        </h2>
+        <h2>Players ({players.length})</h2>
         <div className="score-table">
           <table>
             <thead>
@@ -223,6 +202,9 @@ export default function AdminPage() {
             </thead>
             <tbody>
               {players.map((p) => {
+                // TODO: 等所有真实玩家都完成 Google 绑定后, 删掉这条标红逻辑
+                // (含 Username / Name 两列的 cellStyle 应用). 那时 !merged && !bot 的行
+                // 只剩 legacy unbound (像 pichu / 赢麻了 / Mccc 等) 不需要再催绑了.
                 const unbound = !p.merged && !p.bot
                 const cellStyle = unbound ? { color: 'var(--danger, #c0392b)', fontWeight: 600 } : undefined
                 return (
