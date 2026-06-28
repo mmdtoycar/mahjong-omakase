@@ -31,7 +31,7 @@ export function nameFontSize(text: string) {
   return resolve(
     text,
     [
-      { maxLen: 6, desktop: '0.95rem', mobile: '0.85rem' },
+      { maxLen: 6, desktop: '0.95rem', mobile: '1rem' },
       { maxLen: 8, desktop: '0.95rem', mobile: '0.8rem' },
       { maxLen: 12, desktop: '0.8rem', mobile: '0.75rem' },
       { maxLen: 16, desktop: '0.7rem', mobile: '0.6rem' },
