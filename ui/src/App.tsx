@@ -81,6 +81,7 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('mahjong_token')
     sessionStorage.removeItem('mahjong_me')
+    sessionStorage.removeItem('mahjong_google_credential')
     window.dispatchEvent(new Event('auth-change'))
     navigate('/login')
   }
