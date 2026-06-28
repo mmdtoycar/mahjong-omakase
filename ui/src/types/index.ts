@@ -7,6 +7,7 @@ export interface Player {
   email?: string
   pictureUrl?: string
   merged?: boolean
+  bot?: boolean
 }
 
 export type GameModeKey = 'DONGBEI' | 'RIICHI' | 'GUOBIAO'
