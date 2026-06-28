@@ -196,7 +196,7 @@ export default function AdminPage() {
       <div className="card">
         <h2>Players ({players.length})</h2>
         <div className="table-wrap">
-          <table className="flex-table">
+          <table className="auto-table">
             <thead>
               <tr>
                 <th>ID</th>
@@ -287,7 +287,7 @@ export default function AdminPage() {
           This cannot be undone. In-progress sessions are not shown.
         </p>
         <div className="table-wrap">
-          <table className="flex-table">
+          <table className="auto-table">
             <thead>
               <tr>
                 <th>ID</th>
