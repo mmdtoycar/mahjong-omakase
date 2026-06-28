@@ -370,7 +370,6 @@ export default function StatsPage() {
                     <th>用户名</th>
                     <th>姓名</th>
                     {gameMode !== 'DONGBEI' && <th>段位</th>}
-                    <th>注册日期</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -398,7 +397,6 @@ export default function StatsPage() {
                           </span>
                         </td>
                       )}
-                      <td>{new Date(p.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
                     </tr>
                   ))}
                 </tbody>
