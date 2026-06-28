@@ -107,7 +107,7 @@ export default function ProfilePage() {
       const claimable = await lookupClaimablePlayer(userName, firstName, lastName)
 
       const confirmMsg = claimable
-        ? `确认提交「${userName}」吗?\n\n如该名字已对应历史账号且邮箱归属验证通过, 战绩会自动归入您的 Google 身份。`
+        ? `确认绑定老账号「${userName}」吗?\n\n该账号下的历史战绩与积分将合并到您当前的 Google 身份。`
         : `确认使用「${userName}」作为新账号吗?\n\n系统将注册一个全新雀士档案并绑定您的 Google 身份。`
 
       if (!window.confirm(confirmMsg)) {
@@ -121,7 +121,7 @@ export default function ProfilePage() {
       sessionStorage.setItem('mahjong_me', JSON.stringify(result.player))
       sessionStorage.removeItem('mahjong_google_credential')
       setMe(result.player)
-      setSetupSuccess(claimable ? '完成! 账号已就位。' : '注册成功!您的雀士档案已创建。')
+      setSetupSuccess(claimable ? '绑定成功!历史战绩已同步继承。' : '注册成功!您的雀士档案已创建。')
       setSetupForm({ userName: '', firstName: '', lastName: '' })
       window.dispatchEvent(new Event('auth-change'))
     } catch (err: any) {
