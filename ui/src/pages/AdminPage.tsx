@@ -227,7 +227,7 @@ export default function AdminPage() {
                         p.userName
                       )}
                     </td>
-                    <td style={cellStyle}>
+                    <td style={{ whiteSpace: 'nowrap', ...cellStyle }}>
                       {editingId === p.id ? (
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <input
@@ -287,10 +287,9 @@ export default function AdminPage() {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Name</th>
+                <th>Game Name</th>
                 <th>Mode</th>
                 <th>Rnds</th>
-                <th>Time</th>
                 <th></th>
               </tr>
             </thead>
@@ -298,10 +297,9 @@ export default function AdminPage() {
               {sessions.map((s) => (
                 <tr key={s.id}>
                   <td>{s.id}</td>
-                  <td>{s.name}</td>
-                  <td>{s.gameModeDisplayName}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{s.name}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{s.gameModeDisplayName}</td>
                   <td>{s.roundCount}</td>
-                  <td>{new Date(s.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
                   <td>
                     <button
                       className="btn btn-danger btn-small"
