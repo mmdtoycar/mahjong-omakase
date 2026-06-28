@@ -380,20 +380,54 @@ tr:hover td {
   opacity: 1;
 }
 
-.score-table {
+.table-wrap {
   overflow-x: auto;
 }
 
-.score-table table {
+.table-wrap table {
   min-width: 100%;
 }
 
-.score-table th,
-.score-table td {
+.table-wrap th,
+.table-wrap td {
   vertical-align: middle;
 }
 
-.score-table td.score-cell {
+table.fixed-table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 0;
+}
+
+table.fixed-table th,
+table.fixed-table td {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+table.fixed-table .col-rank {
+  width: 44px;
+}
+
+table.fixed-table .col-num {
+  width: 52px;
+  text-align: right;
+}
+
+table.fixed-table .col-num-wide {
+  width: 68px;
+  text-align: right;
+}
+
+table.fixed-table .col-name {
+  padding-left: 12px;
+}
+
+table.auto-table {
+  table-layout: auto;
+}
+
+.table-wrap td.score-cell {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -408,7 +442,7 @@ tr:hover td {
   color: var(--danger);
 }
 
-.score-table .total-row td {
+.table-wrap .total-row td {
   font-weight: 700;
   background: var(--bg);
   border-top: 2px solid var(--primary);
@@ -496,12 +530,6 @@ tr:hover td {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
-}
-
-.profile-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
 }
 
 .login-container {
@@ -593,39 +621,6 @@ tr:hover td {
 .profile-card-warning {
   background: rgb(181 137 0 / 2%);
   border: 1px dashed var(--mj-gold);
-}
-
-.profile-stat-card {
-  background: var(--card-muted);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-}
-
-.profile-stat-value {
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.profile-stat-value-teal {
-  color: var(--mj-teal);
-}
-
-.profile-stat-value-gold {
-  color: var(--mj-gold);
-}
-
-.profile-stat-suffix {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.profile-stat-label {
-  font-size: 12px;
-  color: var(--text-light);
-  margin-top: 4px;
 }
 
 .profile-info-row {
@@ -1012,53 +1007,11 @@ tr:hover td {
   opacity: 1;
 }
 
-/* Sign Up page */
-.signup-container {
-  display: flex;
-  justify-content: center;
-  padding-top: 20px;
-}
-
-.signup-card {
-  width: 100%;
-  max-width: 480px;
-}
-
-.signup-title {
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--primary);
-  text-align: center;
-  margin-bottom: 28px;
-}
-
-.signup-btn {
-  width: 100%;
-  justify-content: center;
-  margin-top: 8px;
-  padding: 12px;
-  font-size: 1rem;
-}
-
-.signup-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .field-hint {
   display: block;
   margin-top: 4px;
   font-size: 0.8rem;
   color: var(--text-light);
-}
-
-.error-banner {
-  background: #fdecea;
-  color: var(--danger);
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  margin-bottom: 16px;
 }
 
 .error-text {
@@ -1273,7 +1226,7 @@ tr:hover td {
 }
 
 .player-name-with-rank {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
 }
@@ -1504,6 +1457,16 @@ tr:hover td {
 
 /* ===== Mobile responsive ===== */
 @media (width <= 640px) {
+  .player-detail-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .player-detail-tiers {
+    justify-content: flex-end;
+  }
+
   .login-container {
     min-height: 0;
     justify-content: flex-start;
@@ -2026,10 +1989,6 @@ tr:hover td {
 
   .win-action-row-three {
     flex-direction: column;
-  }
-
-  .profile-stats-grid {
-    grid-template-columns: 1fr;
   }
 
   .claim-name-row {
@@ -2846,12 +2805,6 @@ tr:hover td {
   margin-bottom: 12px;
 }
 
-.rank-number {
-  font-weight: 900;
-  font-size: 1.2rem;
-  width: 24px;
-}
-
 .rank-info {
   flex: 1;
   display: flex;
@@ -2996,12 +2949,6 @@ tr:hover td {
   padding-bottom: 8px;
 }
 
-.player-rank-main {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .game-card .rank-number {
   font-weight: 900;
   font-size: 0.75rem;
@@ -3009,18 +2956,9 @@ tr:hover td {
   opacity: 0.4;
 }
 
-.game-card .rank-1 .rank-number {
-  color: var(--sol-yellow);
-  opacity: 1;
-}
-
-.game-card .rank-2 .rank-number {
-  color: var(--sol-base0);
-  opacity: 1;
-}
-
-.game-card .rank-3 .rank-number {
-  color: var(--sol-orange);
+.game-card .rank-number.rank-tag-1,
+.game-card .rank-number.rank-tag-2,
+.game-card .rank-number.rank-tag-3 {
   opacity: 1;
 }
 

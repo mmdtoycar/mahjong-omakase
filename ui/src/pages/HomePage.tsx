@@ -5,6 +5,7 @@ import { GAME_MODES, SessionDetail, PlayerStats, BestRound, getCurrentSeason } f
 import { GameCard } from '../components/GameCard'
 import { RankBadge } from '../components/RankBadge'
 import { deriveGameState, getWindName } from '../utils/gameState'
+import { nameFontSize } from '../utils/fontSize'
 import { MSG } from '../constants'
 
 export default function HomePage() {
@@ -121,7 +122,7 @@ export default function HomePage() {
                     ) : (
                       data.top.map((player, idx) => (
                         <div key={player.playerId} className="rank-item">
-                          <span className={`rank-number rank-tag-${idx + 1}`}>#{idx + 1}</span>
+                          <span className={`rank-tag rank-tag-${idx + 1}`}>#{idx + 1}</span>
                           <div className="rank-info">
                             <span className="player-name-with-rank">
                               <RankBadge
@@ -130,7 +131,9 @@ export default function HomePage() {
                                 gamesNeeded={undefined}
                                 userName={player.userName}
                               />
-                              <span className="player-name">{player.userName}</span>
+                              <span className="player-name" style={{ fontSize: nameFontSize(player.userName) }}>
+                                {player.userName}
+                              </span>
                             </span>
                             <span className="player-score">{player.totalRP.toFixed(1)} RP</span>
                           </div>

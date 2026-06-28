@@ -300,8 +300,11 @@ export default function SessionPage() {
     return state.displayName
   }
 
-  const playerColPct = `${Math.floor(90 / session.players.length)}%`
-  const playerColStyle = { textAlign: 'center' as const, width: playerColPct, minWidth: 56 }
+  const fixedColPx = 60 + (session.status === 'IN_PROGRESS' ? 32 : 0)
+  const playerColStyle = {
+    textAlign: 'center' as const,
+    width: `calc((100% - ${fixedColPx}px) / ${session.players.length})`,
+  }
 
   const otherPlayers = session.players.filter((p) => p.id !== Number(winnerId))
   const dealerId = String(gameState.dealerPlayerId)
@@ -763,8 +766,8 @@ export default function SessionPage() {
             )}
           </div>
         </div>
-        <div className="score-table">
-          <table>
+        <div className="table-wrap">
+          <table className="fixed-table">
             <thead>
               <tr>
                 <th style={{ textAlign: 'center', width: '60px' }}>局</th>
@@ -779,7 +782,7 @@ export default function SessionPage() {
                     </div>
                   </th>
                 ))}
-                {session.status === 'IN_PROGRESS' && <th></th>}
+                {session.status === 'IN_PROGRESS' && <th style={{ width: '32px' }}></th>}
               </tr>
             </thead>
             <tbody>
@@ -894,14 +897,18 @@ export default function SessionPage() {
       {session.rounds.length > 0 && (
         <div className="card">
           <h2>排名</h2>
-          <div className="score-table">
-            <table>
+          <div className="table-wrap">
+            <table className="fixed-table">
               <thead>
                 <tr>
-                  <th>名次</th>
+                  <th className="col-rank">排名</th>
                   <th>玩家</th>
-                  <th className="text-right">分数</th>
-                  <th className="text-right">积分(RP)</th>
+                  <th className="text-right" style={{ width: '72px' }}>
+                    分数
+                  </th>
+                  <th className="text-right" style={{ width: '92px' }}>
+                    积分(RP)
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -912,10 +919,14 @@ export default function SessionPage() {
                   const rank = rankMap[p.id]?.rank ?? i + 1
                   return (
                     <tr key={p.id}>
-                      <td>
+                      <td className="col-rank">
                         <span className={`rank-tag rank-tag-${rank}`}>#{rank}</span>
                       </td>
-                      <td>{p.userName}</td>
+                      <td>
+                        <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
+                          {p.userName}
+                        </span>
+                      </td>
                       <td className={`${scoreClass(val)} num-cell`}>{val > 0 ? `+${val}` : val}</td>
                       <td className="num-cell-rp">
                         {baseRp > 0 ? `+${baseRp.toFixed(1)}` : baseRp.toFixed(1)}

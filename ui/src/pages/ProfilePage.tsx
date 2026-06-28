@@ -238,35 +238,55 @@ export default function ProfilePage() {
               )}
 
               {hasStats ? (
-                <div className="profile-stats-grid">
-                  <div className="profile-stat-card">
-                    <div className="profile-stat-value profile-stat-value-teal">{stats.gamesPlayed}</div>
-                    <div className="profile-stat-label">总局数</div>
+                <div className="stats-grid">
+                  <div className="stat-card">
+                    <div className="stat-value">{stats.gamesPlayed}</div>
+                    <div className="stat-label">总局数</div>
                   </div>
-                  <div className="profile-stat-card">
-                    <div className="profile-stat-value profile-stat-value-teal">
-                      {stats.wins}{' '}
-                      <span className="profile-stat-suffix">
+                  <div className="stat-card">
+                    <div className="stat-value">{stats.avgRank.toFixed(2)}</div>
+                    <div className="stat-label">平均排名</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-value">
+                      {stats.wins}
+                      <span
+                        style={{
+                          fontSize: '0.6rem',
+                          color: 'var(--text-light)',
+                          verticalAlign: 'bottom',
+                          marginLeft: 2,
+                        }}
+                      >
                         ({((stats.wins / stats.gamesPlayed) * 100).toFixed(0)}%)
                       </span>
                     </div>
-                    <div className="profile-stat-label">胜场 (胜率)</div>
+                    <div className="stat-label">胜场</div>
                   </div>
-                  <div className="profile-stat-card">
-                    <div className="profile-stat-value profile-stat-value-gold">
+                  <div className="stat-card">
+                    <div
+                      className="stat-value"
+                      style={{
+                        color: stats.totalRP > 0 ? 'var(--success)' : stats.totalRP < 0 ? 'var(--danger)' : undefined,
+                      }}
+                    >
+                      {(() => {
+                        const avgRP = stats.totalRP / stats.gamesPlayed
+                        return avgRP > 0 ? `+${avgRP.toFixed(1)}` : avgRP.toFixed(1)
+                      })()}
+                    </div>
+                    <div className="stat-label">场均(RP)</div>
+                  </div>
+                  <div className="stat-card">
+                    <div
+                      className="stat-value"
+                      style={{
+                        color: stats.totalRP > 0 ? 'var(--success)' : stats.totalRP < 0 ? 'var(--danger)' : undefined,
+                      }}
+                    >
                       {stats.totalRP > 0 ? `+${stats.totalRP.toFixed(1)}` : stats.totalRP.toFixed(1)}
                     </div>
-                    <div className="profile-stat-label">总积分 (RP)</div>
-                  </div>
-                  <div className="profile-stat-card">
-                    <div className="profile-stat-value profile-stat-value-gold">
-                      {stats.avgScore > 0 ? `+${stats.avgScore.toFixed(0)}` : stats.avgScore.toFixed(0)}
-                    </div>
-                    <div className="profile-stat-label">场均表现</div>
-                  </div>
-                  <div className="profile-stat-card">
-                    <div className="profile-stat-value profile-stat-value-teal">{stats.avgRank.toFixed(2)}</div>
-                    <div className="profile-stat-label">平均排名</div>
+                    <div className="stat-label">总积分(RP)</div>
                   </div>
                 </div>
               ) : (
@@ -287,32 +307,28 @@ export default function ProfilePage() {
                       gap: '6px',
                     }}
                   >
-                    📈 数据统计
+                    🪪 数据统计
                   </h4>
-                  <div className="profile-stats-grid">
-                    <div className="profile-stat-card">
-                      <div className="profile-stat-value profile-stat-value-teal">
-                        {((stats.handWins / stats.roundsPlayed) * 100).toFixed(1)}%
-                      </div>
-                      <div className="profile-stat-label">和牌率</div>
+                  <div className="stats-grid">
+                    <div className="stat-card">
+                      <div className="stat-value">{((stats.handWins / stats.roundsPlayed) * 100).toFixed(1)}%</div>
+                      <div className="stat-label">和牌率</div>
                     </div>
-                    <div className="profile-stat-card">
-                      <div className="profile-stat-value profile-stat-value-teal">
-                        {((stats.dealIns / stats.roundsPlayed) * 100).toFixed(1)}%
-                      </div>
-                      <div className="profile-stat-label">放铳率</div>
+                    <div className="stat-card">
+                      <div className="stat-value">{((stats.dealIns / stats.roundsPlayed) * 100).toFixed(1)}%</div>
+                      <div className="stat-label">放铳率</div>
                     </div>
-                    <div className="profile-stat-card">
-                      <div className="profile-stat-value profile-stat-value-gold">
+                    <div className="stat-card">
+                      <div className="stat-value">
                         {stats.handWins > 0 ? Math.round(stats.avgWinPoints).toLocaleString() : '-'}
                       </div>
-                      <div className="profile-stat-label">平均打点</div>
+                      <div className="stat-label">平均打点</div>
                     </div>
-                    <div className="profile-stat-card">
-                      <div className="profile-stat-value profile-stat-value-gold">
+                    <div className="stat-card">
+                      <div className="stat-value">
                         {stats.dealIns > 0 ? Math.round(stats.avgDealInPoints).toLocaleString() : '-'}
                       </div>
-                      <div className="profile-stat-label">平均铳点</div>
+                      <div className="stat-label">平均铳点</div>
                     </div>
                   </div>
                 </div>

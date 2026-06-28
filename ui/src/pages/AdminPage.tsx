@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Navigate } from 'react-router-dom'
 import { Player, GameSession } from '../types'
 
 const API = '/api/admin'
@@ -13,6 +14,7 @@ export default function AdminPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [sessions, setSessions] = useState<GameSession[]>([])
   const [loading, setLoading] = useState(true)
+  const [authorized, setAuthorized] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editUserName, setEditUserName] = useState('')
   const [editFirst, setEditFirst] = useState('')
@@ -22,21 +24,25 @@ export default function AdminPage() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [deletingSessionId, setDeletingSessionId] = useState<number | null>(null)
 
-  const loadPlayers = async () => {
+  const loadPlayers = async (): Promise<boolean> => {
     const res = await fetch(`${API}/players`, { headers: authHeaders() })
     if (res.ok) {
       setPlayers(await res.json())
+      return true
     }
+    return false
   }
 
-  const loadSessions = async () => {
+  const loadSessions = async (): Promise<boolean> => {
     const res = await fetch(`${API}/sessions`, { headers: authHeaders() })
     if (res.ok) {
       setSessions(await res.json())
+      return true
     }
+    return false
   }
 
-  const loadSettings = async () => {
+  const loadSettings = async (): Promise<boolean> => {
     const res = await fetch(`${API}/settings`, { headers: authHeaders() })
     if (res.ok) {
       const data = await res.json()
@@ -47,11 +53,15 @@ export default function AdminPage() {
           setSavedBonus(String(val))
         }
       }
+      return true
     }
+    return false
   }
 
   useEffect(() => {
-    Promise.all([loadPlayers(), loadSessions(), loadSettings()]).finally(() => setLoading(false))
+    Promise.all([loadPlayers(), loadSessions(), loadSettings()])
+      .then((results) => setAuthorized(results.every(Boolean)))
+      .finally(() => setLoading(false))
   }, [])
 
   const handleSaveSettings = async () => {
@@ -150,12 +160,8 @@ export default function AdminPage() {
     }
   }
 
-  if (loading)
-    return (
-      <div className="empty-state">
-        <p>Loading...</p>
-      </div>
-    )
+  if (loading) return null
+  if (!authorized) return <Navigate to="/" replace />
 
   return (
     <>
@@ -173,7 +179,7 @@ export default function AdminPage() {
               inputMode="decimal"
               value={bonus}
               onChange={(e) => setBonus(e.target.value)}
-              style={{ width: '100%', maxWidth: 120 }}
+              style={{ flex: '0 1 120px', minWidth: 0 }}
             />
             <button
               className="btn btn-primary btn-small"
@@ -189,8 +195,8 @@ export default function AdminPage() {
 
       <div className="card">
         <h2>Players ({players.length})</h2>
-        <div className="score-table">
-          <table>
+        <div className="table-wrap">
+          <table className="auto-table">
             <thead>
               <tr>
                 <th>ID</th>
@@ -213,7 +219,7 @@ export default function AdminPage() {
                         <input
                           value={editUserName}
                           onChange={(e) => setEditUserName(e.target.value)}
-                          style={{ width: '100%', maxWidth: 120 }}
+                          style={{ width: '100%', maxWidth: 120, minWidth: 0 }}
                           placeholder="Username"
                           autoFocus
                         />
@@ -227,13 +233,13 @@ export default function AdminPage() {
                           <input
                             value={editFirst}
                             onChange={(e) => setEditFirst(e.target.value)}
-                            style={{ width: '100%', maxWidth: 80 }}
+                            style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
                             placeholder="First"
                           />
                           <input
                             value={editLast}
                             onChange={(e) => setEditLast(e.target.value)}
-                            style={{ width: '100%', maxWidth: 80 }}
+                            style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
                             placeholder="Last"
                             onKeyDown={(e) => e.key === 'Enter' && handleSave(p.id)}
                           />
@@ -280,8 +286,8 @@ export default function AdminPage() {
           Deleting a session permanently removes all of its rounds, round scores, and fan discoveries (achievements).
           This cannot be undone. In-progress sessions are not shown.
         </p>
-        <div className="score-table">
-          <table>
+        <div className="table-wrap">
+          <table className="auto-table">
             <thead>
               <tr>
                 <th>ID</th>
