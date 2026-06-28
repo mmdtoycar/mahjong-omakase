@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Navigate } from 'react-router-dom'
 import { Player, GameSession } from '../types'
 
 const API = '/api/admin'
@@ -13,6 +14,7 @@ export default function AdminPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [sessions, setSessions] = useState<GameSession[]>([])
   const [loading, setLoading] = useState(true)
+  const [authorized, setAuthorized] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editUserName, setEditUserName] = useState('')
   const [editFirst, setEditFirst] = useState('')
@@ -22,21 +24,25 @@ export default function AdminPage() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [deletingSessionId, setDeletingSessionId] = useState<number | null>(null)
 
-  const loadPlayers = async () => {
+  const loadPlayers = async (): Promise<boolean> => {
     const res = await fetch(`${API}/players`, { headers: authHeaders() })
     if (res.ok) {
       setPlayers(await res.json())
+      return true
     }
+    return false
   }
 
-  const loadSessions = async () => {
+  const loadSessions = async (): Promise<boolean> => {
     const res = await fetch(`${API}/sessions`, { headers: authHeaders() })
     if (res.ok) {
       setSessions(await res.json())
+      return true
     }
+    return false
   }
 
-  const loadSettings = async () => {
+  const loadSettings = async (): Promise<boolean> => {
     const res = await fetch(`${API}/settings`, { headers: authHeaders() })
     if (res.ok) {
       const data = await res.json()
@@ -47,11 +53,15 @@ export default function AdminPage() {
           setSavedBonus(String(val))
         }
       }
+      return true
     }
+    return false
   }
 
   useEffect(() => {
-    Promise.all([loadPlayers(), loadSessions(), loadSettings()]).finally(() => setLoading(false))
+    Promise.all([loadPlayers(), loadSessions(), loadSettings()])
+      .then((results) => setAuthorized(results.every(Boolean)))
+      .finally(() => setLoading(false))
   }, [])
 
   const handleSaveSettings = async () => {
@@ -150,12 +160,8 @@ export default function AdminPage() {
     }
   }
 
-  if (loading)
-    return (
-      <div className="empty-state">
-        <p>Loading...</p>
-      </div>
-    )
+  if (loading) return null
+  if (!authorized) return <Navigate to="/" replace />
 
   return (
     <>
@@ -190,14 +196,14 @@ export default function AdminPage() {
       <div className="card">
         <h2>Players ({players.length})</h2>
         <div className="score-table">
-          <table>
+          <table className="fixed-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th style={{ width: '48px' }}>ID</th>
                 <th>Username</th>
                 <th>Name</th>
-                <th>Joined</th>
-                <th></th>
+                <th style={{ width: '90px' }}>Joined</th>
+                <th style={{ width: '130px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -281,15 +287,15 @@ export default function AdminPage() {
           This cannot be undone. In-progress sessions are not shown.
         </p>
         <div className="score-table">
-          <table>
+          <table className="fixed-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th style={{ width: '48px' }}>ID</th>
                 <th>Name</th>
-                <th>Mode</th>
-                <th>Rounds</th>
-                <th>Created</th>
-                <th></th>
+                <th style={{ width: '64px' }}>Mode</th>
+                <th style={{ width: '56px' }}>Rounds</th>
+                <th style={{ width: '90px' }}>Created</th>
+                <th style={{ width: '80px' }}></th>
               </tr>
             </thead>
             <tbody>
