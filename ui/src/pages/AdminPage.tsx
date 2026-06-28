@@ -195,126 +195,128 @@ export default function AdminPage() {
 
       <div className="card">
         <h2>Players ({players.length})</h2>
-        <div className="table-wrap">
-          <table className="auto-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Name</th>
-                <th>Joined</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {players.map((p) => {
-                // TODO: 等所有真实玩家都完成 Google 绑定后, 删掉这条标红逻辑
-                const unbound = !p.merged && !p.bot
-                const cellStyle = unbound ? { color: 'var(--danger, #c0392b)', fontWeight: 600 } : undefined
-                return (
-                  <tr key={p.id}>
-                    <td>{p.id}</td>
-                    <td style={cellStyle}>
-                      {editingId === p.id ? (
-                        <input
-                          value={editUserName}
-                          onChange={(e) => setEditUserName(e.target.value)}
-                          style={{ width: '100%', maxWidth: 120, minWidth: 0 }}
-                          placeholder="Username"
-                          autoFocus
-                        />
-                      ) : (
-                        p.userName
-                      )}
-                    </td>
-                    <td style={cellStyle}>
-                      {editingId === p.id ? (
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div className="admin-swipe-shell">
+          <div className="table-wrap">
+            <table className="auto-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Name</th>
+                  <th>Joined</th>
+                  <th className="col-action"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {players.map((p) => {
+                  // TODO: 等所有真实玩家都完成 Google 绑定后, 删掉这条标红逻辑
+                  const unbound = !p.merged && !p.bot
+                  const cellStyle = unbound ? { color: 'var(--danger, #c0392b)', fontWeight: 600 } : undefined
+                  return (
+                    <tr key={p.id}>
+                      <td>{p.id}</td>
+                      <td style={cellStyle}>
+                        {editingId === p.id ? (
                           <input
-                            value={editFirst}
-                            onChange={(e) => setEditFirst(e.target.value)}
-                            style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
-                            placeholder="First"
+                            value={editUserName}
+                            onChange={(e) => setEditUserName(e.target.value)}
+                            style={{ width: '100%', maxWidth: 120, minWidth: 0 }}
+                            placeholder="Username"
+                            autoFocus
                           />
-                          <input
-                            value={editLast}
-                            onChange={(e) => setEditLast(e.target.value)}
-                            style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
-                            placeholder="Last"
-                            onKeyDown={(e) => e.key === 'Enter' && handleSave(p.id)}
-                          />
-                        </div>
-                      ) : (
-                        <>
-                          {p.firstName} {p.lastName}
-                        </>
-                      )}
-                    </td>
-                    <td>{new Date(p.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
-                    <td>
-                      {editingId === p.id ? (
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-primary btn-small" onClick={() => handleSave(p.id)}>
-                            Save
-                          </button>
-                          <button className="btn btn-small btn-outline" onClick={cancelEdit}>
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-small btn-outline" onClick={() => startEdit(p)}>
-                            Edit
-                          </button>
-                          <button className="btn btn-danger btn-small" onClick={() => handleDelete(p.id, p.userName)}>
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                        ) : (
+                          p.userName
+                        )}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap', ...cellStyle }}>
+                        {editingId === p.id ? (
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <input
+                              value={editFirst}
+                              onChange={(e) => setEditFirst(e.target.value)}
+                              style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
+                              placeholder="First"
+                            />
+                            <input
+                              value={editLast}
+                              onChange={(e) => setEditLast(e.target.value)}
+                              style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
+                              placeholder="Last"
+                              onKeyDown={(e) => e.key === 'Enter' && handleSave(p.id)}
+                            />
+                          </div>
+                        ) : (
+                          <>
+                            {p.firstName} {p.lastName}
+                          </>
+                        )}
+                      </td>
+                      <td>{new Date(p.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
+                      <td className="col-action">
+                        {editingId === p.id ? (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn btn-primary btn-small" onClick={() => handleSave(p.id)}>
+                              Save
+                            </button>
+                            <button className="btn btn-small btn-outline" onClick={cancelEdit}>
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn btn-small btn-outline" onClick={() => startEdit(p)}>
+                              Edit
+                            </button>
+                            <button className="btn btn-danger btn-small" onClick={() => handleDelete(p.id, p.userName)}>
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <div className="card">
         <h2>Completed Sessions ({sessions.length})</h2>
-        <div className="table-wrap">
-          <table className="auto-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Mode</th>
-                <th>Rnds</th>
-                <th>Time</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map((s) => (
-                <tr key={s.id}>
-                  <td>{s.id}</td>
-                  <td>{s.name}</td>
-                  <td>{s.gameModeDisplayName}</td>
-                  <td>{s.roundCount}</td>
-                  <td>{new Date(s.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
-                  <td>
-                    <button
-                      className="btn btn-danger btn-small"
-                      onClick={() => handleDeleteSession(s.id, s.name)}
-                      disabled={deletingSessionId === s.id}
-                    >
-                      {deletingSessionId === s.id ? 'Deleting...' : 'Delete'}
-                    </button>
-                  </td>
+        <div className="admin-swipe-shell">
+          <div className="table-wrap">
+            <table className="auto-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Game Name</th>
+                  <th>Mode</th>
+                  <th>Rnds</th>
+                  <th className="col-action"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sessions.map((s) => (
+                  <tr key={s.id}>
+                    <td>{s.id}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{s.name}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{s.gameModeDisplayName}</td>
+                    <td>{s.roundCount}</td>
+                    <td className="col-action">
+                      <button
+                        className="btn btn-danger btn-small"
+                        onClick={() => handleDeleteSession(s.id, s.name)}
+                        disabled={deletingSessionId === s.id}
+                      >
+                        {deletingSessionId === s.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </>
