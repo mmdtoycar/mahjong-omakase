@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { fetchCurrentUser } from '../api'
 
 interface ProtectedRouteProps {
@@ -8,6 +8,8 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const token = localStorage.getItem('mahjong_token')
+  const pendingCredential = sessionStorage.getItem('mahjong_google_credential')
+  const location = useLocation()
   const [loading, setLoading] = useState(true)
   const [authenticated, setAuthenticated] = useState(false)
 
@@ -38,6 +40,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         <p>正在验证身份信息...</p>
       </div>
     )
+  }
+
+  // pendingAuth — Google 凭证已暂存但 Player 还没建。只放行 /profile (setup 表单),
+  // 其它 protected 路由统一漏斗到 /profile, 而不是 /login.
+  if (!token && pendingCredential) {
+    return location.pathname === '/profile' ? children : <Navigate to="/profile" replace />
   }
 
   if (!token || !authenticated) {

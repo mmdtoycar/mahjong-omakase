@@ -109,6 +109,11 @@ export default function LoginPage() {
       navigate('/home', { replace: true })
       return
     }
+    const pendingCredential = sessionStorage.getItem('mahjong_google_credential')
+    if (pendingCredential) {
+      navigate('/profile', { replace: true })
+      return
+    }
     return initGis()
   }, [navigate, initGis])
 
