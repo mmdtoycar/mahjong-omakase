@@ -2999,6 +2999,10 @@ table.auto-table {
   .fan-item-example-real {
     padding: 12px 6px 6px;
   }
+
+  .admin-swipe-shell .col-action {
+    padding-left: 60px;
+  }
 }
 
 .pagination-container {
