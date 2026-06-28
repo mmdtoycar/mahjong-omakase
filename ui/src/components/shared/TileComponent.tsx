@@ -40,7 +40,7 @@ export const TileComponent: React.FC<{
       <img
         src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${tileKey}.svg`}
         alt={isBack ? 'Back' : getTileName(tile)}
-        className={`calc-tile ${isWinning ? 'highlighted-tile' : ''} ${isBack ? 'back-tile-svg' : ''}`}
+        className={`calc-tile ${isWinning ? 'highlighted-tile' : ''}`}
       />
     </div>
   )

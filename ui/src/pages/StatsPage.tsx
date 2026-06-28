@@ -334,7 +334,7 @@ export default function StatsPage() {
                       <span className="best-hand-fan-count">{round.fanCount} 番</span>
                       <span className="best-hand-players">
                         <span className="winner-label">赢家:</span> {round.winnerName}
-                        <span className="win-type-label ml-2">({round.dealInPlayerId != null ? '点炮' : '自摸'})</span>
+                        <span className="ml-2">({round.dealInPlayerId != null ? '点炮' : '自摸'})</span>
                         <span className="session-link-label ml-2">
                           <Link to={`/session/${round.sessionId}`}>查看对局</Link>
                         </span>
@@ -363,7 +363,7 @@ export default function StatsPage() {
                       <span className="best-hand-fan-count">{round.fanCount} 番</span>
                       <span className="best-hand-players">
                         <span className="winner-label">赢家:</span> {round.winnerName}
-                        <span className="win-type-label ml-2">({round.dealInPlayerId != null ? '点炮' : '自摸'})</span>
+                        <span className="ml-2">({round.dealInPlayerId != null ? '点炮' : '自摸'})</span>
                         <span className="session-link-label ml-2">
                           <Link to={`/session/${round.sessionId}`}>查看对局</Link>
                         </span>
@@ -390,8 +390,8 @@ export default function StatsPage() {
                   <tr>
                     <th className="col-rank">排名</th>
                     <th className="col-name">玩家</th>
-                    <th className="col-num">平均排名</th>
-                    <th className="col-num">段位分</th>
+                    <th className="col-num-wide">平均排名</th>
+                    <th className="col-num-wide">段位分</th>
                   </tr>
                 </thead>
                 <tbody>
