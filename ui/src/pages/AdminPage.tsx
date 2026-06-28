@@ -203,8 +203,6 @@ export default function AdminPage() {
             <tbody>
               {players.map((p) => {
                 // TODO: 等所有真实玩家都完成 Google 绑定后, 删掉这条标红逻辑
-                // (含 Username / Name 两列的 cellStyle 应用). 那时 !merged && !bot 的行
-                // 只剩 legacy unbound (像 pichu / 赢麻了 / Mccc 等) 不需要再催绑了.
                 const unbound = !p.merged && !p.bot
                 const cellStyle = unbound ? { color: 'var(--danger, #c0392b)', fontWeight: 600 } : undefined
                 return (
