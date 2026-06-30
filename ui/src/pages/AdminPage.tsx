@@ -208,74 +208,69 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {players.map((p) => {
-                  // TODO: 等所有真实玩家都完成 Google 绑定后, 删掉这条标红逻辑
-                  const unbound = !p.merged && !p.bot
-                  const cellStyle = unbound ? { color: 'var(--danger, #c0392b)', fontWeight: 600 } : undefined
-                  return (
-                    <tr key={p.id}>
-                      <td>{p.id}</td>
-                      <td style={cellStyle}>
-                        {editingId === p.id ? (
+                {players.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.id}</td>
+                    <td>
+                      {editingId === p.id ? (
+                        <input
+                          value={editUserName}
+                          onChange={(e) => setEditUserName(e.target.value)}
+                          style={{ width: '100%', maxWidth: 120, minWidth: 0 }}
+                          placeholder="Username"
+                          autoFocus
+                        />
+                      ) : (
+                        p.userName
+                      )}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {editingId === p.id ? (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <input
-                            value={editUserName}
-                            onChange={(e) => setEditUserName(e.target.value)}
-                            style={{ width: '100%', maxWidth: 120, minWidth: 0 }}
-                            placeholder="Username"
-                            autoFocus
+                            value={editFirst}
+                            onChange={(e) => setEditFirst(e.target.value)}
+                            style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
+                            placeholder="First"
                           />
-                        ) : (
-                          p.userName
-                        )}
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap', ...cellStyle }}>
-                        {editingId === p.id ? (
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <input
-                              value={editFirst}
-                              onChange={(e) => setEditFirst(e.target.value)}
-                              style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
-                              placeholder="First"
-                            />
-                            <input
-                              value={editLast}
-                              onChange={(e) => setEditLast(e.target.value)}
-                              style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
-                              placeholder="Last"
-                              onKeyDown={(e) => e.key === 'Enter' && handleSave(p.id)}
-                            />
-                          </div>
-                        ) : (
-                          <>
-                            {p.firstName} {p.lastName}
-                          </>
-                        )}
-                      </td>
-                      <td>{new Date(p.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
-                      <td className="col-action">
-                        {editingId === p.id ? (
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-primary btn-small" onClick={() => handleSave(p.id)}>
-                              Save
-                            </button>
-                            <button className="btn btn-small btn-outline" onClick={cancelEdit}>
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-small btn-outline" onClick={() => startEdit(p)}>
-                              Edit
-                            </button>
-                            <button className="btn btn-danger btn-small" onClick={() => handleDelete(p.id, p.userName)}>
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
+                          <input
+                            value={editLast}
+                            onChange={(e) => setEditLast(e.target.value)}
+                            style={{ flex: '1 1 70px', minWidth: 0, maxWidth: 100 }}
+                            placeholder="Last"
+                            onKeyDown={(e) => e.key === 'Enter' && handleSave(p.id)}
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          {p.firstName} {p.lastName}
+                        </>
+                      )}
+                    </td>
+                    <td>{new Date(p.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
+                    <td className="col-action">
+                      {editingId === p.id ? (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button className="btn btn-primary btn-small" onClick={() => handleSave(p.id)}>
+                            Save
+                          </button>
+                          <button className="btn btn-small btn-outline" onClick={cancelEdit}>
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button className="btn btn-small btn-outline" onClick={() => startEdit(p)}>
+                            Edit
+                          </button>
+                          <button className="btn btn-danger btn-small" onClick={() => handleDelete(p.id, p.userName)}>
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
