@@ -6,6 +6,7 @@ import { GameCard } from '../components/GameCard'
 import { RankBadge } from '../components/RankBadge'
 import { deriveGameState, getWindName } from '../utils/gameState'
 import { nameFontSize } from '../utils/fontSize'
+import { rankMedal } from '../utils/format'
 import { MSG } from '../constants'
 
 export default function HomePage() {
@@ -122,7 +123,7 @@ export default function HomePage() {
                     ) : (
                       data.top.map((player, idx) => (
                         <div key={player.playerId} className="rank-item">
-                          <span className={`rank-tag rank-tag-${idx + 1}`}>#{idx + 1}</span>
+                          <span className={`rank-tag rank-tag-${idx + 1}`}>{rankMedal(idx + 1) ?? `#${idx + 1}`}</span>
                           <div className="rank-info">
                             <span className="player-name-with-rank">
                               <RankBadge

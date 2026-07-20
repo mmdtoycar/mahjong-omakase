@@ -21,6 +21,7 @@ public class PlayerStatsResponse {
   private double fanDiscoveryBonus;
   private int roundsPlayed;
   private int handWins;
+  private int tsumoWins;
   private int dealIns;
   private double avgWinPoints;
   private double avgDealInPoints;

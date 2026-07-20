@@ -308,8 +308,7 @@ public class GameService {
   public List<SessionSummaryResponse> getAllSessionSummaries() {
     List<GameSession> sessions = sessionRepo.findAllByOrderByCreatedAtDesc();
     Map<String, Map<Long, Tier>> tiersCache = new HashMap<>();
-    Map<String, Map<Long, Integer>> monthlyGamesCache = new HashMap<>();
-    return sessions.stream().map(s -> toSummary(s, tiersCache, monthlyGamesCache)).toList();
+    return sessions.stream().map(s -> toSummary(s, tiersCache)).toList();
   }
 
   private String monthCacheKey(GameMode mode, LocalDateTime sessionUtc) {
@@ -318,10 +317,7 @@ public class GameService {
     return mode.name() + ":" + pt.getYear() + "-" + pt.getMonthValue();
   }
 
-  private SessionSummaryResponse toSummary(
-      GameSession s,
-      Map<String, Map<Long, Tier>> tiersCache,
-      Map<String, Map<Long, Integer>> monthlyGamesCache) {
+  private SessionSummaryResponse toSummary(GameSession s, Map<String, Map<Long, Tier>> tiersCache) {
     SessionSummaryResponse r = SessionSummaryResponse.from(s);
     GameMode mode = s.getGameMode();
     if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return r;
@@ -332,12 +328,8 @@ public class GameService {
     Map<Long, Tier> tiers =
         tiersCache.computeIfAbsent(
             key, k -> tierService.resolveTiersForDate(mode, s.getCreatedAt()));
-    Map<Long, Integer> monthly =
-        monthlyGamesCache.computeIfAbsent(
-            key, k -> tierService.monthlyGamesByPlayerForReferenceDate(mode, s.getCreatedAt()));
 
-    r.setTableStrength(
-        tableStrengthService.compute(players, mode, tiers, monthly).getDisplayName());
+    r.setTableStrength(tableStrengthService.compute(players, mode, tiers).getDisplayName());
     annotateRankingsTier(r.getRankings(), players, tiers, mode);
     return r;
   }
@@ -898,6 +890,7 @@ public class GameService {
     Map<Long, Double> fanBonusPerPlayer = new HashMap<>();
     Map<Long, Integer> roundsPlayed = new HashMap<>();
     Map<Long, Integer> handWins = new HashMap<>();
+    Map<Long, Integer> tsumoWins = new HashMap<>();
     Map<Long, Integer> dealIns = new HashMap<>();
     Map<Long, Integer> winPointsSum = new HashMap<>();
     Map<Long, Integer> dealInPointsSum = new HashMap<>();
@@ -952,18 +945,15 @@ public class GameService {
       }
     }
 
-    // Bulk-load Riichi round details — one SQL for all Riichi sessions in scope.
-    Map<Long, List<Object[]>> riichiRoundsBySessionId = new HashMap<>();
-    List<Long> riichiSessionIds =
-        completedSessions.stream()
-            .filter(s -> s.getGameMode() == GameMode.RIICHI)
-            .map(GameSession::getId)
-            .toList();
-    if (!riichiSessionIds.isEmpty()) {
-      for (Object[] row : roundScoreRepo.getRoundDetailsBySessions(riichiSessionIds)) {
+    // Bulk-load round details for ALL completed sessions in scope — one SQL — feeds the round-level
+    // metrics (和牌率/放铳率/自摸率/平均打点/平均铳点).
+    Map<Long, List<Object[]>> roundsBySessionId = new HashMap<>();
+    List<Long> allSessionIds = completedSessions.stream().map(GameSession::getId).toList();
+    if (!allSessionIds.isEmpty()) {
+      for (Object[] row : roundScoreRepo.getRoundDetailsBySessions(allSessionIds)) {
         Long sid = (Long) row[0];
-        // Drop the leading sessionId so the per-session shape matches getRoundDetailsBySession.
-        riichiRoundsBySessionId
+        // Drop the leading sessionId so the per-session shape matches accumulateRoundStats.
+        roundsBySessionId
             .computeIfAbsent(sid, k -> new ArrayList<>())
             .add(new Object[] {row[1], row[2], row[3], row[4], row[5]});
       }
@@ -1029,13 +1019,10 @@ public class GameService {
           if (row[0] != null) wins.merge((Long) row[0], 1, (a, b) -> a + b);
         }
 
-        // Round-level metrics only collected for Riichi (和牌率/放铳率/平均打点/平均铳点).
-        // Other modes have different scoring semantics where these don't translate cleanly.
-        if (session.getGameMode() == GameMode.RIICHI) {
-          List<Object[]> rows = riichiRoundsBySessionId.getOrDefault(session.getId(), List.of());
-          accumulateRoundStats(
-              rows, roundsPlayed, handWins, dealIns, winPointsSum, dealInPointsSum);
-        }
+        // Round-level metrics (和牌率/放铳率/自摸率/平均打点/平均铳点) collected for all modes.
+        List<Object[]> rows = roundsBySessionId.getOrDefault(session.getId(), List.of());
+        accumulateRoundStats(
+            rows, roundsPlayed, handWins, tsumoWins, dealIns, winPointsSum, dealInPointsSum);
       }
     }
 
@@ -1070,6 +1057,7 @@ public class GameService {
               int di = dealIns.getOrDefault(p.getId(), 0);
               stat.setRoundsPlayed(rounds);
               stat.setHandWins(hw);
+              stat.setTsumoWins(tsumoWins.getOrDefault(p.getId(), 0));
               stat.setDealIns(di);
               stat.setAvgWinPoints(
                   hw > 0 ? (double) winPointsSum.getOrDefault(p.getId(), 0) / hw : 0);
@@ -1121,6 +1109,7 @@ public class GameService {
       List<Object[]> rows,
       Map<Long, Integer> roundsPlayed,
       Map<Long, Integer> handWins,
+      Map<Long, Integer> tsumoWins,
       Map<Long, Integer> dealIns,
       Map<Long, Integer> winPointsSum,
       Map<Long, Integer> dealInPointsSum) {
@@ -1137,6 +1126,10 @@ public class GameService {
       if (seenRounds.add(roundId)) {
         if (winnerId != null) {
           handWins.merge(winnerId, 1, Integer::sum);
+          // 自摸 (self-draw): win with no deal-in player. 荣和 = handWins - tsumoWins.
+          if (dealInPlayerId == null) {
+            tsumoWins.merge(winnerId, 1, Integer::sum);
+          }
         }
         if (dealInPlayerId != null) {
           dealIns.merge(dealInPlayerId, 1, Integer::sum);
@@ -1227,33 +1220,28 @@ public class GameService {
     for (var entry : rowsByMode.entrySet()) {
       Map<Long, Integer> roundsPlayed = new HashMap<>();
       Map<Long, Integer> handWins = new HashMap<>();
+      Map<Long, Integer> tsumoWins = new HashMap<>();
       Map<Long, Integer> dealIns = new HashMap<>();
       Map<Long, Integer> winPointsSum = new HashMap<>();
       Map<Long, Integer> dealInPointsSum = new HashMap<>();
       accumulateRoundStats(
-          entry.getValue(), roundsPlayed, handWins, dealIns, winPointsSum, dealInPointsSum);
+          entry.getValue(),
+          roundsPlayed,
+          handWins,
+          tsumoWins,
+          dealIns,
+          winPointsSum,
+          dealInPointsSum);
 
       int rounds = roundsPlayed.getOrDefault(playerId, 0);
       if (rounds == 0) continue;
       int hw = handWins.getOrDefault(playerId, 0);
       int di = dealIns.getOrDefault(playerId, 0);
 
-      // 自摸 (self-draw) wins for this player — 荣和 count is derivable as handWins - tsumoWins.
-      Set<Long> seenWinRounds = new HashSet<>();
-      int tsumo = 0;
-      for (Object[] row : entry.getValue()) {
-        Long roundId = (Long) row[0];
-        Long winnerId = (Long) row[1];
-        Long dealInPlayerId = (Long) row[2];
-        if (playerId.equals(winnerId) && dealInPlayerId == null && seenWinRounds.add(roundId)) {
-          tsumo++;
-        }
-      }
-
       PlayerDetailResponse.ModeStats ms = new PlayerDetailResponse.ModeStats();
       ms.setRoundsPlayed(rounds);
       ms.setHandWins(hw);
-      ms.setTsumoWins(tsumo);
+      ms.setTsumoWins(tsumoWins.getOrDefault(playerId, 0));
       ms.setDealIns(di);
       ms.setAvgWinPoints(hw > 0 ? (double) winPointsSum.getOrDefault(playerId, 0) / hw : 0);
       ms.setAvgDealInPoints(di > 0 ? (double) dealInPointsSum.getOrDefault(playerId, 0) / di : 0);

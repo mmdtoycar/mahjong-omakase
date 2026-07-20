@@ -42,3 +42,8 @@ export function scoreClass(score: number): string {
 export function parseError(e: unknown): string {
   return e instanceof Error ? e.message : MSG.ERROR
 }
+
+/** Medal emoji for the top 3 ranks (🥇🥈🥉), null for 4th and beyond. */
+export function rankMedal(rank: number): string | null {
+  return { 1: '🥇', 2: '🥈', 3: '🥉' }[rank] ?? null
+}

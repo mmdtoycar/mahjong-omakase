@@ -8,7 +8,7 @@ import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
-import { scoreClass, parseError } from '../utils/format'
+import { scoreClass, parseError, rankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
 import { TableStrengthTag } from '../components/TableStrengthTag'
@@ -774,7 +774,9 @@ export default function SessionPage() {
                 {session.players.map((p) => (
                   <th key={p.id} style={playerColStyle}>
                     <div className="player-header-cell">
-                      <span className={`rank-tag rank-tag-${rankMap[p.id]?.rank}`}>#{rankMap[p.id]?.rank}</span>
+                      <span className={`rank-tag rank-tag-${rankMap[p.id]?.rank}`}>
+                        {rankMedal(rankMap[p.id]?.rank ?? 0) ?? `#${rankMap[p.id]?.rank}`}
+                      </span>
                       <RankBadge tier={p.tier} size="sm" userName={p.userName} />
                       <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
                         {p.userName}
@@ -920,7 +922,7 @@ export default function SessionPage() {
                   return (
                     <tr key={p.id}>
                       <td className="col-rank">
-                        <span className={`rank-tag rank-tag-${rank}`}>#{rank}</span>
+                        <span className={`rank-tag rank-tag-${rank}`}>{rankMedal(rank) ?? `#${rank}`}</span>
                       </td>
                       <td>
                         <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>

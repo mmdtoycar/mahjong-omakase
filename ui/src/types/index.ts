@@ -168,6 +168,7 @@ export interface PlayerStats {
   wins: number
   roundsPlayed: number
   handWins: number
+  tsumoWins: number
   dealIns: number
   avgWinPoints: number
   avgDealInPoints: number
