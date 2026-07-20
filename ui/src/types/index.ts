@@ -224,12 +224,22 @@ export interface PlayerGameEntry {
   totalScore: number
 }
 
+export interface PlayerModeStats {
+  roundsPlayed: number
+  handWins: number
+  tsumoWins: number
+  dealIns: number
+  avgWinPoints: number
+  avgDealInPoints: number
+}
+
 export interface PlayerDetail {
   playerId: number
   userName: string
   firstName: string
   lastName: string
   games: PlayerGameEntry[]
+  statsByMode: Partial<Record<GameModeKey, PlayerModeStats>>
 }
 export interface BestRound {
   sessionId: number

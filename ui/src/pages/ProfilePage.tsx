@@ -295,45 +295,6 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {selectedMode === 'RIICHI' && hasStats && stats.roundsPlayed > 0 && (
-                <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
-                  <h4
-                    style={{
-                      margin: '0 0 16px 0',
-                      fontSize: '15px',
-                      color: 'var(--primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    🪪 数据统计
-                  </h4>
-                  <div className="stats-grid">
-                    <div className="stat-card">
-                      <div className="stat-value">{((stats.handWins / stats.roundsPlayed) * 100).toFixed(1)}%</div>
-                      <div className="stat-label">和牌率</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-value">{((stats.dealIns / stats.roundsPlayed) * 100).toFixed(1)}%</div>
-                      <div className="stat-label">放铳率</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-value">
-                        {stats.handWins > 0 ? Math.round(stats.avgWinPoints).toLocaleString() : '-'}
-                      </div>
-                      <div className="stat-label">平均打点</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-value">
-                        {stats.dealIns > 0 ? Math.round(stats.avgDealInPoints).toLocaleString() : '-'}
-                      </div>
-                      <div className="stat-label">平均铳点</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* 番种成就只在国标模式下显示(其他模式没有番种系统) */}
               {selectedMode === 'GUOBIAO' && (
                 <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>

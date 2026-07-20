@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPlayerDetail, fetchPlayerTier } from '../api'
-import { PlayerDetail, PlayerTierResponse } from '../types'
+import { PlayerDetail, PlayerTierResponse, GameModeKey, GAME_MODES } from '../types'
 import { abbrName, scoreClass, parseError } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
@@ -11,6 +11,7 @@ export default function PlayerDetailPage() {
   const navigate = useNavigate()
   const [player, setPlayer] = useState<PlayerDetail | null>(null)
   const [tier, setTier] = useState<PlayerTierResponse | null>(null)
+  const [statsMode, setStatsMode] = useState<GameModeKey>(GAME_MODES[0].key)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -77,6 +78,80 @@ export default function PlayerDetailPage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="card">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <h2 style={{ margin: 0 }}>🪪 数据统计</h2>
+          <select
+            value={statsMode}
+            onChange={(e) => setStatsMode(e.target.value as GameModeKey)}
+            className="select-inline"
+          >
+            {GAME_MODES.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {(() => {
+          const stats = player.statsByMode?.[statsMode]
+          if (!stats || stats.roundsPlayed === 0) {
+            return (
+              <div className="empty-state empty-state-compact">
+                <p>本模式暂无数据统计。</p>
+              </div>
+            )
+          }
+          return (
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-value">
+                  {((stats.handWins / stats.roundsPlayed) * 100).toFixed(1)}%
+                  {stats.handWins > 0 && (
+                    <span
+                      style={{
+                        fontSize: '0.6rem',
+                        color: 'var(--text-light)',
+                        verticalAlign: 'bottom',
+                        marginLeft: 2,
+                      }}
+                    >
+                      ({((stats.tsumoWins / stats.handWins) * 100).toFixed(0)}%)
+                    </span>
+                  )}
+                </div>
+                <div className="stat-label">和牌率(自摸率)</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{((stats.dealIns / stats.roundsPlayed) * 100).toFixed(1)}%</div>
+                <div className="stat-label">放铳率</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">
+                  {stats.handWins > 0 ? Math.round(stats.avgWinPoints).toLocaleString() : '-'}
+                </div>
+                <div className="stat-label">平均打点</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">
+                  {stats.dealIns > 0 ? Math.round(stats.avgDealInPoints).toLocaleString() : '-'}
+                </div>
+                <div className="stat-label">平均铳点</div>
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       <div className="card">

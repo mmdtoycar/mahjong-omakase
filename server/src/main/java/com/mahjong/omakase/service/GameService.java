@@ -1033,7 +1033,7 @@ public class GameService {
         // Other modes have different scoring semantics where these don't translate cleanly.
         if (session.getGameMode() == GameMode.RIICHI) {
           List<Object[]> rows = riichiRoundsBySessionId.getOrDefault(session.getId(), List.of());
-          accumulateRiichiRoundStats(
+          accumulateRoundStats(
               rows, roundsPlayed, handWins, dealIns, winPointsSum, dealInPointsSum);
         }
       }
@@ -1117,7 +1117,7 @@ public class GameService {
    * round.winnerId; dealIns/avgDealInPoints land on the round.dealInPlayerId (self-draws are
    * dealInPlayerId == null, so no deal-in is recorded for those rounds).
    */
-  private void accumulateRiichiRoundStats(
+  private void accumulateRoundStats(
       List<Object[]> rows,
       Map<Long, Integer> roundsPlayed,
       Map<Long, Integer> handWins,
@@ -1193,7 +1193,73 @@ public class GameService {
     resp.setFirstName(player.getFirstName());
     resp.setLastName(player.getLastName());
     resp.setGames(games);
+    resp.setStatsByMode(computeModeStats(playerId, sessions));
     return resp;
+  }
+
+  /**
+   * Per-mode round-level metrics (和牌率/放铳率/平均打点/平均铳点) for a single player, scoped to that player's
+   * own completed sessions. Cheaper than {@link #getPlayerStats} which aggregates the whole table.
+   * Only modes in which the player actually has rounds are included.
+   */
+  private Map<String, PlayerDetailResponse.ModeStats> computeModeStats(
+      Long playerId, List<GameSession> sessions) {
+    List<GameSession> completed =
+        sessions.stream().filter(s -> s.getStatus() == SessionStatus.COMPLETED).toList();
+    if (completed.isEmpty()) return Map.of();
+
+    Map<Long, GameMode> modeBySession = new HashMap<>();
+    for (GameSession s : completed) modeBySession.put(s.getId(), s.getGameMode());
+
+    // Partition round-detail rows by mode, reshaping to the [roundId, winnerId, dealInPlayerId,
+    // playerId, score] tuple that accumulateRoundStats expects (dropping the leading sessionId).
+    Map<GameMode, List<Object[]>> rowsByMode = new EnumMap<>(GameMode.class);
+    List<Long> ids = completed.stream().map(GameSession::getId).toList();
+    for (Object[] row : roundScoreRepo.getRoundDetailsBySessions(ids)) {
+      GameMode mode = modeBySession.get((Long) row[0]);
+      if (mode == null) continue;
+      rowsByMode
+          .computeIfAbsent(mode, k -> new ArrayList<>())
+          .add(new Object[] {row[1], row[2], row[3], row[4], row[5]});
+    }
+
+    Map<String, PlayerDetailResponse.ModeStats> statsByMode = new HashMap<>();
+    for (var entry : rowsByMode.entrySet()) {
+      Map<Long, Integer> roundsPlayed = new HashMap<>();
+      Map<Long, Integer> handWins = new HashMap<>();
+      Map<Long, Integer> dealIns = new HashMap<>();
+      Map<Long, Integer> winPointsSum = new HashMap<>();
+      Map<Long, Integer> dealInPointsSum = new HashMap<>();
+      accumulateRoundStats(
+          entry.getValue(), roundsPlayed, handWins, dealIns, winPointsSum, dealInPointsSum);
+
+      int rounds = roundsPlayed.getOrDefault(playerId, 0);
+      if (rounds == 0) continue;
+      int hw = handWins.getOrDefault(playerId, 0);
+      int di = dealIns.getOrDefault(playerId, 0);
+
+      // 自摸 (self-draw) wins for this player — 荣和 count is derivable as handWins - tsumoWins.
+      Set<Long> seenWinRounds = new HashSet<>();
+      int tsumo = 0;
+      for (Object[] row : entry.getValue()) {
+        Long roundId = (Long) row[0];
+        Long winnerId = (Long) row[1];
+        Long dealInPlayerId = (Long) row[2];
+        if (playerId.equals(winnerId) && dealInPlayerId == null && seenWinRounds.add(roundId)) {
+          tsumo++;
+        }
+      }
+
+      PlayerDetailResponse.ModeStats ms = new PlayerDetailResponse.ModeStats();
+      ms.setRoundsPlayed(rounds);
+      ms.setHandWins(hw);
+      ms.setTsumoWins(tsumo);
+      ms.setDealIns(di);
+      ms.setAvgWinPoints(hw > 0 ? (double) winPointsSum.getOrDefault(playerId, 0) / hw : 0);
+      ms.setAvgDealInPoints(di > 0 ? (double) dealInPointsSum.getOrDefault(playerId, 0) / di : 0);
+      statsByMode.put(entry.getKey().name(), ms);
+    }
+    return statsByMode;
   }
 
   private GameModeHandler getHandler(GameMode mode) {
