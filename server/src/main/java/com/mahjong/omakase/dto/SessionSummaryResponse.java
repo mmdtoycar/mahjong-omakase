@@ -22,7 +22,7 @@ public class SessionSummaryResponse {
   private int roundCount;
   private List<PlayerPerformanceDTO> rankings;
 
-  /** "凤凰台" / "麒麟阁" / "太极殿" / "困龙阙" / "百雀林" — null if mode doesn't track ratings. */
+  /** "铳之间" / "狠之间" / "贪之间" / "狱之间" / "大圣之间" — null if mode doesn't track ratings. */
   private String tableStrength;
 
   public static SessionSummaryResponse from(GameSession session) {

@@ -15,28 +15,27 @@ import org.springframework.stereotype.Service;
  * <p>Rules (priority top-down):
  *
  * <ol>
- *   <li>FENG_HUANG_TAI 凤凰台 — ≥ 2 stable顶尖 (LV3+ AND 当月 ≥ 5 场) AND 0 LV1
- *   <li>KUN_LONG_QUE 困龙阙 — ≥ 2 LV3+ AND ≥ 1 LV1 (高低混战)
- *   <li>QI_LIN_GE 麒麟阁 — ≥ 1 LV3+ (含未达月度门槛的)
- *   <li>BAI_QUE_LIN 百雀林 — 全员 LV1 / 未定段
- *   <li>TAI_JI_DIAN 太极殿 — 其他 (LV2 居多)
+ *   <li>DA_SHENG 大圣之间 — 有斗战胜佛 (LV4_THRONE) 在桌
+ *   <li>YU 狱之间 — ≥ 3 名齐天大圣 (LV3)
+ *   <li>TAN 贪之间 — 2 名 LV3
+ *   <li>HEN 狠之间 — 1 名 LV3
+ *   <li>CHONG 铳之间 — 0 名 LV3
  * </ol>
  *
- * <p>Note: only GUOBIAO and RIICHI modes get a label. DONGBEI returns null (no tag in UI).
+ * <p>Note: only GUOBIAO and RIICHI modes get a label. DONGBEI returns null (no tag in UI). The 斗战胜佛
+ * tier already encodes the "top player, active ≥ 5 games this month" rule, so early each month
+ * (before anyone qualifies) tables fall back to the LV3-count ladder.
  */
 @Service
 @RequiredArgsConstructor
 public class TableStrengthService {
 
-  /** "顶尖" 月度场数门槛 — 防止"少场高分"瞎冲凤凰台. */
-  public static final int STABLE_TOP_MONTHLY_GAMES = 5;
-
   public enum TableStrength {
-    FENG_HUANG_TAI("凤凰台"),
-    QI_LIN_GE("麒麟阁"),
-    TAI_JI_DIAN("太极殿"),
-    KUN_LONG_QUE("困龙阙"),
-    BAI_QUE_LIN("百雀林");
+    CHONG("铳之间"),
+    HEN("狠之间"),
+    TAN("贪之间"),
+    YU("狱之间"),
+    DA_SHENG("大圣之间");
 
     private final String displayName;
 
@@ -54,62 +53,46 @@ public class TableStrengthService {
   /**
    * Compute the table strength label for a session's seated players. Returns null for DONGBEI.
    *
-   * @param sessionDate session's createdAt (UTC) — monthly game count is taken from THAT month, so
-   *     historical sessions get the label they should have had at the time, not what they'd be
-   *     under today's monthly count.
+   * @param sessionDate session's createdAt (UTC) — tier is resolved for THAT month, so historical
+   *     sessions get the label they should have had at the time, not what they'd be under today's
+   *     ratings.
    */
   public TableStrength compute(List<Player> players, GameMode mode, LocalDateTime sessionDate) {
     if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return null;
     Map<Long, Tier> tierByPlayer =
         sessionDate != null ? tierService.resolveTiersForDate(mode, sessionDate) : Map.of();
-    Map<Long, Integer> monthlyByPlayer =
-        sessionDate != null
-            ? tierService.monthlyGamesByPlayerForReferenceDate(mode, sessionDate)
-            : Map.of();
-    return compute(players, mode, tierByPlayer, monthlyByPlayer);
+    return compute(players, mode, tierByPlayer);
   }
 
   /**
-   * Precomputed-map overload — caller provides the per-(mode, month) tier and monthly-games maps so
-   * a request that summarizes 150 sessions doesn't redo {@code resolveTiersForDate} + {@code
-   * monthlyGamesByPlayer} 150 times. {@link GameService#getAllSessionSummaries} groups sessions by
-   * (mode, PT year-month) and reuses one map per group.
+   * Precomputed-map overload — caller provides the per-(mode, month) tier map so a request that
+   * summarizes many sessions doesn't redo {@code resolveTiersForDate} per session. {@link
+   * GameService#getAllSessionSummaries} groups sessions by (mode, PT year-month) and reuses one map
+   * per group.
    */
-  public TableStrength compute(
-      List<Player> players,
-      GameMode mode,
-      Map<Long, Tier> tierByPlayer,
-      Map<Long, Integer> monthlyByPlayer) {
+  public TableStrength compute(List<Player> players, GameMode mode, Map<Long, Tier> tierByPlayer) {
     if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return null;
-    if (players == null) return TableStrength.BAI_QUE_LIN;
+    if (players == null) return TableStrength.CHONG;
     Map<Long, Tier> safeTiers = tierByPlayer != null ? tierByPlayer : Map.of();
-    Map<Long, Integer> safeMonthly = monthlyByPlayer != null ? monthlyByPlayer : Map.of();
 
     List<Player> humans = players.stream().filter(p -> p != null && !p.isBot()).toList();
-    if (humans.size() < 2) return TableStrength.BAI_QUE_LIN;
+    if (humans.size() < 2) return TableStrength.CHONG;
 
-    int stableTop = 0;
+    boolean hasThrone = false;
     int lv3Count = 0;
-    int lv1Count = 0;
-
     for (Player p : humans) {
       Tier t = safeTiers.getOrDefault(p.getId(), tierService.computeTier(p, mode));
-      if (t == Tier.LV3 || t == Tier.LV4_THRONE) {
+      if (t == Tier.LV4_THRONE) {
+        hasThrone = true;
+      } else if (t == Tier.LV3) {
         lv3Count++;
-        int monthlyGames = safeMonthly.getOrDefault(p.getId(), 0);
-        if (monthlyGames >= STABLE_TOP_MONTHLY_GAMES) {
-          stableTop++;
-        }
-      }
-      if (t == Tier.LV1 || t == Tier.UNRANKED) {
-        lv1Count++;
       }
     }
 
-    if (stableTop >= 2 && lv1Count == 0) return TableStrength.FENG_HUANG_TAI;
-    if (lv3Count >= 2 && lv1Count >= 1) return TableStrength.KUN_LONG_QUE;
-    if (lv3Count >= 1) return TableStrength.QI_LIN_GE;
-    if (lv1Count == humans.size()) return TableStrength.BAI_QUE_LIN;
-    return TableStrength.TAI_JI_DIAN;
+    if (hasThrone) return TableStrength.DA_SHENG;
+    if (lv3Count >= 3) return TableStrength.YU;
+    if (lv3Count == 2) return TableStrength.TAN;
+    if (lv3Count == 1) return TableStrength.HEN;
+    return TableStrength.CHONG;
   }
 }

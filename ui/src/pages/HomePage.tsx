@@ -6,6 +6,7 @@ import { GameCard } from '../components/GameCard'
 import { RankBadge } from '../components/RankBadge'
 import { deriveGameState, getWindName } from '../utils/gameState'
 import { nameFontSize } from '../utils/fontSize'
+import { rankMedal } from '../utils/format'
 import { MSG } from '../constants'
 
 export default function HomePage() {
@@ -19,7 +20,7 @@ export default function HomePage() {
     let isActive = true
     const controller = new AbortController()
 
-    async function loadSummary() {
+    async function loadSummary(silent: boolean) {
       try {
         const summary = await fetchHomeSummary(currentSeason.year, currentSeason.month, controller.signal)
         if (!isActive) return
@@ -28,15 +29,27 @@ export default function HomePage() {
       } catch (e: unknown) {
         if (e instanceof Error && e.name !== 'AbortError') console.error('Failed to load home summary:', e)
       } finally {
-        if (isActive) setLoading(false)
+        if (isActive && !silent) setLoading(false)
       }
     }
 
-    loadSummary()
+    loadSummary(false)
+
+    // 轮询静默刷新(仅前台), 让"正在进行的对局"随每局结束自动更新.
+    const timer = setInterval(() => {
+      if (!document.hidden) void loadSummary(true)
+    }, 5000)
+    // 切回该窗口/标签时立即刷新一次, 不用等下个轮询周期.
+    const onVisible = () => {
+      if (!document.hidden) void loadSummary(true)
+    }
+    document.addEventListener('visibilitychange', onVisible)
 
     return () => {
       isActive = false
       controller.abort()
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [currentSeason.year, currentSeason.month])
 
@@ -122,7 +135,7 @@ export default function HomePage() {
                     ) : (
                       data.top.map((player, idx) => (
                         <div key={player.playerId} className="rank-item">
-                          <span className={`rank-tag rank-tag-${idx + 1}`}>#{idx + 1}</span>
+                          <span className={`rank-tag rank-tag-${idx + 1}`}>{rankMedal(idx + 1) ?? `#${idx + 1}`}</span>
                           <div className="rank-info">
                             <span className="player-name-with-rank">
                               <RankBadge

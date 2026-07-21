@@ -731,6 +731,12 @@ table.auto-table {
   margin-top: 4px;
 }
 
+.stat-card .stat-sublabel {
+  font-size: 0.7rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
 .empty-state {
   text-align: center;
   padding: 48px 24px;
@@ -1306,8 +1312,8 @@ table.auto-table {
   font-size: 1.1em;
 }
 
-/* 凤凰台 — 顶配, 烈焰红金 + 动态火焰外圈 */
-@keyframes phoenix-flame {
+/* 大圣之间 — 顶配, 烈焰红金 + 动态火焰外圈 */
+@keyframes dasheng-flame {
   0%,
   100% {
     box-shadow: inset 0 0 0 2px rgb(120 30 0 / 60%), inset 0 1px 0 rgb(255 255 255 / 35%),
@@ -1320,50 +1326,46 @@ table.auto-table {
   }
 }
 
-.table-strength-phoenix {
+.table-strength-dasheng {
   background: linear-gradient(135deg, #d4351c 0%, #f0a429 100%);
   color: #fff;
   text-shadow: 0 1px 2px rgb(0 0 0 / 30%);
-  animation: phoenix-flame 1.8s ease-in-out infinite;
+  animation: dasheng-flame 1.8s ease-in-out infinite;
 }
 
-.table-strength-phoenix .table-strength-emoji {
-  filter: brightness(0) invert(1) drop-shadow(0 1px 2px rgb(120 30 0 / 60%));
-}
-
-/* 麒麟阁 — 第二尊位, 墨青底 + 金字金边, 矜贵不张扬 */
-.table-strength-qilin {
+/* 贪之间 — 墨青底 + 金字金边, 矜贵不张扬 */
+.table-strength-tan {
   background: linear-gradient(135deg, #1a3a3a 0%, #0d2828 100%);
   color: #f4d03f;
   box-shadow: 0 1px 4px rgb(0 0 0 / 30%), inset 0 0 0 2px rgb(244 208 63 / 35%), inset 0 1px 0 rgb(244 208 63 / 30%);
   text-shadow: 0 1px 2px rgb(0 0 0 / 50%);
 }
 
-.table-strength-qilin .table-strength-emoji {
+.table-strength-tan .table-strength-emoji {
   filter: drop-shadow(0 0 3px rgb(244 208 63 / 70%));
 }
 
-/* 太极殿 — 玉石青绿, 阴阳渐变 */
-.table-strength-taiji {
+/* 狠之间 — 玉石青绿, 阴阳渐变 */
+.table-strength-hen {
   background: linear-gradient(135deg, #4a9b94 0%, #2c5f5b 100%);
   color: #fff;
   box-shadow: 0 1px 3px rgb(44 95 91 / 35%), inset 0 0 0 2px rgb(15 50 47 / 50%), inset 0 1px 0 rgb(255 255 255 / 25%);
   text-shadow: 0 1px 2px rgb(0 0 0 / 25%);
 }
 
-.table-strength-taiji .table-strength-emoji {
+.table-strength-hen .table-strength-emoji {
   filter: drop-shadow(0 0 2px rgb(255 255 255 / 50%));
 }
 
-/* 困龙阙 — 风云紫蓝 */
-.table-strength-dragon {
+/* 狱之间 — 风云紫蓝 */
+.table-strength-yu {
   background: linear-gradient(135deg, #4f3eb3 0%, #6c5ce7 100%);
   color: #fff;
   box-shadow: 0 2px 6px rgb(76 60 179 / 30%), inset 0 0 0 2px rgb(40 28 110 / 55%), inset 0 1px 0 rgb(255 255 255 / 20%);
 }
 
-/* 百雀林 — 朴素米绿 */
-.table-strength-sparrow {
+/* 铳之间 — 朴素米绿 */
+.table-strength-chong {
   background: linear-gradient(135deg, #e8ecdf 0%, #c4cfa8 100%);
   color: #4a5a30;
   box-shadow: inset 0 0 0 2px rgb(120 140 80 / 35%), inset 0 1px 0 rgb(255 255 255 / 40%);
