@@ -130,8 +130,8 @@ export default function StatsPage() {
     return () => controller.abort()
   }, [tab, seasonKey, gameMode])
 
-  // 全部赛季需累计 ≥10 场才进排名/评选; 单个赛季不设门槛.
-  const activeStats = stats.filter((s) => s.gamesPlayed > 0 && (seasonKey !== 'all' || s.gamesPlayed >= 10))
+  // 全部赛季需累计 ≥5 场才进排名/评选; 单个赛季不设门槛.
+  const activeStats = stats.filter((s) => s.gamesPlayed > 0 && (seasonKey !== 'all' || s.gamesPlayed >= 5))
   const selectedSeason = seasons.find((s) => `${s.year}-${s.month}` === seasonKey)
 
   // Sort by skillRating descending so top performers show first.
