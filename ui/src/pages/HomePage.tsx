@@ -35,15 +35,21 @@ export default function HomePage() {
 
     loadSummary(false)
 
-    // 轮询静默刷新, 让"正在进行的对局"随每局结束自动更新.
+    // 轮询静默刷新(仅前台), 让"正在进行的对局"随每局结束自动更新.
     const timer = setInterval(() => {
-      if (!document.hidden) loadSummary(true)
-    }, 10000)
+      if (!document.hidden) void loadSummary(true)
+    }, 5000)
+    // 切回该窗口/标签时立即刷新一次, 不用等下个轮询周期.
+    const onVisible = () => {
+      if (!document.hidden) void loadSummary(true)
+    }
+    document.addEventListener('visibilitychange', onVisible)
 
     return () => {
       isActive = false
       controller.abort()
       clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [currentSeason.year, currentSeason.month])
 
