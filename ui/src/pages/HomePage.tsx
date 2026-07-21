@@ -20,7 +20,7 @@ export default function HomePage() {
     let isActive = true
     const controller = new AbortController()
 
-    async function loadSummary() {
+    async function loadSummary(silent: boolean) {
       try {
         const summary = await fetchHomeSummary(currentSeason.year, currentSeason.month, controller.signal)
         if (!isActive) return
@@ -29,15 +29,21 @@ export default function HomePage() {
       } catch (e: unknown) {
         if (e instanceof Error && e.name !== 'AbortError') console.error('Failed to load home summary:', e)
       } finally {
-        if (isActive) setLoading(false)
+        if (isActive && !silent) setLoading(false)
       }
     }
 
-    loadSummary()
+    loadSummary(false)
+
+    // 轮询静默刷新, 让"正在进行的对局"随每局结束自动更新.
+    const timer = setInterval(() => {
+      if (!document.hidden) loadSummary(true)
+    }, 10000)
 
     return () => {
       isActive = false
       controller.abort()
+      clearInterval(timer)
     }
   }, [currentSeason.year, currentSeason.month])
 
