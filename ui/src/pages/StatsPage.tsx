@@ -176,6 +176,8 @@ export default function StatsPage() {
   const topWinRate = pick(withRounds, winRate, 'max')
   const topDealIn = pick(withRounds, dealInRate, 'max')
   const lowDealIn = pick(withRounds, dealInRate, 'min')
+  const lowWinRate = pick(withRounds, winRate, 'min')
+  const lowTsumo = pick(withWins, tsumoRate, 'min')
 
   const statCard = (value: number | string, label: string) => (
     <div className="stat-card">
@@ -188,14 +190,12 @@ export default function StatsPage() {
     <div className="stat-card">
       <div className="stat-value" style={{ fontSize: statFontSize(winner?.userName || '-') }}>
         {winner?.userName || '-'}
-        {winner && rate != null && (
-          <span style={{ fontSize: '0.6rem', color: 'var(--text-light)', verticalAlign: 'bottom', marginLeft: 2 }}>
-            ({(rate * 100).toFixed(0)}%)
-          </span>
-        )}
       </div>
       <div className="stat-label">{name}</div>
-      <div className="stat-sublabel">{sub}</div>
+      <div className="stat-sublabel">
+        {sub}
+        {winner && rate != null ? ` · ${(rate * 100).toFixed(0)}%` : ''}
+      </div>
     </div>
   )
 
@@ -250,7 +250,9 @@ export default function StatsPage() {
         <>
           <div className="stats-grid">
             {awardCard('🧿 真•赤木', '最高胡牌率', topWinRate, topWinRate ? winRate(topWinRate) : undefined)}
+            {awardCard('🪣 水缸坐穿', '最低胡牌率', lowWinRate, lowWinRate ? winRate(lowWinRate) : undefined)}
             {awardCard('🐕 人是打不过狗的', '最高自摸率', topTsumo, topTsumo ? tsumoRate(topTsumo) : undefined)}
+            {awardCard('⚰️ 我的牌去哪儿了', '最低自摸率', lowTsumo, lowTsumo ? tsumoRate(lowTsumo) : undefined)}
             {awardCard('💣 二营长', '最高铳率', topDealIn, topDealIn ? dealInRate(topDealIn) : undefined)}
             {awardCard('🐢 龟仙人', '最低铳率', lowDealIn, lowDealIn ? dealInRate(lowDealIn) : undefined)}
             {statCard(activeStats.length, '参与玩家')}

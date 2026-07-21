@@ -22,8 +22,10 @@ export function statFontSize(text: string) {
       { maxLen: 6, desktop: '2rem', mobile: '1.4rem' },
       { maxLen: 8, desktop: '2rem', mobile: '1.1rem' },
       { maxLen: 12, desktop: '1.5rem', mobile: '0.9rem' },
+      { maxLen: 16, desktop: '1.2rem', mobile: '0.8rem' },
+      { maxLen: 22, desktop: '0.9rem', mobile: '0.6rem' },
     ],
-    { desktop: '1.2rem', mobile: '0.9rem' }
+    { desktop: '0.75rem', mobile: '0.5rem' }
   )
 }
 
