@@ -163,14 +163,12 @@ export default function StatsPage() {
     )
 
   const totalGames = activeStats.length > 0 ? Math.max(...activeStats.map((s) => s.gamesPlayed)) : 0
-  const topScorer = activeStats[0]
-  const topWinner = activeStats.length > 0 ? [...activeStats].sort((a, b) => b.wins - a.wins)[0] : null
 
   // 赛季奖项. 单赛季无局数门槛; 全部赛季沿用 activeStats 的 ≥10 场门槛. 自摸率=自摸/和牌, 胡牌率=和牌/局数, 铳率=放铳/局数.
   const withRounds = activeStats.filter((s) => s.roundsPlayed > 0)
   const withWins = activeStats.filter((s) => s.handWins > 0)
-  const tsumoRate = (s: PlayerStats) => s.tsumoWins / s.handWins
   const winRate = (s: PlayerStats) => s.handWins / s.roundsPlayed
+  const tsumoRate = (s: PlayerStats) => s.tsumoWins / s.handWins
   const dealInRate = (s: PlayerStats) => s.dealIns / s.roundsPlayed
   const pick = (arr: PlayerStats[], rate: (s: PlayerStats) => number, dir: 'max' | 'min') =>
     arr.length === 0 ? null : [...arr].sort((a, b) => (dir === 'max' ? rate(b) - rate(a) : rate(a) - rate(b)))[0]
@@ -178,6 +176,13 @@ export default function StatsPage() {
   const topWinRate = pick(withRounds, winRate, 'max')
   const topDealIn = pick(withRounds, dealInRate, 'max')
   const lowDealIn = pick(withRounds, dealInRate, 'min')
+
+  const statCard = (value: number | string, label: string) => (
+    <div className="stat-card">
+      <div className="stat-value">{value}</div>
+      <div className="stat-label">{label}</div>
+    </div>
+  )
 
   const awardCard = (name: string, sub: string, winner: PlayerStats | null, rate?: number) => (
     <div className="stat-card">
@@ -244,30 +249,12 @@ export default function StatsPage() {
       {tab === 'games' && (
         <>
           <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-value">{activeStats.length}</div>
-              <div className="stat-label">参与玩家</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{totalGames}</div>
-              <div className="stat-label">游戏场次</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value" style={{ fontSize: statFontSize(topScorer?.userName || '-') }}>
-                {topScorer?.userName || '-'}
-              </div>
-              <div className="stat-label">🏆 积分冠军</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value" style={{ fontSize: statFontSize(topWinner?.userName || '-') }}>
-                {topWinner?.userName || '-'}
-              </div>
-              <div className="stat-label">👑 最多胜场</div>
-            </div>
-            {awardCard('🐕 人是打不过狗的', '最高自摸率', topTsumo, topTsumo ? tsumoRate(topTsumo) : undefined)}
             {awardCard('🧿 真•赤木', '最高胡牌率', topWinRate, topWinRate ? winRate(topWinRate) : undefined)}
+            {awardCard('🐕 人是打不过狗的', '最高自摸率', topTsumo, topTsumo ? tsumoRate(topTsumo) : undefined)}
             {awardCard('💣 二营长', '最高铳率', topDealIn, topDealIn ? dealInRate(topDealIn) : undefined)}
             {awardCard('🐢 龟仙人', '最低铳率', lowDealIn, lowDealIn ? dealInRate(lowDealIn) : undefined)}
+            {statCard(activeStats.length, '参与玩家')}
+            {statCard(totalGames, '游戏场次')}
           </div>
 
           {activeStats.length === 0 ? (
