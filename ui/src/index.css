@@ -403,6 +403,7 @@ table.fixed-table th,
 table.fixed-table td {
   padding-left: 6px;
   padding-right: 6px;
+  vertical-align: middle;
 }
 
 table.fixed-table .col-rank {
@@ -2960,7 +2961,8 @@ table.auto-table {
 
 .game-card .rank-number.rank-tag-1,
 .game-card .rank-number.rank-tag-2,
-.game-card .rank-number.rank-tag-3 {
+.game-card .rank-number.rank-tag-3,
+.game-card .rank-number.rank-tag-4 {
   opacity: 1;
 }
 

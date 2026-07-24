@@ -8,7 +8,7 @@ import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
-import { scoreClass, parseError, rankMedal } from '../utils/format'
+import { scoreClass, parseError, seatRankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
 import { TableStrengthTag } from '../components/TableStrengthTag'
@@ -303,6 +303,7 @@ export default function SessionPage() {
   const fixedColPx = 60 + (session.status === 'IN_PROGRESS' ? 32 : 0)
   const playerColStyle = {
     textAlign: 'center' as const,
+    verticalAlign: 'top' as const,
     width: `calc((100% - ${fixedColPx}px) / ${session.players.length})`,
   }
 
@@ -770,12 +771,12 @@ export default function SessionPage() {
           <table className="fixed-table">
             <thead>
               <tr>
-                <th style={{ textAlign: 'center', width: '60px' }}>局</th>
+                <th style={{ textAlign: 'center', verticalAlign: 'top', width: '60px' }}>局</th>
                 {session.players.map((p) => (
                   <th key={p.id} style={playerColStyle}>
                     <div className="player-header-cell">
                       <span className={`rank-tag rank-tag-${rankMap[p.id]?.rank}`}>
-                        {rankMedal(rankMap[p.id]?.rank ?? 0) ?? `#${rankMap[p.id]?.rank ?? 0}`}
+                        {seatRankMedal(rankMap[p.id]?.rank ?? 0) ?? `#${rankMap[p.id]?.rank ?? 0}`}
                       </span>
                       <RankBadge tier={p.tier} size="sm" userName={p.userName} />
                       <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
@@ -922,7 +923,7 @@ export default function SessionPage() {
                   return (
                     <tr key={p.id}>
                       <td className="col-rank">
-                        <span className={`rank-tag rank-tag-${rank}`}>{rankMedal(rank) ?? `#${rank}`}</span>
+                        <span className={`rank-tag rank-tag-${rank}`}>{seatRankMedal(rank) ?? `#${rank}`}</span>
                       </td>
                       <td>
                         <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
