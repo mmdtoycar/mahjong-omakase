@@ -403,6 +403,7 @@ table.fixed-table th,
 table.fixed-table td {
   padding-left: 6px;
   padding-right: 6px;
+  vertical-align: middle;
 }
 
 table.fixed-table .col-rank {

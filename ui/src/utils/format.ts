@@ -47,3 +47,11 @@ export function parseError(e: unknown): string {
 export function rankMedal(rank: number): string | null {
   return { 1: '🥇', 2: '🥈', 3: '🥉' }[rank] ?? null
 }
+
+/**
+ * In-game seat ranking (fixed 3–4 seats): podium + 🤡 for the 4th (last) seat.
+ * Use in per-game views (对局内); NOT the global leaderboard where 4th isn't "last".
+ */
+export function seatRankMedal(rank: number): string | null {
+  return { 1: '🥇', 2: '🥈', 3: '🥉', 4: '🤡' }[rank] ?? null
+}

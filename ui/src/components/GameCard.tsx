@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { scoreClass, rankMedal } from '../utils/format'
+import { scoreClass, seatRankMedal } from '../utils/format'
 import { nameFontSize } from '../utils/fontSize'
 import { TierKey } from '../types'
 import { RankBadge } from './RankBadge'
@@ -59,7 +59,7 @@ export const GameCard: React.FC<Props> = ({
           <div key={idx} className="player-rank-item">
             <span className="player-name-with-rank">
               <span className={`rank-number${p.rank <= 3 ? ` rank-tag-${p.rank}` : ''}`}>
-                {rankMedal(p.rank) ?? `#${p.rank}`}
+                {seatRankMedal(p.rank) ?? `#${p.rank}`}
               </span>
               {p.wind && <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>{p.wind}</span>}
               <RankBadge tier={p.tier} size="sm" userName={p.name} />
