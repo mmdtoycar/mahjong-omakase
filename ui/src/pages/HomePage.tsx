@@ -5,6 +5,7 @@ import { GAME_MODES, SessionDetail, PlayerStats, BestRound, getCurrentSeason } f
 import { GameCard } from '../components/GameCard'
 import { RankBadge } from '../components/RankBadge'
 import { deriveGameState, getWindName } from '../utils/gameState'
+import { rankByScore } from '../logic/ranking'
 import { nameFontSize } from '../utils/fontSize'
 import { rankMedal } from '../utils/format'
 import { MSG } from '../constants'
@@ -80,10 +81,7 @@ export default function HomePage() {
           <div className="active-games-grid">
             {activeSessions.map((s) => {
               const state = deriveGameState(s)
-              const sortedPlayers = [...s.players].sort(
-                (a, b) => (s.totalScores[b.id] || 0) - (s.totalScores[a.id] || 0)
-              )
-              const sortedScores = sortedPlayers.map((p) => s.totalScores[p.id] || 0)
+              const ranked = rankByScore(s.players, (p) => s.totalScores[p.id] || 0)
               return (
                 <GameCard
                   key={s.id}
@@ -93,13 +91,12 @@ export default function HomePage() {
                   roundLabel={`${state.displayName} 进行中`}
                   isActive={true}
                   tableStrength={s.tableStrength}
-                  players={sortedPlayers.map((p) => {
+                  players={ranked.map((p) => {
                     const score = s.totalScores[p.id] || 0
-                    const rank = sortedScores.indexOf(score) + 1
                     const seat = p.seat ?? s.players.findIndex((op) => op.id === p.id) + 1
                     const menfeng = ((seat - state.dealerSeat + state.playerCount) % state.playerCount) + 1
                     return {
-                      rank,
+                      rank: p.rank,
                       name: p.userName,
                       score,
                       wind: getWindName(menfeng),

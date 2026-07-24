@@ -113,8 +113,8 @@ export default function DashboardPage() {
               tableStrength={s.tableStrength}
               players={
                 s.rankings
-                  ? s.rankings.map((p, idx) => ({
-                      rank: idx + 1,
+                  ? s.rankings.map((p) => ({
+                      rank: p.rank,
                       name: p.userName,
                       score: p.totalScore,
                       tier: p.tier ?? null,
