@@ -2981,29 +2981,7 @@ table.auto-table {
   font-weight: 800;
 }
 
-/* 全屏查看按钮(仅进行中对局卡) */
-.game-card-fs-btn {
-  border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--text-muted);
-  border-radius: 8px;
-  width: 26px;
-  height: 26px;
-  font-size: 0.95rem;
-  line-height: 1;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.game-card-fs-btn:hover {
-  color: var(--mj-teal);
-  border-color: var(--mj-teal);
-}
-
-/* 全屏放大观看遮罩 — 复用原卡片 DOM(.game-card-fs), 只放大字号/尺寸 */
+/* 全屏放大观看 — 复用原卡片 DOM, 整体 transform: scale 放大, 不改任何子元素样式 */
 .game-fs {
   position: fixed;
   inset: 0;
@@ -3012,8 +2990,7 @@ table.auto-table {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .game-fs-close {
@@ -3031,56 +3008,9 @@ table.auto-table {
 }
 
 .game-card-fs {
-  width: min(94vw, 640px);
+  width: 340px;
   cursor: default;
-}
-
-.game-card-fs:hover {
-  transform: none;
-  box-shadow: 0 2px 4px rgb(0 0 0 / 2%);
-  border-color: var(--border);
-}
-
-/* 全屏里隐藏那个 ⛶ 按钮(已经在全屏了) */
-.game-card-fs .game-card-fs-btn {
-  display: none;
-}
-
-/* 放大各元素; player-name 用了内联字号, 需 !important 盖过 */
-.game-card-fs .mode-text {
-  font-size: 1.4rem;
-}
-
-.game-card-fs .session-card-players {
-  gap: 4px;
-}
-
-.game-card-fs .player-rank-item {
-  padding: 12px 0;
-}
-
-.game-card-fs .rank-number {
-  font-size: 2rem;
-  min-width: 2rem;
-}
-
-.game-card-fs .player-name {
-  font-size: 1.7rem !important;
-}
-
-.game-card-fs .player-score {
-  font-size: 2rem;
-}
-
-.game-card-fs .wind-tag {
-  font-size: 1.3rem;
-}
-
-.game-card-fs .rank-badge-sm .rank-badge-img,
-.game-card-fs .rank-badge-sm .rank-badge-fallback,
-.game-card-fs .rank-badge-unranked-sm {
-  width: 44px;
-  height: 44px;
+  transform-origin: center center;
 }
 
 @media (width <= 640px) {
