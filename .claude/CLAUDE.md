@@ -61,6 +61,23 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Never Push Unless Asked
+
+**Do NOT `git push` unless the user explicitly says to push (or runs /publish).**
+
+- Making edits, running checks, and committing locally are fine, but stop before pushing.
+- Reason: CodeRabbit only reviews a PR about once per hour. Pushing new commits too quickly means it won't review the later parts — batch changes and let the user decide when to push.
+- When work is ready, say so and wait for the push signal.
+
+## 6. Do Exactly What's Asked — Reuse, Don't Rewrite
+
+**No overdesign. Build the specific thing requested, reusing what exists.**
+
+- This is §2 (Simplicity First) applied concretely — it was already stated; honor it.
+- Reuse/extend existing components, DOM, and styles instead of writing a parallel version. "Make X bigger/fullscreen" → scale or reuse X's existing markup; do NOT re-implement X's layout or author a second set of styles.
+- If you catch yourself writing a second version of something that already exists, stop — that's the overdesign smell. Reuse instead.
+- Do the requested change and nothing more. No speculative variants, no adjacent "improvements."
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
