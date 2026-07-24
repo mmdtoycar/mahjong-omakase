@@ -130,11 +130,12 @@ export default function StatsPage() {
     return () => controller.abort()
   }, [tab, seasonKey, gameMode])
 
-  // 全部赛季门槛 = 赛季数(平均每赛季至少一场): 随赛季增长抬高全时段榜的样本要求; 单个赛季不设门槛.
+  // 打过至少一局的玩家(无门槛) — 用于"参与玩家/游戏场次"计数.
+  const playedStats = stats.filter((s) => s.gamesPlayed > 0)
+  // 全部赛季门槛 = 赛季数(平均每赛季至少一场): 抬高全时段榜的样本要求; 单赛季不设门槛.
+  // 只作用于排名/奖项, 不影响上面的参与玩家/游戏场次计数.
   const allSeasonMinGames = seasons.length
-  const activeStats = stats.filter(
-    (s) => s.gamesPlayed > 0 && (seasonKey !== 'all' || s.gamesPlayed >= allSeasonMinGames)
-  )
+  const activeStats = seasonKey === 'all' ? playedStats.filter((s) => s.gamesPlayed >= allSeasonMinGames) : playedStats
   const selectedSeason = seasons.find((s) => `${s.year}-${s.month}` === seasonKey)
 
   // Sort by skillRating descending so top performers show first.
@@ -165,7 +166,7 @@ export default function StatsPage() {
       </div>
     )
 
-  const totalGames = activeStats.length > 0 ? Math.max(...activeStats.map((s) => s.gamesPlayed)) : 0
+  const totalGames = playedStats.length > 0 ? Math.max(...playedStats.map((s) => s.gamesPlayed)) : 0
 
   // 赛季奖项. 单赛季无局数门槛; 全部赛季沿用 activeStats 的 赛季数 门槛.
   // 率: 自摸=自摸/和牌, 胡牌=和牌/局数, 铳=放铳/局数, 1位=1位/总场, 4位=4位/总场.
@@ -265,7 +266,7 @@ export default function StatsPage() {
             {awardCard('🐢 龟仙人', '最低铳率', lowDealIn, lowDealIn ? dealInRate(lowDealIn) : undefined)}
             {awardCard('☠️ 阳寿打牌', '最高1位率', topFirstRate, topFirstRate ? firstRate(topFirstRate) : undefined)}
             {awardCard('🤡 小丑皇', '最高4位率', topFourthRate, topFourthRate ? fourthRate(topFourthRate) : undefined)}
-            {statCard(activeStats.length, '参与玩家')}
+            {statCard(playedStats.length, '参与玩家')}
             {statCard(totalGames, '游戏场次')}
           </div>
 
