@@ -35,9 +35,6 @@ export function rankByScore<T extends object>(items: T[], getScore: (t: T) => nu
   return result
 }
 
-/**
- * Calculates ranks and Ranking Points (RP) for a list of player scores.
- */
 export function calculateRanks(scores: PlayerScore[], config: RpConfig): PlayerRank[] {
   const { rpFactor: factor, umaDist } = config
   const ranked = rankByScore(scores, (s) => s.score)
@@ -45,7 +42,6 @@ export function calculateRanks(scores: PlayerScore[], config: RpConfig): PlayerR
   const results: PlayerRank[] = []
   let i = 0
   while (i < ranked.length) {
-    // Rank groups are contiguous (same score → same rank), so group by rank.
     let j = i
     while (j < ranked.length && ranked[j].rank === ranked[i].rank) j++
 
