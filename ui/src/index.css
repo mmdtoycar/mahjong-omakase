@@ -2981,6 +2981,117 @@ table.auto-table {
   font-weight: 800;
 }
 
+/* 全屏查看按钮(仅进行中对局卡) */
+.game-card-fs-btn {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-muted);
+  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.game-card-fs-btn:hover {
+  color: var(--mj-teal);
+  border-color: var(--mj-teal);
+}
+
+/* 全屏放大观看遮罩 */
+.game-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgb(0 0 0 / 55%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.game-fs-panel {
+  background: var(--card);
+  border-radius: 16px;
+  width: min(100%, 720px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 30%);
+}
+
+.game-fs-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.game-fs-header .mode-text {
+  font-size: 1.2rem;
+}
+
+.game-fs-close {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.game-fs-players {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(10px, 3vh, 28px);
+  padding: clamp(16px, 4vh, 40px) clamp(20px, 6vw, 56px);
+  overflow-y: auto;
+}
+
+.game-fs-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.game-fs-rank {
+  font-size: clamp(1.6rem, 6vw, 2.6rem);
+  font-weight: 900;
+  min-width: 1.6em;
+  text-align: center;
+}
+
+.game-fs-name {
+  flex: 1;
+  font-size: clamp(1.3rem, 5vw, 2.2rem);
+  font-weight: 700;
+  color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-fs-score {
+  font-size: clamp(1.4rem, 5.5vw, 2.4rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-fs .wind-tag {
+  font-size: clamp(1rem, 3.5vw, 1.5rem);
+}
+
 @media (width <= 640px) {
   .dashboard-sessions-list {
     padding: 16px;
