@@ -2886,6 +2886,7 @@ table.auto-table {
   box-shadow: 0 2px 4px rgb(0 0 0 / 2%);
   text-decoration: none;
   color: inherit;
+  touch-action: manipulation;
 }
 
 .game-card:hover {

@@ -76,25 +76,23 @@ export const GameCard: React.FC<Props> = ({
     []
   )
 
+  // 单击进详情、双击(双击/双触)全屏. 用单一 click 的计时判断双击, 兼容手机触摸
+  // (onDoubleClick 在移动端不可靠); 配合 CSS touch-action: manipulation 禁掉双击缩放.
   const handleClick = () => {
-    // 已结束的卡没有双击全屏, 直接跳转不用延迟.
     if (!isActive) {
       navigate(`/session/${id}`)
       return
     }
-    if (clickTimer.current !== null) return
-    clickTimer.current = setTimeout(() => {
-      clickTimer.current = null
-      navigate(`/session/${id}`)
-    }, 220)
-  }
-
-  const handleDoubleClick = () => {
     if (clickTimer.current !== null) {
       clearTimeout(clickTimer.current)
       clickTimer.current = null
+      setFullscreen(true)
+      return
     }
-    setFullscreen(true)
+    clickTimer.current = setTimeout(() => {
+      clickTimer.current = null
+      navigate(`/session/${id}`)
+    }, 250)
   }
 
   // 卡片内容(表头 + 玩家列表), 普通卡片和全屏放大复用同一份 DOM.
@@ -146,7 +144,6 @@ export const GameCard: React.FC<Props> = ({
         tabIndex={0}
         title={isActive ? '单击查看详情 · 双击全屏' : '单击查看详情'}
         onClick={handleClick}
-        onDoubleClick={isActive ? handleDoubleClick : undefined}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
