@@ -130,9 +130,8 @@ export default function StatsPage() {
     return () => controller.abort()
   }, [tab, seasonKey, gameMode])
 
-  // 全部赛季门槛随赛季数增长(5 + 赛季数): 抬高全时段榜的样本要求, 让持续活跃的玩家够线、
-  // 只打过几场就消失的旧玩家随时间被筛掉; 单个赛季不设门槛.
-  const allSeasonMinGames = 5 + seasons.length
+  // 全部赛季门槛 = 赛季数(平均每赛季至少一场): 随赛季增长抬高全时段榜的样本要求; 单个赛季不设门槛.
+  const allSeasonMinGames = seasons.length
   const activeStats = stats.filter(
     (s) => s.gamesPlayed > 0 && (seasonKey !== 'all' || s.gamesPlayed >= allSeasonMinGames)
   )
@@ -168,7 +167,7 @@ export default function StatsPage() {
 
   const totalGames = activeStats.length > 0 ? Math.max(...activeStats.map((s) => s.gamesPlayed)) : 0
 
-  // 赛季奖项. 单赛季无局数门槛; 全部赛季沿用 activeStats 的 5+赛季数 门槛.
+  // 赛季奖项. 单赛季无局数门槛; 全部赛季沿用 activeStats 的 赛季数 门槛.
   // 率: 自摸=自摸/和牌, 胡牌=和牌/局数, 铳=放铳/局数, 1位=1位/总场, 4位=4位/总场.
   const withRounds = activeStats.filter((s) => s.roundsPlayed > 0)
   const withWins = activeStats.filter((s) => s.handWins > 0)
