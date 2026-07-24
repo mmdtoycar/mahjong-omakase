@@ -3003,93 +3003,84 @@ table.auto-table {
   border-color: var(--mj-teal);
 }
 
-/* 全屏放大观看遮罩 */
+/* 全屏放大观看遮罩 — 复用原卡片 DOM(.game-card-fs), 只放大字号/尺寸 */
 .game-fs {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: rgb(0 0 0 / 55%);
+  background: rgb(0 0 0 / 60%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
-}
-
-.game-fs-panel {
-  background: var(--card);
-  border-radius: 16px;
-  width: min(100%, 720px);
-  max-height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 12px 40px rgb(0 0 0 / 30%);
-}
-
-.game-fs-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.game-fs-header .mode-text {
-  font-size: 1.2rem;
+  overflow: auto;
 }
 
 .game-fs-close {
-  margin-left: auto;
+  position: fixed;
+  top: 12px;
+  right: 16px;
   border: none;
   background: transparent;
-  color: var(--text-muted);
-  font-size: 1.4rem;
+  color: #fff;
+  font-size: 1.8rem;
   line-height: 1;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  z-index: 1;
 }
 
-.game-fs-players {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: clamp(10px, 3vh, 28px);
-  padding: clamp(16px, 4vh, 40px) clamp(20px, 6vw, 56px);
-  overflow-y: auto;
+.game-card-fs {
+  width: min(94vw, 640px);
+  cursor: default;
 }
 
-.game-fs-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.game-card-fs:hover {
+  transform: none;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 2%);
+  border-color: var(--border);
 }
 
-.game-fs-rank {
-  font-size: clamp(1.6rem, 6vw, 2.6rem);
-  font-weight: 900;
-  min-width: 1.6em;
-  text-align: center;
+/* 全屏里隐藏那个 ⛶ 按钮(已经在全屏了) */
+.game-card-fs .game-card-fs-btn {
+  display: none;
 }
 
-.game-fs-name {
-  flex: 1;
-  font-size: clamp(1.3rem, 5vw, 2.2rem);
-  font-weight: 700;
-  color: var(--primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* 放大各元素; player-name 用了内联字号, 需 !important 盖过 */
+.game-card-fs .mode-text {
+  font-size: 1.4rem;
 }
 
-.game-fs-score {
-  font-size: clamp(1.4rem, 5.5vw, 2.4rem);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
+.game-card-fs .session-card-players {
+  gap: 4px;
 }
 
-.game-fs .wind-tag {
-  font-size: clamp(1rem, 3.5vw, 1.5rem);
+.game-card-fs .player-rank-item {
+  padding: 12px 0;
+}
+
+.game-card-fs .rank-number {
+  font-size: 2rem;
+  min-width: 2rem;
+}
+
+.game-card-fs .player-name {
+  font-size: 1.7rem !important;
+}
+
+.game-card-fs .player-score {
+  font-size: 2rem;
+}
+
+.game-card-fs .wind-tag {
+  font-size: 1.3rem;
+}
+
+.game-card-fs .rank-badge-sm .rank-badge-img,
+.game-card-fs .rank-badge-sm .rank-badge-fallback,
+.game-card-fs .rank-badge-unranked-sm {
+  width: 44px;
+  height: 44px;
 }
 
 @media (width <= 640px) {
