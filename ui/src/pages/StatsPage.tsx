@@ -260,11 +260,11 @@ export default function StatsPage() {
           <div className="stats-grid">
             {awardCard('🧿 真•赤木', '最高胡牌率', topWinRate, topWinRate ? winRate(topWinRate) : undefined)}
             {awardCard('🪣 水缸坐穿', '最低胡牌率', lowWinRate, lowWinRate ? winRate(lowWinRate) : undefined)}
-            {awardCard('🐕 人是打不过狗的', '最高自摸率', topTsumo, topTsumo ? tsumoRate(topTsumo) : undefined)}
+            {awardCard('🐶 人是打不过狗的', '最高自摸率', topTsumo, topTsumo ? tsumoRate(topTsumo) : undefined)}
             {awardCard('⚰️ 我的牌去哪儿了', '最低自摸率', lowTsumo, lowTsumo ? tsumoRate(lowTsumo) : undefined)}
             {awardCard('💣 二营长', '最高铳率', topDealIn, topDealIn ? dealInRate(topDealIn) : undefined)}
             {awardCard('🐢 龟仙人', '最低铳率', lowDealIn, lowDealIn ? dealInRate(lowDealIn) : undefined)}
-            {awardCard('🔥 阳寿打牌', '最高1位率', topFirstRate, topFirstRate ? firstRate(topFirstRate) : undefined)}
+            {awardCard('☠️ 阳寿打牌', '最高1位率', topFirstRate, topFirstRate ? firstRate(topFirstRate) : undefined)}
             {awardCard('🤡 小丑皇', '最高4位率', topFourthRate, topFourthRate ? fourthRate(topFourthRate) : undefined)}
             {statCard(activeStats.length, '参与玩家')}
             {statCard(totalGames, '游戏场次')}
