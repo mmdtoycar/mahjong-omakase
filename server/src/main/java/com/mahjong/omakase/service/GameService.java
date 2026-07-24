@@ -884,6 +884,7 @@ public class GameService {
     Map<Long, Integer> gamesPlayed = new HashMap<>();
     Map<Long, Integer> wins = new HashMap<>();
     Map<Long, Integer> totalRanks = new HashMap<>();
+    Map<Long, Integer> fourthPlaces = new HashMap<>();
     Map<Long, Double> totalRP = new HashMap<>();
     Map<Long, Double> tieredBonusPerPlayer = new HashMap<>();
     Map<Long, Double> adminBonusPerPlayer = new HashMap<>();
@@ -1011,6 +1012,7 @@ public class GameService {
         for (var entry : ranked) {
           totalRP.merge(entry.playerId(), entry.rp(), (a, b) -> a + b);
           totalRanks.merge(entry.playerId(), entry.rank(), Integer::sum);
+          if (entry.rank() == 4) fourthPlaces.merge(entry.playerId(), 1, Integer::sum);
         }
 
         int topScore = ((Number) sorted.get(0)[1]).intValue();
@@ -1037,6 +1039,7 @@ public class GameService {
               stat.setGamesPlayed(gamesPlayed.getOrDefault(p.getId(), 0));
               stat.setTotalScore(totalScores.getOrDefault(p.getId(), 0));
               stat.setWins(wins.getOrDefault(p.getId(), 0));
+              stat.setFourthPlaces(fourthPlaces.getOrDefault(p.getId(), 0));
               double baseRP = totalRP.getOrDefault(p.getId(), 0.0);
               double tieredBonus = tieredBonusPerPlayer.getOrDefault(p.getId(), 0.0);
               double adminBonus = adminBonusPerPlayer.getOrDefault(p.getId(), 0.0);

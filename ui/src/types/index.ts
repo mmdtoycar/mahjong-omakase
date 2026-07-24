@@ -166,6 +166,7 @@ export interface PlayerStats {
   avgScore: number
   avgRank: number
   wins: number
+  fourthPlaces: number
   roundsPlayed: number
   handWins: number
   tsumoWins: number
