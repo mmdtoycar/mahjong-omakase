@@ -2886,6 +2886,7 @@ table.auto-table {
   box-shadow: 0 2px 4px rgb(0 0 0 / 2%);
   text-decoration: none;
   color: inherit;
+  touch-action: manipulation;
 }
 
 .game-card:hover {
@@ -2979,6 +2980,38 @@ table.auto-table {
 .game-card .player-score {
   font-size: 0.85rem;
   font-weight: 800;
+}
+
+/* 全屏放大观看 — 复用原卡片 DOM, 整体 transform: scale 放大, 不改任何子元素样式 */
+.game-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgb(0 0 0 / 60%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.game-fs-close {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 6px 10px;
+  z-index: 1;
+}
+
+.game-card-fs {
+  width: 340px;
+  cursor: default;
+  transform-origin: center center;
 }
 
 @media (width <= 640px) {

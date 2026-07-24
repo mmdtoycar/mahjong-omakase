@@ -1,5 +1,5 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { scoreClass, seatRankMedal } from '../utils/format'
 import { nameFontSize } from '../utils/fontSize'
 import { TierKey } from '../types'
@@ -34,8 +34,72 @@ export const GameCard: React.FC<Props> = ({
   players,
   tableStrength,
 }) => {
-  return (
-    <Link to={`/session/${id}`} className="game-card">
+  const navigate = useNavigate()
+  const [fullscreen, setFullscreen] = useState(false)
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fsCardRef = useRef<HTMLDivElement>(null)
+  const [fsScale, setFsScale] = useState(1)
+
+  useEffect(() => {
+    if (!fullscreen) return
+    const compute = () => {
+      const el = fsCardRef.current
+      if (!el) return
+      const s = Math.min((window.innerWidth - 24) / el.offsetWidth, (window.innerHeight - 24) / el.offsetHeight)
+      setFsScale(s)
+    }
+    compute()
+    window.addEventListener('resize', compute)
+    return () => window.removeEventListener('resize', compute)
+  }, [fullscreen])
+
+  useEffect(() => {
+    if (!fullscreen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    // position:fixed body 锁滚动(iOS Safari 上 overflow:hidden 不可靠).
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [fullscreen])
+
+  useEffect(
+    () => () => {
+      if (clickTimer.current !== null) clearTimeout(clickTimer.current)
+    },
+    []
+  )
+
+  // 单一 click 计时判断双击, 兼容手机(onDoubleClick 移动端不可靠).
+  const handleClick = () => {
+    if (!isActive) {
+      navigate(`/session/${id}`)
+      return
+    }
+    if (clickTimer.current !== null) {
+      clearTimeout(clickTimer.current)
+      clickTimer.current = null
+      setFullscreen(true)
+      return
+    }
+    clickTimer.current = setTimeout(() => {
+      clickTimer.current = null
+      navigate(`/session/${id}`)
+    }, 250)
+  }
+
+  const cardBody = (
+    <>
       <div className="session-card-header">
         <div className="session-card-mode">
           <span className="mode-text">{gameModeDisplayName}</span>
@@ -71,6 +135,42 @@ export const GameCard: React.FC<Props> = ({
           </div>
         ))}
       </div>
-    </Link>
+    </>
+  )
+
+  return (
+    <>
+      <div
+        className="game-card"
+        role="button"
+        tabIndex={0}
+        title={isActive ? '单击查看详情 · 双击全屏' : '单击查看详情'}
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            navigate(`/session/${id}`)
+          }
+        }}
+      >
+        {cardBody}
+      </div>
+
+      {fullscreen && (
+        <div className="game-fs" onClick={() => setFullscreen(false)}>
+          <button type="button" className="game-fs-close" aria-label="关闭" onClick={() => setFullscreen(false)}>
+            ✕
+          </button>
+          <div
+            ref={fsCardRef}
+            className="game-card game-card-fs"
+            style={{ transform: `scale(${fsScale})` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {cardBody}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
