@@ -58,7 +58,7 @@ export const GameCard: React.FC<Props> = ({
         {players.map((p, idx) => (
           <div key={idx} className="player-rank-item">
             <span className="player-name-with-rank">
-              <span className={`rank-number${p.rank <= 3 ? ` rank-tag-${p.rank}` : ''}`}>
+              <span className={`rank-number${p.rank <= 4 ? ` rank-tag-${p.rank}` : ''}`}>
                 {seatRankMedal(p.rank) ?? `#${p.rank}`}
               </span>
               {p.wind && <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>{p.wind}</span>}

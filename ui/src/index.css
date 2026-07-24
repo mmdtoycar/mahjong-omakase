@@ -2961,7 +2961,8 @@ table.auto-table {
 
 .game-card .rank-number.rank-tag-1,
 .game-card .rank-number.rank-tag-2,
-.game-card .rank-number.rank-tag-3 {
+.game-card .rank-number.rank-tag-3,
+.game-card .rank-number.rank-tag-4 {
   opacity: 1;
 }
 
