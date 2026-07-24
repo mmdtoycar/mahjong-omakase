@@ -168,18 +168,23 @@ export default function StatsPage() {
 
   const totalGames = activeStats.length > 0 ? Math.max(...activeStats.map((s) => s.gamesPlayed)) : 0
 
-  // 赛季奖项. 单赛季无局数门槛; 全部赛季沿用 activeStats 的 ≥10 场门槛. 自摸率=自摸/和牌, 胡牌率=和牌/局数, 铳率=放铳/局数.
+  // 赛季奖项. 单赛季无局数门槛; 全部赛季沿用 activeStats 的 5+赛季数 门槛.
+  // 率: 自摸=自摸/和牌, 胡牌=和牌/局数, 铳=放铳/局数, 1位=1位/总场, 4位=4位/总场.
   const withRounds = activeStats.filter((s) => s.roundsPlayed > 0)
   const withWins = activeStats.filter((s) => s.handWins > 0)
   const winRate = (s: PlayerStats) => s.handWins / s.roundsPlayed
   const tsumoRate = (s: PlayerStats) => s.tsumoWins / s.handWins
   const dealInRate = (s: PlayerStats) => s.dealIns / s.roundsPlayed
+  const firstRate = (s: PlayerStats) => s.wins / s.gamesPlayed
+  const fourthRate = (s: PlayerStats) => s.fourthPlaces / s.gamesPlayed
   const pick = (arr: PlayerStats[], rate: (s: PlayerStats) => number, dir: 'max' | 'min') =>
     arr.length === 0 ? null : [...arr].sort((a, b) => (dir === 'max' ? rate(b) - rate(a) : rate(a) - rate(b)))[0]
   const topTsumo = pick(withWins, tsumoRate, 'max')
   const topWinRate = pick(withRounds, winRate, 'max')
   const topDealIn = pick(withRounds, dealInRate, 'max')
   const lowDealIn = pick(withRounds, dealInRate, 'min')
+  const topFirstRate = pick(activeStats, firstRate, 'max')
+  const topFourthRate = pick(activeStats, fourthRate, 'max')
   const lowWinRate = pick(withRounds, winRate, 'min')
   const lowTsumo = pick(withWins, tsumoRate, 'min')
 
@@ -255,10 +260,12 @@ export default function StatsPage() {
           <div className="stats-grid">
             {awardCard('🧿 真•赤木', '最高胡牌率', topWinRate, topWinRate ? winRate(topWinRate) : undefined)}
             {awardCard('🪣 水缸坐穿', '最低胡牌率', lowWinRate, lowWinRate ? winRate(lowWinRate) : undefined)}
-            {awardCard('🐕 人是打不过狗的', '最高自摸率', topTsumo, topTsumo ? tsumoRate(topTsumo) : undefined)}
+            {awardCard('🐶 人是打不过狗的', '最高自摸率', topTsumo, topTsumo ? tsumoRate(topTsumo) : undefined)}
             {awardCard('⚰️ 我的牌去哪儿了', '最低自摸率', lowTsumo, lowTsumo ? tsumoRate(lowTsumo) : undefined)}
             {awardCard('💣 二营长', '最高铳率', topDealIn, topDealIn ? dealInRate(topDealIn) : undefined)}
             {awardCard('🐢 龟仙人', '最低铳率', lowDealIn, lowDealIn ? dealInRate(lowDealIn) : undefined)}
+            {awardCard('☠️ 阳寿打牌', '最高1位率', topFirstRate, topFirstRate ? firstRate(topFirstRate) : undefined)}
+            {awardCard('🤡 小丑皇', '最高4位率', topFourthRate, topFourthRate ? fourthRate(topFourthRate) : undefined)}
             {statCard(activeStats.length, '参与玩家')}
             {statCard(totalGames, '游戏场次')}
           </div>

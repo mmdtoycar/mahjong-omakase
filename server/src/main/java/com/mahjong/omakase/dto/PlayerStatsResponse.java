@@ -14,6 +14,7 @@ public class PlayerStatsResponse {
   private double avgScore;
   private double avgRank;
   private int wins;
+  private int fourthPlaces;
   private double totalRP;
   private double baseRP;
   private double tieredBonus;
