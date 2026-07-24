@@ -2750,14 +2750,14 @@ table.auto-table {
 }
 
 .wind-tag {
-  font-size: 0.75rem;
-  padding: 1px 5px;
+  font-size: 0.85rem;
+  padding: 2px 7px;
   border: 1.5px solid var(--mj-gold);
   color: var(--mj-gold);
   background-color: transparent;
   border-radius: 4px;
   font-weight: bold;
-  min-width: 24px;
+  min-width: 26px;
   text-align: center;
   display: inline-block;
   line-height: 1.2;
@@ -2982,36 +2982,298 @@ table.auto-table {
   font-weight: 800;
 }
 
-/* 全屏放大观看 — 复用原卡片 DOM, 整体 transform: scale 放大, 不改任何子元素样式 */
-.game-fs {
+/* 影院/全屏看盘 — 覆盖全屏 Overlay (白色极简全屏 Mode) */
+.game-fs-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000;
-  background: rgb(0 0 0 / 60%);
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999;
+  background: #fff;
+  color: #0f172a;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: max(20px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  overflow-y: auto;
+  animation: fade-in-fs 0.2s ease-out;
+}
+
+@keyframes fade-in-fs {
+  from {
+    opacity: 0;
+    transform: scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.game-fs-topbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  padding-bottom: 18px;
+  padding-left: 64px; /* 避开 iPadOS/iOS 元素全屏左上角系统自带的 X 按钮 */
+  padding-right: 64px;
+  border-bottom: 1px solid #e2e8f0;
+  min-height: 44px;
+  gap: 16px;
+  box-sizing: border-box;
 }
 
-.game-fs-close {
-  position: fixed;
-  top: 12px;
-  right: 16px;
-  border: none;
-  background: transparent;
-  color: #fff;
-  font-size: 1.8rem;
-  line-height: 1;
+.game-fs-title-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.game-fs-mode {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.game-fs-date {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.game-fs-actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-60%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.game-fs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
-  padding: 6px 10px;
-  z-index: 1;
+  transition: all 0.2s ease;
 }
 
-.game-card-fs {
-  width: 340px;
-  cursor: default;
-  transform-origin: center center;
+.game-fs-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.game-fs-close-btn {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.game-fs-close-btn:hover {
+  background: #fecaca;
+  border-color: #f87171;
+  color: #b91c1c;
+}
+
+.game-fs-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+.game-fs-scoreboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.game-fs-player-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px -2px rgb(15 23 42 / 6%);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.game-fs-player-card:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 24px -4px rgb(15 23 42 / 10%);
+}
+
+.game-fs-player-card.is-dealer {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);
+  box-shadow: 0 4px 20px -2px rgb(245 158 11 / 20%);
+}
+
+.game-fs-player-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.game-fs-rank-badge {
+  font-size: 2.2rem;
+  line-height: 1;
+  width: 52px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.game-fs-player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.game-fs-player-name-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.game-fs-player-card .wind-tag {
+  font-size: 1.25rem;
+  padding: 4px 0;
+  width: 76px;
+  flex-shrink: 0;
+  border-width: 2px;
+  border-radius: 6px;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.game-fs-player-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.game-fs-player-score {
+  font-size: 2.6rem;
+  font-weight: 900;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: -0.03em;
+}
+
+.game-fs-player-score.score-positive {
+  color: #16a34a;
+}
+
+.game-fs-player-score.score-negative {
+  color: #dc2626;
+}
+
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  margin-right: 6px;
+  box-shadow: 0 0 8px #22c55e;
+  animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.game-fs-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.game-fs-detail-link {
+  background: var(--accent, #d4a017);
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.game-fs-detail-link:hover {
+  background: #b88a10;
+  transform: translateY(-1px);
+}
+
+.game-fs-tip {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+@media (width <= 768px) {
+  .game-fs-overlay {
+    padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+
+  .game-fs-topbar {
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+
+  .game-fs-player-card {
+    padding: 14px 18px;
+  }
+
+  .game-fs-player-score {
+    font-size: 2rem;
+  }
+
+  .game-fs-player-name {
+    font-size: 1.2rem;
+  }
 }
 
 @media (width <= 640px) {

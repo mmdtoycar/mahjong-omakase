@@ -6,6 +6,19 @@ import { TierKey } from '../types'
 import { RankBadge } from './RankBadge'
 import { TableStrengthTag } from './TableStrengthTag'
 
+// Fullscreen API with webkit fallback + feature-detection (Safari/iPadOS use webkit*; iPhone has neither).
+type FsDoc = Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => void }
+type FsEl = HTMLElement & { webkitRequestFullscreen?: () => void }
+const fsElement = () => document.fullscreenElement ?? (document as FsDoc).webkitFullscreenElement ?? null
+const requestFs = (el: FsEl) => {
+  const fn = el.requestFullscreen ?? el.webkitRequestFullscreen
+  if (fn) Promise.resolve(fn.call(el)).catch(() => {})
+}
+const exitFs = () => {
+  const fn = document.exitFullscreen ?? (document as FsDoc).webkitExitFullscreen
+  if (fn) Promise.resolve(fn.call(document)).catch(() => {})
+}
+
 interface PlayerEntry {
   rank: number
   name: string
@@ -37,29 +50,24 @@ export const GameCard: React.FC<Props> = ({
   const navigate = useNavigate()
   const [fullscreen, setFullscreen] = useState(false)
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const fsCardRef = useRef<HTMLDivElement>(null)
-  const [fsScale, setFsScale] = useState(1)
+  const closeBtnRef = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
-    if (!fullscreen) return
-    const compute = () => {
-      const el = fsCardRef.current
-      if (!el) return
-      const s = Math.min((window.innerWidth - 24) / el.offsetWidth, (window.innerHeight - 24) / el.offsetHeight)
-      setFsScale(s)
-    }
-    compute()
-    window.addEventListener('resize', compute)
-    return () => window.removeEventListener('resize', compute)
-  }, [fullscreen])
+  useEffect(
+    () => () => {
+      if (clickTimer.current !== null) clearTimeout(clickTimer.current)
+    },
+    []
+  )
 
   useEffect(() => {
     if (!fullscreen) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFullscreen(false)
+      if (e.key === 'Escape') {
+        closeFullscreen()
+      }
     }
     document.addEventListener('keydown', onKey)
-    // position:fixed body 锁滚动(iOS Safari 上 overflow:hidden 不可靠).
+    closeBtnRef.current?.focus()
     const scrollY = window.scrollY
     document.body.style.position = 'fixed'
     document.body.style.top = `-${scrollY}px`
@@ -73,23 +81,34 @@ export const GameCard: React.FC<Props> = ({
     }
   }, [fullscreen])
 
-  useEffect(
-    () => () => {
-      if (clickTimer.current !== null) clearTimeout(clickTimer.current)
-    },
-    []
-  )
-
-  // 单一 click 计时判断双击, 兼容手机(onDoubleClick 移动端不可靠).
-  const handleClick = () => {
-    if (!isActive) {
-      navigate(`/session/${id}`)
-      return
+  useEffect(() => {
+    if (!fullscreen) return
+    const handleFsChange = () => {
+      if (!fsElement()) setFullscreen(false)
     }
+    document.addEventListener('fullscreenchange', handleFsChange)
+    document.addEventListener('webkitfullscreenchange', handleFsChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange)
+      document.removeEventListener('webkitfullscreenchange', handleFsChange)
+    }
+  }, [fullscreen])
+
+  const openFullscreen = () => {
+    setFullscreen(true)
+    if (!fsElement()) requestFs(document.documentElement)
+  }
+
+  const closeFullscreen = () => {
+    if (fsElement()) exitFs()
+    setFullscreen(false)
+  }
+
+  const handleCardClick = () => {
     if (clickTimer.current !== null) {
       clearTimeout(clickTimer.current)
       clickTimer.current = null
-      setFullscreen(true)
+      openFullscreen()
       return
     }
     clickTimer.current = setTimeout(() => {
@@ -98,54 +117,14 @@ export const GameCard: React.FC<Props> = ({
     }, 250)
   }
 
-  const cardBody = (
-    <>
-      <div className="session-card-header">
-        <div className="session-card-mode">
-          <span className="mode-text">{gameModeDisplayName}</span>
-          <TableStrengthTag table={tableStrength} />
-        </div>
-        <div className="session-card-meta">
-          <span className="session-card-date">
-            {new Date(createdAt).toLocaleString([], {
-              timeZone: 'America/Los_Angeles',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
-          <span className={`badge badge-sm ${isActive ? 'badge-progress' : 'badge-completed'}`}>{roundLabel}</span>
-        </div>
-      </div>
-      <div className="session-card-players">
-        {players.map((p, idx) => (
-          <div key={idx} className="player-rank-item">
-            <span className="player-name-with-rank">
-              <span className={`rank-number${p.rank <= 4 ? ` rank-tag-${p.rank}` : ''}`}>
-                {seatRankMedal(p.rank) ?? `#${p.rank}`}
-              </span>
-              {p.wind && <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>{p.wind}</span>}
-              <RankBadge tier={p.tier} size="sm" userName={p.name} />
-              <span className="player-name" style={{ fontSize: nameFontSize(p.name) }}>
-                {p.name}
-              </span>
-            </span>
-            <span className={`player-score ${scoreClass(p.score)}`}>{p.score > 0 ? `+${p.score}` : p.score}</span>
-          </div>
-        ))}
-      </div>
-    </>
-  )
-
   return (
     <>
       <div
         className="game-card"
         role="button"
         tabIndex={0}
-        title={isActive ? '单击查看详情 · 双击全屏' : '单击查看详情'}
-        onClick={handleClick}
+        title="单击查看详情 · 双击全屏看盘"
+        onClick={handleCardClick}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -153,21 +132,115 @@ export const GameCard: React.FC<Props> = ({
           }
         }}
       >
-        {cardBody}
+        <div className="session-card-header">
+          <div className="session-card-mode">
+            <span className="mode-text">{gameModeDisplayName}</span>
+            <TableStrengthTag table={tableStrength} />
+          </div>
+          <div className="session-card-meta">
+            <span className="session-card-date">
+              {new Date(createdAt).toLocaleString([], {
+                timeZone: 'America/Los_Angeles',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+            <span className={`badge badge-sm ${isActive ? 'badge-progress' : 'badge-completed'}`}>{roundLabel}</span>
+          </div>
+        </div>
+        <div className="session-card-players">
+          {players.map((p, idx) => (
+            <div key={idx} className="player-rank-item">
+              <span className="player-name-with-rank">
+                <span className={`rank-number${p.rank <= 4 ? ` rank-tag-${p.rank}` : ''}`}>
+                  {seatRankMedal(p.rank) ?? `#${p.rank}`}
+                </span>
+                {p.wind && <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>{p.wind}</span>}
+                <RankBadge tier={p.tier} size="sm" userName={p.name} />
+                <span className="player-name" style={{ fontSize: nameFontSize(p.name) }}>
+                  {p.name}
+                </span>
+              </span>
+              <span className={`player-score ${scoreClass(p.score)}`}>{p.score > 0 ? `+${p.score}` : p.score}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {fullscreen && (
-        <div className="game-fs" onClick={() => setFullscreen(false)}>
-          <button type="button" className="game-fs-close" aria-label="关闭" onClick={() => setFullscreen(false)}>
-            ✕
-          </button>
-          <div
-            ref={fsCardRef}
-            className="game-card game-card-fs"
-            style={{ transform: `scale(${fsScale})` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {cardBody}
+        <div className="game-fs-overlay" role="dialog" aria-modal="true" aria-label="全屏看盘">
+          <div className="game-fs-topbar">
+            <div className="game-fs-title-area">
+              <span className="game-fs-mode">{gameModeDisplayName}</span>
+              <TableStrengthTag table={tableStrength} />
+              <span className={`badge ${isActive ? 'badge-progress' : 'badge-completed'}`}>
+                {isActive && <span className="pulse-dot" />}
+                {roundLabel}
+              </span>
+              <span className="game-fs-date">
+                {new Date(createdAt).toLocaleString([], {
+                  timeZone: 'America/Los_Angeles',
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
+            <div className="game-fs-actions">
+              <button
+                ref={closeBtnRef}
+                type="button"
+                className="game-fs-btn game-fs-close-btn"
+                title="退出全屏 (Esc)"
+                onClick={closeFullscreen}
+              >
+                ✕ 退出全屏
+              </button>
+            </div>
+          </div>
+
+          <div className="game-fs-main">
+            <div className="game-fs-scoreboard-col">
+              {players.map((p, idx) => (
+                <div key={idx} className={`game-fs-player-card ${p.isDealer ? 'is-dealer' : ''} rank-${p.rank}`}>
+                  <div className="game-fs-player-left">
+                    <div className="game-fs-rank-badge">{seatRankMedal(p.rank) ?? `#${p.rank}`}</div>
+                    <div className="game-fs-player-info">
+                      <div className="game-fs-player-name-row">
+                        {p.wind && (
+                          <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>
+                            {p.wind} {p.isDealer && '庄'}
+                          </span>
+                        )}
+                        <RankBadge tier={p.tier} size="md" userName={p.name} />
+                        <span className="game-fs-player-name">{p.name}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={`game-fs-player-score ${scoreClass(p.score)}`}>
+                    {p.score > 0 ? `+${p.score}` : p.score}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="game-fs-footer">
+            <button
+              type="button"
+              className="game-fs-detail-link"
+              onClick={() => {
+                closeFullscreen()
+                navigate(`/session/${id}`)
+              }}
+            >
+              进入对局详情页 ➔
+            </button>
+            <span className="game-fs-tip">按 Esc 键可退出全屏</span>
           </div>
         </div>
       )}
