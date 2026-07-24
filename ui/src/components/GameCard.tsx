@@ -36,9 +36,7 @@ export const GameCard: React.FC<Props> = ({
 }) => {
   const navigate = useNavigate()
   const [fullscreen, setFullscreen] = useState(false)
-  // 单击进详情、双击全屏: 单击延迟一拍, 若紧接着来了第二下则取消跳转、开全屏.
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // 全屏: 复用同一张卡, 整体 transform: scale 放大到铺满屏幕(不改任何子元素样式).
   const fsCardRef = useRef<HTMLDivElement>(null)
   const [fsScale, setFsScale] = useState(1)
 
@@ -48,7 +46,7 @@ export const GameCard: React.FC<Props> = ({
       const el = fsCardRef.current
       if (!el) return
       const s = Math.min((window.innerWidth - 24) / el.offsetWidth, (window.innerHeight - 24) / el.offsetHeight)
-      setFsScale(Math.max(1, s))
+      setFsScale(s)
     }
     compute()
     window.addEventListener('resize', compute)
@@ -61,11 +59,17 @@ export const GameCard: React.FC<Props> = ({
       if (e.key === 'Escape') setFullscreen(false)
     }
     document.addEventListener('keydown', onKey)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    // position:fixed body 锁滚动(iOS Safari 上 overflow:hidden 不可靠).
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      window.scrollTo(0, scrollY)
     }
   }, [fullscreen])
 
@@ -76,8 +80,7 @@ export const GameCard: React.FC<Props> = ({
     []
   )
 
-  // 单击进详情、双击(双击/双触)全屏. 用单一 click 的计时判断双击, 兼容手机触摸
-  // (onDoubleClick 在移动端不可靠); 配合 CSS touch-action: manipulation 禁掉双击缩放.
+  // 单一 click 计时判断双击, 兼容手机(onDoubleClick 移动端不可靠).
   const handleClick = () => {
     if (!isActive) {
       navigate(`/session/${id}`)
@@ -95,7 +98,6 @@ export const GameCard: React.FC<Props> = ({
     }, 250)
   }
 
-  // 卡片内容(表头 + 玩家列表), 普通卡片和全屏放大复用同一份 DOM.
   const cardBody = (
     <>
       <div className="session-card-header">
@@ -155,7 +157,7 @@ export const GameCard: React.FC<Props> = ({
       </div>
 
       {fullscreen && (
-        <div className="game-fs" role="dialog" aria-modal="true" onClick={() => setFullscreen(false)}>
+        <div className="game-fs" onClick={() => setFullscreen(false)}>
           <button type="button" className="game-fs-close" aria-label="关闭" onClick={() => setFullscreen(false)}>
             ✕
           </button>
