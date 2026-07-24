@@ -130,12 +130,11 @@ export default function StatsPage() {
     return () => controller.abort()
   }, [tab, seasonKey, gameMode])
 
-  // 打过至少一局的玩家(无门槛) — 用于"参与玩家/游戏场次"计数.
+  // 打过至少一局的玩家(无门槛) — 用于参与玩家/游戏场次计数 + 排行榜(全部赛季也全展示).
   const playedStats = stats.filter((s) => s.gamesPlayed > 0)
-  // 全部赛季门槛 = 赛季数(平均每赛季至少一场): 抬高全时段榜的样本要求; 单赛季不设门槛.
-  // 只作用于排名/奖项, 不影响上面的参与玩家/游戏场次计数.
+  // 全部赛季奖项门槛 = 赛季数(平均每赛季至少一场); 单赛季不设门槛. 仅用于奖项评选, 不影响排行榜.
   const allSeasonMinGames = seasons.length
-  const activeStats = seasonKey === 'all' ? playedStats.filter((s) => s.gamesPlayed >= allSeasonMinGames) : playedStats
+  const awardStats = seasonKey === 'all' ? playedStats.filter((s) => s.gamesPlayed >= allSeasonMinGames) : playedStats
   const selectedSeason = seasons.find((s) => `${s.year}-${s.month}` === seasonKey)
 
   // Sort by skillRating descending so top performers show first.
@@ -168,10 +167,10 @@ export default function StatsPage() {
 
   const totalGames = playedStats.length > 0 ? Math.max(...playedStats.map((s) => s.gamesPlayed)) : 0
 
-  // 赛季奖项. 单赛季无局数门槛; 全部赛季沿用 activeStats 的 赛季数 门槛.
+  // 赛季奖项. 单赛季无局数门槛; 全部赛季沿用 awardStats 的 赛季数 门槛.
   // 率: 自摸=自摸/和牌, 胡牌=和牌/局数, 铳=放铳/局数, 1位=1位/总场, 4位=4位/总场.
-  const withRounds = activeStats.filter((s) => s.roundsPlayed > 0)
-  const withWins = activeStats.filter((s) => s.handWins > 0)
+  const withRounds = awardStats.filter((s) => s.roundsPlayed > 0)
+  const withWins = awardStats.filter((s) => s.handWins > 0)
   const winRate = (s: PlayerStats) => s.handWins / s.roundsPlayed
   const tsumoRate = (s: PlayerStats) => s.tsumoWins / s.handWins
   const dealInRate = (s: PlayerStats) => s.dealIns / s.roundsPlayed
@@ -183,8 +182,8 @@ export default function StatsPage() {
   const topWinRate = pick(withRounds, winRate, 'max')
   const topDealIn = pick(withRounds, dealInRate, 'max')
   const lowDealIn = pick(withRounds, dealInRate, 'min')
-  const topFirstRate = pick(activeStats, firstRate, 'max')
-  const topFourthRate = pick(activeStats, fourthRate, 'max')
+  const topFirstRate = pick(awardStats, firstRate, 'max')
+  const topFourthRate = pick(awardStats, fourthRate, 'max')
   const lowWinRate = pick(withRounds, winRate, 'min')
   const lowTsumo = pick(withWins, tsumoRate, 'min')
 
@@ -270,7 +269,7 @@ export default function StatsPage() {
             {statCard(totalGames, '游戏场次')}
           </div>
 
-          {activeStats.length === 0 ? (
+          {playedStats.length === 0 ? (
             <div className="card">
               <div className="empty-state">
                 <p>
@@ -294,7 +293,7 @@ export default function StatsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {activeStats.map((s, i) => (
+                    {playedStats.map((s, i) => (
                       <tr
                         key={s.playerId}
                         onClick={() => navigate(`/player/${s.playerId}?from=games`)}
