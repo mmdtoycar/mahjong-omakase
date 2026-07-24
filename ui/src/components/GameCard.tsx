@@ -6,6 +6,19 @@ import { TierKey } from '../types'
 import { RankBadge } from './RankBadge'
 import { TableStrengthTag } from './TableStrengthTag'
 
+// Fullscreen API with webkit fallback + feature-detection (Safari/iPadOS use webkit*; iPhone has neither).
+type FsDoc = Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => void }
+type FsEl = HTMLElement & { webkitRequestFullscreen?: () => void }
+const fsElement = () => document.fullscreenElement ?? (document as FsDoc).webkitFullscreenElement ?? null
+const requestFs = (el: FsEl) => {
+  const fn = el.requestFullscreen ?? el.webkitRequestFullscreen
+  if (fn) Promise.resolve(fn.call(el)).catch(() => {})
+}
+const exitFs = () => {
+  const fn = document.exitFullscreen ?? (document as FsDoc).webkitExitFullscreen
+  if (fn) Promise.resolve(fn.call(document)).catch(() => {})
+}
+
 interface PlayerEntry {
   rank: number
   name: string
@@ -37,6 +50,7 @@ export const GameCard: React.FC<Props> = ({
   const navigate = useNavigate()
   const [fullscreen, setFullscreen] = useState(false)
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closeBtnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(
     () => () => {
@@ -53,6 +67,7 @@ export const GameCard: React.FC<Props> = ({
       }
     }
     document.addEventListener('keydown', onKey)
+    closeBtnRef.current?.focus()
     const scrollY = window.scrollY
     document.body.style.position = 'fixed'
     document.body.style.top = `-${scrollY}px`
@@ -69,27 +84,23 @@ export const GameCard: React.FC<Props> = ({
   useEffect(() => {
     if (!fullscreen) return
     const handleFsChange = () => {
-      if (!document.fullscreenElement) {
-        setFullscreen(false)
-      }
+      if (!fsElement()) setFullscreen(false)
     }
     document.addEventListener('fullscreenchange', handleFsChange)
+    document.addEventListener('webkitfullscreenchange', handleFsChange)
     return () => {
       document.removeEventListener('fullscreenchange', handleFsChange)
+      document.removeEventListener('webkitfullscreenchange', handleFsChange)
     }
   }, [fullscreen])
 
   const openFullscreen = () => {
     setFullscreen(true)
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {})
-    }
+    if (!fsElement()) requestFs(document.documentElement)
   }
 
   const closeFullscreen = () => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {})
-    }
+    if (fsElement()) exitFs()
     setFullscreen(false)
   }
 
@@ -137,29 +148,6 @@ export const GameCard: React.FC<Props> = ({
               })}
             </span>
             <span className={`badge badge-sm ${isActive ? 'badge-progress' : 'badge-completed'}`}>{roundLabel}</span>
-            <button
-              type="button"
-              className="btn-card-fullscreen"
-              title="全屏看盘"
-              aria-label="全屏看盘"
-              onClick={(e) => {
-                e.stopPropagation()
-                openFullscreen()
-              }}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-              </svg>
-            </button>
           </div>
         </div>
         <div className="session-card-players">
@@ -182,7 +170,7 @@ export const GameCard: React.FC<Props> = ({
       </div>
 
       {fullscreen && (
-        <div className="game-fs-overlay" role="dialog" aria-modal="true">
+        <div className="game-fs-overlay" role="dialog" aria-modal="true" aria-label="全屏看盘">
           <div className="game-fs-topbar">
             <div className="game-fs-title-area">
               <span className="game-fs-mode">{gameModeDisplayName}</span>
@@ -204,6 +192,7 @@ export const GameCard: React.FC<Props> = ({
             </div>
             <div className="game-fs-actions">
               <button
+                ref={closeBtnRef}
                 type="button"
                 className="game-fs-btn game-fs-close-btn"
                 title="退出全屏 (Esc)"

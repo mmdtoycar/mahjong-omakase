@@ -2982,28 +2982,6 @@ table.auto-table {
   font-weight: 800;
 }
 
-/* 卡片右上角全屏按钮 */
-.btn-card-fullscreen {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px;
-  border-radius: 5px;
-  border: 1px solid var(--border-ccc, #cccccc);
-  background: transparent;
-  color: var(--text-666, #666666);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-left: 6px;
-}
-
-.btn-card-fullscreen:hover {
-  background: var(--accent, #d4a017);
-  color: #ffffff;
-  border-color: var(--accent, #d4a017);
-  transform: scale(1.08);
-}
-
 /* 影院/全屏看盘 — 覆盖全屏 Overlay (白色极简全屏 Mode) */
 .game-fs-overlay {
   position: fixed;
@@ -3011,18 +2989,18 @@ table.auto-table {
   width: 100vw;
   height: 100vh;
   z-index: 99999;
-  background: #ffffff;
+  background: #fff;
   color: #0f172a;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  padding: max(20px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 24px
-    max(24px, env(safe-area-inset-left));
+  padding: max(20px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
   overflow-y: auto;
-  animation: fadeInFs 0.2s ease-out;
+  animation: fade-in-fs 0.2s ease-out;
 }
 
-@keyframes fadeInFs {
+@keyframes fade-in-fs {
   from {
     opacity: 0;
     transform: scale(0.99);
@@ -3132,7 +3110,7 @@ table.auto-table {
 }
 
 .game-fs-player-card {
-  background: #ffffff;
+  background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 20px 28px;
@@ -3151,7 +3129,7 @@ table.auto-table {
 
 .game-fs-player-card.is-dealer {
   border-color: #f59e0b;
-  background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);
   box-shadow: 0 4px 20px -2px rgb(245 158 11 / 20%);
 }
 
@@ -3208,16 +3186,12 @@ table.auto-table {
   letter-spacing: -0.03em;
 }
 
-.game-fs-player-score.pos {
+.game-fs-player-score.score-positive {
   color: #16a34a;
 }
 
-.game-fs-player-score.neg {
+.game-fs-player-score.score-negative {
   color: #dc2626;
-}
-
-.game-fs-player-score.zero {
-  color: #64748b;
 }
 
 .pulse-dot {
@@ -3228,10 +3202,10 @@ table.auto-table {
   background: #22c55e;
   margin-right: 6px;
   box-shadow: 0 0 8px #22c55e;
-  animation: pulseDot 1.5s infinite;
+  animation: pulse-dot 1.5s infinite;
 }
 
-@keyframes pulseDot {
+@keyframes pulse-dot {
   0% {
     transform: scale(0.95);
     opacity: 0.8;
@@ -3258,7 +3232,7 @@ table.auto-table {
 
 .game-fs-detail-link {
   background: var(--accent, #d4a017);
-  color: #ffffff;
+  color: #fff;
   border: none;
   padding: 10px 22px;
   border-radius: 8px;
@@ -3278,10 +3252,10 @@ table.auto-table {
   color: #64748b;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .game-fs-overlay {
-    padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 16px
-      max(16px, env(safe-area-inset-left));
+    padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
 
   .game-fs-topbar {
