@@ -77,6 +77,7 @@ interface GuobiaoCalculatorProps {
   resetTrigger?: number
   isSelfDraw: boolean
   onIsSelfDrawChange: (val: boolean) => void
+  importedHand?: { concealed: Tile[]; melds: Meld[]; isSelfDraw?: boolean; trigger: number } | null
 }
 
 export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
@@ -84,7 +85,8 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   initialOptions,
   resetTrigger,
   isSelfDraw,
-  onIsSelfDrawChange: _onIsSelfDrawChange,
+  onIsSelfDrawChange,
+  importedHand,
 }) => {
   const [concealedTiles, setConcealedTiles] = useState<Tile[]>([])
   const [melds, setMelds] = useState<Meld[]>([])
@@ -118,6 +120,17 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
     }))
     setMode(modes[0])
   }, [])
+
+  // Sync imported hand from photo recognition
+  const [prevImportTrigger, setPrevImportTrigger] = useState<number | undefined>(importedHand?.trigger)
+  if (importedHand && importedHand.trigger !== prevImportTrigger) {
+    setPrevImportTrigger(importedHand.trigger)
+    setConcealedTiles(importedHand.concealed)
+    setMelds(importedHand.melds)
+    if (importedHand.isSelfDraw !== undefined) {
+      onIsSelfDrawChange(importedHand.isSelfDraw)
+    }
+  }
 
   // Adjusting state during render pattern - resets tiles when parent triggers reset
   // This is more efficient than useEffect as it avoids an extra render pass.

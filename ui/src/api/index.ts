@@ -229,3 +229,36 @@ export async function lookupClaimablePlayer(userName: string, firstName: string,
   const data = await handleResponse<{ exists: boolean }>(res)
   return data.exists
 }
+
+export interface ServerCalibrationDTO {
+  id?: number
+  imagePreview: string
+  handText: string
+  isFull34Set?: boolean
+  createdAt?: string
+}
+
+export async function fetchActiveServerCalibration(): Promise<ServerCalibrationDTO | null> {
+  const res = await fetch(`${API}/calibration/active`, {
+    headers: getAuthHeaders(),
+  })
+  if (res.status === 204) return null
+  return handleResponse<ServerCalibrationDTO>(res)
+}
+
+export async function saveServerCalibration(data: ServerCalibrationDTO): Promise<ServerCalibrationDTO> {
+  const res = await fetch(`${API}/calibration`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(data),
+  })
+  return handleResponse<ServerCalibrationDTO>(res)
+}
+
+export async function deleteServerCalibration(): Promise<void> {
+  const res = await fetch(`${API}/calibration`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  })
+  await handleResponse(res)
+}

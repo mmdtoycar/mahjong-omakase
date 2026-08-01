@@ -22,6 +22,11 @@ ui/dist/
 .claude/*
 !.claude/commands
 
+# Environment & Keys
+.env
+.env.*
+!.env.example
+
 # OS
 .DS_Store
 .gemini/

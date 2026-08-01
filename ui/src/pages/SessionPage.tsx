@@ -12,6 +12,10 @@ import { scoreClass, parseError, seatRankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
 import { TableStrengthTag } from '../components/TableStrengthTag'
+import { PhotoRecognitionModal, RecognizedHand } from '../components/PhotoRecognitionModal'
+import { Tile } from '../logic/shared/tiles'
+import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
+import { Meld as RiichiMeld } from '../logic/riichi/types'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -35,6 +39,21 @@ export default function SessionPage() {
   const [isChomboManual, setIsChomboManual] = useState(false)
   const [calcError, setCalcError] = useState('')
   const [error, setError] = useState('')
+
+  // Photo Recognition State
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false)
+  const [gbImportedHand, setGbImportedHand] = useState<{
+    concealed: Tile[]
+    melds: GuobiaoMeld[]
+    isSelfDraw?: boolean
+    trigger: number
+  } | null>(null)
+  const [riichiImportedHand, setRiichiImportedHand] = useState<{
+    concealed: Tile[]
+    melds: RiichiMeld[]
+    isSelfDraw?: boolean
+    trigger: number
+  } | null>(null)
 
   const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
     if (s !== null) {
@@ -431,6 +450,36 @@ export default function SessionPage() {
 
   const statusMessage = getStatusMessage()
 
+  const handleApplyRecognizedHand = (hand: RecognizedHand) => {
+    if (isGuobiao) {
+      const gbMelds: GuobiaoMeld[] = hand.melds.map((m) => {
+        let type: 'shun' | 'ke' | 'gang' = 'shun'
+        const lower = m.type.toLowerCase()
+        if (lower.includes('ke') || lower.includes('pon') || lower.includes('peng')) {
+          type = 'ke'
+        } else if (lower.includes('gang') || lower.includes('kan')) {
+          type = 'gang'
+        }
+        return { type, tiles: m.tiles, isOpen: m.isOpen }
+      })
+      if (hand.isSelfDraw !== undefined) setIsSelfDraw(hand.isSelfDraw)
+      setGbImportedHand({ concealed: hand.concealed, melds: gbMelds, isSelfDraw: hand.isSelfDraw, trigger: Date.now() })
+    } else if (isRiichi) {
+      const rMelds: RiichiMeld[] = hand.melds.map((m) => {
+        let type: 'shunzi' | 'kezi' | 'gangzi' = 'shunzi'
+        const lower = m.type.toLowerCase()
+        if (lower.includes('ke') || lower.includes('pon') || lower.includes('peng')) {
+          type = 'kezi'
+        } else if (lower.includes('gang') || lower.includes('kan')) {
+          type = 'gangzi'
+        }
+        return { type, tiles: m.tiles, isOpen: m.isOpen }
+      })
+      if (hand.isSelfDraw !== undefined) setIsSelfDraw(hand.isSelfDraw)
+      setRiichiImportedHand({ concealed: hand.concealed, melds: rMelds, isSelfDraw: hand.isSelfDraw, trigger: Date.now() })
+    }
+  }
+
   return (
     <>
       {session.status === 'IN_PROGRESS' && (
@@ -597,6 +646,13 @@ export default function SessionPage() {
                       <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
                         重置
                       </button>
+                      <button
+                        type="button"
+                        className="btn-photo-rec btn-photo-rec-compact"
+                        onClick={() => setIsPhotoModalOpen(true)}
+                      >
+                        📷 拍照识别
+                      </button>
                       <label className="checkbox-toggle">
                         <input type="checkbox" checked={isBackfill} onChange={(e) => setIsBackfill(e.target.checked)} />
                         <span>补录 (不计入局数)</span>
@@ -615,6 +671,7 @@ export default function SessionPage() {
                         isSelfDraw={isSelfDraw}
                         onIsSelfDrawChange={setIsSelfDraw}
                         playerCount={session.playerCount}
+                        importedHand={riichiImportedHand}
                       />
                     </div>
                   </div>
@@ -662,6 +719,13 @@ export default function SessionPage() {
                       <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
                         重置
                       </button>
+                      <button
+                        type="button"
+                        className="btn-photo-rec btn-photo-rec-compact"
+                        onClick={() => setIsPhotoModalOpen(true)}
+                      >
+                        📷 拍照识别
+                      </button>
                     </div>
                     <div className="inline-calc-wrapper" style={{ display: isChomboManual ? 'none' : 'block' }}>
                       <GuobiaoCalculator
@@ -674,6 +738,7 @@ export default function SessionPage() {
                         resetTrigger={calcResetCount}
                         isSelfDraw={isSelfDraw}
                         onIsSelfDrawChange={setIsSelfDraw}
+                        importedHand={gbImportedHand}
                       />
                     </div>
                   </div>
@@ -979,6 +1044,15 @@ export default function SessionPage() {
             })}
           </div>
         </div>
+      )}
+
+      {session && (
+        <PhotoRecognitionModal
+          isOpen={isPhotoModalOpen}
+          onClose={() => setIsPhotoModalOpen(false)}
+          onApplyHand={handleApplyRecognizedHand}
+          gameMode={isGuobiao ? 'GUOBIAO' : 'RIICHI'}
+        />
       )}
     </>
   )
