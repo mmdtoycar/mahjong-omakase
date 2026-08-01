@@ -33,7 +33,7 @@ public class TileCalibrationController {
     TileCalibration entity = new TileCalibration();
     entity.setImagePreview(dto.getImagePreview());
     entity.setHandText(dto.getHandText());
-    entity.setIsFull34Set(dto.getIsFull34Set() != null ? dto.getIsFull34Set() : false);
+    entity.setIsFull34Set(Boolean.TRUE.equals(dto.getIsFull34Set()));
     entity.setCreatedAt(LocalDateTime.now());
 
     TileCalibration saved = repository.save(entity);
