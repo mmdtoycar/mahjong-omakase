@@ -3803,13 +3803,13 @@ table.auto-table {
   padding: 0;
   margin: 0;
   border-radius: 8px;
-  background: #ffffff;
+  background: #fff;
   color: #2c3e50;
   border: 1px solid #d1d8d0;
   font-size: 1.1rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 5px rgb(0 0 0 / 8%);
   transition: all 0.2s ease;
 }
 
@@ -3818,7 +3818,7 @@ table.auto-table {
   border-color: var(--mj-green);
   color: var(--mj-green);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 8px rgb(0 0 0 / 12%);
 }
 
 .btn-text-link-sm {
@@ -4048,7 +4048,7 @@ table.auto-table {
   height: 44px;
   border: 2px dashed var(--mj-green);
   border-radius: 6px;
-  background: rgba(33, 140, 116, 0.05);
+  background: rgb(33 140 116 / 5%);
   color: var(--mj-green);
   font-size: 1.2rem;
   font-weight: 700;
@@ -4060,7 +4060,7 @@ table.auto-table {
 }
 
 .tile-add-btn:hover {
-  background: rgba(33, 140, 116, 0.15);
+  background: rgb(33 140 116 / 15%);
   transform: scale(1.05);
 }
 

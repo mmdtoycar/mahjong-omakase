@@ -25,13 +25,17 @@ async function getSystemCalibrationBase64(): Promise<string> {
   if (cachedSystemCalibrationBase64) return cachedSystemCalibrationBase64
   try {
     const res = await fetch('/system_mahjong_calibration.jpg')
+    if (!res.ok) {
+      throw new Error(`Failed to fetch calibration image: ${res.status}`)
+    }
     const blob = await res.blob()
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onloadend = () => {
         cachedSystemCalibrationBase64 = reader.result as string
         resolve(cachedSystemCalibrationBase64)
       }
+      reader.onerror = (err) => reject(err)
       reader.readAsDataURL(blob)
     })
   } catch (e) {
@@ -131,6 +135,9 @@ export async function callGeminiApiWithKeyRotation(contents: any[], model: strin
     const key = keys[(currentKeyIndex + attempt) % keys.length]
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30_000)
+
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -139,10 +146,11 @@ export async function callGeminiApiWithKeyRotation(contents: any[], model: strin
           contents,
           generationConfig: {
             response_mime_type: 'application/json',
-            temperature: 0.1,
           },
         }),
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
 
       const data = await res.json()
 
@@ -152,9 +160,22 @@ export async function callGeminiApiWithKeyRotation(contents: any[], model: strin
       }
 
       const errMsg = data.error?.message || ''
-      console.warn(`Key attempt ${attempt + 1} failed (${res.status}):`, errMsg)
-      lastError = new Error(errMsg || `API 请求错误 (${res.status})`)
-    } catch (err) {
+      const status = res.status
+      console.warn(`Key attempt ${attempt + 1} failed (${status}):`, errMsg)
+
+      // Only rotate keys for quota/rate-limit errors; propagate other errors immediately.
+      if (status !== 429 && status !== 503 && !errMsg.toLowerCase().includes('quota') && !errMsg.toLowerCase().includes('resource')) {
+        throw new Error(errMsg || `API 请求错误 (${status})`)
+      }
+
+      lastError = new Error(errMsg || `API 请求错误 (${status})`)
+    } catch (err: any) {
+      clearTimeout(timeoutId)
+      if (err.name === 'AbortError') {
+        lastError = new Error('请求超时，请检查网络后重试')
+        continue
+      }
+      // Non-quota fetch errors (e.g. network) — try next key
       console.warn(`Network error on key attempt ${attempt + 1}:`, err)
       lastError = err
     }
@@ -219,7 +240,7 @@ export function normalizeUploadedImage(file: File): Promise<string> {
 }
 
 export function parseTileString(s: string): Tile | null {
-  if (!s) return null
+  if (typeof s !== 'string' || !s) return null
   const clean = s.trim().toLowerCase()
   const m = clean.match(/^([1-9])([mpsz])$/)
   if (m) {
@@ -282,8 +303,15 @@ export function parseTileList(input: any): Tile[] {
           result.push(...parseTileStringSequence(item))
         }
       } else if (typeof item === 'object' && item !== null) {
-        if (item.rank && item.suit) {
-          result.push(new Tile(item.suit, item.rank))
+        const validSuits: TileSuit[] = ['m', 'p', 's', 'z']
+        if (
+          typeof item.rank === 'number' &&
+          typeof item.suit === 'string' &&
+          validSuits.includes(item.suit as TileSuit) &&
+          item.rank >= 1 &&
+          item.rank <= (item.suit === 'z' ? 7 : 9)
+        ) {
+          result.push(new Tile(item.suit as TileSuit, item.rank))
         }
       }
     }
@@ -387,6 +415,8 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    // Clear the input value so re-selecting the same file triggers onChange again
+    e.target.value = ''
     if (file) {
       setSelectedImage(file)
       setError(null)
@@ -544,11 +574,6 @@ Return ONLY valid JSON:
         []
 
       let concealedTiles = parseTileList(rawConcealed)
-
-      // Ultimate Fallback: Extract tiles directly from notes if concealed list is empty!
-      if (concealedTiles.length === 0 && jsonOutput.notes) {
-        concealedTiles = parseTileStringSequence(jsonOutput.notes)
-      }
 
       const melds: { type: string; tiles: Tile[]; isOpen: boolean }[] = []
 

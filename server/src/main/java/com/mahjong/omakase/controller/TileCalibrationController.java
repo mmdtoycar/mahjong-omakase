@@ -3,7 +3,9 @@ package com.mahjong.omakase.controller;
 import com.mahjong.omakase.dto.TileCalibrationDTO;
 import com.mahjong.omakase.model.TileCalibration;
 import com.mahjong.omakase.repository.TileCalibrationRepository;
+import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +30,7 @@ public class TileCalibrationController {
         .orElseGet(() -> ResponseEntity.noContent().build());
   }
 
+  @Transactional
   @PostMapping
   public TileCalibrationDTO save(@RequestBody TileCalibrationDTO dto) {
     TileCalibration entity = new TileCalibration();
@@ -37,6 +40,18 @@ public class TileCalibrationController {
     entity.setCreatedAt(LocalDateTime.now());
 
     TileCalibration saved = repository.save(entity);
+
+    // Retain only the newly saved record — prune all older entries to prevent CLOB accumulation.
+    List<Long> oldIds =
+        repository.findAll().stream()
+            .map(TileCalibration::getId)
+            .filter(id -> !id.equals(saved.getId()))
+            .toList();
+    if (!oldIds.isEmpty()) {
+      repository.deleteAllById(oldIds);
+      log.info("Pruned {} stale calibration record(s)", oldIds.size());
+    }
+
     log.info("Saved new server tile calibration with ID {}", saved.getId());
     return TileCalibrationDTO.fromEntity(saved);
   }

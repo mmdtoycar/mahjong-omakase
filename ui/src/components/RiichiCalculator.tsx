@@ -93,7 +93,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
   initialOptions,
   resetTrigger,
   isSelfDraw,
-  onIsSelfDrawChange,
+  onIsSelfDrawChange: _onIsSelfDrawChange,
   playerCount = 4,
   importedHand,
 }) => {
@@ -139,14 +139,11 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
   }, [])
 
   // Sync imported hand from photo recognition
-  const [prevImportTrigger, setPrevImportTrigger] = useState<number | undefined>(importedHand?.trigger)
+  const [prevImportTrigger, setPrevImportTrigger] = useState<number | undefined>(undefined)
   if (importedHand && importedHand.trigger !== prevImportTrigger) {
     setPrevImportTrigger(importedHand.trigger)
     setConcealedTiles(importedHand.concealed)
     setMelds(importedHand.melds)
-    if (importedHand.isSelfDraw !== undefined) {
-      onIsSelfDrawChange(importedHand.isSelfDraw)
-    }
   }
 
   const [prevResetTrigger, setPrevResetTrigger] = useState(resetTrigger)

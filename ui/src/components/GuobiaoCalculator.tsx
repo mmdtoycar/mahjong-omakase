@@ -85,7 +85,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   initialOptions,
   resetTrigger,
   isSelfDraw,
-  onIsSelfDrawChange,
+  onIsSelfDrawChange: _onIsSelfDrawChange,
   importedHand,
 }) => {
   const [concealedTiles, setConcealedTiles] = useState<Tile[]>([])
@@ -122,14 +122,11 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   }, [])
 
   // Sync imported hand from photo recognition
-  const [prevImportTrigger, setPrevImportTrigger] = useState<number | undefined>(importedHand?.trigger)
+  const [prevImportTrigger, setPrevImportTrigger] = useState<number | undefined>(undefined)
   if (importedHand && importedHand.trigger !== prevImportTrigger) {
     setPrevImportTrigger(importedHand.trigger)
     setConcealedTiles(importedHand.concealed)
     setMelds(importedHand.melds)
-    if (importedHand.isSelfDraw !== undefined) {
-      onIsSelfDrawChange(importedHand.isSelfDraw)
-    }
   }
 
   // Adjusting state during render pattern - resets tiles when parent triggers reset

@@ -64,6 +64,31 @@ export const GameCard: React.FC<Props> = ({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         closeFullscreen()
+        return
+      }
+      // Tab trap: keep focus within the dialog
+      if (e.key === 'Tab') {
+        const dialog = document.querySelector('.game-fs-overlay') as HTMLElement | null
+        if (!dialog) return
+        const focusable = Array.from(
+          dialog.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => !el.hasAttribute('disabled'))
+        if (focusable.length === 0) return
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
       }
     }
     document.addEventListener('keydown', onKey)
