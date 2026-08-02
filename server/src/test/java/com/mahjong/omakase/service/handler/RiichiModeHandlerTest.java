@@ -38,6 +38,13 @@ public class RiichiModeHandlerTest {
     return request;
   }
 
+  private AddRoundRequest drawnGame(List<Long> tenpaiIds) {
+    AddRoundRequest request = new AddRoundRequest();
+    request.setRoundType("DRAWN_GAME");
+    request.setTenpaiPlayerIds(tenpaiIds);
+    return request;
+  }
+
   private void assertZeroSum(Map<Long, Integer> scores, int kyoutaku) {
     int sum = scores.values().stream().mapToInt(Integer::intValue).sum();
     assertEquals(kyoutaku, sum, "scores must sum to kyoutaku (carried-over riichi sticks)");
@@ -540,6 +547,48 @@ public class RiichiModeHandlerTest {
     assertEquals(7400, scores.get(1L));
     assertEquals(-4200, scores.get(2L));
     assertEquals(-3200, scores.get(3L));
+    assertZeroSum(scores, 0);
+  }
+
+  // ============================================================
+  // Drawn game (流局) — tenpai list validation and noten payments
+  // ============================================================
+
+  @Test
+  public void testDrawnGameRejectsMissingTenpaiList() {
+    AddRoundRequest request = drawnGame(null);
+    IllegalArgumentException e =
+        assertThrows(
+            IllegalArgumentException.class, () -> handler.calculateRoundScores(request, YONMA));
+    assertEquals("Tenpai player list is required for drawn game", e.getMessage());
+  }
+
+  @Test
+  public void testDrawnGameRejectsTenpaiPlayerOutsideSession() {
+    AddRoundRequest request = drawnGame(Arrays.asList(1L, 99L));
+    IllegalArgumentException e =
+        assertThrows(
+            IllegalArgumentException.class, () -> handler.calculateRoundScores(request, YONMA));
+    assertEquals("Player 99 is not in this session", e.getMessage());
+  }
+
+  @Test
+  public void testDrawnGameAllNotenIsValidWithNoPointMovement() {
+    Map<Long, Integer> scores = handler.calculateRoundScores(drawnGame(List.of()), YONMA);
+    for (Long id : YONMA) {
+      assertEquals(0, scores.get(id));
+    }
+    assertZeroSum(scores, 0);
+  }
+
+  @Test
+  public void testDrawnGameTwoTenpaiPayments() {
+    Map<Long, Integer> scores =
+        handler.calculateRoundScores(drawnGame(Arrays.asList(1L, 2L)), YONMA);
+    assertEquals(1500, scores.get(1L));
+    assertEquals(1500, scores.get(2L));
+    assertEquals(-1500, scores.get(3L));
+    assertEquals(-1500, scores.get(4L));
     assertZeroSum(scores, 0);
   }
 }
