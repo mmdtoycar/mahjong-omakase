@@ -476,7 +476,12 @@ export default function SessionPage() {
         return { type, tiles: m.tiles, isOpen: m.isOpen }
       })
       if (hand.isSelfDraw !== undefined) setIsSelfDraw(hand.isSelfDraw)
-      setRiichiImportedHand({ concealed: hand.concealed, melds: rMelds, isSelfDraw: hand.isSelfDraw, trigger: Date.now() })
+      setRiichiImportedHand({
+        concealed: hand.concealed,
+        melds: rMelds,
+        isSelfDraw: hand.isSelfDraw,
+        trigger: Date.now(),
+      })
     }
   }
 

@@ -110,7 +110,12 @@ function getApiKeyPool(): string[] {
 
   const pool: string[] = []
   if (envKeysStr) {
-    pool.push(...envKeysStr.split(',').map((k) => k.trim()).filter(Boolean))
+    pool.push(
+      ...envKeysStr
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean)
+    )
   }
   if (envKeySingle && !pool.includes(envKeySingle)) {
     pool.push(envKeySingle)
@@ -133,7 +138,9 @@ export async function callGeminiApiWithKeyRotation(contents: any[], model: strin
 
   for (let attempt = 0; attempt < keys.length; attempt++) {
     const key = keys[(currentKeyIndex + attempt) % keys.length]
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
+      key
+    )}`
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 30_000)
@@ -164,7 +171,12 @@ export async function callGeminiApiWithKeyRotation(contents: any[], model: strin
       console.warn(`Key attempt ${attempt + 1} failed (${status}):`, errMsg)
 
       // Only rotate keys for quota/rate-limit errors; propagate other errors immediately.
-      if (status !== 429 && status !== 503 && !errMsg.toLowerCase().includes('quota') && !errMsg.toLowerCase().includes('resource')) {
+      if (
+        status !== 429 &&
+        status !== 503 &&
+        !errMsg.toLowerCase().includes('quota') &&
+        !errMsg.toLowerCase().includes('resource')
+      ) {
         throw new Error(errMsg || `API 请求错误 (${status})`)
       }
 
@@ -248,43 +260,96 @@ export function parseTileString(s: string): Tile | null {
   }
 
   const charMap: Record<string, Tile> = {
-    '一万': new Tile('m', 1), '1万': new Tile('m', 1),
-    '二万': new Tile('m', 2), '2万': new Tile('m', 2),
-    '三万': new Tile('m', 3), '3万': new Tile('m', 3),
-    '四万': new Tile('m', 4), '4万': new Tile('m', 4),
-    '五万': new Tile('m', 5), '5万': new Tile('m', 5),
-    '六万': new Tile('m', 6), '6万': new Tile('m', 6),
-    '七万': new Tile('m', 7), '7万': new Tile('m', 7),
-    '八万': new Tile('m', 8), '8万': new Tile('m', 8),
-    '九万': new Tile('m', 9), '9万': new Tile('m', 9),
+    一万: new Tile('m', 1),
+    '1万': new Tile('m', 1),
+    二万: new Tile('m', 2),
+    '2万': new Tile('m', 2),
+    三万: new Tile('m', 3),
+    '3万': new Tile('m', 3),
+    四万: new Tile('m', 4),
+    '4万': new Tile('m', 4),
+    五万: new Tile('m', 5),
+    '5万': new Tile('m', 5),
+    六万: new Tile('m', 6),
+    '6万': new Tile('m', 6),
+    七万: new Tile('m', 7),
+    '7万': new Tile('m', 7),
+    八万: new Tile('m', 8),
+    '8万': new Tile('m', 8),
+    九万: new Tile('m', 9),
+    '9万': new Tile('m', 9),
 
-    '一饼': new Tile('p', 1), '1饼': new Tile('p', 1), '1筒': new Tile('p', 1),
-    '二饼': new Tile('p', 2), '2饼': new Tile('p', 2), '2筒': new Tile('p', 2),
-    '三饼': new Tile('p', 3), '3饼': new Tile('p', 3), '3筒': new Tile('p', 3),
-    '四饼': new Tile('p', 4), '4饼': new Tile('p', 4), '4筒': new Tile('p', 4),
-    '五饼': new Tile('p', 5), '5饼': new Tile('p', 5), '5筒': new Tile('p', 5),
-    '六饼': new Tile('p', 6), '6饼': new Tile('p', 6), '6筒': new Tile('p', 6),
-    '七饼': new Tile('p', 7), '7饼': new Tile('p', 7), '7筒': new Tile('p', 7),
-    '八饼': new Tile('p', 8), '8饼': new Tile('p', 8), '8筒': new Tile('p', 8),
-    '九饼': new Tile('p', 9), '9饼': new Tile('p', 9), '9筒': new Tile('p', 9),
+    一饼: new Tile('p', 1),
+    '1饼': new Tile('p', 1),
+    '1筒': new Tile('p', 1),
+    二饼: new Tile('p', 2),
+    '2饼': new Tile('p', 2),
+    '2筒': new Tile('p', 2),
+    三饼: new Tile('p', 3),
+    '3饼': new Tile('p', 3),
+    '3筒': new Tile('p', 3),
+    四饼: new Tile('p', 4),
+    '4饼': new Tile('p', 4),
+    '4筒': new Tile('p', 4),
+    五饼: new Tile('p', 5),
+    '5饼': new Tile('p', 5),
+    '5筒': new Tile('p', 5),
+    六饼: new Tile('p', 6),
+    '6饼': new Tile('p', 6),
+    '6筒': new Tile('p', 6),
+    七饼: new Tile('p', 7),
+    '7饼': new Tile('p', 7),
+    '7筒': new Tile('p', 7),
+    八饼: new Tile('p', 8),
+    '8饼': new Tile('p', 8),
+    '8筒': new Tile('p', 8),
+    九饼: new Tile('p', 9),
+    '9饼': new Tile('p', 9),
+    '9筒': new Tile('p', 9),
 
-    '一条': new Tile('s', 1), '1条': new Tile('s', 1), '1索': new Tile('s', 1),
-    '二条': new Tile('s', 2), '2条': new Tile('s', 2), '2索': new Tile('s', 2),
-    '三条': new Tile('s', 3), '3条': new Tile('s', 3), '3索': new Tile('s', 3),
-    '四条': new Tile('s', 4), '4条': new Tile('s', 4), '4索': new Tile('s', 4),
-    '五条': new Tile('s', 5), '5条': new Tile('s', 5), '5索': new Tile('s', 5),
-    '六条': new Tile('s', 6), '6条': new Tile('s', 6), '6索': new Tile('s', 6),
-    '七条': new Tile('s', 7), '7条': new Tile('s', 7), '7索': new Tile('s', 7),
-    '八条': new Tile('s', 8), '8条': new Tile('s', 8), '8索': new Tile('s', 8),
-    '九条': new Tile('s', 9), '9条': new Tile('s', 9), '9索': new Tile('s', 9),
+    一条: new Tile('s', 1),
+    '1条': new Tile('s', 1),
+    '1索': new Tile('s', 1),
+    二条: new Tile('s', 2),
+    '2条': new Tile('s', 2),
+    '2索': new Tile('s', 2),
+    三条: new Tile('s', 3),
+    '3条': new Tile('s', 3),
+    '3索': new Tile('s', 3),
+    四条: new Tile('s', 4),
+    '4条': new Tile('s', 4),
+    '4索': new Tile('s', 4),
+    五条: new Tile('s', 5),
+    '5条': new Tile('s', 5),
+    '5索': new Tile('s', 5),
+    六条: new Tile('s', 6),
+    '6条': new Tile('s', 6),
+    '6索': new Tile('s', 6),
+    七条: new Tile('s', 7),
+    '7条': new Tile('s', 7),
+    '7索': new Tile('s', 7),
+    八条: new Tile('s', 8),
+    '8条': new Tile('s', 8),
+    '8索': new Tile('s', 8),
+    九条: new Tile('s', 9),
+    '9条': new Tile('s', 9),
+    '9索': new Tile('s', 9),
 
-    '东': new Tile('z', 1), '东风': new Tile('z', 1),
-    '南': new Tile('z', 2), '南风': new Tile('z', 2),
-    '西': new Tile('z', 3), '西风': new Tile('z', 3),
-    '北': new Tile('z', 4), '北风': new Tile('z', 4),
-    '中': new Tile('z', 5), '红中': new Tile('z', 5),
-    '发': new Tile('z', 6), '發': new Tile('z', 6), '发财': new Tile('z', 6),
-    '白': new Tile('z', 7), '白板': new Tile('z', 7),
+    东: new Tile('z', 1),
+    东风: new Tile('z', 1),
+    南: new Tile('z', 2),
+    南风: new Tile('z', 2),
+    西: new Tile('z', 3),
+    西风: new Tile('z', 3),
+    北: new Tile('z', 4),
+    北风: new Tile('z', 4),
+    中: new Tile('z', 5),
+    红中: new Tile('z', 5),
+    发: new Tile('z', 6),
+    發: new Tile('z', 6),
+    发财: new Tile('z', 6),
+    白: new Tile('z', 7),
+    白板: new Tile('z', 7),
   }
   return charMap[clean] || null
 }
@@ -335,13 +400,16 @@ export function parseTileStringSequence(str: string): Tile[] {
   })
 
   // Expand Chinese range like "1万-9万" or "1-9万"
-  str = str.replace(/([一二三四五六七八九1-9])\s*-\s*([一二三四五六七八九1-9])\s*([万萬饼筒条索])/g, (_, start, end, suit) => {
-    const s = '一二三四五六七八九'.includes(start) ? '一二三四五六七八九'.indexOf(start) + 1 : parseInt(start, 10)
-    const e = '一二三四五六七八九'.includes(end) ? '一二三四五六七八九'.indexOf(end) + 1 : parseInt(end, 10)
-    let res = ''
-    for (let i = s; i <= e; i++) res += `${i}${suit} `
-    return res
-  })
+  str = str.replace(
+    /([一二三四五六七八九1-9])\s*-\s*([一二三四五六七八九1-9])\s*([万萬饼筒条索])/g,
+    (_, start, end, suit) => {
+      const s = '一二三四五六七八九'.includes(start) ? '一二三四五六七八九'.indexOf(start) + 1 : parseInt(start, 10)
+      const e = '一二三四五六七八九'.includes(end) ? '一二三四五六七八九'.indexOf(end) + 1 : parseInt(end, 10)
+      let res = ''
+      for (let i = s; i <= e; i++) res += `${i}${suit} `
+      return res
+    }
+  )
 
   // 1. Match standard notation 123m 456p 789s 11155z
   const mpszMatches = Array.from(str.matchAll(/([1-9]+)([mpsz])/gi))
@@ -383,7 +451,15 @@ export function parseTileStringSequence(str: string): Tile[] {
       }
 
       const honorMap: Record<string, number> = {
-        '东': 1, '東': 1, '南': 2, '西': 3, '北': 4, '中': 5, '发': 6, '發': 6, '白': 7,
+        东: 1,
+        東: 1,
+        南: 2,
+        西: 3,
+        北: 4,
+        中: 5,
+        发: 6,
+        發: 6,
+        白: 7,
       }
       for (const char of tok) {
         if (honorMap[char]) {
@@ -479,17 +555,12 @@ Use this master visual legend to identify any tile in this set matching these pa
 
         contents.push({
           role: 'user',
-          parts: [
-            { text: promptText },
-            { inline_data: { mime_type: mimeType, data } },
-          ],
+          parts: [{ text: promptText }, { inline_data: { mime_type: mimeType, data } }],
         })
 
         contents.push({
           role: 'model',
-          parts: [
-            { text: JSON.stringify(sampleJson) },
-          ],
+          parts: [{ text: JSON.stringify(sampleJson) }],
         })
       }
 
@@ -769,7 +840,9 @@ Return ONLY valid JSON:
                 <div className="tile-picker-box">
                   <div className="tile-picker-header">
                     <span>{editingTileIndex >= 0 ? `修正第 ${editingTileIndex + 1} 张牌:` : '添加牌:'}</span>
-                    <button className="btn-close-sm" onClick={() => setEditingTileIndex(null)}>✕</button>
+                    <button className="btn-close-sm" onClick={() => setEditingTileIndex(null)}>
+                      ✕
+                    </button>
                   </div>
                   <div className="tile-picker-grid">
                     {Tile.all.map((t, i) => (
@@ -778,9 +851,7 @@ Return ONLY valid JSON:
                         tile={t}
                         size="small"
                         onClick={() =>
-                          editingTileIndex >= 0
-                            ? handleReplaceTile(editingTileIndex, t)
-                            : handleAddTile(t)
+                          editingTileIndex >= 0 ? handleReplaceTile(editingTileIndex, t) : handleAddTile(t)
                         }
                       />
                     ))}
