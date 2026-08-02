@@ -61,6 +61,7 @@ public class SessionDetailResponse {
     private String dealInPlayerName;
     private Integer prevalentWind;
     private List<Long> riichiPlayerIds;
+    private List<Long> tenpaiPlayerIds;
     private Boolean backfill;
   }
 }

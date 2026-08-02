@@ -21,7 +21,12 @@ function dealerStaysAfterRound(gameMode: GameModeKey, round: RoundInfo, dealerPl
   if (round.winnerId === dealerPlayerId) return true
   if (round.winnerId == null) {
     if (gameMode === 'DONGBEI') return true
-    if (gameMode === 'RIICHI') return (round.scores[dealerPlayerId] ?? 0) >= 0
+    if (gameMode === 'RIICHI') {
+      // 庄家听牌才连庄, 未听则流庄
+      if (round.tenpaiPlayerIds) return round.tenpaiPlayerIds.includes(dealerPlayerId)
+      // Legacy rounds have no tenpai list: fall back to the point delta (全员未听 reads as 连庄)
+      return (round.scores[dealerPlayerId] ?? 0) >= 0
+    }
   }
   return false
 }
@@ -70,17 +75,17 @@ export function deriveGameState(session: SessionDetail): GameState {
     }
 
     const dealer = playersBySeat[seatIndex]
-    if (dealerStaysAfterRound(session.gameMode, round, dealer.id)) {
-      honba++
-    } else {
+    const dealerStays = dealerStaysAfterRound(session.gameMode, round, dealer.id)
+    if (!dealerStays) {
       seatIndex = (seatIndex + 1) % playerCount
       handNumber++
-      honba = 0
       if (handNumber > playerCount) {
         handNumber = 1
         prevalentWind++
       }
     }
+    // 流局必定加一本场, 即使流庄
+    honba = dealerStays || round.winnerId == null ? honba + 1 : 0
   }
 
   const dealer = playersBySeat[seatIndex]
