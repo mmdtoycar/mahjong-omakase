@@ -22,9 +22,9 @@ import org.springframework.stereotype.Service;
  *   <li>CHONG 铳之间 — 0 名 LV3
  * </ol>
  *
- * <p>Note: only GUOBIAO and RIICHI modes get a label. DONGBEI returns null (no tag in UI). The 斗战胜佛
- * tier already encodes the "top player, active ≥ 5 games this month" rule, so early each month
- * (before anyone qualifies) tables fall back to the LV3-count ladder.
+ * <p>Note: all three modes (国标 / 立直 / 东北) get a label. The 斗战胜佛 tier already encodes the "top
+ * player, active ≥ 5 games this month" rule, so early each month (before anyone qualifies) tables
+ * fall back to the LV3-count ladder.
  */
 @Service
 @RequiredArgsConstructor
@@ -51,14 +51,13 @@ public class TableStrengthService {
   private final TierService tierService;
 
   /**
-   * Compute the table strength label for a session's seated players. Returns null for DONGBEI.
+   * Compute the table strength label for a session's seated players.
    *
    * @param sessionDate session's createdAt (UTC) — tier is resolved for THAT month, so historical
    *     sessions get the label they should have had at the time, not what they'd be under today's
    *     ratings.
    */
   public TableStrength compute(List<Player> players, GameMode mode, LocalDateTime sessionDate) {
-    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return null;
     Map<Long, Tier> tierByPlayer =
         sessionDate != null ? tierService.resolveTiersForDate(mode, sessionDate) : Map.of();
     return compute(players, mode, tierByPlayer);
@@ -71,7 +70,6 @@ public class TableStrengthService {
    * per group.
    */
   public TableStrength compute(List<Player> players, GameMode mode, Map<Long, Tier> tierByPlayer) {
-    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return null;
     if (players == null) return TableStrength.CHONG;
     Map<Long, Tier> safeTiers = tierByPlayer != null ? tierByPlayer : Map.of();
 

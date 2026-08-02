@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/** Per-player tier summary covering both ranked modes (国标 / 立直). */
+/** Per-player tier summary covering every ranked mode (国标 / 立直 / 东北). */
 @Data
 @Builder
 @NoArgsConstructor
@@ -15,4 +15,5 @@ public class PlayerTierResponse {
   private String userName;
   private TierInfo guobiao;
   private TierInfo riichi;
+  private TierInfo dongbei;
 }

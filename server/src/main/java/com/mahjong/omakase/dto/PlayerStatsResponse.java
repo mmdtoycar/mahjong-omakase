@@ -11,15 +11,9 @@ public class PlayerStatsResponse {
   private String displayName;
   private int gamesPlayed;
   private int totalScore;
-  private double avgScore;
   private double avgRank;
   private int wins;
   private int fourthPlaces;
-  private double totalRP;
-  private double baseRP;
-  private double tieredBonus;
-  private double adminBonus;
-  private double fanDiscoveryBonus;
   private int roundsPlayed;
   private int handWins;
   private int tsumoWins;

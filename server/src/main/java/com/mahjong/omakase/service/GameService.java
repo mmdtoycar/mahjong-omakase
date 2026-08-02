@@ -4,7 +4,7 @@ import com.mahjong.omakase.dto.*;
 import com.mahjong.omakase.model.*;
 import com.mahjong.omakase.repository.*;
 import com.mahjong.omakase.service.handler.GameModeHandler;
-import com.mahjong.omakase.service.scoring.RpCalculator;
+import com.mahjong.omakase.service.scoring.RankCalculator;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -37,14 +37,12 @@ public class GameService {
   private final RoundRepository roundRepo;
   private final RoundScoreRepository roundScoreRepo;
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
-  private final AppSettingRepository appSettingRepo;
   private final FanDiscoveryRepository fanDiscoveryRepo;
   private final TierService tierService;
   private final TableStrengthService tableStrengthService;
   private final PlayerMonthlySkillRepository monthlySkillRepo;
   private final CacheManager cacheManager;
   private final Map<GameMode, GameModeHandler> handlers;
-  private volatile double participationBonus;
 
   public GameService(
       PlayerRepository playerRepo,
@@ -52,7 +50,6 @@ public class GameService {
       RoundRepository roundRepo,
       RoundScoreRepository roundScoreRepo,
       GameSessionPlayerRepository gameSessionPlayerRepo,
-      AppSettingRepository appSettingRepo,
       FanDiscoveryRepository fanDiscoveryRepo,
       TierService tierService,
       TableStrengthService tableStrengthService,
@@ -64,7 +61,6 @@ public class GameService {
     this.roundRepo = roundRepo;
     this.roundScoreRepo = roundScoreRepo;
     this.gameSessionPlayerRepo = gameSessionPlayerRepo;
-    this.appSettingRepo = appSettingRepo;
     this.fanDiscoveryRepo = fanDiscoveryRepo;
     this.tierService = tierService;
     this.tableStrengthService = tableStrengthService;
@@ -73,7 +69,6 @@ public class GameService {
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
-    this.participationBonus = loadParticipationBonus();
   }
 
   /**
@@ -199,26 +194,6 @@ public class GameService {
     return none.get();
   }
 
-  public void reloadSettings() {
-    this.participationBonus = loadParticipationBonus();
-    evictAllCaches();
-  }
-
-  private double loadParticipationBonus() {
-    return appSettingRepo
-        .findById("participation_bonus")
-        .map(
-            s -> {
-              try {
-                return Double.parseDouble(s.getValue());
-              } catch (NumberFormatException e) {
-                log.warn("Invalid participation_bonus value '{}', using default", s.getValue());
-                return 0.0;
-              }
-            })
-        .orElse(0.0);
-  }
-
   public List<Player> getAllPlayers() {
     return playerRepo.findAll();
   }
@@ -320,7 +295,6 @@ public class GameService {
   private SessionSummaryResponse toSummary(GameSession s, Map<String, Map<Long, Tier>> tiersCache) {
     SessionSummaryResponse r = SessionSummaryResponse.from(s);
     GameMode mode = s.getGameMode();
-    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return r;
     List<Player> players =
         s.getPlayers().stream().map(GameSessionPlayer::getPlayer).filter(Objects::nonNull).toList();
 
@@ -367,7 +341,6 @@ public class GameService {
     session.setName(request.getName());
     session.setGameMode(GameMode.valueOf(request.getGameMode()));
     session.setPlayerCount(request.getPlayerIds().size());
-    session.setParticipationBonus(this.participationBonus);
     session = sessionRepo.save(session);
 
     int seat = 1;
@@ -405,10 +378,7 @@ public class GameService {
     resp.setCreatedAt(session.getCreatedAt());
 
     GameMode sessionMode = session.getGameMode();
-    final Long sessionThroneId =
-        (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI)
-            ? tierService.findThroneId(sessionMode)
-            : null;
+    final Long sessionThroneId = tierService.findThroneId(sessionMode);
 
     resp.setPlayers(
         session.getPlayers().stream()
@@ -423,24 +393,20 @@ public class GameService {
                           p.getFirstName(),
                           p.getLastName(),
                           gsp.getSeat());
-                  if (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI) {
-                    info.setTier(tierService.computeTier(p, sessionMode, sessionThroneId).name());
-                  }
+                  info.setTier(tierService.computeTier(p, sessionMode, sessionThroneId).name());
                   return info;
                 })
             .collect(Collectors.toList()));
 
-    if (sessionMode == GameMode.GUOBIAO || sessionMode == GameMode.RIICHI) {
-      List<Player> players =
-          session.getPlayers().stream()
-              .map(GameSessionPlayer::getPlayer)
-              .filter(Objects::nonNull)
-              .toList();
-      resp.setTableStrength(
-          tableStrengthService
-              .compute(players, sessionMode, session.getCreatedAt())
-              .getDisplayName());
-    }
+    List<Player> players =
+        session.getPlayers().stream()
+            .map(GameSessionPlayer::getPlayer)
+            .filter(Objects::nonNull)
+            .toList();
+    resp.setTableStrength(
+        tableStrengthService
+            .compute(players, sessionMode, session.getCreatedAt())
+            .getDisplayName());
 
     Map<Long, String> playerNameMap =
         session.getPlayers().stream()
@@ -498,70 +464,24 @@ public class GameService {
       }
     }
     resp.setTotalScores(totals);
-    resp.setRpFactor(session.getGameMode().getRpFactor());
-    resp.setRpOrigin(session.getGameMode().getRpOrigin());
-    resp.setUmaDist(session.getGameMode().getUmaDist(session.getPlayerCount()));
-    resp.setParticipationBonus(
-        session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0);
-    resp.setPlayerBonuses(computeSessionPlayerBonuses(session));
+    resp.setStartingPoints(session.getGameMode().getStartingPoints());
+    resp.setRatingDeltas(collectRatingDeltas(session));
 
     return resp;
   }
 
   /**
-   * Computes per-player bonus contributed by this one session = tieredBonus + adminBonus +
-   * fanDiscoveryBonus. Matches what getPlayerStats aggregates across all sessions. Returns empty
-   * for sessions with no round scores (no bonus for empty sessions).
+   * Per-player 段位分 change recorded when this session was completed. Empty while the session is in
+   * progress, and for completed sessions predating the column (run the tier backfill to fill those
+   * in).
    */
-  private Map<Long, Double> computeSessionPlayerBonuses(GameSession session) {
-    Map<Long, Double> bonuses = new HashMap<>();
-
-    List<Object[]> currentSessionScores = roundScoreRepo.getTotalScoresBySession(session.getId());
-    if (currentSessionScores.isEmpty()) {
-      return bonuses;
+  private Map<Long, Double> collectRatingDeltas(GameSession session) {
+    Map<Long, Double> deltas = new HashMap<>();
+    for (GameSessionPlayer gsp : session.getPlayers()) {
+      if (gsp.getPlayer() == null || gsp.getRatingDelta() == null) continue;
+      deltas.put(gsp.getPlayer().getId(), gsp.getRatingDelta());
     }
-
-    YearMonth seasonYm = YearMonth.from(toPacificTime(session.getCreatedAt()));
-    LocalDateTime seasonStartUtc = toUtcTime(seasonYm.atDay(1).atStartOfDay());
-    LocalDateTime seasonEndUtc = toUtcTime(seasonYm.plusMonths(1).atDay(1).atStartOfDay());
-
-    List<GameSession> seasonSessions =
-        sessionRepo.findCompletedInSeasonUpTo(
-            session.getGameMode(), seasonStartUtc, seasonEndUtc, session.getCreatedAt());
-
-    Map<Long, Integer> gameIndexUpToHere = new HashMap<>();
-    if (!seasonSessions.isEmpty()) {
-      List<Long> seasonSessionIds = seasonSessions.stream().map(GameSession::getId).toList();
-      for (Object[] row : roundScoreRepo.getGamesPlayedPerPlayerInSessions(seasonSessionIds)) {
-        if (row[0] != null) {
-          gameIndexUpToHere.put((Long) row[0], ((Number) row[1]).intValue());
-        }
-      }
-    }
-    boolean currentIncluded =
-        seasonSessions.stream().anyMatch(s -> s.getId().equals(session.getId()));
-
-    double adminBonus =
-        session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
-
-    for (Object[] row : currentSessionScores) {
-      if (row[0] == null) continue;
-      Long pid = (Long) row[0];
-      int idx = gameIndexUpToHere.getOrDefault(pid, 0);
-      if (!currentIncluded) idx += 1;
-      double tiered = idx <= 10 ? 10.0 : idx <= 20 ? 5.0 : 0.0;
-      bonuses.merge(pid, tiered + adminBonus, Double::sum);
-    }
-
-    if (session.getGameMode() == GameMode.GUOBIAO) {
-      for (FanDiscovery fd : fanDiscoveryRepo.findByRoundGameSessionId(session.getId())) {
-        if (fd.getBonusRp() > 0 && fd.getPlayer() != null) {
-          bonuses.merge(fd.getPlayer().getId(), fd.getBonusRp(), Double::sum);
-        }
-      }
-    }
-
-    return bonuses;
+    return deltas;
   }
 
   public void addRound(Long sessionId, AddRoundRequest request) {
@@ -817,8 +737,8 @@ public class GameService {
 
   /**
    * Aggregates everything HomePage needs in a single call: in-progress sessions (with full detail)
-   * and per-mode rankings (top 3 by RP + best round). Replaces 1 + N + 2M frontend round-trips with
-   * one response.
+   * and per-mode rankings (top 3 by 段位分 + best round). Replaces 1 + N + 2M frontend round-trips
+   * with one response.
    */
   @Cacheable("homeSummary")
   public HomeSummaryResponse getHomeSummary(LocalDateTime start, LocalDateTime end) {
@@ -829,8 +749,13 @@ public class GameService {
 
     Map<String, HomeSummaryResponse.ModeRanking> rankings = new LinkedHashMap<>();
     for (GameMode mode : GameMode.values()) {
-      List<PlayerStatsResponse> stats = getPlayerStats(mode, start, end);
-      stats.sort((a, b) -> Double.compare(b.getTotalRP(), a.getTotalRP()));
+      // Only players who actually played this season — everyone else sits at the initial rating
+      // and would otherwise outrank real players who dropped below it.
+      List<PlayerStatsResponse> stats =
+          getPlayerStats(mode, start, end).stream()
+              .filter(s -> s.getGamesPlayed() > 0)
+              .sorted(Comparator.comparingDouble(PlayerStatsResponse::getSkillRating).reversed())
+              .toList();
       List<PlayerStatsResponse> top = stats.subList(0, Math.min(3, stats.size()));
 
       List<BestRoundResponse> bests = getBestRounds(mode, start, end);
@@ -861,10 +786,10 @@ public class GameService {
     LocalDateTime startUtc = toUtcTime(start);
     LocalDateTime endUtc = toUtcTime(end);
 
-    // Historical tier snapshot lookup — only for past PT months in GUOBIAO/RIICHI.
+    // Historical tier snapshot lookup — only for past PT months of a single mode.
     // Current/future months keep using live Player state (no snapshot exists yet).
     Map<Long, TierService.MonthlyTierInfo> historicalTiers = null;
-    if (hasDateRange && (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI)) {
+    if (hasDateRange && gameMode != null) {
       YearMonth queryMonth = YearMonth.of(start.getYear(), start.getMonthValue());
       YearMonth currentPtMonth = YearMonth.from(java.time.LocalDate.now(ZONE_PACIFIC));
       if (queryMonth.isBefore(currentPtMonth)) {
@@ -876,19 +801,13 @@ public class GameService {
     final Map<Long, TierService.MonthlyTierInfo> historicalTiersFinal = historicalTiers;
 
     final Long liveThroneId =
-        (historicalTiers == null && (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI))
-            ? tierService.findThroneId(gameMode)
-            : null;
+        historicalTiers == null && gameMode != null ? tierService.findThroneId(gameMode) : null;
 
     Map<Long, Integer> totalScores = new HashMap<>();
     Map<Long, Integer> gamesPlayed = new HashMap<>();
     Map<Long, Integer> wins = new HashMap<>();
     Map<Long, Integer> totalRanks = new HashMap<>();
     Map<Long, Integer> fourthPlaces = new HashMap<>();
-    Map<Long, Double> totalRP = new HashMap<>();
-    Map<Long, Double> tieredBonusPerPlayer = new HashMap<>();
-    Map<Long, Double> adminBonusPerPlayer = new HashMap<>();
-    Map<Long, Double> fanBonusPerPlayer = new HashMap<>();
     Map<Long, Integer> roundsPlayed = new HashMap<>();
     Map<Long, Integer> handWins = new HashMap<>();
     Map<Long, Integer> tsumoWins = new HashMap<>();
@@ -906,32 +825,6 @@ public class GameService {
                             && s.getCreatedAt().isBefore(endUtc)))
             .sorted(Comparator.comparing(GameSession::getCreatedAt))
             .toList();
-
-    // Tracks chronological game count per (season, mode, player) for tiered bonus.
-    // Keyed separately by mode so each game mode has its own 20-game tier per season.
-    Map<String, Map<Long, Integer>> gameIndexBySeasonModePlayer = new HashMap<>();
-
-    // Add Fan Discovery Bonuses (GUOBIAO only)
-    if (gameMode == null || gameMode == GameMode.GUOBIAO) {
-      if (hasDateRange) {
-        // Callers supply start in Pacific timezone; convert to UTC to consistently derive season
-        String season = getSeasonStringFromUtc(startUtc);
-        List<FanDiscovery> discoveries = fanDiscoveryRepo.findBySeason(season);
-        for (FanDiscovery fd : discoveries) {
-          if (fd.getBonusRp() > 0) {
-            fanBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
-          }
-        }
-      } else {
-        // All-time: Sum bonuses from all seasons
-        List<FanDiscovery> allDiscoveries = fanDiscoveryRepo.findAll();
-        for (FanDiscovery fd : allDiscoveries) {
-          if (fd.getBonusRp() > 0) {
-            fanBonusPerPlayer.merge(fd.getPlayer().getId(), fd.getBonusRp(), (a, b) -> a + b);
-          }
-        }
-      }
-    }
 
     // Bulk-load total scores per session — replaces N+1 calls to getTotalScoresBySession.
     Map<Long, List<Object[]>> scoresBySessionId = new HashMap<>();
@@ -963,34 +856,16 @@ public class GameService {
     for (GameSession session : completedSessions) {
       List<Object[]> sessionScores = scoresBySessionId.getOrDefault(session.getId(), List.of());
       if (!sessionScores.isEmpty()) {
-        String season = getSeasonStringFromUtc(session.getCreatedAt());
-        String seasonModeKey = season + ":" + session.getGameMode().name();
-        Map<Long, Integer> seasonCounts =
-            gameIndexBySeasonModePlayer.computeIfAbsent(seasonModeKey, k -> new HashMap<>());
-        double adminBonus =
-            session.getParticipationBonus() != null ? session.getParticipationBonus() : 0.0;
         for (Object[] row : sessionScores) {
           if (row[0] != null) {
             Long playerId = (Long) row[0];
             int score = ((Number) row[1]).intValue();
 
             // Accumulate gamesPlayed and totalScores dynamically so they share the same
-            // session set as wins/bonuses below (otherwise mode-or-date-only filters can
+            // session set as wins/ranks below (otherwise mode-or-date-only filters can
             // mix all-time totals with date-filtered wins).
             gamesPlayed.merge(playerId, 1, Integer::sum);
             totalScores.merge(playerId, score, Integer::sum);
-
-            int gameIndex = seasonCounts.merge(playerId, 1, Integer::sum);
-            double tieredBonus;
-            if (gameIndex <= 10) {
-              tieredBonus = 10.0;
-            } else if (gameIndex <= 20) {
-              tieredBonus = 5.0;
-            } else {
-              tieredBonus = 0.0;
-            }
-            tieredBonusPerPlayer.merge(playerId, tieredBonus, (a, b) -> a + b);
-            adminBonusPerPlayer.merge(playerId, adminBonus, (a, b) -> a + b);
           }
         }
         List<Object[]> sorted = new ArrayList<>(sessionScores);
@@ -1003,14 +878,7 @@ public class GameService {
           }
         }
 
-        List<RpCalculator.RankEntry> ranked =
-            RpCalculator.rankPlayers(
-                scoreMap,
-                session.getGameMode().getRpFactor(),
-                session.getGameMode().getUmaDist(session.getPlayerCount()));
-
-        for (var entry : ranked) {
-          totalRP.merge(entry.playerId(), entry.rp(), (a, b) -> a + b);
+        for (var entry : RankCalculator.rankPlayers(scoreMap)) {
           totalRanks.merge(entry.playerId(), entry.rank(), Integer::sum);
           if (entry.rank() == 4) fourthPlaces.merge(entry.playerId(), 1, Integer::sum);
         }
@@ -1040,18 +908,7 @@ public class GameService {
               stat.setTotalScore(totalScores.getOrDefault(p.getId(), 0));
               stat.setWins(wins.getOrDefault(p.getId(), 0));
               stat.setFourthPlaces(fourthPlaces.getOrDefault(p.getId(), 0));
-              double baseRP = totalRP.getOrDefault(p.getId(), 0.0);
-              double tieredBonus = tieredBonusPerPlayer.getOrDefault(p.getId(), 0.0);
-              double adminBonus = adminBonusPerPlayer.getOrDefault(p.getId(), 0.0);
-              double fanBonus = fanBonusPerPlayer.getOrDefault(p.getId(), 0.0);
-              double total = baseRP + tieredBonus + adminBonus + fanBonus;
-              stat.setBaseRP(baseRP);
-              stat.setTieredBonus(tieredBonus);
-              stat.setAdminBonus(adminBonus);
-              stat.setFanDiscoveryBonus(fanBonus);
-              stat.setTotalRP(total);
               int games = gamesPlayed.getOrDefault(p.getId(), 0);
-              stat.setAvgScore(games > 0 ? total / games : 0);
               stat.setAvgRank(
                   games > 0 ? (double) totalRanks.getOrDefault(p.getId(), 0) / games : 0);
 
@@ -1067,8 +924,9 @@ public class GameService {
               stat.setAvgDealInPoints(
                   di > 0 ? (double) dealInPointsSum.getOrDefault(p.getId(), 0) / di : 0);
 
-              // Tier in the queried mode (only GUOBIAO/RIICHI track ratings; DONGBEI gets null).
-              if (gameMode == GameMode.GUOBIAO || gameMode == GameMode.RIICHI) {
+              // Tier in the queried mode. A null gameMode spans all modes, so there's no single
+              // rating to report.
+              if (gameMode != null) {
                 if (historicalTiersFinal != null) {
                   TierService.MonthlyTierInfo info = historicalTiersFinal.get(p.getId());
                   if (info != null) {
@@ -1081,16 +939,10 @@ public class GameService {
                     stat.setGamesNeeded(TierService.RANKED_MIN_GAMES);
                   }
                 } else {
-                  Tier liveTier = tierService.computeTier(p, gameMode, liveThroneId);
-                  int lifetimeGames =
-                      gameMode == GameMode.GUOBIAO ? p.getGamesGuobiao() : p.getGamesRiichi();
-                  stat.setTier(liveTier.name());
-                  stat.setSkillRating(
-                      gameMode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi());
-                  stat.setGamesNeeded(
-                      liveTier == Tier.UNRANKED
-                          ? Math.max(0, TierService.RANKED_MIN_GAMES - lifetimeGames)
-                          : 0);
+                  TierInfo live = TierInfo.of(tierService, p, gameMode, liveThroneId);
+                  stat.setTier(live.getTier());
+                  stat.setSkillRating(live.getRating());
+                  stat.setGamesNeeded(live.getGamesNeeded());
                 }
               } else {
                 stat.setTier(null);
@@ -1336,22 +1188,8 @@ public class GameService {
 
       if (fanDiscoveryRepo.findBySeasonAndFanNameAndPlayerBotFalse(season, fanName).isEmpty()) {
         try {
-          int fanScore = 0;
-          if (bracketIdx != -1) {
-            int endBracket = trimmedPart.indexOf(')', bracketIdx);
-            if (endBracket != -1) {
-              String scorePart = trimmedPart.substring(bracketIdx + 1, endBracket);
-              try {
-                fanScore = Integer.parseInt(scorePart.split("x")[0]);
-              } catch (NumberFormatException e) {
-                // ignore
-              }
-            }
-          }
-          double bonusRp = fanScore >= 8 ? fanScore / 2.0 : 0.0;
-
           FanDiscovery fd =
-              new FanDiscovery(fanName, season, winner, round, winHand, bonusRp, discoveryTime);
+              new FanDiscovery(fanName, season, winner, round, winHand, discoveryTime);
           fanDiscoveryRepo.save(fd);
           count++;
           log.info(
@@ -1401,7 +1239,6 @@ public class GameService {
                     fd.getPlayer().getUserName(),
                     fd.getExampleHand(),
                     fd.getDiscoveredAt(),
-                    fd.getBonusRp(),
                     fd.getSeason()))
         .collect(Collectors.toList());
   }

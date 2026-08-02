@@ -2,6 +2,7 @@ package com.mahjong.omakase.service;
 
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.model.GameSession;
+import com.mahjong.omakase.model.GameSessionPlayer;
 import com.mahjong.omakase.model.Player;
 import com.mahjong.omakase.model.PlayerMonthlySkill;
 import com.mahjong.omakase.model.Round;
@@ -27,8 +28,12 @@ import org.springframework.transaction.annotation.Transactional;
  * into tiers (灵明石猴/美猴王/齐天大圣/斗战圣佛), runs the monthly soft reset, and writes per-month skill
  * snapshots used to render historical tier on the players-stats page.
  *
+ * <p>All three modes (国标 / 立直 / 东北) are ranked, each with its own independent rating, throne and
+ * monthly reset.
+ *
  * <p>Tiers are derived state — never persisted directly. Persisted state is the rating, the game
- * count, the all-time peak rating per mode, and the per-month snapshots.
+ * count, the all-time peak rating per mode, the per-session rating delta (for the 结算 display), and
+ * the per-month snapshots.
  */
 @Slf4j
 @Service
@@ -63,13 +68,14 @@ public class TierService {
   private final PlayerMonthlySkillRepository monthlySkillRepo;
 
   /**
-   * Update skill ratings for all human players in this completed session. Bots are skipped (their
-   * rating doesn't change and they're filtered out of the pairwise updates).
+   * Update skill ratings for all human players in this completed session, and record each player's
+   * rating change on their {@link com.mahjong.omakase.model.GameSessionPlayer} row so the session
+   * page can show it at 结算. Bots are skipped (their rating doesn't change and they're filtered out
+   * of the pairwise updates).
    */
   public void onSessionCompleted(GameSession session, Map<Long, Integer> totalScoresByPlayer) {
     if (session.getStatus() != SessionStatus.COMPLETED) return;
     GameMode mode = session.getGameMode();
-    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return;
 
     // Filter to humans with a recorded score, sorted by score descending = rank order.
     List<Map.Entry<Player, Integer>> ranked = new ArrayList<>();
@@ -83,7 +89,7 @@ public class TierService {
 
     if (ranked.size() < 2) return;
 
-    applyPairwiseElo(mode, ranked);
+    Map<Long, Double> deltas = applyPairwiseElo(mode, ranked);
 
     for (Map.Entry<Player, Integer> e : ranked) {
       Player p = e.getKey();
@@ -91,9 +97,21 @@ public class TierService {
       bumpPeak(p, mode);
       playerRepo.save(p);
     }
+
+    for (GameSessionPlayer gsp : session.getPlayers()) {
+      Player p = gsp.getPlayer();
+      if (p == null) continue;
+      Double delta = deltas.get(p.getId());
+      if (delta == null) continue;
+      gsp.setRatingDelta(delta);
+      gsp.setRatingAfter(getRating(p, mode));
+    }
+    sessionRepo.save(session);
   }
 
-  private void applyPairwiseElo(GameMode mode, List<Map.Entry<Player, Integer>> ranked) {
+  /** Applies the pairwise ELO update and returns each player's rating delta for this session. */
+  private Map<Long, Double> applyPairwiseElo(
+      GameMode mode, List<Map.Entry<Player, Integer>> ranked) {
     int n = ranked.size();
     // Snapshot starting ratings + games BEFORE the loop. Reading from the live Player object
     // inside the nested loop would let earlier pairings perturb later ones, making the result
@@ -124,9 +142,13 @@ public class TierService {
         deltas[j] -= kJ * softDelta;
       }
     }
+    Map<Long, Double> deltaByPlayer = new HashMap<>();
     for (int i = 0; i < n; i++) {
-      setRating(ranked.get(i).getKey(), mode, startRatings[i] + deltas[i]);
+      Player p = ranked.get(i).getKey();
+      setRating(p, mode, startRatings[i] + deltas[i]);
+      deltaByPlayer.put(p.getId(), deltas[i]);
     }
+    return deltaByPlayer;
   }
 
   /** Monthly soft reset: pulls every rating toward MEAN by (1 - ALPHA). Peaks are untouched. */
@@ -135,10 +157,9 @@ public class TierService {
     int n = 0;
     for (Player p : all) {
       if (p.isBot()) continue;
-      double newGuobiao = INITIAL_RATING + RESET_ALPHA * (p.getSkillGuobiao() - INITIAL_RATING);
-      double newRiichi = INITIAL_RATING + RESET_ALPHA * (p.getSkillRiichi() - INITIAL_RATING);
-      p.setSkillGuobiao(newGuobiao);
-      p.setSkillRiichi(newRiichi);
+      for (GameMode mode : GameMode.values()) {
+        setRating(p, mode, INITIAL_RATING + RESET_ALPHA * (getRating(p, mode) - INITIAL_RATING));
+      }
       playerRepo.save(p);
       n++;
     }
@@ -158,18 +179,18 @@ public class TierService {
     LocalDateTime[] range = monthUtcRangeFor(java.time.LocalDate.of(year, month, 1));
     // Bulk: 1 SQL per mode for the whole month, then map.get per (player, mode).
     Map<GameMode, Map<Long, Integer>> monthlyByMode = new java.util.EnumMap<>(GameMode.class);
-    for (GameMode mode : List.of(GameMode.GUOBIAO, GameMode.RIICHI)) {
+    for (GameMode mode : GameMode.values()) {
       monthlyByMode.put(mode, monthlyGamesByPlayer(mode, range[0], range[1]));
     }
     List<Player> all = playerRepo.findAll();
     int written = 0;
     for (Player p : all) {
       if (p.isBot()) continue;
-      for (GameMode mode : List.of(GameMode.GUOBIAO, GameMode.RIICHI)) {
+      for (GameMode mode : GameMode.values()) {
         if (getGames(p, mode) == 0) continue;
         int mgames = monthlyByMode.get(mode).getOrDefault(p.getId(), 0);
         double rating = getRating(p, mode);
-        double peak = mode == GameMode.GUOBIAO ? p.getPeakSkillGuobiao() : p.getPeakSkillRiichi();
+        double peak = getPeak(p, mode);
         PlayerMonthlySkill snap =
             monthlySkillRepo
                 .findByPlayerIdAndModeAndYearAndMonth(p.getId(), mode, year, month)
@@ -191,9 +212,7 @@ public class TierService {
 
   /** Compute tier for a player in a given mode, factoring in the throne (单 1 位). */
   public Tier computeTier(Player p, GameMode mode) {
-    Long throneId =
-        (mode == GameMode.GUOBIAO || mode == GameMode.RIICHI) ? findThroneId(mode) : null;
-    return computeTier(p, mode, throneId);
+    return computeTier(p, mode, findThroneId(mode));
   }
 
   /**
@@ -202,7 +221,6 @@ public class TierService {
    * response. Pass {@code null} when no qualified throne holder exists.
    */
   public Tier computeTier(Player p, GameMode mode, Long throneId) {
-    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return Tier.UNRANKED;
     if (getGames(p, mode) < RANKED_MIN_GAMES) return Tier.UNRANKED;
     double rating = getRating(p, mode);
     if (rating < LV2_CUTOFF) return Tier.LV1;
@@ -250,7 +268,6 @@ public class TierService {
    */
   public Map<Long, MonthlyTierInfo> computeMonthlySnapshotTiers(
       GameMode mode, int year, int month) {
-    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return Map.of();
     List<PlayerMonthlySkill> rows = monthlySkillRepo.findByModeAndYearAndMonth(mode, year, month);
     if (rows.isEmpty()) return Map.of();
 
@@ -301,7 +318,6 @@ public class TierService {
    * they had at the time, not what today's ratings would suggest.
    */
   public Map<Long, Tier> resolveTiersForDate(GameMode mode, LocalDateTime referenceUtc) {
-    if (mode != GameMode.GUOBIAO && mode != GameMode.RIICHI) return Map.of();
     YearMonth queryMonth =
         YearMonth.from(
             referenceUtc.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDate());
@@ -373,12 +389,11 @@ public class TierService {
     // 1. Reset live state.
     List<Player> all = playerRepo.findAll();
     for (Player p : all) {
-      p.setSkillGuobiao(INITIAL_RATING);
-      p.setSkillRiichi(INITIAL_RATING);
-      p.setGamesGuobiao(0);
-      p.setGamesRiichi(0);
-      p.setPeakSkillGuobiao(INITIAL_RATING);
-      p.setPeakSkillRiichi(INITIAL_RATING);
+      for (GameMode mode : GameMode.values()) {
+        setRating(p, mode, INITIAL_RATING);
+        setGames(p, mode, 0);
+        setPeak(p, mode, INITIAL_RATING);
+      }
     }
     playerRepo.saveAll(all);
 
@@ -456,29 +471,59 @@ public class TierService {
   // ===== Per-mode getters/setters =====
 
   private double getRating(Player p, GameMode mode) {
-    return mode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi();
+    return switch (mode) {
+      case GUOBIAO -> p.getSkillGuobiao();
+      case RIICHI -> p.getSkillRiichi();
+      case DONGBEI -> p.getSkillDongbei();
+    };
   }
 
   private void setRating(Player p, GameMode mode, double v) {
-    if (mode == GameMode.GUOBIAO) p.setSkillGuobiao(v);
-    else p.setSkillRiichi(v);
+    switch (mode) {
+      case GUOBIAO -> p.setSkillGuobiao(v);
+      case RIICHI -> p.setSkillRiichi(v);
+      case DONGBEI -> p.setSkillDongbei(v);
+    }
   }
 
   private int getGames(Player p, GameMode mode) {
-    return mode == GameMode.GUOBIAO ? p.getGamesGuobiao() : p.getGamesRiichi();
+    return switch (mode) {
+      case GUOBIAO -> p.getGamesGuobiao();
+      case RIICHI -> p.getGamesRiichi();
+      case DONGBEI -> p.getGamesDongbei();
+    };
+  }
+
+  private void setGames(Player p, GameMode mode, int v) {
+    switch (mode) {
+      case GUOBIAO -> p.setGamesGuobiao(v);
+      case RIICHI -> p.setGamesRiichi(v);
+      case DONGBEI -> p.setGamesDongbei(v);
+    }
   }
 
   private void incrementGames(Player p, GameMode mode) {
-    if (mode == GameMode.GUOBIAO) p.setGamesGuobiao(p.getGamesGuobiao() + 1);
-    else p.setGamesRiichi(p.getGamesRiichi() + 1);
+    setGames(p, mode, getGames(p, mode) + 1);
+  }
+
+  private double getPeak(Player p, GameMode mode) {
+    return switch (mode) {
+      case GUOBIAO -> p.getPeakSkillGuobiao();
+      case RIICHI -> p.getPeakSkillRiichi();
+      case DONGBEI -> p.getPeakSkillDongbei();
+    };
+  }
+
+  private void setPeak(Player p, GameMode mode, double v) {
+    switch (mode) {
+      case GUOBIAO -> p.setPeakSkillGuobiao(v);
+      case RIICHI -> p.setPeakSkillRiichi(v);
+      case DONGBEI -> p.setPeakSkillDongbei(v);
+    }
   }
 
   private void bumpPeak(Player p, GameMode mode) {
     double current = getRating(p, mode);
-    if (mode == GameMode.GUOBIAO) {
-      if (current > p.getPeakSkillGuobiao()) p.setPeakSkillGuobiao(current);
-    } else {
-      if (current > p.getPeakSkillRiichi()) p.setPeakSkillRiichi(current);
-    }
+    if (current > getPeak(p, mode)) setPeak(p, mode, current);
   }
 }

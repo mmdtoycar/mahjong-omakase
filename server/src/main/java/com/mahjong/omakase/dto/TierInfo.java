@@ -24,21 +24,17 @@ public class TierInfo {
   /** Current skill rating */
   private double rating;
 
-  /** Games played in this mode (国标 or 立直). */
+  /** Games played in this mode (国标 / 立直 / 东北). */
   private int games;
 
-  /** 0 if ranked, else (RANKED_MIN_GAMES - games). For "挑战中 X/10" display per mode. */
+  /** 0 if ranked, else (RANKED_MIN_GAMES - games). For "挑战中 X/5" display per mode. */
   private int gamesNeeded;
 
   /** All-time peak rating in this mode */
   private double peakRating;
 
   public static TierInfo of(TierService tierService, Player p, GameMode mode) {
-    Long throneId =
-        (mode == GameMode.GUOBIAO || mode == GameMode.RIICHI)
-            ? tierService.findThroneId(mode)
-            : null;
-    return of(tierService, p, mode, throneId);
+    return of(tierService, p, mode, tierService.findThroneId(mode));
   }
 
   public static TierInfo of(TierService tierService, Player p, GameMode mode, Long throneId) {
@@ -51,9 +47,24 @@ public class TierInfo {
           case LV3 -> 3;
           case LV4_THRONE -> 4;
         };
-    double rating = mode == GameMode.GUOBIAO ? p.getSkillGuobiao() : p.getSkillRiichi();
-    int games = mode == GameMode.GUOBIAO ? p.getGamesGuobiao() : p.getGamesRiichi();
-    double peak = mode == GameMode.GUOBIAO ? p.getPeakSkillGuobiao() : p.getPeakSkillRiichi();
+    double rating =
+        switch (mode) {
+          case GUOBIAO -> p.getSkillGuobiao();
+          case RIICHI -> p.getSkillRiichi();
+          case DONGBEI -> p.getSkillDongbei();
+        };
+    int games =
+        switch (mode) {
+          case GUOBIAO -> p.getGamesGuobiao();
+          case RIICHI -> p.getGamesRiichi();
+          case DONGBEI -> p.getGamesDongbei();
+        };
+    double peak =
+        switch (mode) {
+          case GUOBIAO -> p.getPeakSkillGuobiao();
+          case RIICHI -> p.getPeakSkillRiichi();
+          case DONGBEI -> p.getPeakSkillDongbei();
+        };
     int needed = t == Tier.UNRANKED ? Math.max(0, TierService.RANKED_MIN_GAMES - games) : 0;
     return TierInfo.builder()
         .tier(t.name())

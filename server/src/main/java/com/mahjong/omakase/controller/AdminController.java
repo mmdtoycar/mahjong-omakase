@@ -10,7 +10,6 @@ import com.mahjong.omakase.service.TierService;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -105,18 +104,6 @@ public class AdminController {
         .collect(Collectors.toMap(AppSetting::getKey, AppSetting::getValue));
   }
 
-  private static final Map<String, Predicate<String>> SETTING_VALIDATORS =
-      Map.of(
-          "participation_bonus",
-          v -> {
-            try {
-              double d = Double.parseDouble(v);
-              return d >= 0;
-            } catch (NumberFormatException e) {
-              return false;
-            }
-          });
-
   @PutMapping("/settings")
   public Map<String, String> updateSettings(
       @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -124,11 +111,6 @@ public class AdminController {
     requireAdmin(authHeader);
     body.forEach(
         (key, value) -> {
-          var validator = SETTING_VALIDATORS.get(key);
-          if (validator != null && !validator.test(value)) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST, "Invalid value for setting: " + key);
-          }
           AppSetting setting =
               appSettingRepo
                   .findById(Objects.requireNonNull(key))
@@ -137,7 +119,7 @@ public class AdminController {
           appSettingRepo.save(setting);
         });
     log.info("Admin updated settings: {}", body.keySet());
-    gameService.reloadSettings();
+    gameService.evictAllCaches();
     return body;
   }
 

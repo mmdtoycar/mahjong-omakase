@@ -5,9 +5,9 @@ interface Props {
   tier?: TierKey | null
   /** sm = list/scoreboard inline, md = card header, lg = profile/detail hero. */
   size?: 'sm' | 'md' | 'lg'
-  /** When unranked, show "X/10" progress instead of empty. Pass `gamesNeeded` to enable. */
+  /** When unranked, show "X/5" progress instead of empty. Pass `gamesNeeded` to enable. */
   gamesNeeded?: number
-  /** Optional rating overlay shown beside the image (md/lg only). */
+  /** Optional rating overlay shown beside the image (md/lg only). Unranked ratings render as "XXXX(?)". */
   rating?: number
   /** Player userName — used to detect BOT and render 🤖 instead of UNRANKED placeholder. */
   userName?: string
@@ -86,11 +86,13 @@ export const RankBadge: React.FC<Props> = ({
     )
   }
 
-  // Unranked + md/lg: bigger progress card without image
+  // Unranked + md/lg: bigger progress card without image. 段位分 still shown, suffixed with (?)
+  // because it isn't settled until RANKED_MIN_GAMES games are played.
   if (tier === 'UNRANKED') {
     return (
       <div className={`rank-badge rank-badge-unranked rank-badge-${size} ${className ?? ''}`} onClick={onClick}>
         <div className="rank-badge-progress">{showProgress ? `${progressPlayed}/5` : '未定段'}</div>
+        {rating !== undefined && <span className="rank-badge-rating">{rating.toFixed(0)}(?)</span>}
       </div>
     )
   }
