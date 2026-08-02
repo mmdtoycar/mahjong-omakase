@@ -44,5 +44,8 @@ public class Round {
   @Column(columnDefinition = "TEXT")
   private String riichiPlayerIds;
 
+  @Column(columnDefinition = "TEXT")
+  private String tenpaiPlayerIds;
+
   private Boolean backfill;
 }

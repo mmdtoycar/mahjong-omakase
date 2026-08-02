@@ -110,6 +110,7 @@ export interface RoundInfo {
   dealInPlayerName?: string | null
   prevalentWind?: number
   riichiPlayerIds?: number[]
+  tenpaiPlayerIds?: number[] // for drawn games; undefined on legacy rounds
   backfill?: boolean
 }
 
