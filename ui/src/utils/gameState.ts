@@ -97,7 +97,7 @@ export function deriveGameState(session: SessionDetail): GameState {
     handNumber,
     honba,
     kyoutaku,
-    displayName: honba > 0 ? `${windHand}（${honba}）` : windHand,
+    displayName: honba > 0 ? `${windHand}(${honba})` : windHand,
     playerCount,
   }
 }

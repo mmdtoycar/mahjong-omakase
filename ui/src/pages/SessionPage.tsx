@@ -17,7 +17,7 @@ import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
 import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
 
-const ROUND_COL_PX = 76
+const ROUND_COL_PX = 62
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -925,7 +925,7 @@ export default function SessionPage() {
                     >
                       <div className="total-score-box">
                         <div className="total-val">{displayVal}</div>
-                        {rankDelta != null && <div className="rank-delta-val">{formatDelta(rankDelta)} 段位分</div>}
+                        {rankDelta != null && <div className="rank-delta-val">{formatDelta(rankDelta)}</div>}
                       </div>
                     </td>
                   )
