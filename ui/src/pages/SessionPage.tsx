@@ -267,25 +267,6 @@ export default function SessionPage() {
     (a, b) => (session.totalScores[b.id] || 0) - (session.totalScores[a.id] || 0)
   )
 
-  // Find max fan hand(s)
-  const parseFanCount = (r: RoundInfo) => {
-    if (r.fanCount) return r.fanCount
-    if (!r.fanDetails) return 0
-    // Fallback: parse from "Name(Score)" or "Name(ScorexCount)"
-    const matches = r.fanDetails.match(/\((\d+)(x\d+)?\)/g)
-    if (!matches) return 0
-    return matches.reduce((sum: number, m: string) => {
-      const score = parseInt(m.match(/\d+/)?.[0] || '0')
-      const multMatch = m.match(/x(\d+)/)
-      const mult = multMatch ? parseInt(multMatch[1]) : 1
-      return sum + score * mult
-    }, 0)
-  }
-
-  const roundsWithFan = session.rounds.map((r) => ({ ...r, effectiveFan: parseFanCount(r) }))
-  const maxFan = roundsWithFan.reduce((max, r) => Math.max(max, r.effectiveFan), 0)
-  const bestRounds = maxFan > 0 ? roundsWithFan.filter((r) => r.effectiveFan === maxFan) : []
-
   const rankings = rankByScore(
     session.players.map((p) => ({ playerId: p.id, score: session.totalScores[p.id] || 0 })),
     (s) => s.score
@@ -930,43 +911,6 @@ export default function SessionPage() {
                 })}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {bestRounds.length > 0 && (
-        <div className="card best-hand-card">
-          <div className="best-hand-header">
-            <span className="best-hand-crown">👑</span>
-            <h2>最高番和牌</h2>
-          </div>
-          <div>
-            {bestRounds.map((round) => {
-              const winner = session.players.find((p) => p.id === round.winnerId)
-              const loser =
-                round.dealInPlayerId != null ? session.players.find((p) => p.id === round.dealInPlayerId) : null
-
-              return (
-                <div key={round.roundNumber} className="best-hand-item">
-                  <div className="best-hand-meta">
-                    <span className="best-hand-fan-count">{round.effectiveFan} 番</span>
-                    <span className="best-hand-players">
-                      <span className="winner-label">赢家:</span> {winner?.userName}
-                      {round.dealInPlayerId != null ? (
-                        <>
-                          <span className="loser-label ml-2">输家:</span> {loser?.userName || '?'}
-                        </>
-                      ) : (
-                        <span className="zimo-label ml-2">(自摸)</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="best-hand-display">
-                    <MahjongHand hand={round.winHand} details={round.fanDetails} />
-                  </div>
-                </div>
-              )
-            })}
           </div>
         </div>
       )}

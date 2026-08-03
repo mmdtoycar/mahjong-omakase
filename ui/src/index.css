@@ -979,16 +979,6 @@ table.auto-table {
   font-weight: 800;
 }
 
-.loser-label {
-  color: var(--mj-red);
-  font-weight: 800;
-}
-
-.zimo-label {
-  color: var(--sol-blue);
-  font-style: italic;
-}
-
 .session-link-label a {
   color: var(--sol-cyan);
   text-decoration: underline;
