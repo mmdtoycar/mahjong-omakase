@@ -3369,18 +3369,18 @@ table.auto-table {
   padding: 8px 16px;
   background: linear-gradient(135deg, #1b4d3e 0%, #2e7d67 100%);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgb(255 255 255 / 20%);
   border-radius: 999px;
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(27, 77, 62, 0.25);
+  box-shadow: 0 4px 12px rgb(27 77 62 / 25%);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-photo-rec:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(27, 77, 62, 0.35);
+  box-shadow: 0 6px 16px rgb(27 77 62 / 35%);
   background: linear-gradient(135deg, #215c4b 0%, #358d75 100%);
 }
 
@@ -3402,7 +3402,7 @@ table.auto-table {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 43, 54, 0.65);
+  background: rgb(0 43 54 / 65%);
   backdrop-filter: blur(4px);
   z-index: 2000;
   display: flex;
@@ -3419,7 +3419,7 @@ table.auto-table {
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 20px 40px rgb(0 0 0 / 25%);
   overflow: hidden;
   animation: modal-pop 0.25s ease-out;
 }
@@ -3429,6 +3429,7 @@ table.auto-table {
     opacity: 0;
     transform: scale(0.95) translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -3559,13 +3560,13 @@ table.auto-table {
   border-radius: 12px;
   padding: 24px 16px;
   text-align: center;
-  background: rgba(33, 140, 116, 0.03);
+  background: rgb(33 140 116 / 3%);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .upload-dropzone:hover {
-  background: rgba(33, 140, 116, 0.08);
+  background: rgb(33 140 116 / 8%);
   border-color: #1b4d3e;
 }
 
@@ -3659,7 +3660,7 @@ table.auto-table {
 .spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgb(255 255 255 / 30%);
   border-radius: 50%;
   border-top-color: #fff;
   animation: spin 0.8s linear infinite;
@@ -3736,7 +3737,7 @@ table.auto-table {
 .result-notes {
   font-size: 0.8rem;
   color: var(--sol-base01);
-  background: rgba(181, 137, 0, 0.1);
+  background: rgb(181 137 0 / 10%);
   padding: 6px 10px;
   border-radius: 6px;
 }
@@ -3873,7 +3874,7 @@ table.auto-table {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 3%);
 }
 
 .full-34-guide {
@@ -4110,9 +4111,9 @@ table.auto-table {
 }
 
 .btn-rotate-manual {
-  background: rgba(0, 0, 0, 0.7);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgb(0 0 0 / 70%);
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 40%);
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.82rem;
@@ -4126,9 +4127,13 @@ table.auto-table {
 }
 
 .btn-rotate-manual:hover {
-  background: rgba(0, 0, 0, 0.9);
-  border-color: #ffffff;
+  background: rgb(0 0 0 / 90%);
+  border-color: #fff;
   transform: translateY(-1px);
 }
 
-
+/* Inline variant used by the in-progress round form, next to 重置 */
+.btn-photo-rec-compact {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}

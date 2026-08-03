@@ -4,6 +4,7 @@ import { Meld, GameOptions, CalcResult } from '../logic/guobiao/types'
 import { calculateBestScore } from '../logic/guobiao/fan'
 import { checkTing } from '../logic/guobiao/ting'
 import { TileComponent, isSequenceDisabled } from './shared/TileComponent'
+import { ImportedHand } from '../logic/shared/importedHand'
 
 type Mode = {
   name: string
@@ -77,7 +78,7 @@ interface GuobiaoCalculatorProps {
   resetTrigger?: number
   isSelfDraw: boolean
   onIsSelfDrawChange: (val: boolean) => void
-  importedHand?: { concealed: Tile[]; melds: Meld[]; isSelfDraw?: boolean; trigger: number } | null
+  importedHand?: ImportedHand<Meld> | null
 }
 
 export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({

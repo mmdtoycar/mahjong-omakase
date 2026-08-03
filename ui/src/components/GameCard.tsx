@@ -51,6 +51,7 @@ export const GameCard: React.FC<Props> = ({
   const [fullscreen, setFullscreen] = useState(false)
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeBtnRef = useRef<HTMLButtonElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
   useEffect(
     () => () => {
@@ -68,7 +69,7 @@ export const GameCard: React.FC<Props> = ({
       }
       // Tab trap: keep focus within the dialog
       if (e.key === 'Tab') {
-        const dialog = document.querySelector('.game-fs-overlay') as HTMLElement | null
+        const dialog = overlayRef.current
         if (!dialog) return
         const focusable = Array.from(
           dialog.querySelectorAll<HTMLElement>(
@@ -195,7 +196,7 @@ export const GameCard: React.FC<Props> = ({
       </div>
 
       {fullscreen && (
-        <div className="game-fs-overlay" role="dialog" aria-modal="true" aria-label="全屏看盘">
+        <div ref={overlayRef} className="game-fs-overlay" role="dialog" aria-modal="true" aria-label="全屏看盘">
           <div className="game-fs-topbar">
             <div className="game-fs-title-area">
               <span className="game-fs-mode">{gameModeDisplayName}</span>

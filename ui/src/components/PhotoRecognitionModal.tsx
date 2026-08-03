@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Tile, TileSuit } from '../logic/shared/tiles'
 import { TileComponent } from './shared/TileComponent'
+import { recognizeHandPhoto } from '../api'
 
 export interface RecognizedHand {
   concealed: Tile[]
@@ -17,34 +18,7 @@ interface PhotoRecognitionModalProps {
   gameMode: 'GUOBIAO' | 'RIICHI'
 }
 
-export const FULL_34_TILES_STR = '1m2m3m4m5m6m7m8m9m1p2p3p4p5p6p7p8p9p1s2s3s4s5s6s7s8s9s1z2z3z4z5z6z7z'
-
-let cachedSystemCalibrationBase64: string | null = null
-
-async function getSystemCalibrationBase64(): Promise<string> {
-  if (cachedSystemCalibrationBase64) return cachedSystemCalibrationBase64
-  try {
-    const res = await fetch('/system_mahjong_calibration.jpg')
-    if (!res.ok) {
-      throw new Error(`Failed to fetch calibration image: ${res.status}`)
-    }
-    const blob = await res.blob()
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        cachedSystemCalibrationBase64 = reader.result as string
-        resolve(cachedSystemCalibrationBase64)
-      }
-      reader.onerror = (err) => reject(err)
-      reader.readAsDataURL(blob)
-    })
-  } catch (e) {
-    console.error('Failed to load builtin system calibration image:', e)
-    return ''
-  }
-}
-
-// Helper to automatically rotate base64 image on HTML5 Canvas by specified degrees (0, 90, 180, 270)
+// Rotates a base64 image on an HTML5 Canvas by 0/90/180/270 degrees.
 export function rotateImageBase64(base64: string, degrees: number): Promise<string> {
   if (degrees === 0) return Promise.resolve(base64)
   return new Promise((resolve) => {
@@ -74,7 +48,7 @@ export function rotateImageBase64(base64: string, degrees: number): Promise<stri
   })
 }
 
-// Helper to safely parse JSON and repair potential trailing truncation
+// Parses model JSON, making a best-effort repair of output truncated mid-token.
 export function safeParseJSON(str: string): any {
   let clean = str.trim()
   if (clean.startsWith('```')) {
@@ -85,10 +59,19 @@ export function safeParseJSON(str: string): any {
   } catch (err) {
     console.warn('Initial JSON parse failed, attempting repair:', err)
     let repaired = clean
-    const openQuotes = (repaired.match(/"/g) || []).length
-    if (openQuotes % 2 !== 0) {
-      repaired += '"'
+
+    // An unpaired quote means the output stopped inside a string. Drop that partial
+    // token rather than closing it, so we never invent a tile that was never read.
+    if ((repaired.match(/"/g) || []).length % 2 !== 0) {
+      repaired = repaired.slice(0, repaired.lastIndexOf('"'))
     }
+    // Truncation almost always leaves a dangling separator or a key with no value;
+    // balancing brackets on top of those still yields invalid JSON.
+    repaired = repaired
+      .replace(/[\s,]+$/, '')
+      .replace(/,?\s*"[^"]*"\s*:\s*$/, '')
+      .replace(/[\s,]+$/, '')
+
     const openBrackets = (repaired.match(/\[/g) || []).length - (repaired.match(/\]/g) || []).length
     for (let i = 0; i < openBrackets; i++) repaired += ']'
     const openBraces = (repaired.match(/\{/g) || []).length - (repaired.match(/\}/g) || []).length
@@ -102,101 +85,11 @@ export function safeParseJSON(str: string): any {
   }
 }
 
-const DEFAULT_KEYS: string[] = []
-
-function getApiKeyPool(): string[] {
-  const envKeysStr = (import.meta.env.VITE_GEMINI_API_KEYS as string) || ''
-  const envKeySingle = (import.meta.env.VITE_GEMINI_API_KEY as string) || ''
-
-  const pool: string[] = []
-  if (envKeysStr) {
-    pool.push(
-      ...envKeysStr
-        .split(',')
-        .map((k) => k.trim())
-        .filter(Boolean)
-    )
-  }
-  if (envKeySingle && !pool.includes(envKeySingle)) {
-    pool.push(envKeySingle)
-  }
-  for (const k of DEFAULT_KEYS) {
-    if (!pool.includes(k)) pool.push(k)
-  }
-  return pool
-}
-
-let currentKeyIndex = 0
-
-export async function callGeminiApiWithKeyRotation(contents: any[], model: string = 'gemini-3.6-flash'): Promise<any> {
-  const keys = getApiKeyPool()
-  if (keys.length === 0) {
-    throw new Error('未配置任何 Gemini API Key')
-  }
-
-  let lastError: any = null
-
-  for (let attempt = 0; attempt < keys.length; attempt++) {
-    const key = keys[(currentKeyIndex + attempt) % keys.length]
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
-      key
-    )}`
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30_000)
-
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            response_mime_type: 'application/json',
-          },
-        }),
-        signal: controller.signal,
-      })
-      clearTimeout(timeoutId)
-
-      const data = await res.json()
-
-      if (res.ok && !data.error) {
-        currentKeyIndex = (currentKeyIndex + attempt + 1) % keys.length
-        return data
-      }
-
-      const errMsg = data.error?.message || ''
-      const status = res.status
-      console.warn(`Key attempt ${attempt + 1} failed (${status}):`, errMsg)
-
-      // Only rotate keys for quota/rate-limit errors; propagate other errors immediately.
-      if (
-        status !== 429 &&
-        status !== 503 &&
-        !errMsg.toLowerCase().includes('quota') &&
-        !errMsg.toLowerCase().includes('resource')
-      ) {
-        throw new Error(errMsg || `API 请求错误 (${status})`)
-      }
-
-      lastError = new Error(errMsg || `API 请求错误 (${status})`)
-    } catch (err: any) {
-      clearTimeout(timeoutId)
-      if (err.name === 'AbortError') {
-        lastError = new Error('请求超时，请检查网络后重试')
-        continue
-      }
-      // Non-quota fetch errors (e.g. network) — try next key
-      console.warn(`Network error on key attempt ${attempt + 1}:`, err)
-      lastError = err
-    }
-  }
-
-  throw lastError || new Error('所有 Gemini API Key 额度均已耗尽或服务暂不可用')
-}
-
-// Helper to normalize EXIF camera orientation and force landscape mode (long edge horizontal X-axis, short edge vertical Y-axis)
+// Downscales an upload to at most 2048px and forces landscape (long edge on the X axis).
+// EXIF orientation is not decoded here — browsers already apply it when drawing an <img>
+// to a canvas (`image-orientation: from-image` is the default).
+// Portrait photos are rotated 90° clockwise, which is a guess: the ↺ button in the modal
+// is there for when the camera was held the other way.
 export function normalizeUploadedImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -207,10 +100,9 @@ export function normalizeUploadedImage(file: File): Promise<string> {
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')
 
-        let w = img.width
-        let h = img.height
+        const w = img.width
+        const h = img.height
 
-        // Check if image is vertical (h > w). If so, rotate 90° clockwise to force landscape (width > height, long edge left-to-right)
         const isVertical = h > w
 
         let targetW = isVertical ? h : w
@@ -256,7 +148,11 @@ export function parseTileString(s: string): Tile | null {
   const clean = s.trim().toLowerCase()
   const m = clean.match(/^([1-9])([mpsz])$/)
   if (m) {
-    return new Tile(m[2] as TileSuit, parseInt(m[1], 10))
+    const suit = m[2] as TileSuit
+    const rank = parseInt(m[1], 10)
+    // Honors stop at 7 — "8z"/"9z" would build a tile with no face.
+    if (rank > (suit === 'z' ? 7 : 9)) return null
+    return new Tile(suit, rank)
   }
 
   const charMap: Record<string, Tile> = {
@@ -413,22 +309,23 @@ export function parseTileStringSequence(str: string): Tile[] {
 
   // 1. Match standard notation 123m 456p 789s 11155z
   const mpszMatches = Array.from(str.matchAll(/([1-9]+)([mpsz])/gi))
-  if (mpszMatches.length > 0) {
-    for (const match of mpszMatches) {
-      const digits = match[1]
-      const suit = match[2].toLowerCase() as TileSuit
-      for (const d of digits) {
-        const rank = parseInt(d, 10)
-        if (rank >= 1 && rank <= (suit === 'z' ? 7 : 9)) {
-          tiles.push(new Tile(suit, rank))
-        }
+  for (const match of mpszMatches) {
+    const digits = match[1]
+    const suit = match[2].toLowerCase() as TileSuit
+    for (const d of digits) {
+      const rank = parseInt(d, 10)
+      if (rank >= 1 && rank <= (suit === 'z' ? 7 : 9)) {
+        tiles.push(new Tile(suit, rank))
       }
     }
-    if (tiles.length > 0) return tiles
   }
 
+  // Strip what step 1 consumed, then keep going: a mixed string like "123m 东南" must not
+  // lose its Chinese tiles just because the ASCII notation matched first.
+  const remainder = mpszMatches.length > 0 ? str.replace(/([1-9]+)([mpsz])/gi, ' ') : str
+
   // 2. Parse individual tokens or Chinese names (e.g. 1万, 2饼, 东)
-  const tokens = str.split(/[\s,，、;\n]+/)
+  const tokens = remainder.split(/[\s,，、;\n]+/)
   for (const tok of tokens) {
     if (!tok.trim()) continue
     const t = parseTileString(tok)
@@ -472,13 +369,48 @@ export function parseTileStringSequence(str: string): Tile[] {
   return tiles
 }
 
+/**
+ * Sanity-checks a recognized hand before it can be pushed into a calculator.
+ *
+ * A gang shows 4 physical tiles but occupies 3 slots, so hand size is counted that way.
+ * `blocking` problems are ones no real hand can have, and the model does occasionally
+ * produce them (e.g. echoing the whole 34-tile legend back as the hand).
+ */
+export function checkRecognizedHand(hand: RecognizedHand): { blocking: string[]; warnings: string[] } {
+  const blocking: string[] = []
+  const warnings: string[] = []
+
+  const meldSlots = hand.melds.reduce((sum, m) => sum + (m.tiles.length === 4 ? 3 : m.tiles.length), 0)
+  const size = hand.concealed.length + meldSlots
+
+  const counts = new Map<string, number>()
+  for (const t of [...hand.concealed, ...hand.melds.flatMap((m) => m.tiles)]) {
+    const key = `${t.rank}${t.suit}`
+    counts.set(key, (counts.get(key) || 0) + 1)
+  }
+  const over = [...counts.entries()].filter(([, n]) => n > 4).map(([key]) => key)
+  if (over.length > 0) {
+    blocking.push(`${over.join('、')} 出现超过 4 张，请修正后再填入`)
+  }
+
+  if (size > 14) {
+    blocking.push(`共识别出 ${size} 张牌（含副露），超过一手牌上限，请删掉多余的牌`)
+  } else if (size < 13) {
+    warnings.push(`只识别出 ${size} 张牌，可能有遗漏，建议补齐后再填入`)
+  }
+
+  return { blocking, warnings }
+}
+
 export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
   isOpen,
   onClose,
   onApplyHand,
   gameMode,
 }) => {
-  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  // The normalized upload, kept pristine so rotation never compounds JPEG loss.
+  const [sourceImage, setSourceImage] = useState<string | null>(null)
+  const [rotation, setRotation] = useState(0)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
@@ -487,6 +419,15 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
   // Tile Selection Modal for editing misrecognized tiles
   const [editingTileIndex, setEditingTileIndex] = useState<number | null>(null)
 
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -494,32 +435,41 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
     // Clear the input value so re-selecting the same file triggers onChange again
     e.target.value = ''
     if (file) {
-      setSelectedImage(file)
       setError(null)
       setResult(null)
+      setRotation(0)
       try {
         const normalizedBase64 = await normalizeUploadedImage(file)
+        setSourceImage(normalizedBase64)
         setImagePreview(normalizedBase64)
       } catch (err) {
         console.error('Failed to normalize photo:', err)
         const reader = new FileReader()
-        reader.onloadend = () => setImagePreview(reader.result as string)
+        reader.onloadend = () => {
+          setSourceImage(reader.result as string)
+          setImagePreview(reader.result as string)
+        }
         reader.readAsDataURL(file)
       }
     }
   }
 
   const handleRotateCounterClockwise = async () => {
-    if (!imagePreview) return
+    if (!sourceImage) return
+    // Always re-render from the pristine normalized upload: rotating the previous preview
+    // would stack a fresh JPEG re-encode on every press.
+    const nextRotation = (rotation + 270) % 360
     try {
-      const rotated = await rotateImageBase64(imagePreview, 270)
+      const rotated = await rotateImageBase64(sourceImage, nextRotation)
+      setRotation(nextRotation)
       setImagePreview(rotated)
     } catch (err) {
       console.error('Failed to rotate image:', err)
     }
   }
+
   const handleRecognize = async () => {
-    if (!selectedImage || !imagePreview) {
+    if (!imagePreview) {
       setError('请先选择或拍摄一张麻将手牌图片')
       return
     }
@@ -529,110 +479,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
     setResult(null)
 
     try {
-      const contents: any[] = []
-
-      // 1. Single Master Calibration Image Context Turn (High Speed & Token-Efficient)
-      const systemCalibBase64 = await getSystemCalibrationBase64()
-
-      if (systemCalibBase64) {
-        const mimeType = systemCalibBase64.match(/^data:(image\/[a-zA-Z+]+);base64,/)?.[1] || 'image/jpeg'
-        const data = systemCalibBase64.split(',')[1]
-        const fullTiles = parseTileList(FULL_34_TILES_STR)
-
-        const promptText = `Master reference calibration photo containing ALL 34 mahjong tile patterns for this physical set:
-Row 1: 1m to 9m (1万 to 9万)
-Row 2: 1p to 9p (1饼/筒 to 9饼/筒)
-Row 3: 1s to 9s (1条/索 to 9条/索)
-Row 4: 1z to 7z (东,南,西,北,中,发,白)
-Use this master visual legend to identify any tile in this set matching these patterns in any orientation (0° upright, 90° sideways, 180° inverted).`
-
-        const sampleJson = {
-          concealed: fullTiles.map((t) => `${t.rank}${t.suit}`),
-          melds: [],
-          winningTile: null,
-          notes: 'Master 34-tile legend stored.',
-        }
-
-        contents.push({
-          role: 'user',
-          parts: [{ text: promptText }, { inline_data: { mime_type: mimeType, data } }],
-        })
-
-        contents.push({
-          role: 'model',
-          parts: [{ text: JSON.stringify(sampleJson) }],
-        })
-      }
-
-      // 2. Prepare Target Image & Fast Visual Identification Prompt
-      const targetMimeType = imagePreview.match(/^data:(image\/[a-zA-Z+]+);base64,/)?.[1] || 'image/jpeg'
-      const targetBase64 = imagePreview.split(',')[1]
-
-      const systemPrompt = `You are a world-class, ultra-fast Mahjong Tile Recognition Expert.
-Analyze this mahjong hand image with high precision.
-
-### Strict Spatial Demarcation (左右空间划分与全数量把关):
-1. **LEFT SIDE: Standing Concealed Hand (暗牌/立牌)**:
-   - ALL upright standing tiles on the LEFT side belong strictly to "concealed".
-   - Count EVERY standing tile block one by one.
-   - List EVERY tile individually in array "concealed": ["1m", "2m", "3m", "4m", "5m", "6m", "7m", "8m", "9m", "1p", "2p", "3p", "5z", "5z"].
-   - DO NOT skip any standing tile on the left! DO NOT use range hyphens like "1-9m"!
-
-2. **RIGHT SIDE: Exposed Melds & Kangs (副露/吃碰杠)**:
-   - ALL flat/exposed tiles or sets set aside on the RIGHT side belong strictly to "melds".
-   - Note: Exposed melds may be stacked in multiple vertical rows on the right.
-   - Chi/Shun (吃/顺): 3 consecutive -> { "type": "shun", "tiles": ["1m","2m","3m"], "isOpen": true }
-   - Pon/Ke (碰/刻): 3 identical -> { "type": "ke", "tiles": ["5z","5z","5z"], "isOpen": true }
-   - Ming-Gang (明杠): 4 face-up identical -> { "type": "gang", "tiles": ["6p","6p","6p","6p"], "isOpen": true }
-   - An-Gang (暗杠): 4 tiles (2 face-UP, 2 face-DOWN backs) -> { "type": "gang", "tiles": ["8s","8s","8s","8s"], "isOpen": false }
-   - DO NOT mix right-side exposed melds into the left-side concealed hand!
-
-### Critical Tile Pattern Audit Rules (防错识别自查规则):
-1. **5s (五条) vs 4s (四条)**:
-   - **5s (五条)**: Has 4 corner bamboo sticks PLUS ONE DISTINCT RED BAMBOO STICK IN THE EXACT CENTER!
-   - **4s (四条)**: Has ONLY 4 corner bamboo sticks with EMPTY center space (NO red center stick).
-   - **MUST CHECK**: If a bamboo tile has a RED vertical stick in the middle surrounded by 4 green sticks, IT IS ALWAYS 5s ("5s"), NEVER 4s!
-2. **Anti-Merge Seams**:
-   - **2p vs 4p**: Two adjacent 2-dot tiles = TWO 2p TILES ("2p", "2p"), NEVER one 4p tile!
-   - **2s vs 4s**: Two adjacent 2-bamboo tiles = TWO 2s TILES ("2s", "2s"), NEVER one 4s tile!
-- Inspect vertical seams between tiles to count individual rectangular blocks accurately.
-
-### Strict English Output Requirement (全英文输出，提升生成速度与稳定性):
-- Write ALL JSON keys and values (especially the 'notes' string) STRICTLY in ENGLISH ASCII characters only.
-- Example notes: "Left hand 13 standing tiles, Right 1 meld row An-Gang of 8s".
-- DO NOT use Chinese characters anywhere in the JSON output!
-
-### Return Format:
-Return ONLY valid JSON:
-{
-  "notes": "Left hand 13 standing tiles, Right 1 meld row An-Gang of 8s",
-  "concealed": ["1m", "2m", "3m", "4m", "5m", "6m", "7m", "8m", "9m", "1p", "2p", "3p", "5z"],
-  "melds": [
-    { "type": "gang", "tiles": ["8s", "8s", "8s", "8s"], "isOpen": false }
-  ],
-  "winningTile": "5z",
-  "isSelfDraw": false
-}`
-
-      contents.push({
-        role: 'user',
-        parts: [
-          { text: systemPrompt },
-          {
-            inline_data: {
-              mime_type: targetMimeType,
-              data: targetBase64,
-            },
-          },
-        ],
-      })
-
-      const data = await callGeminiApiWithKeyRotation(contents, 'gemini-3.6-flash')
-
-      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text
-      if (!responseText) {
-        throw new Error('模型未返回有效内容')
-      }
+      // The prompt, the 34-tile calibration legend and the API key all live on the server.
+      const mimeType = imagePreview.match(/^data:(image\/[a-zA-Z+]+);base64,/)?.[1] || 'image/jpeg'
+      const responseText = await recognizeHandPhoto(imagePreview.split(',')[1], mimeType)
 
       const jsonOutput = safeParseJSON(responseText)
 
@@ -644,7 +493,7 @@ Return ONLY valid JSON:
         jsonOutput.concealed_tiles ||
         []
 
-      let concealedTiles = parseTileList(rawConcealed)
+      const concealedTiles = parseTileList(rawConcealed)
 
       const melds: { type: string; tiles: Tile[]; isOpen: boolean }[] = []
 
@@ -661,10 +510,10 @@ Return ONLY valid JSON:
         }
       }
 
-      let winTile = parseTileString(jsonOutput.winningTile)
+      const winTile = parseTileString(jsonOutput.winningTile)
 
       if (winTile) {
-        const foundIdx = concealedTiles.findIndex((t) => t.equals(winTile!))
+        const foundIdx = concealedTiles.findIndex((t) => t.equals(winTile))
         if (foundIdx !== -1) {
           concealedTiles.splice(foundIdx, 1)
         }
@@ -680,7 +529,7 @@ Return ONLY valid JSON:
       })
     } catch (err: any) {
       console.error('Photo recognition error:', err)
-      setError(err.message || '识别失败，请检查图片或 API Key')
+      setError(err.message || '识别失败，请重试')
     } finally {
       setLoading(false)
     }
@@ -708,8 +557,10 @@ Return ONLY valid JSON:
     setEditingTileIndex(null)
   }
 
+  const issues = result ? checkRecognizedHand(result) : null
+
   const handleApply = () => {
-    if (result) {
+    if (result && issues && issues.blocking.length === 0) {
       onApplyHand(result)
       onClose()
     }
@@ -717,11 +568,18 @@ Return ONLY valid JSON:
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card photo-rec-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal-card photo-rec-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="拍照识别手牌"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <div className="photo-rec-title">
             <span className="photo-rec-icon">📷</span>
             <div>
+              <h3>拍照识别</h3>
               <p className="photo-rec-subtitle">高精度 AI 自动识别手牌与副露</p>
             </div>
           </div>
@@ -756,7 +614,7 @@ Return ONLY valid JSON:
           )}
 
           {/* Main Upload Area */}
-          <div className="upload-container">
+          <div>
             {!imagePreview ? (
               <label className="upload-dropzone">
                 <input
@@ -784,13 +642,13 @@ Return ONLY valid JSON:
           {/* Action button */}
           {!result && (
             <button
-              className="btn btn-accent btn-block btn-lg photo-rec-submit-btn"
-              disabled={loading || !selectedImage}
+              className="btn btn-accent photo-rec-submit-btn"
+              disabled={loading || !imagePreview}
               onClick={handleRecognize}
             >
               {loading ? (
                 <span className="loading-spinner-wrap">
-                  <span className="spinner"></span> 正在使用 Gemini 3.6 Flash 智能识别中...
+                  <span className="spinner"></span> AI 正在识别中...
                 </span>
               ) : (
                 '✨ 开始 AI 拍照识别'
@@ -881,8 +739,19 @@ Return ONLY valid JSON:
                 </div>
               )}
 
+              {issues &&
+                [...issues.blocking, ...issues.warnings].map((msg, i) => (
+                  <div key={i} className="photo-rec-error">
+                    ⚠️ {msg}
+                  </div>
+                ))}
+
               <div className="result-actions">
-                <button className="btn btn-success btn-lg" onClick={handleApply}>
+                <button
+                  className="btn btn-success"
+                  disabled={!issues || issues.blocking.length > 0}
+                  onClick={handleApply}
+                >
                   ✅ 一键填入{gameMode === 'GUOBIAO' ? '国标' : '立直'}算番器
                 </button>
               </div>

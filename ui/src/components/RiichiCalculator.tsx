@@ -3,6 +3,7 @@ import { Tile } from '../logic/shared/tiles'
 import { Meld, GameOptions, CalcResult } from '../logic/riichi/types'
 import { calculateHand } from '../logic/riichi/score'
 import { TileComponent, isSequenceDisabled } from './shared/TileComponent'
+import { ImportedHand } from '../logic/shared/importedHand'
 
 type Mode = {
   name: string
@@ -84,7 +85,7 @@ interface RiichiCalculatorProps {
   isSelfDraw: boolean
   onIsSelfDrawChange: (val: boolean) => void
   playerCount?: number
-  importedHand?: { concealed: Tile[]; melds: Meld[]; isSelfDraw?: boolean; trigger: number } | null
+  importedHand?: ImportedHand<Meld> | null
 }
 
 export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({

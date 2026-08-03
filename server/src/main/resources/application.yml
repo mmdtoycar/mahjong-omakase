@@ -38,3 +38,9 @@ app:
 
 google:
   client-id: 471645797225-qtqf1nlv8l807tblfhpa9d36p5q456l3.apps.googleusercontent.com
+
+# Photo hand recognition. Keys stay server-side — never expose them to the browser.
+# Comma-separate several keys to rotate away from one that hit its quota.
+gemini:
+  api-keys: ${GEMINI_API_KEYS:}
+  model: ${GEMINI_MODEL:gemini-3.6-flash}

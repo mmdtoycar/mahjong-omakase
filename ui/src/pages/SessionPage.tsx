@@ -13,9 +13,9 @@ import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
 import { TableStrengthTag } from '../components/TableStrengthTag'
 import { PhotoRecognitionModal, RecognizedHand } from '../components/PhotoRecognitionModal'
-import { Tile } from '../logic/shared/tiles'
 import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
+import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -42,18 +42,8 @@ export default function SessionPage() {
 
   // Photo Recognition State
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false)
-  const [gbImportedHand, setGbImportedHand] = useState<{
-    concealed: Tile[]
-    melds: GuobiaoMeld[]
-    isSelfDraw?: boolean
-    trigger: number
-  } | null>(null)
-  const [riichiImportedHand, setRiichiImportedHand] = useState<{
-    concealed: Tile[]
-    melds: RiichiMeld[]
-    isSelfDraw?: boolean
-    trigger: number
-  } | null>(null)
+  const [gbImportedHand, setGbImportedHand] = useState<ImportedHand<GuobiaoMeld> | null>(null)
+  const [riichiImportedHand, setRiichiImportedHand] = useState<ImportedHand<RiichiMeld> | null>(null)
 
   const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
     if (s !== null) {
@@ -137,6 +127,8 @@ export default function SessionPage() {
     setIsChomboManual(false)
     setCalcError('')
     setCalcResetCount((prev) => prev + 1)
+    setGbImportedHand(null)
+    setRiichiImportedHand(null)
   }
 
   const handlePlayerClick = (pid: string) => {
@@ -452,36 +444,19 @@ export default function SessionPage() {
 
   const handleApplyRecognizedHand = (hand: RecognizedHand) => {
     if (isGuobiao) {
-      const gbMelds: GuobiaoMeld[] = hand.melds.map((m) => {
-        let type: 'shun' | 'ke' | 'gang' = 'shun'
-        const lower = m.type.toLowerCase()
-        if (lower.includes('ke') || lower.includes('pon') || lower.includes('peng')) {
-          type = 'ke'
-        } else if (lower.includes('gang') || lower.includes('kan')) {
-          type = 'gang'
-        }
-        return { type, tiles: m.tiles, isOpen: m.isOpen }
-      })
-      if (hand.isSelfDraw !== undefined) setIsSelfDraw(hand.isSelfDraw)
-      setGbImportedHand({ concealed: hand.concealed, melds: gbMelds, isSelfDraw: hand.isSelfDraw, trigger: Date.now() })
-    } else if (isRiichi) {
-      const rMelds: RiichiMeld[] = hand.melds.map((m) => {
-        let type: 'shunzi' | 'kezi' | 'gangzi' = 'shunzi'
-        const lower = m.type.toLowerCase()
-        if (lower.includes('ke') || lower.includes('pon') || lower.includes('peng')) {
-          type = 'kezi'
-        } else if (lower.includes('gang') || lower.includes('kan')) {
-          type = 'gangzi'
-        }
-        return { type, tiles: m.tiles, isOpen: m.isOpen }
-      })
-      if (hand.isSelfDraw !== undefined) setIsSelfDraw(hand.isSelfDraw)
-      setRiichiImportedHand({
+      setIsSelfDraw(hand.isSelfDraw)
+      setGbImportedHand((prev) => ({
         concealed: hand.concealed,
-        melds: rMelds,
-        isSelfDraw: hand.isSelfDraw,
-        trigger: Date.now(),
-      })
+        melds: toGuobiaoMelds(hand.melds),
+        trigger: (prev?.trigger ?? 0) + 1,
+      }))
+    } else if (isRiichi) {
+      setIsSelfDraw(hand.isSelfDraw)
+      setRiichiImportedHand((prev) => ({
+        concealed: hand.concealed,
+        melds: toRiichiMelds(hand.melds),
+        trigger: (prev?.trigger ?? 0) + 1,
+      }))
     }
   }
 

@@ -3,9 +3,9 @@ import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { RiichiCalculator } from '../components/RiichiCalculator'
 import { WindSelectorRow } from '../components/WindSelectorRow'
 import { PhotoRecognitionModal, RecognizedHand } from '../components/PhotoRecognitionModal'
-import { Tile } from '../logic/shared/tiles'
 import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
+import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
 
 type GameMode = 'GUOBIAO' | 'RIICHI'
 
@@ -18,24 +18,14 @@ const CalculatorPage: React.FC = () => {
   const [gbQuanfeng, setGbQuanfeng] = useState(1)
   const [gbMenfeng, setGbMenfeng] = useState(1)
   const [gbResetTrigger, setGbResetTrigger] = useState(0)
-  const [gbImportedHand, setGbImportedHand] = useState<{
-    concealed: Tile[]
-    melds: GuobiaoMeld[]
-    isSelfDraw?: boolean
-    trigger: number
-  } | null>(null)
+  const [gbImportedHand, setGbImportedHand] = useState<ImportedHand<GuobiaoMeld> | null>(null)
 
   // Standalone state for Riichi
   const [riichiIsSelfDraw, setRiichiIsSelfDraw] = useState(false)
   const [riichiChangfeng, setRiichiChangfeng] = useState(1)
   const [riichiZifeng, setRiichiZifeng] = useState(1)
   const [riichiResetTrigger, setRiichiResetTrigger] = useState(0)
-  const [riichiImportedHand, setRiichiImportedHand] = useState<{
-    concealed: Tile[]
-    melds: RiichiMeld[]
-    isSelfDraw?: boolean
-    trigger: number
-  } | null>(null)
+  const [riichiImportedHand, setRiichiImportedHand] = useState<ImportedHand<RiichiMeld> | null>(null)
 
   const handleGbReset = useCallback(() => {
     setGbIsSelfDraw(false)
@@ -56,53 +46,19 @@ const CalculatorPage: React.FC = () => {
   // Handle applying hand from Photo Recognition modal
   const handleApplyRecognizedHand = (hand: RecognizedHand) => {
     if (activeTab === 'GUOBIAO') {
-      const gbMelds: GuobiaoMeld[] = hand.melds.map((m) => {
-        let type: 'shun' | 'ke' | 'gang' = 'shun'
-        const lower = m.type.toLowerCase()
-        if (lower.includes('ke') || lower.includes('pon') || lower.includes('peng')) {
-          type = 'ke'
-        } else if (lower.includes('gang') || lower.includes('kan')) {
-          type = 'gang'
-        }
-        return {
-          type,
-          tiles: m.tiles,
-          isOpen: m.isOpen,
-        }
-      })
-      if (hand.isSelfDraw !== undefined) {
-        setGbIsSelfDraw(hand.isSelfDraw)
-      }
-      setGbImportedHand({
+      setGbIsSelfDraw(hand.isSelfDraw)
+      setGbImportedHand((prev) => ({
         concealed: hand.concealed,
-        melds: gbMelds,
-        isSelfDraw: hand.isSelfDraw,
-        trigger: Date.now(),
-      })
+        melds: toGuobiaoMelds(hand.melds),
+        trigger: (prev?.trigger ?? 0) + 1,
+      }))
     } else {
-      const rMelds: RiichiMeld[] = hand.melds.map((m) => {
-        let type: 'shunzi' | 'kezi' | 'gangzi' = 'shunzi'
-        const lower = m.type.toLowerCase()
-        if (lower.includes('ke') || lower.includes('pon') || lower.includes('peng')) {
-          type = 'kezi'
-        } else if (lower.includes('gang') || lower.includes('kan')) {
-          type = 'gangzi'
-        }
-        return {
-          type,
-          tiles: m.tiles,
-          isOpen: m.isOpen,
-        }
-      })
-      if (hand.isSelfDraw !== undefined) {
-        setRiichiIsSelfDraw(hand.isSelfDraw)
-      }
-      setRiichiImportedHand({
+      setRiichiIsSelfDraw(hand.isSelfDraw)
+      setRiichiImportedHand((prev) => ({
         concealed: hand.concealed,
-        melds: rMelds,
-        isSelfDraw: hand.isSelfDraw,
-        trigger: Date.now(),
-      })
+        melds: toRiichiMelds(hand.melds),
+        trigger: (prev?.trigger ?? 0) + 1,
+      }))
     }
   }
 
@@ -112,7 +68,7 @@ const CalculatorPage: React.FC = () => {
   return (
     <div className="container calc-page-wrapper">
       <div className="calc-header-bar">
-        <div className="tabs calc-tabs">
+        <div className="tabs">
           <button
             className={`calc-mode-tab-btn ${activeTab === 'GUOBIAO' ? 'active' : ''}`}
             onClick={() => setActiveTab('GUOBIAO')}
