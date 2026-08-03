@@ -1,8 +1,7 @@
 package com.mahjong.omakase.dto;
 
-import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.model.GameSession;
-import com.mahjong.omakase.service.scoring.RpCalculator;
+import com.mahjong.omakase.service.scoring.RankCalculator;
 import java.time.LocalDateTime;
 import java.util.*;
 import lombok.Getter;
@@ -18,11 +17,10 @@ public class SessionSummaryResponse {
   private int playerCount;
   private String status;
   private LocalDateTime createdAt;
-  private Double participationBonus;
   private int roundCount;
   private List<PlayerPerformanceDTO> rankings;
 
-  /** "铳之间" / "狠之间" / "贪之间" / "狱之间" / "大圣之间" — null if mode doesn't track ratings. */
+  /** "铳之间" / "狠之间" / "贪之间" / "狱之间" / "大圣之间" */
   private String tableStrength;
 
   public static SessionSummaryResponse from(GameSession session) {
@@ -34,7 +32,6 @@ public class SessionSummaryResponse {
     r.playerCount = session.getPlayerCount();
     r.status = session.getStatus().name();
     r.createdAt = session.getCreatedAt();
-    r.participationBonus = session.getParticipationBonus();
     r.roundCount = session.getRounds() != null ? session.getRounds().size() : 0;
     r.rankings = calculateRankings(session);
     return r;
@@ -64,10 +61,7 @@ public class SessionSummaryResponse {
       }
     }
 
-    GameMode mode = session.getGameMode();
-    List<RpCalculator.RankEntry> ranked =
-        RpCalculator.rankPlayers(
-            totals, mode.getRpFactor(), mode.getUmaDist(session.getPlayerCount()));
+    List<RankCalculator.RankEntry> ranked = RankCalculator.rankPlayers(totals);
 
     List<PlayerPerformanceDTO> results = new ArrayList<>();
     for (var entry : ranked) {
@@ -76,7 +70,6 @@ public class SessionSummaryResponse {
               .playerId(entry.playerId())
               .userName(names.get(entry.playerId()))
               .totalScore(entry.score())
-              .rp(entry.rp())
               .rank(entry.rank())
               .build());
     }

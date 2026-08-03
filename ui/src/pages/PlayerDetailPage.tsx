@@ -55,26 +55,24 @@ export default function PlayerDetailPage() {
           </div>
           {tier && (
             <div className="player-detail-tiers">
-              <div className="player-detail-tier-cell">
-                <span className="player-detail-tier-mode">国标</span>
-                <RankBadge
-                  tier={tier.guobiao.tier}
-                  size="md"
-                  userName={tier.userName}
-                  rating={tier.guobiao.tier === 'UNRANKED' ? undefined : tier.guobiao.rating}
-                  gamesNeeded={tier.guobiao.gamesNeeded}
-                />
-              </div>
-              <div className="player-detail-tier-cell">
-                <span className="player-detail-tier-mode">立直</span>
-                <RankBadge
-                  tier={tier.riichi.tier}
-                  size="md"
-                  userName={tier.userName}
-                  rating={tier.riichi.tier === 'UNRANKED' ? undefined : tier.riichi.rating}
-                  gamesNeeded={tier.riichi.gamesNeeded}
-                />
-              </div>
+              {(
+                [
+                  ['国标', tier.guobiao],
+                  ['立直', tier.riichi],
+                  ['东北', tier.dongbei],
+                ] as const
+              ).map(([label, info]) => (
+                <div key={label} className="player-detail-tier-cell">
+                  <span className="player-detail-tier-mode">{label}</span>
+                  <RankBadge
+                    tier={info.tier}
+                    size="md"
+                    userName={tier.userName}
+                    rating={info.rating}
+                    gamesNeeded={info.gamesNeeded}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>

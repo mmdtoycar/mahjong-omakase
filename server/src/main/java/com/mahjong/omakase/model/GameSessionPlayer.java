@@ -27,4 +27,14 @@ public class GameSessionPlayer {
 
   @Column(name = "seat")
   private Integer seat;
+
+  /**
+   * 本场对局结束后段位分的变化量. Written by {@link com.mahjong.omakase.service.TierService#onSessionCompleted}.
+   * Null for sessions that are still in progress, or completed sessions from before this column
+   * existed (run the tier backfill to fill those in).
+   */
+  @Column private Double ratingDelta;
+
+  /** 本场对局结束后的段位分. Null under the same conditions as {@link #ratingDelta}. */
+  @Column private Double ratingAfter;
 }

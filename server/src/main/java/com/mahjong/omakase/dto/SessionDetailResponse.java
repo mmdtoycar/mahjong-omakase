@@ -21,11 +21,11 @@ public class SessionDetailResponse {
   private List<PlayerInfo> players;
   private List<RoundInfo> rounds;
   private Map<Long, Integer> totalScores;
-  private double rpFactor;
-  private double rpOrigin;
-  private double[] umaDist;
-  private Double participationBonus;
-  private Map<Long, Double> playerBonuses = Collections.emptyMap();
+  private double startingPoints;
+
+  /** 每位玩家本场对局的段位分变化. Empty while the session is in progress. */
+  private Map<Long, Double> ratingDeltas = Collections.emptyMap();
+
   private String tableStrength;
 
   @Getter

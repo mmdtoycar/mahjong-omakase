@@ -223,12 +223,9 @@ const FanTablePage: React.FC = () => {
                           <span
                             className="badge badge-discovery badge-sm"
                             style={{ fontSize: nameFontSize(currentDiscovery.playerName) }}
-                            title={`首位达成者: ${currentDiscovery.playerName}${
-                              (currentDiscovery.bonusRp ?? 0) > 0 ? ` (+${currentDiscovery.bonusRp} RP)` : ''
-                            }`}
+                            title={`首位达成者: ${currentDiscovery.playerName}`}
                           >
                             本月冠名: {currentDiscovery.playerName}
-                            {(currentDiscovery.bonusRp ?? 0) > 0 && ` (+${currentDiscovery.bonusRp})`}
                           </span>
                         )}
                         {hasPrev && (

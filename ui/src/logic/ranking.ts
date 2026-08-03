@@ -1,25 +1,9 @@
-export interface PlayerScore {
-  playerId: number
-  score: number
-}
-
-export interface PlayerRank extends PlayerScore {
-  rank: number
-  rp: number
-}
-
-export interface RpConfig {
-  rpFactor: number
-  rpOrigin: number
-  umaDist: number[]
-}
-
 /**
  * Standard competition ranking: sort by score descending, tied scores share the
  * same rank, and the next distinct score skips (e.g. [100,50,30,30] → ranks
  * [1,2,3,3]; [50,50,30,10] → [1,1,3,4]). Sort is stable, so tied items keep their
  * input order. This is the single source of truth for per-game rank across the UI
- * and matches the backend RpCalculator.
+ * and matches the backend RankCalculator.
  */
 export function rankByScore<T extends object>(items: T[], getScore: (t: T) => number): (T & { rank: number })[] {
   const sorted = [...items].sort((a, b) => getScore(b) - getScore(a))
@@ -33,35 +17,4 @@ export function rankByScore<T extends object>(items: T[], getScore: (t: T) => nu
     i = j
   }
   return result
-}
-
-export function calculateRanks(scores: PlayerScore[], config: RpConfig): PlayerRank[] {
-  const { rpFactor: factor, umaDist } = config
-  const ranked = rankByScore(scores, (s) => s.score)
-
-  const results: PlayerRank[] = []
-  let i = 0
-  while (i < ranked.length) {
-    let j = i
-    while (j < ranked.length && ranked[j].rank === ranked[i].rank) j++
-
-    let totalUma = 0
-    for (let k = i; k < j; k++) {
-      totalUma += umaDist[k] || 0
-    }
-    const avgUma = totalUma / (j - i)
-
-    for (let k = i; k < j; k++) {
-      results.push({
-        playerId: ranked[k].playerId,
-        score: ranked[k].score,
-        rank: ranked[k].rank,
-        rp: ranked[k].score / factor + avgUma,
-      })
-    }
-
-    i = j
-  }
-
-  return results
 }

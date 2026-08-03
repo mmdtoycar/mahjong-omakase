@@ -9,10 +9,11 @@ type Tab = 'games' | 'players'
 
 const currentSeason = getCurrentSeason()
 
-import { statFontSize, nameFontSize } from '../utils/fontSize'
-import { parseError, rankMedal } from '../utils/format'
+import { statFontSize, tableNameFontSize } from '../utils/fontSize'
+import { parseError, rankMedal, skillRatingText } from '../utils/format'
 import { MSG } from '../constants'
 import { useActiveSeasons } from '../hooks/useActiveSeasons'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 export default function StatsPage() {
   const navigate = useNavigate()
@@ -28,6 +29,8 @@ export default function StatsPage() {
   const [monthlyBestRounds, setMonthlyBestRounds] = useState<BestRound[]>([])
   const [monthlyBestRoundsError, setMonthlyBestRoundsError] = useState('')
   const { seasons, error: seasonsError } = useActiveSeasons()
+  // 内联字号要跟着视口变化重算, 所以断点走订阅式 hook 而不是现场读 window.innerWidth.
+  const isMobile = useIsMobile()
 
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
@@ -44,7 +47,7 @@ export default function StatsPage() {
     }
     fetchStats(mode, year, month)
       .then((s) => {
-        setStats(s.sort((a, b) => b.totalRP - a.totalRP || b.totalScore - a.totalScore))
+        setStats(s.sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0) || b.totalScore - a.totalScore))
         setLoading(false)
       })
       .catch((e: unknown) => {
@@ -148,6 +151,10 @@ export default function StatsPage() {
         totalGames: stat?.gamesPlayed ?? 0,
         gamesNeeded: stat?.gamesNeeded,
         avgRank: stat?.avgRank,
+        handWins: stat?.handWins ?? 0,
+        dealIns: stat?.dealIns ?? 0,
+        avgWinPoints: stat?.avgWinPoints ?? 0,
+        avgDealInPoints: stat?.avgDealInPoints ?? 0,
       }
     })
     .sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0))
@@ -186,6 +193,20 @@ export default function StatsPage() {
   const topFourthRate = pick(awardStats, fourthRate, 'max')
   const lowWinRate = pick(withRounds, winRate, 'min')
   const lowTsumo = pick(withWins, tsumoRate, 'min')
+
+  // 率: 百分号比数字小一号, 避免窄列换行.
+  const rateCell = (numerator: number, denominator: number) =>
+    denominator > 0 ? (
+      <>
+        {((numerator / denominator) * 100).toFixed(1)}
+        <span className="stat-unit">%</span>
+      </>
+    ) : (
+      '-'
+    )
+
+  /** 平均打点/铳点 — 分母为 0 时给 "-", 避免显示 0 误导. */
+  const pointsCell = (value: number, count: number) => (count > 0 ? Math.round(value).toLocaleString() : '-')
 
   const statCard = (value: number | string, label: string) => (
     <div className="stat-card">
@@ -282,14 +303,14 @@ export default function StatsPage() {
             <div className="card">
               <h2>排行榜</h2>
               <div className="table-wrap">
-                <table className="fixed-table">
+                <table className="fixed-table stats-table">
                   <thead>
                     <tr>
                       <th className="col-rank">排名</th>
                       <th className="col-name">玩家</th>
-                      <th className="col-num">胜场</th>
-                      <th className="col-num">场均</th>
-                      <th className="col-num-wide">积分</th>
+                      <th className="col-num">胡率</th>
+                      <th className="col-num">铳率</th>
+                      <th className="col-rating">段位分</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -308,35 +329,18 @@ export default function StatsPage() {
                               userName={s.userName}
                               gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
                             />
-                            <span className="player-name" style={{ fontSize: nameFontSize(s.userName) }}>
+                            <span
+                              className="player-name"
+                              title={s.userName}
+                              style={{ fontSize: tableNameFontSize(s.userName, isMobile) }}
+                            >
                               {s.userName}
                             </span>
                           </span>
                         </td>
-                        <td className="num-cell">
-                          {s.wins}
-                          <span
-                            style={{
-                              fontSize: '0.6rem',
-                              color: 'var(--text-light)',
-                              verticalAlign: 'bottom',
-                              marginLeft: 2,
-                            }}
-                          >
-                            ({((s.wins / s.gamesPlayed) * 100).toFixed(0)}%)
-                          </span>
-                        </td>
-                        <td
-                          className="num-cell"
-                          style={{
-                            color: s.avgScore > 0 ? 'var(--success)' : s.avgScore < 0 ? 'var(--danger)' : undefined,
-                          }}
-                        >
-                          {s.avgScore > 0 ? `+${s.avgScore.toFixed(0)}` : s.avgScore.toFixed(0)}
-                        </td>
-                        <td className="num-cell-rp">
-                          {s.totalRP > 0 ? `+${s.totalRP.toFixed(1)}` : s.totalRP.toFixed(1)}
-                        </td>
+                        <td className="num-cell">{rateCell(s.handWins, s.roundsPlayed)}</td>
+                        <td className="num-cell">{rateCell(s.dealIns, s.roundsPlayed)}</td>
+                        <td className="num-cell-rank">{skillRatingText(s.skillRating, s.tier)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -415,13 +419,14 @@ export default function StatsPage() {
           <div className="card">
             <h2>全部玩家</h2>
             <div className="table-wrap">
-              <table className="fixed-table">
+              <table className="fixed-table stats-table">
                 <thead>
                   <tr>
                     <th className="col-rank">排名</th>
                     <th className="col-name">玩家</th>
                     <th className="col-num-wide">平均排名</th>
-                    <th className="col-num-wide">段位分</th>
+                    <th className="col-num-wide">平均打点</th>
+                    <th className="col-num-wide">平均铳点</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -440,15 +445,18 @@ export default function StatsPage() {
                             userName={p.userName}
                             gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
                           />
-                          <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
+                          <span
+                            className="player-name"
+                            title={p.userName}
+                            style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}
+                          >
                             {p.userName}
                           </span>
                         </span>
                       </td>
                       <td className="num-cell">{p.totalGames > 0 ? p.avgRank?.toFixed(2) : '-'}</td>
-                      <td className="num-cell-rp">
-                        {p.tier && p.tier !== 'UNRANKED' ? p.skillRating?.toFixed(0) : '-'}
-                      </td>
+                      <td className="num-cell">{pointsCell(p.avgWinPoints, p.handWins)}</td>
+                      <td className="num-cell">{pointsCell(p.avgDealInPoints, p.dealIns)}</td>
                     </tr>
                   ))}
                 </tbody>
