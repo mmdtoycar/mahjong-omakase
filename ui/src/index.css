@@ -2090,10 +2090,6 @@ table.auto-table {
     max-width: 18px;
   }
 
-  .win-action-row-three {
-    flex-direction: column;
-  }
-
   .claim-name-row {
     flex-direction: column;
     gap: 12px;
@@ -2584,18 +2580,6 @@ table.auto-table {
   margin-bottom: 8px;
 }
 
-/* Always keep 点炮/自摸 and 重置 on the same row */
-.win-action-row {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-
-.win-action-row .quick-player-btn {
-  flex: 1;
-}
-
 .quick-player-btn {
   width: 100%;
   padding: 6px 28px 6px 10px; /* Increased right padding to avoid badge overlap */
@@ -2644,15 +2628,6 @@ table.auto-table {
   box-shadow: 0 0 0 1px var(--sol-red);
 }
 
-.quick-player-btn.win-type-btn {
-  border-color: var(--sol-blue) !important;
-  color: var(--sol-blue) !important;
-  background: rgb(38 139 210 / 4%) !important;
-  font-weight: 700;
-  border-width: 1.5px !important;
-  transition: all 0.2s ease;
-}
-
 .quick-player-btn.reset-btn {
   border-color: var(--primary);
   color: var(--primary);
@@ -2661,18 +2636,6 @@ table.auto-table {
 
 .quick-player-btn.reset-btn:hover {
   background: rgb(7 54 66 / 14%);
-}
-
-.quick-player-btn.win-type-btn:hover:not(:disabled) {
-  background: rgb(38 139 210 / 12%) !important;
-  transform: translateY(-2px);
-}
-
-.quick-player-btn.win-type-btn.active {
-  border-color: var(--sol-blue) !important;
-  color: white !important;
-  background: var(--sol-blue) !important;
-  box-shadow: 0 2px 5px rgb(38 139 210 / 30%) !important;
 }
 
 .round-form .score-inline-group {

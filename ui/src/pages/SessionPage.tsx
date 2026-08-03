@@ -569,50 +569,10 @@ export default function SessionPage() {
                         </button>
                       )
                     })}
-                    <div className={`win-action-row${isGuobiao ? ' win-action-row-three' : ''}`}>
-                      <button
-                        type="button"
-                        className={`quick-player-btn win-type-btn dianpao ${
-                          !isSelfDraw && !isChomboManual ? 'active' : ''
-                        }`}
-                        onClick={() => {
-                          setIsSelfDraw(false)
-                          setIsChomboManual(false)
-                        }}
-                      >
-                        点炮
-                      </button>
-                      <button
-                        type="button"
-                        className={`quick-player-btn win-type-btn zimo ${
-                          isSelfDraw && !isChomboManual ? 'active' : ''
-                        }`}
-                        onClick={() => {
-                          setIsSelfDraw(true)
-                          setIsChomboManual(false)
-                          setDealInPlayerId('')
-                        }}
-                      >
-                        自摸
-                      </button>
-                      {isGuobiao && (
-                        <button
-                          type="button"
-                          className={`quick-player-btn win-type-btn chombo ${isChomboManual ? 'active' : ''}`}
-                          onClick={() => {
-                            setIsSelfDraw(false)
-                            setIsChomboManual(true)
-                            setDealInPlayerId('')
-                          }}
-                        >
-                          诈胡
-                        </button>
-                      )}
-                    </div>
                   </div>
                   <span className="field-hint">
                     {!winnerId
-                      ? '点一下选和牌者'
+                      ? `点一下选和牌者 · 连点同一人切换自摸${isGuobiao ? '/诈胡' : ''}`
                       : isChomboManual
                       ? '再点一下清空重选'
                       : isSelfDraw
