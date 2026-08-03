@@ -647,19 +647,13 @@ export default function SessionPage() {
                   <div className="round-form-grid">
                     <div className="form-group">
                       <label>番</label>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={fan}
-                          onChange={(e) => setFan(e.target.value)}
-                          placeholder="输入番"
-                          style={{ flex: 1 }}
-                        />
-                        <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
-                          重置
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={fan}
+                        onChange={(e) => setFan(e.target.value)}
+                        placeholder="输入番"
+                      />
                     </div>
                   </div>
                 )}

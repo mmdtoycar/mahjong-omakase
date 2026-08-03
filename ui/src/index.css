@@ -2668,33 +2668,6 @@ table.auto-table {
   box-shadow: 0 2px 5px rgb(38 139 210 / 30%) !important;
 }
 
-.reset-btn-score-compact {
-  padding: 4px 0 !important;
-  font-size: 0.75rem !important;
-  height: 28px !important;
-  line-height: 1 !important;
-  border-radius: 4px !important;
-  border: 1px solid var(--sol-yellow) !important;
-  background: rgb(181 137 0 / 5%) !important;
-  color: var(--sol-yellow) !important;
-  cursor: pointer !important;
-  white-space: nowrap !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-  width: 52px !important;
-  font-weight: 700 !important;
-  box-shadow: none !important;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-.reset-btn-score-compact:hover {
-  background: rgb(181 137 0 / 15%) !important;
-  border-color: var(--sol-yellow) !important;
-  color: var(--sol-yellow) !important;
-}
-
 .round-form .score-inline-group {
   display: flex;
   flex-direction: row;
