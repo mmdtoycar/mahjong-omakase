@@ -430,15 +430,15 @@ public class GameService {
                     dealInName = playerNameMap.getOrDefault(round.getDealInPlayerId(), "?");
                   }
 
-                  List<Long> riichiIds = null;
-                  if (round.getRiichiPlayerIds() != null && !round.getRiichiPlayerIds().isBlank()) {
-                    riichiIds =
-                        Arrays.stream(round.getRiichiPlayerIds().split(","))
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .map(Long::valueOf)
-                            .toList();
-                  }
+                  // null column = 历史对局没有该数据, 保持 null 让前端走兼容分支
+                  List<Long> riichiIds =
+                      round.getRiichiPlayerIds() == null
+                          ? null
+                          : parseIdList(round.getRiichiPlayerIds());
+                  List<Long> tenpaiIds =
+                      round.getTenpaiPlayerIds() == null
+                          ? null
+                          : parseIdList(round.getTenpaiPlayerIds());
 
                   return new SessionDetailResponse.RoundInfo(
                       round.getRoundNumber(),
@@ -451,6 +451,7 @@ public class GameService {
                       dealInName,
                       round.getPrevalentWind(),
                       riichiIds,
+                      tenpaiIds,
                       round.getBackfill());
                 })
             .collect(Collectors.toList()));
@@ -539,6 +540,7 @@ public class GameService {
         request.isSelfDraw() ? null : request.getDealInPlayerId(),
         request.getPrevalentWind(),
         request.getRiichiPlayerIds(),
+        request.getTenpaiPlayerIds(),
         request.getBackfill());
     evictAllCaches();
   }
@@ -1113,6 +1115,15 @@ public class GameService {
     return handler;
   }
 
+  /** Parses a comma-separated id column; "" → empty list (e.g. 流局全员未听). */
+  private static List<Long> parseIdList(String raw) {
+    return Arrays.stream(raw.split(","))
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .map(Long::valueOf)
+        .toList();
+  }
+
   private void saveRoundScores(
       GameSession session,
       int roundNumber,
@@ -1124,6 +1135,7 @@ public class GameService {
       Long dealInId,
       Integer prevalentWind,
       List<Long> riichiPlayerIds,
+      List<Long> tenpaiPlayerIds,
       Boolean backfill) {
     Round round = new Round();
     round.setGameSession(session);
@@ -1138,6 +1150,11 @@ public class GameService {
     if (riichiPlayerIds != null && !riichiPlayerIds.isEmpty()) {
       round.setRiichiPlayerIds(
           riichiPlayerIds.stream().map(String::valueOf).collect(Collectors.joining(",")));
+    }
+    if (tenpaiPlayerIds != null) {
+      // Empty list is meaningful for draws (全员未听) — store "" to distinguish from legacy rounds
+      round.setTenpaiPlayerIds(
+          tenpaiPlayerIds.stream().map(String::valueOf).collect(Collectors.joining(",")));
     }
 
     round = roundRepo.save(round);
