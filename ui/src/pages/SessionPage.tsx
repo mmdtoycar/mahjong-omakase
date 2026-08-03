@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, PlayerInfo, RoundInfo } from '../types'
-import { calculateRanks } from '../logic/ranking'
+import { rankByScore } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
@@ -285,11 +285,15 @@ export default function SessionPage() {
   const maxFan = roundsWithFan.reduce((max, r) => Math.max(max, r.effectiveFan), 0)
   const bestRounds = maxFan > 0 ? roundsWithFan.filter((r) => r.effectiveFan === maxFan) : []
 
-  const rankings = calculateRanks(
+  const rankings = rankByScore(
     session.players.map((p) => ({ playerId: p.id, score: session.totalScores[p.id] || 0 })),
-    { rpFactor: session.rpFactor, rpOrigin: session.rpOrigin, umaDist: session.umaDist }
+    (s) => s.score
   )
   const rankMap = Object.fromEntries(rankings.map((r) => [r.playerId, r]))
+
+  // 段位分变化 — 只有对局结束结算后才有值.
+  const ratingDelta = (playerId: number) => session.ratingDeltas?.[playerId]
+  const formatDelta = (d: number) => `${d > 0 ? '+' : ''}${d.toFixed(1)}`
 
   const gameState = deriveGameState(session)
 
@@ -908,8 +912,9 @@ export default function SessionPage() {
                 </td>
                 {session.players.map((p) => {
                   const delta = session.totalScores[p.id] || 0
-                  const total = session.rpOrigin + delta
-                  const displayVal = session.rpOrigin ? total : delta
+                  const total = session.startingPoints + delta
+                  const displayVal = session.startingPoints ? total : delta
+                  const rankDelta = ratingDelta(p.id)
                   return (
                     <td
                       key={p.id}
@@ -918,19 +923,7 @@ export default function SessionPage() {
                     >
                       <div className="total-score-box">
                         <div className="total-val">{displayVal}</div>
-                        {session.rounds.length > 0 &&
-                          (() => {
-                            const baseRp = rankMap[p.id]?.rp ?? 0
-                            const bonus = session.playerBonuses?.[p.id] ?? 0
-                            return (
-                              <div className="rp-val">
-                                {baseRp > 0 ? `+${baseRp.toFixed(1)}` : baseRp.toFixed(1)} RP
-                                {bonus > 0 && (
-                                  <span className="rp-bonus">(+{bonus.toFixed(bonus % 1 === 0 ? 0 : 1)})</span>
-                                )}
-                              </div>
-                            )
-                          })()}
+                        {rankDelta != null && <div className="rank-delta-val">{formatDelta(rankDelta)} 段位分</div>}
                       </div>
                     </td>
                   )
@@ -955,15 +948,14 @@ export default function SessionPage() {
                     分数
                   </th>
                   <th className="text-right" style={{ width: '92px' }}>
-                    积分(RP)
+                    段位分
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {sortedPlayers.map((p, i) => {
                   const val = session.totalScores[p.id] || 0
-                  const baseRp = rankMap[p.id]?.rp ?? 0
-                  const bonus = session.playerBonuses?.[p.id] ?? 0
+                  const rankDelta = ratingDelta(p.id)
                   const rank = rankMap[p.id]?.rank ?? i + 1
                   return (
                     <tr key={p.id}>
@@ -976,9 +968,8 @@ export default function SessionPage() {
                         </span>
                       </td>
                       <td className={`${scoreClass(val)} num-cell`}>{val > 0 ? `+${val}` : val}</td>
-                      <td className="num-cell-rp">
-                        {baseRp > 0 ? `+${baseRp.toFixed(1)}` : baseRp.toFixed(1)}
-                        {bonus > 0 && <span className="rp-bonus">(+{bonus.toFixed(bonus % 1 === 0 ? 0 : 1)})</span>}
+                      <td className={`num-cell-rank-delta${rankDelta != null ? ' ' + scoreClass(rankDelta) : ''}`}>
+                        {rankDelta != null ? formatDelta(rankDelta) : '—'}
                       </td>
                     </tr>
                   )

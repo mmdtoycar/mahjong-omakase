@@ -48,22 +48,4 @@ public interface GameSessionRepository extends JpaRepository<GameSession, Long> 
       @Param("mode") GameMode mode,
       @Param("start") LocalDateTime start,
       @Param("end") LocalDateTime end);
-
-  /**
-   * Completed sessions in a season+mode window up to and including {@code asOf}, in chronological
-   * order. Used by {@code computeSessionPlayerBonuses} — replaces the per-call full-table {@code
-   * findAll} + in-memory filter that was scanning every session per round write.
-   */
-  @Query(
-      "SELECT s FROM GameSession s "
-          + "WHERE s.status = com.mahjong.omakase.model.SessionStatus.COMPLETED "
-          + "AND s.gameMode = :mode "
-          + "AND s.createdAt >= :start AND s.createdAt < :end "
-          + "AND s.createdAt <= :asOf "
-          + "ORDER BY s.createdAt ASC")
-  List<GameSession> findCompletedInSeasonUpTo(
-      @Param("mode") GameMode mode,
-      @Param("start") LocalDateTime start,
-      @Param("end") LocalDateTime end,
-      @Param("asOf") LocalDateTime asOf);
 }

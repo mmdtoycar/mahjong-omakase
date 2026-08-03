@@ -7,7 +7,7 @@ package com.mahjong.omakase.model;
  * <p>Tier names map to images in ui/public/rank/lv{1-4}.png.
  */
 public enum Tier {
-  /** < 10 games in this mode — display "挑战中 X/10". */
+  /** < 5 games in this mode — display "挑战中 X/5". */
   UNRANKED,
   /** 灵明石猴: rating < 1400. */
   LV1,

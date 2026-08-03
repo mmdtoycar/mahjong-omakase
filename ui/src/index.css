@@ -410,14 +410,18 @@ table.fixed-table .col-rank {
   width: 44px;
 }
 
-table.fixed-table .col-num {
-  width: 52px;
+/* 统计列一律不写宽度: table-layout: fixed 会把剩余宽度在它们之间平均分,
+   所以一张表是 2 列还是 3 列统计都自动等宽适应, 不用逐列调像素. */
+table.fixed-table .col-num,
+table.fixed-table .col-num-wide,
+table.fixed-table .col-rating {
   text-align: right;
 }
 
-table.fixed-table .col-num-wide {
-  width: 68px;
-  text-align: right;
+/* 玩家列 = 段位徽章 + ID, 形状也固定. 桌面用百分比: 名字拿走一半宽度, 统计列平分另一半;
+   窗口从 960px 缩到 640px 的过程里也跟着等比缩, 不会突然把统计列挤爆. 手机端换成固定 112px. */
+table.stats-table .col-name {
+  width: 50%;
 }
 
 table.fixed-table .col-name {
@@ -832,11 +836,31 @@ table.auto-table {
   font-variant-numeric: tabular-nums;
 }
 
-.num-cell-rp {
+.num-cell-rank {
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: bold;
   color: var(--primary);
+}
+
+/* 段位分变化 — 颜色由 scoreClass (score-positive/score-negative) 提供. */
+.num-cell-rank-delta {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: bold;
+}
+
+/* 统计表的数字列: 固定列宽下绝不换行, 字号比正文小一号才装得下 "1464(?)" / "12.3%". */
+.stats-table .num-cell,
+.stats-table .num-cell-rank {
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+/* 百分号/单位比数字小一号. */
+.stat-unit {
+  font-size: 0.75em;
+  margin-left: 1px;
 }
 
 .config-row-label {
@@ -866,7 +890,7 @@ table.auto-table {
   align-items: center;
 }
 
-.rp-val {
+.rank-delta-val {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-light);
@@ -1103,13 +1127,6 @@ table.auto-table {
   cursor: not-allowed;
 }
 
-.rp-bonus {
-  color: var(--accent, #ff9800);
-  font-weight: 500;
-  font-size: 0.85em;
-  margin-left: 4px;
-}
-
 /* ===== RankBadge / 段位徽章 ===== */
 .rank-badge {
   display: inline-flex;
@@ -1199,6 +1216,7 @@ table.auto-table {
 .rank-badge-unranked,
 .rank-badge-unranked-sm {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
@@ -1259,6 +1277,7 @@ table.auto-table {
 
 .player-detail-tiers {
   display: flex;
+  flex-wrap: wrap;
   gap: 24px;
 }
 
@@ -1270,9 +1289,10 @@ table.auto-table {
 }
 
 .player-detail-tier-mode {
-  font-size: 0.75rem;
-  color: var(--text-light);
-  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 /* Profile tier section (inside stats card, follows mode selector) */
@@ -1466,8 +1486,83 @@ table.auto-table {
     gap: 16px;
   }
 
+  /* 三个模式的段位徽章必须挤在一行: 徽章竖排(图在上, 段位名+分数在下) 并缩到 76px. */
   .player-detail-tiers {
-    justify-content: flex-end;
+    justify-content: space-around;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .player-detail-tiers .rank-badge {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .player-detail-tiers .rank-badge-md .rank-badge-img,
+  .player-detail-tiers .rank-badge-md .rank-badge-fallback,
+  .player-detail-tiers .rank-badge-unranked.rank-badge-md {
+    width: 76px;
+    height: 76px;
+  }
+
+  .player-detail-tiers .rank-badge-md .rank-badge-meta {
+    align-items: center;
+    text-align: center;
+  }
+
+  .player-detail-tiers .rank-badge-name {
+    font-size: 0.75rem;
+  }
+
+  /* 统计表在手机上收紧: 表头/数字/徽章各缩一号, 固定列(排名/玩家/段位分)给更小的宽度,
+     数字列继续由 table-layout: fixed 平分剩余空间. */
+  .stats-table th {
+    font-size: 0.62rem;
+    letter-spacing: 0;
+  }
+
+  .stats-table th,
+  .stats-table td {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  table.stats-table .col-rank {
+    width: 36px;
+  }
+
+  /* 118px 是上限: 再宽的话平分给统计列的宽度就装不下 "1464(?)" 了. */
+  table.stats-table .col-name {
+    width: 118px;
+    padding-left: 6px;
+  }
+
+  .stats-table .num-cell,
+  .stats-table .num-cell-rank {
+    font-size: 0.78rem;
+  }
+
+  /* 只缩统计表里的行内段位徽章, 把省下的宽度让给玩家名. */
+  .stats-table .rank-badge-sm .rank-badge-img,
+  .stats-table .rank-badge-sm .rank-badge-fallback,
+  .stats-table .rank-badge-unranked-sm {
+    width: 38px;
+    height: 38px;
+  }
+
+  /* :not(bot) — BOT 那个 🤖 要保持自己的大字号, 别被缩成小点. */
+  .stats-table .rank-badge-unranked-sm:not(.rank-badge-bot) {
+    font-size: 0.8rem;
+  }
+
+  /* 名字列: 让 flex 子项可以收缩到省略号, 否则徽章会把名字挤出单元格. */
+  .stats-table .player-name-with-rank {
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .stats-table .player-name {
+    min-width: 0;
   }
 
   .login-container {

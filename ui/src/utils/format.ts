@@ -1,4 +1,5 @@
 import { MSG } from '../constants'
+import { TierKey } from '../types'
 
 /**
  * Abbreviates a name to initials.
@@ -54,4 +55,14 @@ export function rankMedal(rank: number): string | null {
  */
 export function seatRankMedal(rank: number): string | null {
   return { 1: '🥇', 2: '🥈', 3: '🥉', 4: '🤡' }[rank] ?? null
+}
+
+/**
+ * 段位分 for display. 未定段(不足 5 场)的分数还在统计中, 所以带上 (?) 后缀; 完全没有数据时给 "-".
+ * 半角括号 — 全角 （？） 在窄列里会被当成两个字宽, 挤到第二行.
+ */
+export function skillRatingText(rating: number | undefined, tier: TierKey | null | undefined): string {
+  if (!rating) return '-'
+  const val = rating.toFixed(0)
+  return !tier || tier === 'UNRANKED' ? `${val}(?)` : val
 }

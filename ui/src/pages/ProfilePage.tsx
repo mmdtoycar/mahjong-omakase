@@ -42,7 +42,7 @@ export default function ProfilePage() {
       })
       .catch(console.error)
 
-    // 3. 段位 (国标 + 立直)
+    // 3. 段位 (国标 / 立直 / 东北)
     fetchPlayerTier(me.id)
       .then(setTier)
       .catch((e) => {
@@ -107,7 +107,7 @@ export default function ProfilePage() {
       const claimable = await lookupClaimablePlayer(userName, firstName, lastName)
 
       const confirmMsg = claimable
-        ? `确认绑定老账号「${userName}」吗?\n\n该账号下的历史战绩与积分将合并到您当前的 Google 身份。`
+        ? `确认绑定老账号「${userName}」吗?\n\n该账号下的历史战绩将合并到您当前的 Google 身份。`
         : `确认使用「${userName}」作为新账号吗?\n\n系统将注册一个全新雀士档案并绑定您的 Google 身份。`
 
       if (!window.confirm(confirmMsg)) {
@@ -219,21 +219,14 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              {/* 段位显示: 国标 / 立直 跟随上面 selectedMode 切换 */}
-              {tier && (selectedMode === 'GUOBIAO' || selectedMode === 'RIICHI') && (
+              {/* 段位显示: 跟随上面 selectedMode 切换 */}
+              {tier && (
                 <div className="profile-tier-section">
-                  <RankBadge
-                    tier={selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier}
-                    size="lg"
-                    rating={
-                      (selectedMode === 'GUOBIAO' ? tier.guobiao.tier : tier.riichi.tier) === 'UNRANKED'
-                        ? undefined
-                        : selectedMode === 'GUOBIAO'
-                        ? tier.guobiao.rating
-                        : tier.riichi.rating
-                    }
-                    gamesNeeded={selectedMode === 'GUOBIAO' ? tier.guobiao.gamesNeeded : tier.riichi.gamesNeeded}
-                  />
+                  {(() => {
+                    const info =
+                      selectedMode === 'GUOBIAO' ? tier.guobiao : selectedMode === 'RIICHI' ? tier.riichi : tier.dongbei
+                    return <RankBadge tier={info.tier} size="lg" rating={info.rating} gamesNeeded={info.gamesNeeded} />
+                  })()}
                 </div>
               )}
 
@@ -262,31 +255,6 @@ export default function ProfilePage() {
                       </span>
                     </div>
                     <div className="stat-label">胜场</div>
-                  </div>
-                  <div className="stat-card">
-                    <div
-                      className="stat-value"
-                      style={{
-                        color: stats.totalRP > 0 ? 'var(--success)' : stats.totalRP < 0 ? 'var(--danger)' : undefined,
-                      }}
-                    >
-                      {(() => {
-                        const avgRP = stats.totalRP / stats.gamesPlayed
-                        return avgRP > 0 ? `+${avgRP.toFixed(1)}` : avgRP.toFixed(1)
-                      })()}
-                    </div>
-                    <div className="stat-label">场均(RP)</div>
-                  </div>
-                  <div className="stat-card">
-                    <div
-                      className="stat-value"
-                      style={{
-                        color: stats.totalRP > 0 ? 'var(--success)' : stats.totalRP < 0 ? 'var(--danger)' : undefined,
-                      }}
-                    >
-                      {stats.totalRP > 0 ? `+${stats.totalRP.toFixed(1)}` : stats.totalRP.toFixed(1)}
-                    </div>
-                    <div className="stat-label">总积分(RP)</div>
                   </div>
                 </div>
               ) : (
@@ -334,7 +302,6 @@ export default function ProfilePage() {
                               {new Date(fd.discoveredAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}
                             </div>
                           </div>
-                          <span className="profile-status-pill profile-status-pill-warning">+{fd.bonusRp || 0} RP</span>
                         </div>
                       ))}
                     </div>

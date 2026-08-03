@@ -52,7 +52,7 @@ public class PlayerController {
     return gameService.getPlayerDetail(id);
   }
 
-  /** Get tier + skill rating for a player in both ranked modes (国标 / 立直). */
+  /** Get tier + skill rating for a player in every ranked mode (国标 / 立直 / 东北). */
   @GetMapping("/{id}/tier")
   public PlayerTierResponse tier(@PathVariable Long id) {
     Player p =
@@ -65,6 +65,7 @@ public class PlayerController {
         .userName(p.getUserName())
         .guobiao(TierInfo.of(tierService, p, GameMode.GUOBIAO))
         .riichi(TierInfo.of(tierService, p, GameMode.RIICHI))
+        .dongbei(TierInfo.of(tierService, p, GameMode.DONGBEI))
         .build();
   }
 
@@ -73,6 +74,7 @@ public class PlayerController {
   public List<PlayerTierResponse> tiersBulk(@RequestParam List<Long> ids) {
     Long guobiaoThrone = tierService.findThroneId(GameMode.GUOBIAO);
     Long riichiThrone = tierService.findThroneId(GameMode.RIICHI);
+    Long dongbeiThrone = tierService.findThroneId(GameMode.DONGBEI);
     return playerRepo.findAllById(ids).stream()
         .map(
             p ->
@@ -81,6 +83,7 @@ public class PlayerController {
                     .userName(p.getUserName())
                     .guobiao(TierInfo.of(tierService, p, GameMode.GUOBIAO, guobiaoThrone))
                     .riichi(TierInfo.of(tierService, p, GameMode.RIICHI, riichiThrone))
+                    .dongbei(TierInfo.of(tierService, p, GameMode.DONGBEI, dongbeiThrone))
                     .build())
         .toList();
   }

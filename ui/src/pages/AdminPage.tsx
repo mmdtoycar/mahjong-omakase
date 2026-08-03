@@ -19,9 +19,6 @@ export default function AdminPage() {
   const [editUserName, setEditUserName] = useState('')
   const [editFirst, setEditFirst] = useState('')
   const [editLast, setEditLast] = useState('')
-  const [bonus, setBonus] = useState('0')
-  const [savedBonus, setSavedBonus] = useState('0')
-  const [savingSettings, setSavingSettings] = useState(false)
   const [deletingSessionId, setDeletingSessionId] = useState<number | null>(null)
 
   const loadPlayers = async (): Promise<boolean> => {
@@ -42,53 +39,11 @@ export default function AdminPage() {
     return false
   }
 
-  const loadSettings = async (): Promise<boolean> => {
-    const res = await fetch(`${API}/settings`, { headers: authHeaders() })
-    if (res.ok) {
-      const data = await res.json()
-      if (data.participation_bonus !== undefined) {
-        const val = parseFloat(data.participation_bonus)
-        if (!isNaN(val)) {
-          setBonus(String(val))
-          setSavedBonus(String(val))
-        }
-      }
-      return true
-    }
-    return false
-  }
-
   useEffect(() => {
-    Promise.all([loadPlayers(), loadSessions(), loadSettings()])
+    Promise.all([loadPlayers(), loadSessions()])
       .then((results) => setAuthorized(results.every(Boolean)))
       .finally(() => setLoading(false))
   }, [])
-
-  const handleSaveSettings = async () => {
-    if (!/^\d+(\.\d+)?$/.test(bonus.trim())) {
-      alert('请输入有效的非负数值')
-      return
-    }
-    const bonusVal = parseFloat(bonus)
-    if (bonusVal < 0) {
-      alert('请输入有效的非负数值')
-      return
-    }
-    setSavingSettings(true)
-    const res = await fetch(`${API}/settings`, {
-      method: 'PUT',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ participation_bonus: bonusVal }),
-    })
-    if (res.ok) {
-      const persisted = String(bonusVal)
-      setBonus(persisted)
-      setSavedBonus(persisted)
-    } else {
-      alert('Failed to save settings')
-    }
-    setSavingSettings(false)
-  }
 
   const handleDelete = async (id: number, userName: string) => {
     if (!confirm(`Delete ${userName}?`)) return
@@ -167,30 +122,6 @@ export default function AdminPage() {
     <>
       <div className="card">
         <h2>Admin Panel</h2>
-      </div>
-
-      <div className="card">
-        <h2>Settings</h2>
-        <div className="form-group">
-          <label>Participation Bonus (RP per game)</label>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={bonus}
-              onChange={(e) => setBonus(e.target.value)}
-              style={{ flex: '0 1 120px', minWidth: 0 }}
-            />
-            <button
-              className="btn btn-primary btn-small"
-              onClick={handleSaveSettings}
-              disabled={savingSettings || bonus === savedBonus}
-            >
-              {savingSettings ? 'Saving...' : 'Save'}
-            </button>
-            {bonus !== savedBonus && <span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>unsaved</span>}
-          </div>
-        </div>
       </div>
 
       <div className="card">

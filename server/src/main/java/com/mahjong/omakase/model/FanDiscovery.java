@@ -37,9 +37,6 @@ public class FanDiscovery {
   private String exampleHand;
 
   @Column(nullable = false)
-  private Double bonusRp;
-
-  @Column(nullable = false)
   private LocalDateTime discoveredAt;
 
   public FanDiscovery(
@@ -48,14 +45,12 @@ public class FanDiscovery {
       Player player,
       Round round,
       String exampleHand,
-      Double bonusRp,
       LocalDateTime discoveredAt) {
     this.fanName = fanName;
     this.season = season;
     this.player = player;
     this.round = round;
     this.exampleHand = exampleHand;
-    this.bonusRp = bonusRp;
     this.discoveredAt = discoveredAt;
   }
 

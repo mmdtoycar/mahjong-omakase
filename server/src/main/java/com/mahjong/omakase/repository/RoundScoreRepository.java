@@ -22,11 +22,6 @@ public interface RoundScoreRepository extends JpaRepository<RoundScore, Long> {
           + "GROUP BY rs.round.gameSession.id, rs.player.id")
   List<Object[]> getTotalScoresBySessions(List<Long> sessionIds);
 
-  @Query(
-      "SELECT rs.player.id, COUNT(DISTINCT rs.round.gameSession.id) FROM RoundScore rs "
-          + "WHERE rs.round.gameSession.id IN :sessionIds GROUP BY rs.player.id")
-  List<Object[]> getGamesPlayedPerPlayerInSessions(List<Long> sessionIds);
-
   /**
    * Returns one row per (round × scoring player) across the given sessions: [sessionId, roundId,
    * winnerId, dealInPlayerId, scoringPlayerId, score]. Used to compute Riichi round-level metrics

@@ -54,9 +54,9 @@ export interface TierInfo {
   /** 0-4 — maps to /rank/lv{level}.png (level 0 = 未定段, no image). */
   level: number
   rating: number
-  /** Games in this mode (国标 or 立直). */
+  /** Games in this mode (国标 / 立直 / 东北). */
   games: number
-  /** When unranked: 10 - games (counts down to ranked debut for THIS mode). 0 once ranked. */
+  /** When unranked: 5 - games (counts down to ranked debut for THIS mode). 0 once ranked. */
   gamesNeeded: number
   peakRating: number
 }
@@ -66,6 +66,7 @@ export interface PlayerTierResponse {
   userName: string
   guobiao: TierInfo
   riichi: TierInfo
+  dongbei: TierInfo
 }
 
 const TIER_LABEL: Record<TierKey, string> = {
@@ -84,7 +85,6 @@ export interface PlayerPerformance {
   playerId?: number
   userName: string
   totalScore: number
-  rp: number
   rank: number
   tier?: TierKey | null
 }
@@ -125,10 +125,10 @@ export interface SessionDetail {
   players: PlayerInfo[]
   rounds: RoundInfo[]
   totalScores: Record<number, number>
-  rpFactor: number
-  rpOrigin: number
-  umaDist: number[]
-  playerBonuses?: Record<number, number>
+  /** 起始点数 — 立直 25000, 其他模式 0. */
+  startingPoints: number
+  /** 每位玩家本场对局的段位分变化; 进行中的对局为空. */
+  ratingDeltas?: Record<number, number>
   tableStrength?: string | null
 }
 
@@ -159,12 +159,6 @@ export interface PlayerStats {
   displayName: string
   gamesPlayed: number
   totalScore: number
-  totalRP: number
-  baseRP: number
-  tieredBonus: number
-  adminBonus: number
-  fanDiscoveryBonus: number
-  avgScore: number
   avgRank: number
   wins: number
   fourthPlaces: number
@@ -268,6 +262,5 @@ export interface FanDiscovery {
   playerName: string
   exampleHand: string | null
   discoveredAt: string
-  bonusRp: number | null
   season: string
 }
