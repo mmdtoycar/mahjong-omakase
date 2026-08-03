@@ -3,6 +3,7 @@ package com.mahjong.omakase.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -107,5 +108,20 @@ class TileRecognitionServiceTest {
     assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("模型未返回有效内容");
+  }
+
+  /** An empty GEMINI_MODEL must not produce a request URL with a blank model name. */
+  @Test
+  void fallsBackToDefaultModelWhenBlank() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+    TileRecognitionService service =
+        new TileRecognitionService(new ObjectMapper(), builder.build(), "key-a", "  ");
+    server
+        .expect(requestTo(org.hamcrest.Matchers.containsString("models/gemini-3.6-flash:")))
+        .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
+
+    assertThat(service.recognize("BASE64", "image/jpeg")).contains("1m");
+    server.verify();
   }
 }

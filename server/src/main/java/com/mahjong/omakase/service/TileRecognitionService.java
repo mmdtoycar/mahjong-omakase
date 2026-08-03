@@ -40,6 +40,9 @@ public class TileRecognitionService {
 
   private static final String CALIBRATION_RESOURCE = "calibration/system_mahjong_calibration.jpg";
 
+  /** Used when {@code GEMINI_MODEL} is unset — or set to an empty string, which Spring keeps. */
+  private static final String DEFAULT_MODEL = "gemini-3.6-flash";
+
   /** Describes IMAGE 1 (the calibration legend) and forbids answering from it. */
   private static final String LEGEND_PROMPT =
       """
@@ -116,9 +119,9 @@ public class TileRecognitionService {
       ObjectMapper objectMapper,
       RestClient geminiRestClient,
       @Value("${gemini.api-keys:}") String rawApiKeys,
-      @Value("${gemini.model:gemini-3.6-flash}") String model) {
+      @Value("${gemini.model:}") String model) {
     this.objectMapper = objectMapper;
-    this.model = model;
+    this.model = model == null || model.isBlank() ? DEFAULT_MODEL : model;
     this.apiKeys =
         Arrays.stream(rawApiKeys.split(",")).map(String::trim).filter(k -> !k.isEmpty()).toList();
     this.restClient = geminiRestClient;
@@ -127,7 +130,7 @@ public class TileRecognitionService {
     if (apiKeys.isEmpty()) {
       log.warn("GEMINI_API_KEYS is not set — photo recognition will return 503 until configured");
     } else {
-      log.info("Photo recognition ready: {} Gemini key(s), model {}", apiKeys.size(), model);
+      log.info("Photo recognition ready: {} Gemini key(s), model {}", apiKeys.size(), this.model);
     }
   }
 
