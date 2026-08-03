@@ -46,31 +46,31 @@ describe('deriveGameState: riichi ryuukyoku dealer rotation', () => {
   it('全员未听 → 流庄, 本场 +1', () => {
     const s = deriveGameState(session([draw([])]))
     expect(s.dealerPlayerId).toBe(2)
-    expect(s.displayName).toBe('东2（1）')
+    expect(s.displayName).toBe('东2(1)')
   })
 
   it('全员听牌 → 连庄, 本场 +1', () => {
     const s = deriveGameState(session([draw([1, 2, 3, 4])]))
     expect(s.dealerPlayerId).toBe(1)
-    expect(s.displayName).toBe('东1（1）')
+    expect(s.displayName).toBe('东1(1)')
   })
 
   it('庄家听牌 (部分听) → 连庄', () => {
     const s = deriveGameState(session([draw([1, 3])]))
     expect(s.dealerPlayerId).toBe(1)
-    expect(s.displayName).toBe('东1（1）')
+    expect(s.displayName).toBe('东1(1)')
   })
 
   it('庄家未听 (部分听) → 流庄, 本场 +1', () => {
     const s = deriveGameState(session([draw([2, 3])]))
     expect(s.dealerPlayerId).toBe(2)
-    expect(s.displayName).toBe('东2（1）')
+    expect(s.displayName).toBe('东2(1)')
   })
 
   it('连续流局本场累加, 庄家轮转', () => {
     const s = deriveGameState(session([draw([]), draw([]), draw([1, 2, 3, 4])]))
     expect(s.dealerPlayerId).toBe(3)
-    expect(s.displayName).toBe('东3（3）')
+    expect(s.displayName).toBe('东3(3)')
   })
 
   it('legacy 流局 (无听牌名单) 沿用点数推断', () => {
@@ -80,7 +80,7 @@ describe('deriveGameState: riichi ryuukyoku dealer rotation', () => {
     }
     const s = deriveGameState(session([notenDealer]))
     expect(s.dealerPlayerId).toBe(2)
-    expect(s.displayName).toBe('东2（1）')
+    expect(s.displayName).toBe('东2(1)')
   })
 
   it('闲家和牌 → 流庄, 本场清零', () => {
@@ -94,7 +94,7 @@ describe('deriveGameState: riichi ryuukyoku dealer rotation', () => {
     const win: RoundInfo = { roundNumber: 1, scores: { 1: 5800, 2: -5800, 3: 0, 4: 0 }, winnerId: 1 }
     const s = deriveGameState(session([win]))
     expect(s.dealerPlayerId).toBe(1)
-    expect(s.displayName).toBe('东1（1）')
+    expect(s.displayName).toBe('东1(1)')
   })
 
   it('立直棒流局保留, 和牌清零', () => {

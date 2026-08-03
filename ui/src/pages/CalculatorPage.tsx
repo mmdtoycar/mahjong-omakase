@@ -67,22 +67,22 @@ const CalculatorPage: React.FC = () => {
 
   return (
     <div className="container calc-page-wrapper">
-      <div className="calc-header-bar">
-        <div className="tabs">
-          <button
-            className={`calc-mode-tab-btn ${activeTab === 'GUOBIAO' ? 'active' : ''}`}
-            onClick={() => setActiveTab('GUOBIAO')}
-          >
-            国标算番器
-          </button>
-          <button
-            className={`calc-mode-tab-btn ${activeTab === 'RIICHI' ? 'active' : ''}`}
-            onClick={() => setActiveTab('RIICHI')}
-          >
-            立直算番器
-          </button>
-        </div>
+      <div className="tabs">
+        <button
+          className={`calc-mode-tab-btn ${activeTab === 'GUOBIAO' ? 'active' : ''}`}
+          onClick={() => setActiveTab('GUOBIAO')}
+        >
+          国标算番器
+        </button>
+        <button
+          className={`calc-mode-tab-btn ${activeTab === 'RIICHI' ? 'active' : ''}`}
+          onClick={() => setActiveTab('RIICHI')}
+        >
+          立直算番器
+        </button>
+      </div>
 
+      <div className="calc-photo-rec-row">
         <button className="btn-photo-rec" onClick={() => setIsPhotoModalOpen(true)}>
           <span className="btn-photo-rec-icon">📷</span>
           <span>拍照识别</span>

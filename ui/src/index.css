@@ -877,10 +877,9 @@ table.auto-table {
 }
 
 .player-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* 永不截断: 名字再长也要完整显示, 装不下就折行 (最长基准 WalkingAFK). */
   max-width: 100%;
+  overflow-wrap: anywhere;
   font-weight: 500;
 }
 
@@ -897,8 +896,30 @@ table.auto-table {
   margin-top: 2px;
 }
 
+/* 对局记分表在手机上的收紧 —— 与统计表同一套思路.
+   393px 视口的宽度预算: 393 −32(main) −32(card) = 329px 表宽,
+   局列 68 + 删除列 32 + 4×玩家列 57 = 328px. 单元格 padding 收到 4px、
+   分数缩到 0.8rem 才腾得出这个空间, 否则六位数分数和 局 标签都会挤出格子. */
+@media (width <= 640px) {
+  table.session-rounds-table th,
+  table.session-rounds-table td {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .session-rounds-table .score-cell,
+  .session-rounds-table .total-val {
+    font-size: 0.8rem;
+  }
+
+  .session-rounds-table .round-wind-tag {
+    font-size: 0.8rem;
+    padding: 2px 4px;
+  }
+}
+
 .round-wind-tag {
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   background: var(--sol-base2);
   color: var(--sol-yellow);
   padding: 2px 6px;
@@ -906,19 +927,6 @@ table.auto-table {
   border: 1px solid var(--sol-base1);
   font-weight: 700;
   white-space: nowrap;
-
-  /* The 局 column is a fixed width, so clip rather than spill into the score columns.
-     With the （N）form this should not trigger; it is a backstop for a 2-digit 本场. */
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@media (width <= 480px) {
-  .round-wind-tag {
-    font-size: 0.72rem;
-    padding: 2px 4px;
-  }
 }
 
 /* Best Hand Card */
@@ -969,16 +977,6 @@ table.auto-table {
 .winner-label {
   color: var(--mj-green);
   font-weight: 800;
-}
-
-.loser-label {
-  color: var(--mj-red);
-  font-weight: 800;
-}
-
-.zimo-label {
-  color: var(--sol-blue);
-  font-style: italic;
 }
 
 .session-link-label a {
@@ -1105,9 +1103,8 @@ table.auto-table {
 }
 
 .player-select-card div {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* 玩家名永不截断 (基准 WalkingAFK): 装不下就折行. */
+  overflow-wrap: anywhere;
 }
 
 .player-select-card.selected {
@@ -1831,13 +1828,8 @@ table.auto-table {
   }
 
   .round-form .score-inline-group {
-    flex-wrap: nowrap !important;
+    flex-wrap: wrap;
     width: 100%;
-  }
-
-  .round-form .score-input-compact {
-    flex: 1 !important;
-    max-width: none !important;
   }
 
   .options-grid.compact.cols-3 {
@@ -2096,10 +2088,6 @@ table.auto-table {
 @media (width <= 480px) {
   .mahjong-tile {
     max-width: 18px;
-  }
-
-  .win-action-row-three {
-    flex-direction: column;
   }
 
   .claim-name-row {
@@ -2592,18 +2580,6 @@ table.auto-table {
   margin-bottom: 8px;
 }
 
-/* Always keep 点炮/自摸 and 重置 on the same row */
-.win-action-row {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-
-.win-action-row .quick-player-btn {
-  flex: 1;
-}
-
 .quick-player-btn {
   width: 100%;
   padding: 6px 28px 6px 10px; /* Increased right padding to avoid badge overlap */
@@ -2652,15 +2628,6 @@ table.auto-table {
   box-shadow: 0 0 0 1px var(--sol-red);
 }
 
-.quick-player-btn.win-type-btn {
-  border-color: var(--sol-blue) !important;
-  color: var(--sol-blue) !important;
-  background: rgb(38 139 210 / 4%) !important;
-  font-weight: 700;
-  border-width: 1.5px !important;
-  transition: all 0.2s ease;
-}
-
 .quick-player-btn.reset-btn {
   border-color: var(--primary);
   color: var(--primary);
@@ -2669,45 +2636,6 @@ table.auto-table {
 
 .quick-player-btn.reset-btn:hover {
   background: rgb(7 54 66 / 14%);
-}
-
-.quick-player-btn.win-type-btn:hover:not(:disabled) {
-  background: rgb(38 139 210 / 12%) !important;
-  transform: translateY(-2px);
-}
-
-.quick-player-btn.win-type-btn.active {
-  border-color: var(--sol-blue) !important;
-  color: white !important;
-  background: var(--sol-blue) !important;
-  box-shadow: 0 2px 5px rgb(38 139 210 / 30%) !important;
-}
-
-.reset-btn-score-compact {
-  padding: 4px 0 !important;
-  font-size: 0.75rem !important;
-  height: 28px !important;
-  line-height: 1 !important;
-  border-radius: 4px !important;
-  border: 1px solid var(--sol-yellow) !important;
-  background: rgb(181 137 0 / 5%) !important;
-  color: var(--sol-yellow) !important;
-  cursor: pointer !important;
-  white-space: nowrap !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-  width: 52px !important;
-  font-weight: 700 !important;
-  box-shadow: none !important;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-.reset-btn-score-compact:hover {
-  background: rgb(181 137 0 / 15%) !important;
-  border-color: var(--sol-yellow) !important;
-  color: var(--sol-yellow) !important;
 }
 
 .round-form .score-inline-group {
@@ -2724,10 +2652,18 @@ table.auto-table {
   font-weight: 700;
 }
 
-.round-form .score-input-compact {
-  flex: 1;
-  max-width: 280px;
-  padding: 6px 10px;
+/* Must follow the desktop rule above: same specificity, and a media query adds none,
+   so source order decides. Stacking stops the lone pill button hugging the left edge. */
+@media (width <= 640px) {
+  .round-form .score-inline-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .round-form .score-inline-group .btn-photo-rec {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .round-form .form-section-title {
@@ -2948,9 +2884,9 @@ table.auto-table {
   font-size: 0.75rem;
   margin-top: 4px;
   color: var(--sol-base01);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+
+  /* 番种列表可以很长, 折行显示完整内容而不是截断. */
+  overflow-wrap: anywhere;
 }
 
 /* Dashboard Header */
@@ -3079,10 +3015,7 @@ table.auto-table {
   font-weight: 600;
   color: var(--primary);
   font-size: 0.9rem;
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .game-card .player-score {
@@ -3457,17 +3390,17 @@ table.auto-table {
 /* ==========================================================================
    Photo Recognition (AI 3.6 Flash) Styles
    ========================================================================== */
-.calc-header-bar {
+.calc-photo-rec-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-end;
   margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 12px;
 }
 
-.calc-tabs {
-  margin-bottom: 0 !important;
+@media (width <= 640px) {
+  .calc-photo-rec-row .btn-photo-rec {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .btn-photo-rec {
@@ -4239,10 +4172,4 @@ table.auto-table {
   background: rgb(0 0 0 / 90%);
   border-color: #fff;
   transform: translateY(-1px);
-}
-
-/* Inline variant used by the in-progress round form, next to 重置 */
-.btn-photo-rec-compact {
-  padding: 6px 12px;
-  font-size: 0.8rem;
 }

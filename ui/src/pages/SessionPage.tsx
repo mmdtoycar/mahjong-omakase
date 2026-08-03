@@ -6,7 +6,8 @@ import { rankByScore } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
-import { nameFontSize } from '../utils/fontSize'
+import { tableNameFontSize } from '../utils/fontSize'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
 import { scoreClass, parseError, seatRankMedal } from '../utils/format'
 import { MSG } from '../constants'
@@ -16,11 +17,13 @@ import { PhotoRecognitionModal, RecognizedHand } from '../components/PhotoRecogn
 import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
 import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
+import { nextWinSelection } from '../logic/shared/winSelection'
 
-const ROUND_COL_PX = 76
+const ROUND_COL_PX = 68
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
+  const isMobile = useIsMobile()
   const [session, setSession] = useState<SessionDetail | null>(null)
   const [winnerId, setWinnerId] = useState<string>('')
   const [score, setScore] = useState('')
@@ -37,7 +40,6 @@ export default function SessionPage() {
   const [fanDetails, setFanDetails] = useState<string>('')
   const [fanCount, setFanCount] = useState<number>(0)
   const [tsumoDetail, setTsumoDetail] = useState<{ dealer: number; nonDealer: number } | null>(null)
-  const [isBackfill, setIsBackfill] = useState(false)
   const [isChomboManual, setIsChomboManual] = useState(false)
   const [calcError, setCalcError] = useState('')
   const [error, setError] = useState('')
@@ -125,7 +127,6 @@ export default function SessionPage() {
     setFanDetails('')
     setFanCount(0)
     setTsumoDetail(null)
-    setIsBackfill(false)
     setIsChomboManual(false)
     setCalcError('')
     setCalcResetCount((prev) => prev + 1)
@@ -133,21 +134,24 @@ export default function SessionPage() {
     setRiichiImportedHand(null)
   }
 
+  /**
+   * 一个按钮承担"选人"和"定胡法"两件事, 靠点几下区分 —— 循环规则见 nextWinSelection,
+   * 那边是纯函数并有穷举测试, 这里只做状态映射。
+   */
   const handlePlayerClick = (pid: string) => {
-    if (winnerId === pid) {
-      setWinnerId('')
-      setDealInPlayerId('')
-      setIsSelfDraw(false)
-    } else if (dealInPlayerId === pid) {
-      setDealInPlayerId('')
-      setIsSelfDraw(false)
-    } else if (!winnerId) {
-      setWinnerId(pid)
-      setIsSelfDraw(false)
-    } else {
-      setDealInPlayerId(pid)
-      setIsSelfDraw(false)
-    }
+    const next = nextWinSelection(
+      {
+        winnerId,
+        dealInPlayerId,
+        kind: isChomboManual ? 'chombo' : isSelfDraw ? 'tsumo' : 'ron',
+      },
+      pid,
+      isGuobiao
+    )
+    setWinnerId(next.winnerId)
+    setDealInPlayerId(next.dealInPlayerId)
+    setIsSelfDraw(next.kind === 'tsumo')
+    setIsChomboManual(next.kind === 'chombo')
   }
 
   const canSubmit =
@@ -203,7 +207,6 @@ export default function SessionPage() {
           winHand,
           fanDetails,
           riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
-          backfill: isBackfill || undefined,
         })
       } else if (isDongbei) {
         await addRound(session.id, {
@@ -267,25 +270,6 @@ export default function SessionPage() {
   const sortedPlayers = [...session.players].sort(
     (a, b) => (session.totalScores[b.id] || 0) - (session.totalScores[a.id] || 0)
   )
-
-  // Find max fan hand(s)
-  const parseFanCount = (r: RoundInfo) => {
-    if (r.fanCount) return r.fanCount
-    if (!r.fanDetails) return 0
-    // Fallback: parse from "Name(Score)" or "Name(ScorexCount)"
-    const matches = r.fanDetails.match(/\((\d+)(x\d+)?\)/g)
-    if (!matches) return 0
-    return matches.reduce((sum: number, m: string) => {
-      const score = parseInt(m.match(/\d+/)?.[0] || '0')
-      const multMatch = m.match(/x(\d+)/)
-      const mult = multMatch ? parseInt(multMatch[1]) : 1
-      return sum + score * mult
-    }, 0)
-  }
-
-  const roundsWithFan = session.rounds.map((r) => ({ ...r, effectiveFan: parseFanCount(r) }))
-  const maxFan = roundsWithFan.reduce((max, r) => Math.max(max, r.effectiveFan), 0)
-  const bestRounds = maxFan > 0 ? roundsWithFan.filter((r) => r.effectiveFan === maxFan) : []
 
   const rankings = rankByScore(
     session.players.map((p) => ({ playerId: p.id, score: session.totalScores[p.id] || 0 })),
@@ -564,85 +548,47 @@ export default function SessionPage() {
                         <button key={p.id} className={btnClass} onClick={() => handlePlayerClick(String(p.id))}>
                           <div className="btn-name">{p.userName}</div>
                           <div className={`btn-wind${p.id === gameState.dealerPlayerId ? ' btn-wind-dealer' : ''}`}>
-                            {getWindName(getPlayerMenfeng(getPlayerSeat(p, idx)))}
-                            {p.id === gameState.dealerPlayerId ? ' 庄' : ''}
+                            {/* 选中后第二行改写角色, 让"谁是什么"看文字而不是记颜色 —— 同流局分支. */}
+                            {isWinner ? (
+                              isChomboManual ? (
+                                '诈胡'
+                              ) : isSelfDraw ? (
+                                '自摸'
+                              ) : (
+                                '和牌'
+                              )
+                            ) : isLoser && !isChomboManual && !isSelfDraw ? (
+                              '点炮'
+                            ) : (
+                              <>
+                                {getWindName(getPlayerMenfeng(getPlayerSeat(p, idx)))}
+                                {p.id === gameState.dealerPlayerId ? ' 庄' : ''}
+                              </>
+                            )}
                           </div>
                         </button>
                       )
                     })}
-                    <div className={`win-action-row${isGuobiao ? ' win-action-row-three' : ''}`}>
-                      <button
-                        type="button"
-                        className={`quick-player-btn win-type-btn dianpao ${
-                          !isSelfDraw && !isChomboManual ? 'active' : ''
-                        }`}
-                        onClick={() => {
-                          setIsSelfDraw(false)
-                          setIsChomboManual(false)
-                        }}
-                      >
-                        点炮
-                      </button>
-                      <button
-                        type="button"
-                        className={`quick-player-btn win-type-btn zimo ${
-                          isSelfDraw && !isChomboManual ? 'active' : ''
-                        }`}
-                        onClick={() => {
-                          setIsSelfDraw(true)
-                          setIsChomboManual(false)
-                        }}
-                      >
-                        自摸
-                      </button>
-                      {isGuobiao && (
-                        <button
-                          type="button"
-                          className={`quick-player-btn win-type-btn chombo ${isChomboManual ? 'active' : ''}`}
-                          onClick={() => {
-                            setIsSelfDraw(false)
-                            setIsChomboManual(true)
-                          }}
-                        >
-                          诈胡
-                        </button>
-                      )}
-                    </div>
                   </div>
+                  <span className="field-hint">
+                    {!winnerId
+                      ? `点一下选和牌者 · 连点同一人切换自摸${isGuobiao ? '/诈胡' : ''}`
+                      : isChomboManual
+                      ? '再点一下清空重选'
+                      : isSelfDraw
+                      ? `自摸无需选点炮者 · 再点${isGuobiao ? '一下改诈胡' : '一下清空'}`
+                      : '再点和牌者可切自摸' + (isGuobiao ? '/诈胡' : '') + ' · 另点一人为点炮者'}
+                  </span>
                 </div>
 
                 {isRiichi && (
                   <div className="form-group">
                     <div className="score-inline-group">
-                      <label>分数</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={score}
-                        onChange={(e) => {
-                          setScore(e.target.value)
-                          setTsumoDetail(null)
-                          setWinHand('')
-                          setFanDetails('')
-                          setFanCount(0)
-                        }}
-                        placeholder="输入分数"
-                        className="score-input-compact"
-                      />
-                      <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
-                        重置
+                      <button type="button" className="btn-photo-rec" onClick={() => setIsPhotoModalOpen(true)}>
+                        <span className="btn-photo-rec-icon">📷</span>
+                        <span>拍照识别</span>
+                        <span className="btn-photo-rec-badge">AI 识别</span>
                       </button>
-                      <button
-                        type="button"
-                        className="btn-photo-rec btn-photo-rec-compact"
-                        onClick={() => setIsPhotoModalOpen(true)}
-                      >
-                        📷 拍照识别
-                      </button>
-                      <label className="checkbox-toggle">
-                        <input type="checkbox" checked={isBackfill} onChange={(e) => setIsBackfill(e.target.checked)} />
-                        <span>补录 (不计入局数)</span>
-                      </label>
                     </div>
                     <div className="inline-calc-wrapper">
                       <RiichiCalculator
@@ -667,52 +613,29 @@ export default function SessionPage() {
                   <div className="round-form-grid">
                     <div className="form-group">
                       <label>番</label>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={fan}
-                          onChange={(e) => setFan(e.target.value)}
-                          placeholder="输入番"
-                          style={{ flex: 1 }}
-                        />
-                        <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
-                          重置
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={fan}
+                        onChange={(e) => setFan(e.target.value)}
+                        placeholder="输入番"
+                      />
                     </div>
                   </div>
                 )}
 
                 {!isRiichi && isGuobiao && (
                   <div className="form-group">
-                    <div className="score-inline-group">
-                      <label>分数</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={score}
-                        onChange={(e) => {
-                          setScore(e.target.value)
-                          setWinHand('')
-                          setFanDetails('')
-                          setFanCount(0)
-                        }}
-                        placeholder={isChomboManual ? '诈胡免输分数' : '输入分数'}
-                        className="score-input-compact"
-                        disabled={isChomboManual}
-                      />
-                      <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
-                        重置
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-photo-rec btn-photo-rec-compact"
-                        onClick={() => setIsPhotoModalOpen(true)}
-                      >
-                        📷 拍照识别
-                      </button>
-                    </div>
+                    {/* 诈胡 hides the calculator and needs no score, so the importer is moot too. */}
+                    {!isChomboManual && (
+                      <div className="score-inline-group">
+                        <button type="button" className="btn-photo-rec" onClick={() => setIsPhotoModalOpen(true)}>
+                          <span className="btn-photo-rec-icon">📷</span>
+                          <span>拍照识别</span>
+                          <span className="btn-photo-rec-badge">AI 识别</span>
+                        </button>
+                      </div>
+                    )}
                     <div className="inline-calc-wrapper" style={{ display: isChomboManual ? 'none' : 'block' }}>
                       <GuobiaoCalculator
                         key="guobiao-calc"
@@ -819,7 +742,7 @@ export default function SessionPage() {
           </div>
         </div>
         <div className="table-wrap">
-          <table className="fixed-table">
+          <table className="fixed-table session-rounds-table">
             <thead>
               <tr>
                 <th style={{ textAlign: 'center', verticalAlign: 'top', width: `${ROUND_COL_PX}px` }}>局</th>
@@ -830,7 +753,7 @@ export default function SessionPage() {
                         {seatRankMedal(rankMap[p.id]?.rank ?? 0) ?? `#${rankMap[p.id]?.rank ?? 0}`}
                       </span>
                       <RankBadge tier={p.tier} size="sm" userName={p.userName} />
-                      <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
+                      <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>
                         {p.userName}
                       </span>
                     </div>
@@ -925,7 +848,7 @@ export default function SessionPage() {
                     >
                       <div className="total-score-box">
                         <div className="total-val">{displayVal}</div>
-                        {rankDelta != null && <div className="rank-delta-val">{formatDelta(rankDelta)} 段位分</div>}
+                        {rankDelta != null && <div className="rank-delta-val">{formatDelta(rankDelta)}</div>}
                       </div>
                     </td>
                   )
@@ -965,7 +888,7 @@ export default function SessionPage() {
                         <span className={`rank-tag rank-tag-${rank}`}>{seatRankMedal(rank) ?? `#${rank}`}</span>
                       </td>
                       <td>
-                        <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
+                        <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>
                           {p.userName}
                         </span>
                       </td>
@@ -978,43 +901,6 @@ export default function SessionPage() {
                 })}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {bestRounds.length > 0 && (
-        <div className="card best-hand-card">
-          <div className="best-hand-header">
-            <span className="best-hand-crown">👑</span>
-            <h2>最高番和牌</h2>
-          </div>
-          <div>
-            {bestRounds.map((round) => {
-              const winner = session.players.find((p) => p.id === round.winnerId)
-              const loser =
-                round.dealInPlayerId != null ? session.players.find((p) => p.id === round.dealInPlayerId) : null
-
-              return (
-                <div key={round.roundNumber} className="best-hand-item">
-                  <div className="best-hand-meta">
-                    <span className="best-hand-fan-count">{round.effectiveFan} 番</span>
-                    <span className="best-hand-players">
-                      <span className="winner-label">赢家:</span> {winner?.userName}
-                      {round.dealInPlayerId != null ? (
-                        <>
-                          <span className="loser-label ml-2">输家:</span> {loser?.userName || '?'}
-                        </>
-                      ) : (
-                        <span className="zimo-label ml-2">(自摸)</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="best-hand-display">
-                    <MahjongHand hand={round.winHand} details={round.fanDetails} />
-                  </div>
-                </div>
-              )
-            })}
           </div>
         </div>
       )}

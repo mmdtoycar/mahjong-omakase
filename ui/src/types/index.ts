@@ -111,7 +111,6 @@ export interface RoundInfo {
   prevalentWind?: number
   riichiPlayerIds?: number[]
   tenpaiPlayerIds?: number[] // for drawn games; undefined on legacy rounds
-  backfill?: boolean
 }
 
 export interface SessionDetail {
@@ -149,7 +148,6 @@ export interface AddRoundData {
   fanDetails?: string
   fanCount?: number
   prevalentWind?: number
-  backfill?: boolean
   chombo?: boolean
 }
 

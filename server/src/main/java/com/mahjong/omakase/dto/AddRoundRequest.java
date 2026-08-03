@@ -38,8 +38,6 @@ public class AddRoundRequest {
 
   private List<Long> riichiPlayerIds; // players who declared riichi
 
-  private Boolean backfill;
-
   private String winHand;
 
   private String fanDetails;
