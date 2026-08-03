@@ -17,6 +17,8 @@ import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
 import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
 
+const ROUND_COL_PX = 76
+
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
   const [session, setSession] = useState<SessionDetail | null>(null)
@@ -315,7 +317,7 @@ export default function SessionPage() {
     return state.displayName
   }
 
-  const fixedColPx = 60 + (session.status === 'IN_PROGRESS' ? 32 : 0)
+  const fixedColPx = ROUND_COL_PX + (session.status === 'IN_PROGRESS' ? 32 : 0)
   const playerColStyle = {
     textAlign: 'center' as const,
     verticalAlign: 'top' as const,
@@ -820,7 +822,7 @@ export default function SessionPage() {
           <table className="fixed-table">
             <thead>
               <tr>
-                <th style={{ textAlign: 'center', verticalAlign: 'top', width: '60px' }}>局</th>
+                <th style={{ textAlign: 'center', verticalAlign: 'top', width: `${ROUND_COL_PX}px` }}>局</th>
                 {session.players.map((p) => (
                   <th key={p.id} style={playerColStyle}>
                     <div className="player-header-cell">
