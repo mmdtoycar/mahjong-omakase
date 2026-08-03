@@ -877,10 +877,9 @@ table.auto-table {
 }
 
 .player-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* 永不截断: 名字再长也要完整显示, 装不下就折行 (最长基准 WalkingAFK). */
   max-width: 100%;
+  overflow-wrap: anywhere;
   font-weight: 500;
 }
 
@@ -897,6 +896,28 @@ table.auto-table {
   margin-top: 2px;
 }
 
+/* 对局记分表在手机上的收紧 —— 与统计表同一套思路.
+   393px 视口的宽度预算: 393 −32(main) −32(card) = 329px 表宽,
+   局列 68 + 删除列 32 + 4×玩家列 57 = 328px. 单元格 padding 收到 4px、
+   分数缩到 0.8rem 才腾得出这个空间, 否则六位数分数和 局 标签都会挤出格子. */
+@media (width <= 640px) {
+  table.session-rounds-table th,
+  table.session-rounds-table td {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .session-rounds-table .score-cell,
+  .session-rounds-table .total-val {
+    font-size: 0.8rem;
+  }
+
+  .session-rounds-table .round-wind-tag {
+    font-size: 0.8rem;
+    padding: 2px 4px;
+  }
+}
+
 .round-wind-tag {
   font-size: 0.85rem;
   background: var(--sol-base2);
@@ -906,9 +927,6 @@ table.auto-table {
   border: 1px solid var(--sol-base1);
   font-weight: 700;
   white-space: nowrap;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Best Hand Card */
@@ -1095,9 +1113,8 @@ table.auto-table {
 }
 
 .player-select-card div {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* 玩家名永不截断 (基准 WalkingAFK): 装不下就折行. */
+  overflow-wrap: anywhere;
 }
 
 .player-select-card.selected {
@@ -2914,9 +2931,9 @@ table.auto-table {
   font-size: 0.75rem;
   margin-top: 4px;
   color: var(--sol-base01);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+
+  /* 番种列表可以很长, 折行显示完整内容而不是截断. */
+  overflow-wrap: anywhere;
 }
 
 /* Dashboard Header */
@@ -3045,10 +3062,7 @@ table.auto-table {
   font-weight: 600;
   color: var(--primary);
   font-size: 0.9rem;
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .game-card .player-score {

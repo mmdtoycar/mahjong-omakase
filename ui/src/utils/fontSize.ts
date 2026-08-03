@@ -21,9 +21,6 @@ const FULLWIDTH =
 
 /**
  * 视觉宽度(以"半个字"为单位): 全角记 2, 大写字母记 1.4, 其他记 1.
- *
- * <p>text.length 会把 "小明同学" 和 "abcd" 当成一样长, 但前者实际宽一倍; 大写字母也明显比小写宽
- * (Helvetica 里 W 是 l 的 4 倍), 所以 "WalkingAFK" 这种混了 4 个大写的名字按 length 分档会溢出.
  */
 function visualWidth(text: string) {
   let w = 0

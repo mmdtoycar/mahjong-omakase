@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { scoreClass, seatRankMedal } from '../utils/format'
-import { nameFontSize } from '../utils/fontSize'
+import { tableNameFontSize } from '../utils/fontSize'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { TierKey } from '../types'
 import { RankBadge } from './RankBadge'
 import { TableStrengthTag } from './TableStrengthTag'
@@ -48,6 +49,7 @@ export const GameCard: React.FC<Props> = ({
   tableStrength,
 }) => {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [fullscreen, setFullscreen] = useState(false)
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeBtnRef = useRef<HTMLButtonElement>(null)
@@ -185,7 +187,7 @@ export const GameCard: React.FC<Props> = ({
                 </span>
                 {p.wind && <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>{p.wind}</span>}
                 <RankBadge tier={p.tier} size="sm" userName={p.name} />
-                <span className="player-name" style={{ fontSize: nameFontSize(p.name) }}>
+                <span className="player-name" style={{ fontSize: tableNameFontSize(p.name, isMobile) }}>
                   {p.name}
                 </span>
               </span>

@@ -6,7 +6,8 @@ import { rankByScore } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
-import { nameFontSize } from '../utils/fontSize'
+import { tableNameFontSize } from '../utils/fontSize'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
 import { scoreClass, parseError, seatRankMedal } from '../utils/format'
 import { MSG } from '../constants'
@@ -17,10 +18,11 @@ import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
 import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
 
-const ROUND_COL_PX = 62
+const ROUND_COL_PX = 68
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
+  const isMobile = useIsMobile()
   const [session, setSession] = useState<SessionDetail | null>(null)
   const [winnerId, setWinnerId] = useState<string>('')
   const [score, setScore] = useState('')
@@ -769,7 +771,7 @@ export default function SessionPage() {
           </div>
         </div>
         <div className="table-wrap">
-          <table className="fixed-table">
+          <table className="fixed-table session-rounds-table">
             <thead>
               <tr>
                 <th style={{ textAlign: 'center', verticalAlign: 'top', width: `${ROUND_COL_PX}px` }}>局</th>
@@ -780,7 +782,7 @@ export default function SessionPage() {
                         {seatRankMedal(rankMap[p.id]?.rank ?? 0) ?? `#${rankMap[p.id]?.rank ?? 0}`}
                       </span>
                       <RankBadge tier={p.tier} size="sm" userName={p.userName} />
-                      <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
+                      <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>
                         {p.userName}
                       </span>
                     </div>
@@ -915,7 +917,7 @@ export default function SessionPage() {
                         <span className={`rank-tag rank-tag-${rank}`}>{seatRankMedal(rank) ?? `#${rank}`}</span>
                       </td>
                       <td>
-                        <span className="player-name" style={{ fontSize: nameFontSize(p.userName) }}>
+                        <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>
                           {p.userName}
                         </span>
                       </td>
