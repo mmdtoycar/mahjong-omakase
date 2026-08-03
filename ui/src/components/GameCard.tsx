@@ -51,6 +51,7 @@ export const GameCard: React.FC<Props> = ({
   const [fullscreen, setFullscreen] = useState(false)
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeBtnRef = useRef<HTMLButtonElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
   useEffect(
     () => () => {
@@ -64,6 +65,31 @@ export const GameCard: React.FC<Props> = ({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         closeFullscreen()
+        return
+      }
+      // Tab trap: keep focus within the dialog
+      if (e.key === 'Tab') {
+        const dialog = overlayRef.current
+        if (!dialog) return
+        const focusable = Array.from(
+          dialog.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => !el.hasAttribute('disabled'))
+        if (focusable.length === 0) return
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
       }
     }
     document.addEventListener('keydown', onKey)
@@ -170,7 +196,7 @@ export const GameCard: React.FC<Props> = ({
       </div>
 
       {fullscreen && (
-        <div className="game-fs-overlay" role="dialog" aria-modal="true" aria-label="全屏看盘">
+        <div ref={overlayRef} className="game-fs-overlay" role="dialog" aria-modal="true" aria-label="全屏看盘">
           <div className="game-fs-topbar">
             <div className="game-fs-title-area">
               <span className="game-fs-mode">{gameModeDisplayName}</span>

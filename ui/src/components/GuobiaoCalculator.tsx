@@ -4,6 +4,7 @@ import { Meld, GameOptions, CalcResult } from '../logic/guobiao/types'
 import { calculateBestScore } from '../logic/guobiao/fan'
 import { checkTing } from '../logic/guobiao/ting'
 import { TileComponent, isSequenceDisabled } from './shared/TileComponent'
+import { ImportedHand } from '../logic/shared/importedHand'
 
 type Mode = {
   name: string
@@ -77,6 +78,7 @@ interface GuobiaoCalculatorProps {
   resetTrigger?: number
   isSelfDraw: boolean
   onIsSelfDrawChange: (val: boolean) => void
+  importedHand?: ImportedHand<Meld> | null
 }
 
 export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
@@ -85,6 +87,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   resetTrigger,
   isSelfDraw,
   onIsSelfDrawChange: _onIsSelfDrawChange,
+  importedHand,
 }) => {
   const [concealedTiles, setConcealedTiles] = useState<Tile[]>([])
   const [melds, setMelds] = useState<Meld[]>([])
@@ -118,6 +121,17 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
     }))
     setMode(modes[0])
   }, [])
+
+  // Sync imported hand from photo recognition
+  const [prevImportTrigger, setPrevImportTrigger] = useState<number | undefined>(undefined)
+  if (importedHand && importedHand.trigger !== prevImportTrigger) {
+    setPrevImportTrigger(importedHand.trigger)
+    // A photo carries no 花牌/绝张/杠上/海底 information, so clear whatever the previous
+    // hand left behind before applying it — otherwise those flags inflate the new fan total.
+    resetHandState()
+    setConcealedTiles(importedHand.concealed)
+    setMelds(importedHand.melds)
+  }
 
   // Adjusting state during render pattern - resets tiles when parent triggers reset
   // This is more efficient than useEffect as it avoids an extra render pass.

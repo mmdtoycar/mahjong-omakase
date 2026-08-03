@@ -3,6 +3,7 @@ import { Tile } from '../logic/shared/tiles'
 import { Meld, GameOptions, CalcResult } from '../logic/riichi/types'
 import { calculateHand } from '../logic/riichi/score'
 import { TileComponent, isSequenceDisabled } from './shared/TileComponent'
+import { ImportedHand } from '../logic/shared/importedHand'
 
 type Mode = {
   name: string
@@ -84,6 +85,7 @@ interface RiichiCalculatorProps {
   isSelfDraw: boolean
   onIsSelfDrawChange: (val: boolean) => void
   playerCount?: number
+  importedHand?: ImportedHand<Meld> | null
 }
 
 export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
@@ -94,6 +96,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
   isSelfDraw,
   onIsSelfDrawChange: _onIsSelfDrawChange,
   playerCount = 4,
+  importedHand,
 }) => {
   const [concealedTiles, setConcealedTiles] = useState<Tile[]>([])
   const [melds, setMelds] = useState<Meld[]>([])
@@ -135,6 +138,17 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
     }))
     setMode(modes[0])
   }, [])
+
+  // Sync imported hand from photo recognition
+  const [prevImportTrigger, setPrevImportTrigger] = useState<number | undefined>(undefined)
+  if (importedHand && importedHand.trigger !== prevImportTrigger) {
+    setPrevImportTrigger(importedHand.trigger)
+    // A photo carries no 立直/一发/海底/dora information, so clear whatever the previous
+    // hand left behind before applying it — otherwise the imported hand scores with them.
+    resetHandState()
+    setConcealedTiles(importedHand.concealed)
+    setMelds(importedHand.melds)
+  }
 
   const [prevResetTrigger, setPrevResetTrigger] = useState(resetTrigger)
   if (resetTrigger !== prevResetTrigger) {

@@ -229,3 +229,23 @@ export async function lookupClaimablePlayer(userName: string, firstName: string,
   const data = await handleResponse<{ exists: boolean }>(res)
   return data.exists
 }
+
+/**
+ * Sends a hand photo to the server for recognition and returns the model's raw JSON text.
+ *
+ * The Gemini key, the prompt and the calibration legend all live server-side, so the
+ * browser only ever ships the photo.
+ */
+export async function recognizeHandPhoto(imageBase64: string, mimeType: string): Promise<string> {
+  const res = await fetch(`${API}/recognize`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ imageBase64, mimeType }),
+  })
+  const data = await handleResponse<{ rawJson: string } | undefined>(res)
+  // handleResponse yields undefined for an empty body; don't hand that to the parser.
+  if (!data || typeof data.rawJson !== 'string' || !data.rawJson.trim()) {
+    throw new Error('识别服务未返回内容，请重试')
+  }
+  return data.rawJson
+}
