@@ -13,6 +13,7 @@ import { statFontSize, tableNameFontSize } from '../utils/fontSize'
 import { parseError, rankMedal, skillRatingText } from '../utils/format'
 import { MSG } from '../constants'
 import { useActiveSeasons } from '../hooks/useActiveSeasons'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 export default function StatsPage() {
   const navigate = useNavigate()
@@ -28,6 +29,8 @@ export default function StatsPage() {
   const [monthlyBestRounds, setMonthlyBestRounds] = useState<BestRound[]>([])
   const [monthlyBestRoundsError, setMonthlyBestRoundsError] = useState('')
   const { seasons, error: seasonsError } = useActiveSeasons()
+  // 内联字号要跟着视口变化重算, 所以断点走订阅式 hook 而不是现场读 window.innerWidth.
+  const isMobile = useIsMobile()
 
   const [gameMode, setGameMode] = useState<GameModeKey>(GAME_MODES[0].key)
   const [seasonKey, setSeasonKey] = useState<string>(`${currentSeason.year}-${currentSeason.month}`)
@@ -329,7 +332,7 @@ export default function StatsPage() {
                             <span
                               className="player-name"
                               title={s.userName}
-                              style={{ fontSize: tableNameFontSize(s.userName) }}
+                              style={{ fontSize: tableNameFontSize(s.userName, isMobile) }}
                             >
                               {s.userName}
                             </span>
@@ -445,7 +448,7 @@ export default function StatsPage() {
                           <span
                             className="player-name"
                             title={p.userName}
-                            style={{ fontSize: tableNameFontSize(p.userName) }}
+                            style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}
                           >
                             {p.userName}
                           </span>

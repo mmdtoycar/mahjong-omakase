@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { TierKey, tierLabel } from '../types'
+import { skillRatingText } from '../utils/format'
 
 interface Props {
   tier?: TierKey | null
@@ -92,7 +93,7 @@ export const RankBadge: React.FC<Props> = ({
     return (
       <div className={`rank-badge rank-badge-unranked rank-badge-${size} ${className ?? ''}`} onClick={onClick}>
         <div className="rank-badge-progress">{showProgress ? `${progressPlayed}/5` : '未定段'}</div>
-        {rating !== undefined && <span className="rank-badge-rating">{rating.toFixed(0)}(?)</span>}
+        {rating !== undefined && <span className="rank-badge-rating">{skillRatingText(rating, 'UNRANKED')}</span>}
       </div>
     )
   }

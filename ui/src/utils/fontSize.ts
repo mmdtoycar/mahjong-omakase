@@ -1,4 +1,4 @@
-const MOBILE_BREAKPOINT = 640
+export const MOBILE_BREAKPOINT = 640
 
 interface FontSizeTier {
   maxLen: number
@@ -35,9 +35,17 @@ function visualWidth(text: string) {
   return w
 }
 
-function resolveByWidth(text: string, tiers: FontSizeTier[], fallback: { desktop: string; mobile: string }) {
+/**
+ * 与 resolve 的区别: 按 visualWidth 分档, 且 mobile 由调用方传入(useIsMobile) 而不是现场读
+ * window.innerWidth —— 后者不会触发重渲染, 旋转屏幕或缩放窗口跨过断点后字号会停在旧值.
+ */
+function resolveByWidth(
+  text: string,
+  mobile: boolean,
+  tiers: FontSizeTier[],
+  fallback: { desktop: string; mobile: string }
+) {
   const width = visualWidth(text)
-  const mobile = window.innerWidth <= MOBILE_BREAKPOINT
   for (const t of tiers) {
     if (width <= t.maxLen) return mobile ? t.mobile : t.desktop
   }
@@ -76,9 +84,10 @@ export function nameFontSize(text: string) {
  * 分档(中文名按两倍宽算), 尽量让完整 ID 显示出来而不是被省略号截掉.
  * maxLen 的单位是"半个字": 8 = 4 个汉字 = 8 个字母. 桌面端列宽充裕, 档位放宽.
  */
-export function tableNameFontSize(text: string) {
+export function tableNameFontSize(text: string, mobile: boolean) {
   return resolveByWidth(
     text,
+    mobile,
     [
       { maxLen: 8, desktop: '0.95rem', mobile: '0.85rem' },
       { maxLen: 10, desktop: '0.95rem', mobile: '0.72rem' },

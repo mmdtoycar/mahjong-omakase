@@ -470,6 +470,14 @@ public class TierService {
 
   // ===== Per-mode getters/setters =====
 
+  /**
+   * 这三个 setter 是 switch <b>语句</b>, 编译器不像 switch 表达式那样强制穷尽. 新增 GameMode 又漏改 setter 时, 没有 default 会静默
+   * no-op, 让那个模式的 rating/games/peak 永远不更新 —— 宁可直接抛.
+   */
+  private static IllegalArgumentException unhandledMode(GameMode mode) {
+    return new IllegalArgumentException("Unhandled GameMode: " + mode);
+  }
+
   private double getRating(Player p, GameMode mode) {
     return switch (mode) {
       case GUOBIAO -> p.getSkillGuobiao();
@@ -483,6 +491,7 @@ public class TierService {
       case GUOBIAO -> p.setSkillGuobiao(v);
       case RIICHI -> p.setSkillRiichi(v);
       case DONGBEI -> p.setSkillDongbei(v);
+      default -> throw unhandledMode(mode);
     }
   }
 
@@ -499,6 +508,7 @@ public class TierService {
       case GUOBIAO -> p.setGamesGuobiao(v);
       case RIICHI -> p.setGamesRiichi(v);
       case DONGBEI -> p.setGamesDongbei(v);
+      default -> throw unhandledMode(mode);
     }
   }
 
@@ -519,6 +529,7 @@ public class TierService {
       case GUOBIAO -> p.setPeakSkillGuobiao(v);
       case RIICHI -> p.setPeakSkillRiichi(v);
       case DONGBEI -> p.setPeakSkillDongbei(v);
+      default -> throw unhandledMode(mode);
     }
   }
 
