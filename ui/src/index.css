@@ -1821,13 +1821,8 @@ table.auto-table {
   }
 
   .round-form .score-inline-group {
-    flex-wrap: nowrap !important;
+    flex-wrap: wrap;
     width: 100%;
-  }
-
-  .round-form .score-input-compact {
-    flex: 1 !important;
-    max-width: none !important;
   }
 
   .options-grid.compact.cols-3 {
@@ -2714,12 +2709,6 @@ table.auto-table {
   font-weight: 700;
 }
 
-.round-form .score-input-compact {
-  flex: 1;
-  max-width: 280px;
-  padding: 6px 10px;
-}
-
 .round-form .form-section-title {
   background: var(--sol-base3);
   font-size: 0.85rem;
@@ -3447,13 +3436,17 @@ table.auto-table {
 /* ==========================================================================
    Photo Recognition (AI 3.6 Flash) Styles
    ========================================================================== */
-.calc-header-bar {
+.calc-photo-rec-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-end;
   margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 12px;
+}
+
+@media (width <= 600px) {
+  .calc-photo-rec-row .btn-photo-rec {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .calc-tabs {
@@ -4229,10 +4222,4 @@ table.auto-table {
   background: rgb(0 0 0 / 90%);
   border-color: #fff;
   transform: translateY(-1px);
-}
-
-/* Inline variant used by the in-progress round form, next to 重置 */
-.btn-photo-rec-compact {
-  padding: 6px 12px;
-  font-size: 0.8rem;
 }

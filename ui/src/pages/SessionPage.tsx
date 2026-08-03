@@ -614,30 +614,10 @@ export default function SessionPage() {
                 {isRiichi && (
                   <div className="form-group">
                     <div className="score-inline-group">
-                      <label>分数</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={score}
-                        onChange={(e) => {
-                          setScore(e.target.value)
-                          setTsumoDetail(null)
-                          setWinHand('')
-                          setFanDetails('')
-                          setFanCount(0)
-                        }}
-                        placeholder="输入分数"
-                        className="score-input-compact"
-                      />
-                      <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
-                        重置
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-photo-rec btn-photo-rec-compact"
-                        onClick={() => setIsPhotoModalOpen(true)}
-                      >
-                        📷 拍照识别
+                      <button type="button" className="btn-photo-rec" onClick={() => setIsPhotoModalOpen(true)}>
+                        <span className="btn-photo-rec-icon">📷</span>
+                        <span>拍照识别</span>
+                        <span className="btn-photo-rec-badge">AI 识别</span>
                       </button>
                       <label className="checkbox-toggle">
                         <input type="checkbox" checked={isBackfill} onChange={(e) => setIsBackfill(e.target.checked)} />
@@ -686,33 +666,16 @@ export default function SessionPage() {
 
                 {!isRiichi && isGuobiao && (
                   <div className="form-group">
-                    <div className="score-inline-group">
-                      <label>分数</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={score}
-                        onChange={(e) => {
-                          setScore(e.target.value)
-                          setWinHand('')
-                          setFanDetails('')
-                          setFanCount(0)
-                        }}
-                        placeholder={isChomboManual ? '诈胡免输分数' : '输入分数'}
-                        className="score-input-compact"
-                        disabled={isChomboManual}
-                      />
-                      <button type="button" className="reset-btn-score-compact" onClick={resetForm}>
-                        重置
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-photo-rec btn-photo-rec-compact"
-                        onClick={() => setIsPhotoModalOpen(true)}
-                      >
-                        📷 拍照识别
-                      </button>
-                    </div>
+                    {/* 诈胡 hides the calculator and needs no score, so the importer is moot too. */}
+                    {!isChomboManual && (
+                      <div className="score-inline-group">
+                        <button type="button" className="btn-photo-rec" onClick={() => setIsPhotoModalOpen(true)}>
+                          <span className="btn-photo-rec-icon">📷</span>
+                          <span>拍照识别</span>
+                          <span className="btn-photo-rec-badge">AI 识别</span>
+                        </button>
+                      </div>
+                    )}
                     <div className="inline-calc-wrapper" style={{ display: isChomboManual ? 'none' : 'block' }}>
                       <GuobiaoCalculator
                         key="guobiao-calc"
