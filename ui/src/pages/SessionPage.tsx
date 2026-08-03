@@ -17,6 +17,7 @@ import { PhotoRecognitionModal, RecognizedHand } from '../components/PhotoRecogn
 import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
 import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
+import { nextWinSelection } from '../logic/shared/winSelection'
 
 const ROUND_COL_PX = 68
 
@@ -133,21 +134,24 @@ export default function SessionPage() {
     setRiichiImportedHand(null)
   }
 
+  /**
+   * 一个按钮承担"选人"和"定胡法"两件事, 靠点几下区分 —— 循环规则见 nextWinSelection,
+   * 那边是纯函数并有穷举测试, 这里只做状态映射。
+   */
   const handlePlayerClick = (pid: string) => {
-    if (winnerId === pid) {
-      setWinnerId('')
-      setDealInPlayerId('')
-      setIsSelfDraw(false)
-    } else if (dealInPlayerId === pid) {
-      setDealInPlayerId('')
-      setIsSelfDraw(false)
-    } else if (!winnerId) {
-      setWinnerId(pid)
-      setIsSelfDraw(false)
-    } else {
-      setDealInPlayerId(pid)
-      setIsSelfDraw(false)
-    }
+    const next = nextWinSelection(
+      {
+        winnerId,
+        dealInPlayerId,
+        kind: isChomboManual ? 'chombo' : isSelfDraw ? 'tsumo' : 'ron',
+      },
+      pid,
+      isGuobiao
+    )
+    setWinnerId(next.winnerId)
+    setDealInPlayerId(next.dealInPlayerId)
+    setIsSelfDraw(next.kind === 'tsumo')
+    setIsChomboManual(next.kind === 'chombo')
   }
 
   const canSubmit =
@@ -544,8 +548,23 @@ export default function SessionPage() {
                         <button key={p.id} className={btnClass} onClick={() => handlePlayerClick(String(p.id))}>
                           <div className="btn-name">{p.userName}</div>
                           <div className={`btn-wind${p.id === gameState.dealerPlayerId ? ' btn-wind-dealer' : ''}`}>
-                            {getWindName(getPlayerMenfeng(getPlayerSeat(p, idx)))}
-                            {p.id === gameState.dealerPlayerId ? ' 庄' : ''}
+                            {/* 选中后第二行改写角色, 让"谁是什么"看文字而不是记颜色 —— 同流局分支. */}
+                            {isWinner ? (
+                              isChomboManual ? (
+                                '诈胡'
+                              ) : isSelfDraw ? (
+                                '自摸'
+                              ) : (
+                                '和牌'
+                              )
+                            ) : isLoser && !isChomboManual && !isSelfDraw ? (
+                              '点炮'
+                            ) : (
+                              <>
+                                {getWindName(getPlayerMenfeng(getPlayerSeat(p, idx)))}
+                                {p.id === gameState.dealerPlayerId ? ' 庄' : ''}
+                              </>
+                            )}
                           </div>
                         </button>
                       )
@@ -571,6 +590,7 @@ export default function SessionPage() {
                         onClick={() => {
                           setIsSelfDraw(true)
                           setIsChomboManual(false)
+                          setDealInPlayerId('')
                         }}
                       >
                         自摸
@@ -582,6 +602,7 @@ export default function SessionPage() {
                           onClick={() => {
                             setIsSelfDraw(false)
                             setIsChomboManual(true)
+                            setDealInPlayerId('')
                           }}
                         >
                           诈胡
@@ -589,6 +610,15 @@ export default function SessionPage() {
                       )}
                     </div>
                   </div>
+                  <span className="field-hint">
+                    {!winnerId
+                      ? '点一下选和牌者'
+                      : isChomboManual
+                      ? '再点一下清空重选'
+                      : isSelfDraw
+                      ? `自摸无需选点炮者 · 再点${isGuobiao ? '一下改诈胡' : '一下清空'}`
+                      : '再点和牌者可切自摸' + (isGuobiao ? '/诈胡' : '') + ' · 另点一人为点炮者'}
+                  </span>
                 </div>
 
                 {isRiichi && (
