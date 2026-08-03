@@ -3689,6 +3689,7 @@ table.auto-table {
 }
 
 .image-preview-wrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;

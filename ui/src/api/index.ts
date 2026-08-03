@@ -242,6 +242,10 @@ export async function recognizeHandPhoto(imageBase64: string, mimeType: string):
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ imageBase64, mimeType }),
   })
-  const data = await handleResponse<{ rawJson: string }>(res)
+  const data = await handleResponse<{ rawJson: string } | undefined>(res)
+  // handleResponse yields undefined for an empty body; don't hand that to the parser.
+  if (!data || typeof data.rawJson !== 'string' || !data.rawJson.trim()) {
+    throw new Error('识别服务未返回内容，请重试')
+  }
   return data.rawJson
 }

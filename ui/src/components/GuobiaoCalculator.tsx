@@ -126,6 +126,9 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   const [prevImportTrigger, setPrevImportTrigger] = useState<number | undefined>(undefined)
   if (importedHand && importedHand.trigger !== prevImportTrigger) {
     setPrevImportTrigger(importedHand.trigger)
+    // A photo carries no 花牌/绝张/杠上/海底 information, so clear whatever the previous
+    // hand left behind before applying it — otherwise those flags inflate the new fan total.
+    resetHandState()
     setConcealedTiles(importedHand.concealed)
     setMelds(importedHand.melds)
   }

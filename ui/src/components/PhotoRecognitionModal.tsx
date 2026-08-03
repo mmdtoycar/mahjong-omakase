@@ -383,6 +383,13 @@ export function checkRecognizedHand(hand: RecognizedHand): { blocking: string[];
   const meldSlots = hand.melds.reduce((sum, m) => sum + (m.tiles.length === 4 ? 3 : m.tiles.length), 0)
   const size = hand.concealed.length + meldSlots
 
+  // Both calculators score a meld as exactly 3 slots, so a 2- or 5-tile meld silently
+  // shifts the hand size and produces a set no rule set can form.
+  const badMelds = hand.melds.filter((m) => m.tiles.length !== 3 && m.tiles.length !== 4)
+  if (badMelds.length > 0) {
+    blocking.push(`有 ${badMelds.length} 组副露张数不是 3 或 4 张，请修正后再填入`)
+  }
+
   const counts = new Map<string, number>()
   for (const t of [...hand.concealed, ...hand.melds.flatMap((m) => m.tiles)]) {
     const key = `${t.rank}${t.suit}`
@@ -393,7 +400,9 @@ export function checkRecognizedHand(hand: RecognizedHand): { blocking: string[];
     blocking.push(`${over.join('、')} 出现超过 4 张，请修正后再填入`)
   }
 
-  if (size > 14) {
+  if (size === 0) {
+    blocking.push('没有识别出任何牌，请换一张更清晰的照片重试')
+  } else if (size > 14) {
     blocking.push(`共识别出 ${size} 张牌（含副露），超过一手牌上限，请删掉多余的牌`)
   } else if (size < 13) {
     warnings.push(`只识别出 ${size} 张牌，可能有遗漏，建议补齐后再填入`)
@@ -418,6 +427,21 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
 
   // Tile Selection Modal for editing misrecognized tiles
   const [editingTileIndex, setEditingTileIndex] = useState<number | null>(null)
+
+  // Both callers keep this mounted and only toggle isOpen, so without this a reopen would
+  // still show the previous photo and result.
+  const [wasOpen, setWasOpen] = useState(isOpen)
+  if (wasOpen !== isOpen) {
+    setWasOpen(isOpen)
+    if (!isOpen) {
+      setSourceImage(null)
+      setRotation(0)
+      setImagePreview(null)
+      setError(null)
+      setResult(null)
+      setEditingTileIndex(null)
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) return
@@ -448,6 +472,12 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
         reader.onloadend = () => {
           setSourceImage(reader.result as string)
           setImagePreview(reader.result as string)
+        }
+        // Normalization already failed to get here; a second silent failure would leave
+        // the dropzone looking simply broken.
+        reader.onerror = () => {
+          console.error('Failed to read photo:', reader.error)
+          setError('读取图片失败，请重新选择或换一张照片')
         }
         reader.readAsDataURL(file)
       }

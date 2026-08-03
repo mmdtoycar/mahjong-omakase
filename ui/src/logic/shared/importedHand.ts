@@ -21,23 +21,32 @@ export interface ImportedHand<M> {
 
 type MeldKind = 'shun' | 'ke' | 'gang'
 
-/** Maps the model's free-form meld label ("pon", "kezi", "kan", …) onto our three kinds. */
-function meldKind(rawType: string): MeldKind {
+/**
+ * Decides the meld kind from its tiles, using the model's label only as a tiebreak.
+ *
+ * The label is free-form ("ankou", "koutsu", "minko", "toitsu", …), so trusting it alone
+ * silently turns triplets into sequences and mis-scores the hand. The tiles are unambiguous:
+ * four tiles is a gang, three identical is a ke.
+ */
+function meldKind(rawType: string, tiles: Tile[]): MeldKind {
+  if (tiles.length >= 4) return 'gang'
+  if (tiles.length === 3 && tiles.every((t) => t.equals(tiles[0]))) return 'ke'
+
   const lower = rawType.toLowerCase()
-  if (lower.includes('ke') || lower.includes('pon') || lower.includes('peng')) return 'ke'
+  if (lower.includes('ke') || lower.includes('ko') || lower.includes('pon') || lower.includes('peng')) return 'ke'
   if (lower.includes('gang') || lower.includes('kan')) return 'gang'
   return 'shun'
 }
 
 export function toGuobiaoMelds(melds: RecognizedMeld[]): GuobiaoMeld[] {
-  return melds.map((m) => ({ type: meldKind(m.type), tiles: m.tiles, isOpen: m.isOpen }))
+  return melds.map((m) => ({ type: meldKind(m.type, m.tiles), tiles: m.tiles, isOpen: m.isOpen }))
 }
 
 const RIICHI_MELD_TYPE = { shun: 'shunzi', ke: 'kezi', gang: 'gangzi' } as const
 
 export function toRiichiMelds(melds: RecognizedMeld[]): RiichiMeld[] {
   return melds.map((m) => ({
-    type: RIICHI_MELD_TYPE[meldKind(m.type)],
+    type: RIICHI_MELD_TYPE[meldKind(m.type, m.tiles)],
     tiles: m.tiles,
     isOpen: m.isOpen,
   }))

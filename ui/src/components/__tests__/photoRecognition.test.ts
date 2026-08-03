@@ -8,6 +8,7 @@ import {
   RecognizedHand,
 } from '../PhotoRecognitionModal'
 import { Tile } from '../../logic/shared/tiles'
+import { toGuobiaoMelds, toRiichiMelds } from '../../logic/shared/importedHand'
 
 const str = (tiles: Tile[]) => tiles.map((t) => `${t.rank}${t.suit}`).join(' ')
 
@@ -166,5 +167,46 @@ describe('checkRecognizedHand', () => {
     const r = checkRecognizedHand(hand('123m'))
     expect(r.blocking).toEqual([])
     expect(r.warnings.some((m) => m.includes('可能有遗漏'))).toBe(true)
+  })
+
+  it('blocks an empty result instead of only warning', () => {
+    const r = checkRecognizedHand(hand(''))
+    expect(r.blocking.some((m) => m.includes('没有识别出任何牌'))).toBe(true)
+  })
+
+  // Both calculators score every meld as exactly 3 slots.
+  it('blocks a meld that is not 3 or 4 tiles', () => {
+    const short = { type: 'ke', tiles: parseTileStringSequence('55z'), isOpen: true }
+    const long = { type: 'shun', tiles: parseTileStringSequence('12345m'), isOpen: true }
+    expect(checkRecognizedHand(hand('1234567899m', [short])).blocking.some((m) => m.includes('副露张数'))).toBe(true)
+    expect(checkRecognizedHand(hand('123456789m', [long])).blocking.some((m) => m.includes('副露张数'))).toBe(true)
+  })
+})
+
+describe('meld kind inference', () => {
+  const meld = (type: string, tiles: string) => ({ type, tiles: parseTileStringSequence(tiles), isOpen: true })
+
+  // Regression: labels the model actually emits that contain none of the old substrings.
+  it('derives a triplet from identical tiles regardless of label', () => {
+    for (const label of ['ankou', 'koutsu', 'minko', 'toitsu', 'unknown', '']) {
+      expect(toGuobiaoMelds([meld(label, '555z')])[0].type).toBe('ke')
+      expect(toRiichiMelds([meld(label, '555z')])[0].type).toBe('kezi')
+    }
+  })
+
+  it('derives a gang from four tiles regardless of label', () => {
+    expect(toGuobiaoMelds([meld('mystery', '8888s')])[0].type).toBe('gang')
+    expect(toRiichiMelds([meld('mystery', '8888s')])[0].type).toBe('gangzi')
+  })
+
+  it('keeps a genuine sequence as a sequence', () => {
+    expect(toGuobiaoMelds([meld('shun', '123m')])[0].type).toBe('shun')
+    expect(toRiichiMelds([meld('chi', '123m')])[0].type).toBe('shunzi')
+  })
+
+  it('falls back to the label when the tiles are ambiguous', () => {
+    // Three non-identical, non-consecutive tiles: only the label can say what was meant.
+    expect(toGuobiaoMelds([meld('pon', '159m')])[0].type).toBe('ke')
+    expect(toGuobiaoMelds([meld('kan', '159m')])[0].type).toBe('gang')
   })
 })
