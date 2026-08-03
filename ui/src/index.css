@@ -2682,6 +2682,20 @@ table.auto-table {
   font-weight: 700;
 }
 
+/* Must follow the desktop rule above: same specificity, and a media query adds none,
+   so source order decides. Stacking stops the lone pill button hugging the left edge. */
+@media (width <= 640px) {
+  .round-form .score-inline-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .round-form .score-inline-group .btn-photo-rec {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .round-form .form-section-title {
   background: var(--sol-base3);
   font-size: 0.85rem;
@@ -3415,15 +3429,11 @@ table.auto-table {
   margin-bottom: 12px;
 }
 
-@media (width <= 600px) {
+@media (width <= 640px) {
   .calc-photo-rec-row .btn-photo-rec {
     width: 100%;
     justify-content: center;
   }
-}
-
-.calc-tabs {
-  margin-bottom: 0 !important;
 }
 
 .btn-photo-rec {
