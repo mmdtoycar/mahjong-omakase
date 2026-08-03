@@ -37,7 +37,6 @@ export default function SessionPage() {
   const [fanDetails, setFanDetails] = useState<string>('')
   const [fanCount, setFanCount] = useState<number>(0)
   const [tsumoDetail, setTsumoDetail] = useState<{ dealer: number; nonDealer: number } | null>(null)
-  const [isBackfill, setIsBackfill] = useState(false)
   const [isChomboManual, setIsChomboManual] = useState(false)
   const [calcError, setCalcError] = useState('')
   const [error, setError] = useState('')
@@ -125,7 +124,6 @@ export default function SessionPage() {
     setFanDetails('')
     setFanCount(0)
     setTsumoDetail(null)
-    setIsBackfill(false)
     setIsChomboManual(false)
     setCalcError('')
     setCalcResetCount((prev) => prev + 1)
@@ -203,7 +201,6 @@ export default function SessionPage() {
           winHand,
           fanDetails,
           riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
-          backfill: isBackfill || undefined,
         })
       } else if (isDongbei) {
         await addRound(session.id, {
@@ -619,10 +616,6 @@ export default function SessionPage() {
                         <span>拍照识别</span>
                         <span className="btn-photo-rec-badge">AI 识别</span>
                       </button>
-                      <label className="checkbox-toggle">
-                        <input type="checkbox" checked={isBackfill} onChange={(e) => setIsBackfill(e.target.checked)} />
-                        <span>补录 (不计入局数)</span>
-                      </label>
                     </div>
                     <div className="inline-calc-wrapper">
                       <RiichiCalculator

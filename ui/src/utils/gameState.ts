@@ -65,8 +65,6 @@ export function deriveGameState(session: SessionDetail): GameState {
   let kyoutaku = 0
 
   for (const round of session.rounds) {
-    if (round.backfill) continue
-
     const riichiCount = round.riichiPlayerIds?.length ?? 0
     kyoutaku += riichiCount * 1000
 

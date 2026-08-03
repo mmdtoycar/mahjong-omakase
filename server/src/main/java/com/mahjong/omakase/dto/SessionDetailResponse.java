@@ -62,6 +62,5 @@ public class SessionDetailResponse {
     private Integer prevalentWind;
     private List<Long> riichiPlayerIds;
     private List<Long> tenpaiPlayerIds;
-    private Boolean backfill;
   }
 }
