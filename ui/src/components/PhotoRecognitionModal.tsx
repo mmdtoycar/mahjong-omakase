@@ -672,13 +672,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
                 ↺
               </button>
               <label className="icon-control-btn" title="重新选择图片">
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                />
+                <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
                 🔄
               </label>
             </div>
@@ -688,13 +682,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
           <div>
             {!imagePreview ? (
               <label className="upload-dropzone">
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                />
+                {/* No capture attribute: it would force the camera and hide the photo library,
+                    contradicting the label below. */}
+                <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
                 <div className="dropzone-content">
                   <div className="upload-icon">📸</div>
                   <p className="upload-main-text">点击选择照片 或 拍照</p>
