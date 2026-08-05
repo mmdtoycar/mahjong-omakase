@@ -108,6 +108,26 @@ public class TileRecognitionService {
       }
       """;
 
+  /**
+   * Wall-clock point after which no further key is tried.
+   *
+   * <p>Sized to block exactly one thing: stacked read timeouts. Three of those in a row would run
+   * to minutes, long after Cloudflare's free plan gave up at 100s and answered 524, spending Gemini
+   * quota on a response nobody will receive. Matching the 60s read timeout is enough to stop them,
+   * because a timed-out attempt always lands above 60s — connecting and uploading the image both
+   * happen before the read wait even starts.
+   *
+   * <p>Deliberately no safety margin below that, and deliberately not derived from the worst case
+   * (100s minus a full 65s attempt would put this near 35s). Every second shaved off here only ever
+   * cancels a retry that had time to succeed: a 503 arriving at 57s still leaves ~40s, plenty for a
+   * call that normally takes twenty-something seconds. Refusing to retry makes failure certain,
+   * whereas retrying and running into the 524 is no worse than that.
+   *
+   * <p>The common case never reaches this at all: a 429 comes back in well under a second, so all
+   * three keys can be tried in a couple of seconds.
+   */
+  private static final long RETRY_BUDGET_MS = 60_000;
+
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
   private final List<String> apiKeys;
@@ -154,6 +174,15 @@ public class TileRecognitionService {
     log.info("Recognition request received: {} KB of {}", imageBase64.length() / 1024, mimeType);
 
     for (int attempt = 0; attempt < apiKeys.size(); attempt++) {
+      long elapsedMs = (System.nanoTime() - startedAtNanos) / 1_000_000;
+      if (attempt > 0 && elapsedMs > RETRY_BUDGET_MS) {
+        log.warn(
+            "Stopping after {} of {} keys: {} ms spent, not enough left before the gateway gives up",
+            attempt,
+            apiKeys.size(),
+            elapsedMs);
+        break;
+      }
       int index = (start + attempt) % apiKeys.size();
       try {
         String body =

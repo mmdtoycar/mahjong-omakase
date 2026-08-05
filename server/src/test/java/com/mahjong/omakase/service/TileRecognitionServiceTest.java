@@ -60,6 +60,41 @@ class TileRecognitionServiceTest {
     f.server().verify();
   }
 
+  /**
+   * Having three keys must not mean three calls per photo. The loop is failover, not fan-out: a
+   * second key is only reached once the first has failed. verify() would report the extra requests.
+   */
+  @Test
+  void spendsOnlyOneKeyWhenTheFirstOneSucceeds() {
+    Fixture f = build("key-a,key-b,key-c");
+    f.server()
+        .expect(ExpectedCount.once(), header("x-goog-api-key", "key-a"))
+        .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
+
+    assertThat(f.service().recognize("BASE64", "image/jpeg")).contains("1m");
+    f.server().verify();
+  }
+
+  /** The other half of rotation: load is spread across requests, not just on failure. */
+  @Test
+  void movesToTheNextKeyOnTheFollowingRequest() {
+    Fixture f = build("key-a,key-b,key-c");
+    f.server()
+        .expect(header("x-goog-api-key", "key-a"))
+        .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
+    f.server()
+        .expect(header("x-goog-api-key", "key-b"))
+        .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
+    f.server()
+        .expect(header("x-goog-api-key", "key-c"))
+        .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
+
+    for (int i = 0; i < 3; i++) {
+      assertThat(f.service().recognize("BASE64", "image/jpeg")).contains("1m");
+    }
+    f.server().verify();
+  }
+
   @Test
   void failsWithUpstreamMessageWhenEveryKeyIsExhausted() {
     Fixture f = build("key-a,key-b");
