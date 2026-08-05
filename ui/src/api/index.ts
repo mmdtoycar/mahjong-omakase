@@ -28,7 +28,11 @@ async function handleResponse<T = void>(res: Response): Promise<T> {
     let message = ''
     try {
       const body = JSON.parse(raw)
-      message = body.error || body.message || ''
+      // JSON.parse('null') succeeds and yields null, so reading .error off it would throw a
+      // TypeError and lose the status fallback entirely.
+      if (body && typeof body === 'object') {
+        message = body.error || body.message || ''
+      }
     } catch {
       message = raw
         .replace(/<[^>]*>/g, ' ')

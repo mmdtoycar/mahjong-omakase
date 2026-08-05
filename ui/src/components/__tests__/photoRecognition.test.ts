@@ -6,6 +6,7 @@ import {
   safeParseJSON,
   checkRecognizedHand,
   isUsableImageDataUrl,
+  parseImageDataUrl,
   RecognizedHand,
 } from '../PhotoRecognitionModal'
 import { Tile } from '../../logic/shared/tiles'
@@ -230,5 +231,36 @@ describe('isUsableImageDataUrl', () => {
     expect(isUsableImageDataUrl(undefined)).toBe(false)
     expect(isUsableImageDataUrl('')).toBe(false)
     expect(isUsableImageDataUrl('data:text/plain;base64,QQ==')).toBe(false)
+  })
+})
+
+describe('parseImageDataUrl', () => {
+  it('returns the MIME type and payload separately', () => {
+    expect(parseImageDataUrl('data:image/png;base64,iVBORw0K')).toEqual({
+      mimeType: 'image/png',
+      base64: 'iVBORw0K',
+    })
+  })
+
+  // The server's @Pattern only accepts lowercase, so an uppercase data URL from a browser must be
+  // normalized here rather than rejected with a silent 400.
+  it('accepts uppercase subtypes and lowercases the MIME type it reports', () => {
+    expect(parseImageDataUrl('data:image/HEIC;base64,AAAA')?.mimeType).toBe('image/heic')
+    expect(parseImageDataUrl('DATA:IMAGE/JPEG;BASE64,/9j/4AAQ')?.mimeType).toBe('image/jpeg')
+  })
+
+  // Only the five types the server allows; anything else would be sent and then 400'd.
+  it('rejects image types the server does not accept', () => {
+    expect(parseImageDataUrl('data:image/gif;base64,R0lGOD')).toBeNull()
+    expect(parseImageDataUrl('data:image/svg+xml;base64,PHN2Zz4=')).toBeNull()
+    expect(parseImageDataUrl('data:image/bmp;base64,Qk0=')).toBeNull()
+  })
+
+  it('rejects malformed and payload-less URLs', () => {
+    expect(parseImageDataUrl('data:,')).toBeNull()
+    expect(parseImageDataUrl('data:image/jpeg;base64,')).toBeNull()
+    expect(parseImageDataUrl('data:image/jpeg,notbase64')).toBeNull()
+    expect(parseImageDataUrl('https://example.com/a.jpg')).toBeNull()
+    expect(parseImageDataUrl(null)).toBeNull()
   })
 })

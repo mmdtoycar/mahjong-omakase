@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,10 +19,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * already deserialized the whole body into the heap. With {@code -Xmx512m}, a single
  * multi-hundred-MB POST would exhaust memory before validation ever executed.
  *
- * <p>Scope of the guard: this checks the declared {@code Content-Length}, which covers every normal
- * client (fetch, curl, the app itself) and the realistic accident of an oversized photo. A request
- * using chunked transfer encoding declares no length and slips past — Cloudflare's own request-size
- * cap and requiring authentication are the outer layers for that case.
+ * <p>Two ways in, both closed: an oversized declared {@code Content-Length} is refused with 413,
+ * and a chunked body — which declares no length at all and would otherwise stream straight into
+ * Jackson — is refused with 411. Nothing in this app sends chunked requests; {@code fetch} and
+ * {@code curl} both set a length. A missing length without chunked encoding is left alone, because
+ * a bodyless {@code PUT}/{@code DELETE} (completing a session, deleting a round) legitimately has
+ * neither.
  */
 @Slf4j
 @Component
@@ -44,12 +47,29 @@ public class RequestSizeLimitFilter extends OncePerRequestFilter {
           declared,
           request.getRequestURI(),
           MAX_REQUEST_BYTES);
-      response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
-      response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-      response.setCharacterEncoding("UTF-8");
-      response.getWriter().write("{\"message\":\"请求内容过大\"}");
+      reject(response, HttpStatus.PAYLOAD_TOO_LARGE, "请求内容过大");
       return;
     }
+
+    if (isChunked(request)) {
+      log.warn("Rejected chunked body on {}: length must be declared", request.getRequestURI());
+      reject(response, HttpStatus.LENGTH_REQUIRED, "请求需要声明内容长度");
+      return;
+    }
+
     chain.doFilter(request, response);
+  }
+
+  private static boolean isChunked(HttpServletRequest request) {
+    String encoding = request.getHeader("Transfer-Encoding");
+    return encoding != null && encoding.toLowerCase(Locale.ROOT).contains("chunked");
+  }
+
+  private void reject(HttpServletResponse response, HttpStatus status, String message)
+      throws IOException {
+    response.setStatus(status.value());
+    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+    response.setCharacterEncoding("UTF-8");
+    response.getWriter().write("{\"message\":\"" + message + "\"}");
   }
 }

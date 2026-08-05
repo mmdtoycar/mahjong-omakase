@@ -40,8 +40,10 @@ public class SecurityInterceptor implements HandlerInterceptor {
 
     String path = request.getRequestURI();
 
-    // Static assets and SPA routes are not /api, so they never need a token.
-    if (!path.startsWith("/api") || "/error".equals(path) || PUBLIC_API_PATHS.contains(path)) {
+    // Static assets and SPA routes are not /api, so they never need a token. Match on the segment
+    // boundary so a path like /apix/logo.svg is not mistaken for an API call and refused.
+    boolean isApi = "/api".equals(path) || path.startsWith("/api/");
+    if (!isApi || "/error".equals(path) || PUBLIC_API_PATHS.contains(path)) {
       return true;
     }
 

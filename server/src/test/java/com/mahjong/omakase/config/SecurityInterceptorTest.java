@@ -58,6 +58,15 @@ class SecurityInterceptorTest {
     assertThat(handle("GET", "/error", null)).isTrue();
   }
 
+  /** A bare startsWith("/api") would have refused these as API calls and broken the SPA. */
+  @Test
+  void treatsOnlyWholeApiSegmentsAsApiPaths() throws Exception {
+    assertThat(handle("GET", "/apix/logo.svg", null)).isTrue();
+    assertThat(handle("GET", "/api-docs", null)).isTrue();
+    assertThat(handle("GET", "/apis", null)).isTrue();
+    assertThat(handle("GET", "/api", null)).isFalse();
+  }
+
   // ── protected ──────────────────────────────────────────────────────────────
 
   @Test

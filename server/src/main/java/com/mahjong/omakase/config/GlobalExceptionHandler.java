@@ -23,7 +23,9 @@ public class GlobalExceptionHandler {
   public ResponseEntity<Map<String, String>> handleNoResource(NoResourceFoundException e) {
     // resourcePath is a final field set from the request path, so it is never null.
     String path = e.getResourcePath();
-    if (path.startsWith("/api")) {
+    // Match the segment boundary: a bare startsWith("/api") also claims /apix/logo.svg, whose 404
+    // must stay an empty static-resource response.
+    if ("/api".equals(path) || path.startsWith("/api/")) {
       log.warn("No handler for API path: {}", path);
       // Log the path, don't echo it: reflecting a caller-controlled string is a needless risk.
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "接口不存在"));

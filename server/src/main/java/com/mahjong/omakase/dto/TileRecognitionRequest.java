@@ -14,6 +14,8 @@ public class TileRecognitionRequest {
   @Size(max = 8_000_000, message = "图片过大，请重新拍摄")
   private String imageBase64;
 
-  @Pattern(regexp = "image/(jpeg|png|webp|heic|heif)", message = "仅支持 JPEG / PNG / WebP / HEIC 图片")
+  @Pattern(
+      regexp = "image/(jpeg|png|webp|heic|heif)",
+      message = "仅支持 JPEG / PNG / WebP / HEIC / HEIF 图片")
   private String mimeType = "image/jpeg";
 }
