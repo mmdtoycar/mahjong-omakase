@@ -434,6 +434,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
 
   // Tile Selection Modal for editing misrecognized tiles
   const [editingTileIndex, setEditingTileIndex] = useState<number | null>(null)
+  // HEIC decodes on iOS but not in desktop Chrome, and the fallback keeps the original file
+  // so recognition still works — show that rather than a broken-image icon.
+  const [previewFailed, setPreviewFailed] = useState(false)
 
   // Both callers keep this mounted and only toggle isOpen, so without this a reopen would
   // still show the previous photo and result.
@@ -447,6 +450,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       setError(null)
       setResult(null)
       setEditingTileIndex(null)
+      setPreviewFailed(false)
     }
   }
 
@@ -469,6 +473,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       setError(null)
       setResult(null)
       setRotation(0)
+      setPreviewFailed(false)
       try {
         const normalizedBase64 = await normalizeUploadedImage(file)
         setSourceImage(normalizedBase64)
@@ -676,7 +681,16 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
               </label>
             ) : (
               <div className="image-preview-wrapper">
-                <img src={imagePreview} alt="Hand preview" className="uploaded-img-preview" />
+                {previewFailed ? (
+                  <p className="upload-sub-text">此格式无法在当前浏览器预览，但可以正常识别</p>
+                ) : (
+                  <img
+                    src={imagePreview}
+                    alt="Hand preview"
+                    className="uploaded-img-preview"
+                    onError={() => setPreviewFailed(true)}
+                  />
+                )}
               </div>
             )}
           </div>
