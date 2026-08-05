@@ -3,11 +3,13 @@ package com.mahjong.omakase.config;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
@@ -41,7 +43,13 @@ public class GlobalExceptionHandler {
             .map(err -> err.getField() + ": " + err.getDefaultMessage())
             .findFirst()
             .orElse("Validation failed");
+    log.warn("Request validation failed: {}", message);
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", message));
+  }
+
+  @ExceptionHandler({ClientAbortException.class, AsyncRequestNotUsableException.class})
+  public void handleClientDisconnect(Exception e) {
+    log.debug("Client disconnected before the response was written: {}", e.getMessage());
   }
 
   @ExceptionHandler(Exception.class)

@@ -5,6 +5,7 @@ import {
   parseTileList,
   safeParseJSON,
   checkRecognizedHand,
+  isUsableImageDataUrl,
   RecognizedHand,
 } from '../PhotoRecognitionModal'
 import { Tile } from '../../logic/shared/tiles'
@@ -208,5 +209,26 @@ describe('meld kind inference', () => {
     // Three non-identical, non-consecutive tiles: only the label can say what was meant.
     expect(toGuobiaoMelds([meld('pon', '159m')])[0].type).toBe('ke')
     expect(toGuobiaoMelds([meld('kan', '159m')])[0].type).toBe('gang')
+  })
+})
+
+describe('isUsableImageDataUrl', () => {
+  it('接受正常的 data URL', () => {
+    expect(isUsableImageDataUrl('data:image/jpeg;base64,/9j/4AAQ')).toBe(true)
+    expect(isUsableImageDataUrl('data:image/heic;base64,AAAA')).toBe(true)
+  })
+
+  // 这是 iPhone 上真正踩到的: 画布超限时 iOS 的 toDataURL 不抛错, 只返回 "data:,"
+  // 于是 split(',')[1] 得到 undefined, 被当成图片发出去, 服务端 @NotBlank 拒掉返回 400。
+  it('拦住 iOS 画布超限时返回的空 data URL', () => {
+    expect(isUsableImageDataUrl('data:,')).toBe(false)
+    expect(isUsableImageDataUrl('data:image/jpeg;base64,')).toBe(false)
+  })
+
+  it('拦住空值与非图片', () => {
+    expect(isUsableImageDataUrl(null)).toBe(false)
+    expect(isUsableImageDataUrl(undefined)).toBe(false)
+    expect(isUsableImageDataUrl('')).toBe(false)
+    expect(isUsableImageDataUrl('data:text/plain;base64,QQ==')).toBe(false)
   })
 })

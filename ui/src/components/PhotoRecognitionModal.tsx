@@ -85,6 +85,11 @@ export function safeParseJSON(str: string): any {
   }
 }
 
+/** iOS Safari 的 toDataURL 在超出画布上限时不抛错, 而是返回 "data:," 这种空串。 */
+export function isUsableImageDataUrl(dataUrl: string | null | undefined): dataUrl is string {
+  return typeof dataUrl === 'string' && /^data:image\/[a-z+]+;base64,.+/i.test(dataUrl)
+}
+
 // Downscales an upload to at most 2048px and forces landscape (long edge on the X axis).
 // EXIF orientation is not decoded here — browsers already apply it when drawing an <img>
 // to a canvas (`image-orientation: from-image` is the default).
@@ -94,6 +99,7 @@ export function normalizeUploadedImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
+      const original = e.target?.result as string
       const img = new Image()
       img.crossOrigin = 'Anonymous'
       img.onload = () => {
@@ -122,7 +128,7 @@ export function normalizeUploadedImage(file: File): Promise<string> {
         canvas.width = targetW
         canvas.height = targetH
 
-        if (!ctx) return resolve(e.target?.result as string)
+        if (!ctx) return resolve(original)
 
         if (isVertical) {
           // Rotate 90° clockwise so portrait image becomes landscape with long edge left-to-right
@@ -133,10 +139,11 @@ export function normalizeUploadedImage(file: File): Promise<string> {
           ctx.drawImage(img, 0, 0, targetW, targetH)
         }
 
-        resolve(canvas.toDataURL('image/jpeg', 0.88))
+        const jpeg = canvas.toDataURL('image/jpeg', 0.88)
+        resolve(isUsableImageDataUrl(jpeg) ? jpeg : original)
       }
-      img.onerror = () => resolve(e.target?.result as string)
-      img.src = e.target?.result as string
+      img.onerror = () => resolve(original)
+      img.src = original
     }
     reader.onerror = (err) => reject(err)
     reader.readAsDataURL(file)
@@ -510,8 +517,15 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
 
     try {
       // The prompt, the 34-tile calibration legend and the API key all live on the server.
+      if (!isUsableImageDataUrl(imagePreview)) {
+        throw new Error('图片处理失败，请重新拍摄或换一张照片')
+      }
       const mimeType = imagePreview.match(/^data:(image\/[a-zA-Z+]+);base64,/)?.[1] || 'image/jpeg'
-      const responseText = await recognizeHandPhoto(imagePreview.split(',')[1], mimeType)
+      const base64 = imagePreview.slice(imagePreview.indexOf(',') + 1)
+      if (base64.length > 8_000_000) {
+        throw new Error('图片过大，请用较低分辨率重拍，或关闭 iPhone 的 ProRAW / 48MP')
+      }
+      const responseText = await recognizeHandPhoto(base64, mimeType)
 
       const jsonOutput = safeParseJSON(responseText)
 
