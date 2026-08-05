@@ -148,6 +148,10 @@ public class TileRecognitionService {
     Map<String, Object> payload = buildPayload(imageBase64, mimeType);
     int start = keyCursor.get();
     String lastError = null;
+    // Log on the way in as well as on failure: Gemini takes tens of seconds for two images, and
+    // without this a request in flight looks identical to one that never arrived.
+    long startedAtNanos = System.nanoTime();
+    log.info("Recognition request received: {} KB of {}", imageBase64.length() / 1024, mimeType);
 
     for (int attempt = 0; attempt < apiKeys.size(); attempt++) {
       int index = (start + attempt) % apiKeys.size();
@@ -163,7 +167,13 @@ public class TileRecognitionService {
                 .body(String.class);
         // Success: next request starts at the key after this one.
         keyCursor.set((index + 1) % apiKeys.size());
-        return extractText(body);
+        String text = extractText(body);
+        log.info(
+            "Recognition succeeded in {} ms on key #{} ({} chars returned)",
+            (System.nanoTime() - startedAtNanos) / 1_000_000,
+            index,
+            text.length());
+        return text;
       } catch (RestClientResponseException e) {
         int status = e.getStatusCode().value();
         String detail = errorMessage(e.getResponseBodyAsString());

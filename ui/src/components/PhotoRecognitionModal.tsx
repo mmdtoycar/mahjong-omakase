@@ -85,6 +85,33 @@ export function safeParseJSON(str: string): any {
   }
 }
 
+/** Formats the server accepts, which are also the formats Gemini reads. */
+const SUPPORTED_IMAGE_TYPES = ['jpeg', 'png', 'webp', 'heic', 'heif'] as const
+
+// Case-insensitive on purpose: a data URL may arrive as `data:IMAGE/HEIC;base64,...`.
+const IMAGE_DATA_URL = new RegExp(`^data:image/(${SUPPORTED_IMAGE_TYPES.join('|')});base64,(.+)$`, 'i')
+
+/**
+ * Splits a data URL into the MIME type the server expects and the bare base64 payload.
+ *
+ * One parser does both jobs so validation and extraction can never disagree — previously the guard
+ * accepted any `image/*` (avif included, which the server rejects) while the extractor matched
+ * `data:image` case-sensitively, so an uppercase `data:IMAGE/HEIC` was silently relabelled as JPEG.
+ *
+ * <p>Also rejects iOS Safari's `"data:,"`, which is what toDataURL returns past the canvas limit
+ * instead of throwing.
+ */
+export function parseImageDataUrl(dataUrl: string | null | undefined): { mimeType: string; base64: string } | null {
+  if (typeof dataUrl !== 'string') return null
+  const m = dataUrl.match(IMAGE_DATA_URL)
+  if (!m) return null
+  return { mimeType: `image/${m[1].toLowerCase()}`, base64: m[2] }
+}
+
+export function isUsableImageDataUrl(dataUrl: string | null | undefined): dataUrl is string {
+  return parseImageDataUrl(dataUrl) !== null
+}
+
 // Downscales an upload to at most 2048px and forces landscape (long edge on the X axis).
 // EXIF orientation is not decoded here — browsers already apply it when drawing an <img>
 // to a canvas (`image-orientation: from-image` is the default).
@@ -94,6 +121,7 @@ export function normalizeUploadedImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
+      const original = e.target?.result as string
       const img = new Image()
       img.crossOrigin = 'Anonymous'
       img.onload = () => {
@@ -122,7 +150,7 @@ export function normalizeUploadedImage(file: File): Promise<string> {
         canvas.width = targetW
         canvas.height = targetH
 
-        if (!ctx) return resolve(e.target?.result as string)
+        if (!ctx) return resolve(original)
 
         if (isVertical) {
           // Rotate 90° clockwise so portrait image becomes landscape with long edge left-to-right
@@ -133,10 +161,11 @@ export function normalizeUploadedImage(file: File): Promise<string> {
           ctx.drawImage(img, 0, 0, targetW, targetH)
         }
 
-        resolve(canvas.toDataURL('image/jpeg', 0.88))
+        const jpeg = canvas.toDataURL('image/jpeg', 0.88)
+        resolve(isUsableImageDataUrl(jpeg) ? jpeg : original)
       }
-      img.onerror = () => resolve(e.target?.result as string)
-      img.src = e.target?.result as string
+      img.onerror = () => resolve(original)
+      img.src = original
     }
     reader.onerror = (err) => reject(err)
     reader.readAsDataURL(file)
@@ -427,6 +456,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
 
   // Tile Selection Modal for editing misrecognized tiles
   const [editingTileIndex, setEditingTileIndex] = useState<number | null>(null)
+  // HEIC decodes on iOS but not in desktop Chrome, and the fallback keeps the original file
+  // so recognition still works — show that rather than a broken-image icon.
+  const [previewFailed, setPreviewFailed] = useState(false)
 
   // Both callers keep this mounted and only toggle isOpen, so without this a reopen would
   // still show the previous photo and result.
@@ -440,6 +472,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       setError(null)
       setResult(null)
       setEditingTileIndex(null)
+      setPreviewFailed(false)
     }
   }
 
@@ -462,6 +495,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       setError(null)
       setResult(null)
       setRotation(0)
+      setPreviewFailed(false)
       try {
         const normalizedBase64 = await normalizeUploadedImage(file)
         setSourceImage(normalizedBase64)
@@ -510,8 +544,15 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
 
     try {
       // The prompt, the 34-tile calibration legend and the API key all live on the server.
-      const mimeType = imagePreview.match(/^data:(image\/[a-zA-Z+]+);base64,/)?.[1] || 'image/jpeg'
-      const responseText = await recognizeHandPhoto(imagePreview.split(',')[1], mimeType)
+      const parsed = parseImageDataUrl(imagePreview)
+      if (!parsed) {
+        throw new Error('图片格式不支持或处理失败，请重新拍摄或换一张照片')
+      }
+      const { mimeType, base64 } = parsed
+      if (base64.length > 8_000_000) {
+        throw new Error('图片过大，请用较低分辨率重拍，或关闭 iPhone 的 ProRAW / 48MP')
+      }
+      const responseText = await recognizeHandPhoto(base64, mimeType)
 
       const jsonOutput = safeParseJSON(responseText)
 
@@ -662,7 +703,16 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
               </label>
             ) : (
               <div className="image-preview-wrapper">
-                <img src={imagePreview} alt="Hand preview" className="uploaded-img-preview" />
+                {previewFailed ? (
+                  <p className="upload-sub-text">此格式无法在当前浏览器预览，但可以正常识别</p>
+                ) : (
+                  <img
+                    src={imagePreview}
+                    alt="Hand preview"
+                    className="uploaded-img-preview"
+                    onError={() => setPreviewFailed(true)}
+                  />
+                )}
               </div>
             )}
           </div>

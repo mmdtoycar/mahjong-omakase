@@ -24,8 +24,23 @@ function getAuthHeaders(headers: Record<string, string> = {}): Record<string, st
 
 async function handleResponse<T = void>(res: Response): Promise<T> {
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.error || body.message || MSG.ERROR)
+    const raw = await res.text().catch(() => '')
+    let message = ''
+    try {
+      const body = JSON.parse(raw)
+      // JSON.parse('null') succeeds and yields null, so reading .error off it would throw a
+      // TypeError and lose the status fallback entirely.
+      if (body && typeof body === 'object') {
+        message = body.error || body.message || ''
+      }
+    } catch {
+      message = raw
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120)
+    }
+    throw new Error(message || `${MSG.ERROR} (HTTP ${res.status}${res.statusText ? ' ' + res.statusText : ''})`)
   }
   const text = await res.text()
   if (!text.trim()) return undefined as T
