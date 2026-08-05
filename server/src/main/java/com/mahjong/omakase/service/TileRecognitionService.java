@@ -125,6 +125,15 @@ public class TileRecognitionService {
    *
    * <p>The common case never reaches this at all: a 429 comes back in well under a second, so all
    * three keys can be tried in a couple of seconds.
+   *
+   * <p><strong>This is a floor on wasted work, not a total deadline — a gateway timeout is still
+   * reachable.</strong> A failure at 59s passes the check, and that retry may then use its full
+   * 65s, putting the total near 125s; the caller sees Cloudflare's own 524 page instead of our JSON
+   * error. Accepted rather than fixed. Capping each attempt at the remaining gateway time would
+   * mean rebuilding the request factory per attempt, which replaces the one {@code
+   * MockRestServiceServer} binds to and would point every test in {@code
+   * TileRecognitionServiceTest} at the real Gemini API. The cheaper alternative — lowering this
+   * constant until {@code budget + 65s <= 100s} — is exactly what the paragraph above rejects.
    */
   private static final long RETRY_BUDGET_MS = 60_000;
 
