@@ -1,11 +1,13 @@
 package com.mahjong.omakase.config;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -16,18 +18,24 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-  /**
-   * 静态资源缺失照旧返回空 404, 但 /api/** 的 404 要带上路径 —— 空 body 的 404 在前端 只会显示成一句"操作失败"(空 body 过不了 JSON 解析),
-   * 排查时完全看不出是接口不存在。
-   */
   @ExceptionHandler(NoResourceFoundException.class)
   public ResponseEntity<Map<String, String>> handleNoResource(NoResourceFoundException e) {
+    // resourcePath is a final field set from the request path, so it is never null.
     String path = e.getResourcePath();
-    if (path != null && path.startsWith("/api")) {
+    if (path.startsWith("/api")) {
       log.warn("No handler for API path: {}", path);
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "接口不存在: " + path));
+      // Log the path, don't echo it: reflecting a caller-controlled string is a needless risk.
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "接口不存在"));
     }
     return ResponseEntity.notFound().build();
+  }
+
+  @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+  public ResponseEntity<Map<String, String>> handleMethodNotSupported(
+      HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+    log.warn("Method {} not supported for {}", e.getMethod(), request.getRequestURI());
+    return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+        .body(Map.of("message", "该地址不支持此请求方式"));
   }
 
   @ExceptionHandler(NoSuchElementException.class)

@@ -213,19 +213,19 @@ describe('meld kind inference', () => {
 })
 
 describe('isUsableImageDataUrl', () => {
-  it('接受正常的 data URL', () => {
+  it('accepts a normal data URL', () => {
     expect(isUsableImageDataUrl('data:image/jpeg;base64,/9j/4AAQ')).toBe(true)
     expect(isUsableImageDataUrl('data:image/heic;base64,AAAA')).toBe(true)
   })
 
-  // 这是 iPhone 上真正踩到的: 画布超限时 iOS 的 toDataURL 不抛错, 只返回 "data:,"
-  // 于是 split(',')[1] 得到 undefined, 被当成图片发出去, 服务端 @NotBlank 拒掉返回 400。
-  it('拦住 iOS 画布超限时返回的空 data URL', () => {
+  // The real iPhone path: past the canvas limit iOS returns "data:," without throwing, so
+  // split(',')[1] is undefined, gets sent as the image, and the server rejects it with a 400.
+  it('rejects the empty data URL iOS returns past the canvas limit', () => {
     expect(isUsableImageDataUrl('data:,')).toBe(false)
     expect(isUsableImageDataUrl('data:image/jpeg;base64,')).toBe(false)
   })
 
-  it('拦住空值与非图片', () => {
+  it('rejects empty values and non-images', () => {
     expect(isUsableImageDataUrl(null)).toBe(false)
     expect(isUsableImageDataUrl(undefined)).toBe(false)
     expect(isUsableImageDataUrl('')).toBe(false)

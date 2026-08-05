@@ -11,7 +11,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/** 这些校验以前是静默 400 (handleValidation 不打日志), iPhone 上的识别失败就因此完全没有线索, 所以把每条规则钉住。 */
+/**
+ * These constraints used to fail as a silent 400 (handleValidation did not log), which is why the
+ * iPhone recognition failure left no trace at all. Pin every rule down.
+ */
 class TileRecognitionRequestTest {
 
   private static ValidatorFactory factory;
@@ -42,7 +45,7 @@ class TileRecognitionRequestTest {
     assertThat(violations("AAAA", "image/jpeg")).isEmpty();
   }
 
-  /** iPhone 默认存 HEIC, 归一化在大图解码失败时会退回原始文件, 所以必须放行。 */
+  /** iPhone stores HEIC, and normalisation falls back to the original on a decode failure. */
   @Test
   void acceptsHeicAndHeif() {
     assertThat(violations("AAAA", "image/heic")).isEmpty();
@@ -61,13 +64,13 @@ class TileRecognitionRequestTest {
     assertThat(violations("AAAA", "application/pdf")).anyMatch(v -> v.contains("mimeType"));
   }
 
-  /** mimeType 可选: 不传就用默认的 image/jpeg。 */
+  /** mimeType is optional — omitting it falls back to image/jpeg. */
   @Test
   void allowsNullMime() {
     assertThat(violations("AAAA", null)).isEmpty();
   }
 
-  /** 客户端把空 data URL 切出 undefined 时, 字段会缺失 —— 就是 iPhone 上踩到的那条路。 */
+  /** Slicing an empty data URL yields undefined, so the field goes missing — the iPhone path. */
   @Test
   void rejectsBlankImage() {
     assertThat(violations(null, "image/jpeg")).anyMatch(v -> v.contains("imageBase64"));

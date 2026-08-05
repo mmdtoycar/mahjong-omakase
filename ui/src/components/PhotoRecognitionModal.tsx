@@ -85,7 +85,7 @@ export function safeParseJSON(str: string): any {
   }
 }
 
-/** iOS Safari 的 toDataURL 在超出画布上限时不抛错, 而是返回 "data:," 这种空串。 */
+/** iOS Safari's toDataURL does not throw past the canvas limit — it returns a bare "data:,". */
 export function isUsableImageDataUrl(dataUrl: string | null | undefined): dataUrl is string {
   return typeof dataUrl === 'string' && /^data:image\/[a-z+]+;base64,.+/i.test(dataUrl)
 }
