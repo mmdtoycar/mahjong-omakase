@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
@@ -67,6 +68,20 @@ public class GlobalExceptionHandler {
   @ExceptionHandler({ClientAbortException.class, AsyncRequestNotUsableException.class})
   public void handleClientDisconnect(Exception e) {
     log.debug("Client disconnected before the response was written: {}", e.getMessage());
+  }
+
+  /**
+   * Controllers throw this to pick their own status — 403 from the admin guard, 400 for a bad
+   * year/month, 404 for a missing player. Without this handler they all fell through to
+   * handleGeneral, which reported "An unexpected error occurred" with a 500 and logged a full stack
+   * trace, hiding both the real status and the reason.
+   */
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<Map<String, String>> handleResponseStatus(ResponseStatusException e) {
+    String reason = e.getReason();
+    log.warn("Rejected with {}: {}", e.getStatusCode(), reason);
+    return ResponseEntity.status(e.getStatusCode())
+        .body(Map.of("message", reason != null ? reason : "请求被拒绝"));
   }
 
   @ExceptionHandler(Exception.class)
