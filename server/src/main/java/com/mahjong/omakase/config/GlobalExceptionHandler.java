@@ -16,8 +16,17 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+  /**
+   * 静态资源缺失照旧返回空 404, 但 /api/** 的 404 要带上路径 —— 空 body 的 404 在前端 只会显示成一句"操作失败"(空 body 过不了 JSON 解析),
+   * 排查时完全看不出是接口不存在。
+   */
   @ExceptionHandler(NoResourceFoundException.class)
-  public ResponseEntity<Void> handleNoResource(NoResourceFoundException e) {
+  public ResponseEntity<Map<String, String>> handleNoResource(NoResourceFoundException e) {
+    String path = e.getResourcePath();
+    if (path != null && path.startsWith("/api")) {
+      log.warn("No handler for API path: {}", path);
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "接口不存在: " + path));
+    }
     return ResponseEntity.notFound().build();
   }
 
