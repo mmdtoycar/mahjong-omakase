@@ -67,7 +67,8 @@ jobs:
             docker run -d \
               --name mahjong \
               --restart always \
-              -p 8080:8080 \
+              -p 127.0.0.1:8080:8080 \
+              -p '[::1]:8080:8080' \
               -v mahjong-data:/app/data \
               -e ADMIN_EMAILS="${{ secrets.ADMIN_EMAILS }}" \
               -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
