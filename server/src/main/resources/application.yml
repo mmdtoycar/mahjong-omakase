@@ -44,6 +44,8 @@ google:
 
 # Photo hand recognition. Keys stay server-side — never expose them to the browser.
 # Comma-separate several keys to rotate away from one that hit its quota.
+# Models are a fallback chain, tried in order: a 503 is that model being over capacity, which every
+# key sees alike, so the only thing that helps is a different model.
 gemini:
   api-keys: ${GEMINI_API_KEYS:}
-  model: ${GEMINI_MODEL:gemini-3.6-flash}
+  models: ${GEMINI_MODELS:gemini-3.6-flash}

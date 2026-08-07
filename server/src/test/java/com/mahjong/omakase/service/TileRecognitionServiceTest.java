@@ -28,11 +28,18 @@ class TileRecognitionServiceTest {
   private record Fixture(TileRecognitionService service, MockRestServiceServer server) {}
 
   private Fixture build(String keys) {
+    return build(keys, "gemini-test");
+  }
+
+  private Fixture build(String keys, String models) {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
     return new Fixture(
-        new TileRecognitionService(new ObjectMapper(), builder.build(), keys, "gemini-test"),
-        server);
+        new TileRecognitionService(new ObjectMapper(), builder.build(), keys, models), server);
+  }
+
+  private static String overloadBody() {
+    return "{\"error\":{\"message\":\"This model is currently experiencing high demand.\"}}";
   }
 
   @Test
@@ -111,21 +118,63 @@ class TileRecognitionServiceTest {
   }
 
   /**
-   * The failure that actually happened in production. A 503 is Google running out of capacity, not
-   * our key running out of quota — the two must stay distinguishable, which is why the upstream
-   * text is passed through instead of being folded into one message.
+   * The failure that actually happened in production: three keys, three 503s, eight seconds, all
+   * doomed. A 503 is the model being over capacity, which every key sees alike, so with nothing to
+   * fall back to the right move is to stop at one call rather than burn the pool.
    */
   @Test
-  void surfacesUpstreamOverloadDistinctlyFromAQuotaFailure() {
-    Fixture f = build("key-a,key-b");
+  void doesNotRotateKeysWhenTheModelItselfIsOverCapacity() {
+    Fixture f = build("key-a,key-b,key-c", "only-model");
     f.server()
-        .expect(
-            ExpectedCount.twice(), header("x-goog-api-key", org.hamcrest.Matchers.notNullValue()))
+        .expect(ExpectedCount.once(), header("x-goog-api-key", "key-a"))
+        .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE).body(overloadBody()));
+
+    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("experiencing high demand");
+    f.server().verify();
+  }
+
+  /** The point of the fallback chain: a busy model is survivable without waiting for Google. */
+  @Test
+  void fallsBackToTheNextModelWhenTheFirstIsOverCapacity() {
+    Fixture f = build("key-a", "busy-model,spare-model");
+    f.server()
+        .expect(requestTo(org.hamcrest.Matchers.containsString("models/busy-model:")))
+        .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE).body(overloadBody()));
+    f.server()
+        .expect(requestTo(org.hamcrest.Matchers.containsString("models/spare-model:")))
+        .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
+
+    assertThat(f.service().recognize("BASE64", "image/jpeg")).contains("1m");
+    f.server().verify();
+  }
+
+  /** The key is fine when the model is busy, so the fallback must not waste a key rotation. */
+  @Test
+  void keepsTheSameKeyWhenFallingBackToAnotherModel() {
+    Fixture f = build("key-a,key-b", "busy-model,spare-model");
+    f.server()
+        .expect(ExpectedCount.twice(), header("x-goog-api-key", "key-a"))
         .andRespond(
-            withStatus(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(
-                    "{\"error\":{\"message\":\"This model is currently experiencing high"
-                        + " demand.\"}}"));
+            request ->
+                request.getURI().toString().contains("busy-model")
+                    ? withStatus(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body(overloadBody())
+                        .createResponse(request)
+                    : withSuccess(OK_BODY, MediaType.APPLICATION_JSON).createResponse(request));
+
+    assertThat(f.service().recognize("BASE64", "image/jpeg")).contains("1m");
+    f.server().verify();
+  }
+
+  /** Every model busy means the fallback chain is spent, not that the keys are bad. */
+  @Test
+  void givesUpWhenEveryModelIsOverCapacity() {
+    Fixture f = build("key-a", "busy-one,busy-two");
+    f.server()
+        .expect(ExpectedCount.twice(), header("x-goog-api-key", "key-a"))
+        .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE).body(overloadBody()));
 
     assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
         .isInstanceOf(IllegalStateException.class)
