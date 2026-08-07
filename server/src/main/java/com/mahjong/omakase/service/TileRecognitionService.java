@@ -215,21 +215,32 @@ public class TileRecognitionService {
       } catch (RestClientResponseException e) {
         int status = e.getStatusCode().value();
         String detail = errorMessage(e.getResponseBodyAsString());
+        boolean quota = isQuotaFailure(status, detail);
         if (!isRetryable(status, detail)) {
           log.warn("Gemini rejected the request ({}): {}", status, detail);
-          throw new IllegalStateException(detail.isEmpty() ? "识别服务返回错误" : detail, e);
+          throw new IllegalStateException(
+              detail.isEmpty() ? "Gemini returned an error with no message" : detail, e);
         }
-        log.warn("Gemini key #{} exhausted ({}): {}", index, status, detail);
+        log.warn(
+            "Gemini key #{} {} ({}): {}",
+            index,
+            quota ? "is out of quota" : "hit a transient upstream failure",
+            status,
+            detail);
         lastError = detail;
       } catch (ResourceAccessException e) {
         log.warn("Gemini request failed on key #{}: {}", index, e.getMessage());
-        lastError = "识别服务连接超时，请重试";
+        // Coalesced because a null would reach Map.of("message", ...) in the controller and NPE
+        // into a 500, hiding the timeout behind "An unexpected error occurred".
+        lastError = e.getMessage() != null ? e.getMessage() : "Upstream request failed";
       }
       // Skip past the key that just failed so the next request does not retry it first.
       keyCursor.set((index + 1) % apiKeys.size());
     }
 
-    throw new IllegalStateException(lastError == null ? "所有 Gemini API Key 均不可用" : lastError);
+    // Non-null by construction: apiKeys is non-empty, so the loop ran at least once, and every
+    // path out of an attempt either returns, throws, or records a reason here.
+    throw new IllegalStateException(lastError);
   }
 
   private Map<String, Object> buildPayload(String imageBase64, String mimeType) {
@@ -287,11 +298,20 @@ public class TileRecognitionService {
 
   /** Quota, rate limit and transient upstream failures are worth trying another key. */
   private boolean isRetryable(int status, String detail) {
-    if (status == 429 || status == 503 || status == 500) {
-      return true;
-    }
+    return status == 503 || status == 500 || isQuotaFailure(status, detail);
+  }
+
+  /**
+   * Whether the key itself ran out, as opposed to Gemini being over capacity — a 503 "experiencing
+   * high demand" is Google's own problem and hits every key at once, so reporting it as an
+   * exhausted key sends anyone reading the log to look at their quota instead of at the upstream
+   * status.
+   */
+  private static boolean isQuotaFailure(int status, String detail) {
     String lower = detail.toLowerCase(Locale.ROOT);
-    return lower.contains("quota") || lower.contains("resource has been exhausted");
+    return status == 429
+        || lower.contains("quota")
+        || lower.contains("resource has been exhausted");
   }
 
   private String loadCalibrationLegend() {

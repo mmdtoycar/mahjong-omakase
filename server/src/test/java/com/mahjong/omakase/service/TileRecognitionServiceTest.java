@@ -95,6 +95,7 @@ class TileRecognitionServiceTest {
     f.server().verify();
   }
 
+  /** The upstream reason is surfaced verbatim — it is the most precise thing we have. */
   @Test
   void failsWithUpstreamMessageWhenEveryKeyIsExhausted() {
     Fixture f = build("key-a,key-b");
@@ -106,6 +107,29 @@ class TileRecognitionServiceTest {
     assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("Quota exceeded");
+    f.server().verify();
+  }
+
+  /**
+   * The failure that actually happened in production. A 503 is Google running out of capacity, not
+   * our key running out of quota — the two must stay distinguishable, which is why the upstream
+   * text is passed through instead of being folded into one message.
+   */
+  @Test
+  void surfacesUpstreamOverloadDistinctlyFromAQuotaFailure() {
+    Fixture f = build("key-a,key-b");
+    f.server()
+        .expect(
+            ExpectedCount.twice(), header("x-goog-api-key", org.hamcrest.Matchers.notNullValue()))
+        .andRespond(
+            withStatus(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(
+                    "{\"error\":{\"message\":\"This model is currently experiencing high"
+                        + " demand.\"}}"));
+
+    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("experiencing high demand");
     f.server().verify();
   }
 
