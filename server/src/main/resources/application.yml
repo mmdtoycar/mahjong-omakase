@@ -52,3 +52,10 @@ google:
 gemini:
   api-keys: ${GEMINI_API_KEYS:}
   models: ${GEMINI_MODELS:gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite}
+
+# Every recognised photo is kept next to what the model answered, as training and evaluation data
+# for a possible local tile detector. Deliberately its own volume, not the DB one: at ~1.2MB a photo
+# this grows by a few hundred MB a month and would drag the nightly DB backup along with it.
+# Set to an empty value to stop keeping them.
+recognition:
+  sample-dir: ${RECOGNITION_SAMPLE_DIR:/app/samples}

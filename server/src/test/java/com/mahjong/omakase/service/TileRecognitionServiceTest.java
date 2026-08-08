@@ -35,7 +35,9 @@ class TileRecognitionServiceTest {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
     return new Fixture(
-        new TileRecognitionService(new ObjectMapper(), builder.build(), keys, models), server);
+        new TileRecognitionService(
+            new ObjectMapper(), builder.build(), new RecognitionSampleStore(""), keys, models),
+        server);
   }
 
   private static String overloadBody() {
@@ -252,7 +254,8 @@ class TileRecognitionServiceTest {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
     TileRecognitionService service =
-        new TileRecognitionService(new ObjectMapper(), builder.build(), "key-a", "  ");
+        new TileRecognitionService(
+            new ObjectMapper(), builder.build(), new RecognitionSampleStore(""), "key-a", "  ");
     server
         .expect(requestTo(org.hamcrest.Matchers.containsString("models/gemini-3.6-flash:")))
         .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));

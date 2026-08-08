@@ -139,6 +139,7 @@ public class TileRecognitionService {
 
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
+  private final RecognitionSampleStore sampleStore;
   private final List<String> apiKeys;
   private final List<String> models;
   private final String legendBase64;
@@ -147,9 +148,11 @@ public class TileRecognitionService {
   public TileRecognitionService(
       ObjectMapper objectMapper,
       RestClient geminiRestClient,
+      RecognitionSampleStore sampleStore,
       @Value("${gemini.api-keys:}") String rawApiKeys,
       @Value("${gemini.models:}") String rawModels) {
     this.objectMapper = objectMapper;
+    this.sampleStore = sampleStore;
     this.apiKeys = splitList(rawApiKeys);
     List<String> configured = splitList(rawModels);
     this.models = configured.isEmpty() ? List.of(DEFAULT_MODEL) : configured;
@@ -224,6 +227,8 @@ public class TileRecognitionService {
             keyIndex,
             model,
             text.length());
+        // After extractText, so a photo is only kept once there is an answer to pair it with.
+        sampleStore.save(imageBase64, mimeType, model, text);
         return text;
       } catch (RestClientResponseException e) {
         int status = e.getStatusCode().value();

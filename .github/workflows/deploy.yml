@@ -70,6 +70,7 @@ jobs:
               -p 127.0.0.1:8080:8080 \
               -p '[::1]:8080:8080' \
               -v mahjong-data:/app/data \
+              -v mahjong-samples:/app/samples \
               -e ADMIN_EMAILS="${{ secrets.ADMIN_EMAILS }}" \
               -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
               -e GEMINI_API_KEYS="${{ secrets.GEMINI_API_KEYS }}" \
