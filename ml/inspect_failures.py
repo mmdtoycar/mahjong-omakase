@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 import torch
 
-from synthesize import SIZE, Synthesiser, load_tiles
+from synthesize import NOT_A_TILE, SIZE, Synthesiser, load_tiles
 from train_classifier import HARD_SEEDS, VAL_SEEDS, TileNet
 
 RUNS = Path(__file__).resolve().parent / "runs"
@@ -28,7 +28,12 @@ def main() -> None:
     args = parser.parse_args()
 
     checkpoint = torch.load(RUNS / "classifier.pt")
-    labels, faces, masks = load_tiles()
+    # Labels from the checkpoint, not from the crops: the trained head has the extra `none` class and
+    # building the model from 34 labels fails outright on the head shape.
+    face_labels, faces, masks = load_tiles()
+    labels = checkpoint["labels"]
+    if labels != [*face_labels, NOT_A_TILE]:
+        raise SystemExit(f"checkpoint labels {labels} do not match the crops in data/faces")
     size = checkpoint.get("size", SIZE)
     model = TileNet(len(labels))
     model.load_state_dict(checkpoint["state"])
@@ -41,8 +46,11 @@ def main() -> None:
         for target in range(len(labels)):
             for n in range(args.per_class):
                 seed = low + (target * args.per_class + n) % (high - low)
-                image = Synthesiser(faces, masks, seed=seed, hard=args.hard, size=size).sample(
-                    target
+                synth = Synthesiser(faces, masks, seed=seed, hard=args.hard, size=size)
+                image = (
+                    synth.sample_negative()
+                    if labels[target] == NOT_A_TILE
+                    else synth.sample(target)
                 )
                 rgb = image[:, :, ::-1].astype(np.float32) / 255.0
                 batch = torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1)) - 0.5)[None]

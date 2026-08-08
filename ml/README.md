@@ -73,12 +73,8 @@ has to be right:
 
 | split | per tile | per hand |
 | --- | --- | --- |
-| same distribution as training | 0.9975 | 0.961 |
-| every augmentation range widened | 0.9858 | 0.796 |
-
-Slightly below the 34-class figures it replaced (0.9882 widened). Expected: 35 classes is harder,
-`none` is the weakest of them at 0.907, and some real tiles now come back as `none` — which costs
-recall and is the safe direction to lose it in.
+| same distribution as training | 0.9996 | 0.994 |
+| every augmentation range widened | 0.9912 | 0.869 |
 
 **These are not estimates of accuracy on a real photo.** Every image, training and evaluation alike,
 derives from the same 34 crops of one calibration photograph. They measure invariance to the
@@ -96,14 +92,28 @@ On the widened split:
 
 | confidence ≥ | answered | per tile | per hand |
 | --- | --- | --- | --- |
-| 0.0 | 100% | 0.9858 | 0.796 |
-| 0.5 | 96.3% | 0.9953 | 0.927 |
-| **0.8** | **86.7%** | **0.9982** | **0.972** |
-| 0.9 | 71.2% | 0.9988 | 0.981 |
+| 0.0 | 100% | 0.9912 | 0.869 |
+| 0.5 | 98.2% | 0.9960 | 0.938 |
+| **0.8** | **92.2%** | **0.9989** | **0.982** |
+| 0.9 | 80.5% | 0.9995 | 0.993 |
 
 So a threshold of 0.8 answers seven tiles in eight and is essentially never wrong on those.
 (Confidence saturates near 0.95 because of the label smoothing, so thresholds above that are not
 meaningful.)
+
+### The synthetic numbers and the real photo moved in opposite directions
+
+Worth recording, because it is the clearest evidence that the table above is not a deployment
+criterion. Giving each epoch its own augmentation seeds — the training set had been re-drawing the
+same 14k images every epoch — lifted the widened split from 0.9858 to 0.9912 per tile, and per hand
+from 0.796 to 0.869.
+
+On the one real photo, the same change left the reading correct at 13 of 13 and **lowered the
+confidences**: tiles at or above 0.8 went from 6 of 13 to 4 of 13. More augmentation variety makes the
+model less sure of itself, which is better calibration on synthetic data and, here, worse coverage on
+the only real data there is. Nine tiles handed back instead of seven is worse to use.
+
+Neither figure is wrong. They measure different things, and only the second one is about photographs.
 
 ### What the failures turned out to be
 

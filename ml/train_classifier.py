@@ -28,10 +28,13 @@ from synthesize import NOT_A_TILE, SIZE, Synthesiser, load_tiles
 DATA = Path(__file__).resolve().parent / "data"
 RUNS = Path(__file__).resolve().parent / "runs"
 
-# Seed ranges, kept apart so no validation sample can repeat a training one.
+# Seed ranges, kept apart so no two splits can draw the same sample.
 TRAIN_SEEDS = (0, 10_000_000)
 VAL_SEEDS = (10_000_000, 11_000_000)
 HARD_SEEDS = (11_000_000, 12_000_000)
+# Its own range rather than a slice of VAL_SEEDS: this split picks which checkpoint to keep, so any
+# overlap makes the number finally reported partly a number the model was selected on.
+WATCH_SEEDS = (12_000_000, 13_000_000)
 
 
 class TileDataset(Dataset):
@@ -44,13 +47,20 @@ class TileDataset(Dataset):
         self.seed_low, self.seed_high = seed_range
         self.hard = hard
         self.size = size
+        # Bumped once per training epoch so the same index yields a different augmentation. Without
+        # it the seed depends on the index alone, every epoch re-draws the identical 14k images, and
+        # "generated on demand" quietly means a fixed pool the model can start memorising — the very
+        # thing the comment on --workers claims this design avoids. Left at zero for the evaluation
+        # splits, which have to stay comparable between runs.
+        self.epoch = 0
 
     def __len__(self) -> int:
         return self.count
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, int]:
         target = index % len(self.labels)  # every class equally often
-        seed = self.seed_low + (index * 2_654_435_761) % (self.seed_high - self.seed_low)
+        span = self.seed_high - self.seed_low
+        seed = self.seed_low + (index * 2_654_435_761 + self.epoch * 40_960_001) % span
         synth = Synthesiser(self.faces, self.masks, seed=seed, hard=self.hard, size=self.size)
         image = synth.sample_negative() if target == len(self.faces) else synth.sample(target)
         # BGR uint8 HWC to RGB float CHW, centred on zero.
@@ -163,7 +173,7 @@ def main() -> None:
     train = loader(classes * args.per_class, TRAIN_SEEDS, False, True)
     # Small during training so the per-epoch line is cheap; large for the final report, because 60
     # samples a class puts an error bar of a couple of points on every figure below.
-    watch = loader(classes * 60, VAL_SEEDS, False, False)
+    watch = loader(classes * 60, WATCH_SEEDS, False, False)
     val = loader(classes * 300, VAL_SEEDS, False, False)
     hard = loader(classes * 300, HARD_SEEDS, True, False)
 
@@ -179,6 +189,7 @@ def main() -> None:
     RUNS.mkdir(exist_ok=True)
     best = 0.0
     for epoch in range(1, args.epochs + 1):
+        train.dataset.epoch = epoch
         model.train()
         running, seen, right = 0.0, 0, 0
         for images, targets in train:

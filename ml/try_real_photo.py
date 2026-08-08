@@ -23,7 +23,7 @@ import cv2
 import numpy as np
 import torch
 
-from synthesize import SIZE
+from synthesize import DATA, SIZE
 from train_classifier import RUNS, TileNet
 
 # A tile face is near-white: bright, and far less coloured than green felt or a brown table.
@@ -151,6 +151,9 @@ def main() -> None:
     parser.add_argument("--scale", type=float, default=0.25)
     parser.add_argument("--min-tiles", type=int, default=12)
     parser.add_argument("--max-tiles", type=int, default=15)
+    # Under data/ rather than /tmp: that directory is this script's own and gitignored, so two runs on
+    # photos with the same stem cannot collide with each other or with anything else on the machine.
+    parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
 
     bgr = cv2.imread(str(args.photo))
@@ -190,7 +193,9 @@ def main() -> None:
     x, y, w, h = box
     vertical = h >= w
     crops = slice_line(bgr, box, vertical, start, pitch, count, size)
-    sheet(crops, labels, predicted, confidence, Path("/tmp") / f"{args.photo.stem}_read.png")
+    out = args.output or DATA / f"{args.photo.stem}_read.png"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    sheet(crops, labels, predicted, confidence, out)
 
 
 def sheet(
