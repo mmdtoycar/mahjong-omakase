@@ -198,6 +198,34 @@ class TileRecognitionServiceTest {
     f.server().verify();
   }
 
+  /** An empty upstream body must not become {"message":""} — the status is all we have left. */
+  @Test
+  void reportsTheStatusWhenTheUpstreamBodyIsEmpty() {
+    Fixture f = build("key-a", "only-model");
+    f.server()
+        .expect(ExpectedCount.once(), header("x-goog-api-key", "key-a"))
+        .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("Gemini returned HTTP 503 with no message");
+    f.server().verify();
+  }
+
+  /** Same for a status nothing can retry: a bare 403 still has to say what happened. */
+  @Test
+  void reportsTheStatusWhenARejectionHasNoBody() {
+    Fixture f = build("key-a");
+    f.server()
+        .expect(ExpectedCount.once(), header("x-goog-api-key", "key-a"))
+        .andRespond(withStatus(HttpStatus.FORBIDDEN));
+
+    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("Gemini returned HTTP 403 with no message");
+    f.server().verify();
+  }
+
   @Test
   void rejectsCallWhenNoKeyConfigured() {
     Fixture f = build("");

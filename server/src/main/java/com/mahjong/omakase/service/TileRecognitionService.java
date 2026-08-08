@@ -228,12 +228,16 @@ public class TileRecognitionService {
       } catch (RestClientResponseException e) {
         int status = e.getStatusCode().value();
         String detail = errorMessage(e.getResponseBodyAsString());
+        // errorMessage() yields "" for an empty or non-JSON body, and an empty reason would travel
+        // all the way out as {"message":""}. The status is then the only thing left to report, and
+        // it is worth reporting: it still says whether this was quota or capacity.
+        String reason =
+            detail.isBlank() ? "Gemini returned HTTP " + status + " with no message" : detail;
         if (!isRetryable(status, detail)) {
           log.warn("Gemini rejected the request ({} on {}): {}", status, model, detail);
-          throw new IllegalStateException(
-              detail.isEmpty() ? "Gemini returned an error with no message" : detail, e);
+          throw new IllegalStateException(reason, e);
         }
-        lastError = detail;
+        lastError = reason;
         if (isQuotaFailure(status, detail)) {
           log.warn("Gemini key #{} is out of quota ({}): {}", keyIndex, status, detail);
           keyCursor.set((keyIndex + 1) % apiKeys.size());
