@@ -23,7 +23,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
-from synthesize import SIZE, Synthesiser, load_tiles
+from synthesize import NOT_A_TILE, SIZE, Synthesiser, load_tiles
 
 DATA = Path(__file__).resolve().parent / "data"
 RUNS = Path(__file__).resolve().parent / "runs"
@@ -39,6 +39,7 @@ class TileDataset(Dataset):
 
     def __init__(self, count: int, seed_range: tuple[int, int], hard: bool, size: int):
         self.labels, self.faces, self.masks = load_tiles()
+        self.labels = [*self.labels, NOT_A_TILE]
         self.count = count
         self.seed_low, self.seed_high = seed_range
         self.hard = hard
@@ -50,9 +51,8 @@ class TileDataset(Dataset):
     def __getitem__(self, index: int) -> tuple[torch.Tensor, int]:
         target = index % len(self.labels)  # every class equally often
         seed = self.seed_low + (index * 2_654_435_761) % (self.seed_high - self.seed_low)
-        image = Synthesiser(
-            self.faces, self.masks, seed=seed, hard=self.hard, size=self.size
-        ).sample(target)
+        synth = Synthesiser(self.faces, self.masks, seed=seed, hard=self.hard, size=self.size)
+        image = synth.sample_negative() if target == len(self.faces) else synth.sample(target)
         # BGR uint8 HWC to RGB float CHW, centred on zero.
         rgb = image[:, :, ::-1].astype(np.float32) / 255.0
         return torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1)) - 0.5), target
@@ -147,6 +147,7 @@ def main() -> None:
     torch.manual_seed(0)
     device = "mps" if torch.backends.mps.is_available() else "cpu"
     labels, _, _ = load_tiles()
+    labels = [*labels, NOT_A_TILE]
     classes = len(labels)
     print(f"device {device}, {classes} classes: {' '.join(labels)}")
 

@@ -30,6 +30,12 @@ FACES, MASKS = DATA / "faces", DATA / "masks"
 
 SIZE = 64  # what the classifier sees; a tile face is a simple shape and this is plenty
 
+# A 35th class for everything that is not a tile face. Without it the classifier is closed-set: it
+# has to answer with one of the 34, so felt, the table's plastic housing and a misaligned crop all
+# come back as some tile, often above 0.8 confidence. That broke reading a real photo — the housing
+# scored higher than the hand — and it would quietly write invented tiles into the score sheet.
+NOT_A_TILE = "none"
+
 # A tile is not always upright in a photo, and the classifier is asked to name the face, not the
 # orientation, so all four quarter turns are the same class.
 QUARTER_TURNS = (0, 1, 2, 3)
@@ -82,10 +88,14 @@ class Synthesiser:
             high = middle + (high - middle) * stretch
         return float(self.rng.uniform(low, high))
 
-    def _background(self, height: int, width: int, exclude: int) -> np.ndarray:
-        """Whatever surrounds a tile: another tile, the table, or something plain."""
+    def _background(self, height: int, width: int, exclude: int, tiles: bool = True) -> np.ndarray:
+        """Whatever surrounds a tile: another tile, the table, or something plain.
+
+        `tiles=False` for the negative class, which must never be handed a legible tile face — that
+        would teach the model a clear 5m is "not a tile".
+        """
         choice = self.rng.integers(0, 10)
-        if choice < 5:
+        if tiles and choice < 5:
             # A neighbouring tile, which is what a hand actually looks like. Blurred and dimmed a
             # little so it reads as out of frame rather than as a second subject.
             other = self.faces[int(self.rng.integers(0, len(self.faces)))]
@@ -96,10 +106,17 @@ class Synthesiser:
             tiled = cv2.GaussianBlur(tiled, (0, 0), max(self._uniform(1.0, 3.0), 0.1))
             return np.clip(tiled * self._uniform(0.75, 1.0), 0, 255).astype(np.uint8)
         if choice < 8:
-            # Table-ish: a warm dark surface with some grain.
-            base = np.array(
-                [self._uniform(40, 90), self._uniform(55, 110), self._uniform(70, 140)]
-            )
+            # A table. Two of them exist, and they are nothing alike: the calibration photo was taken
+            # on brown wood, the real hand photos come off green felt. Guessing only brown left the
+            # classifier reading 發 on green felt at 0.4 confidence when it was in fact correct.
+            if self.rng.random() < 0.5:
+                base = np.array(  # brown, BGR
+                    [self._uniform(40, 90), self._uniform(55, 110), self._uniform(70, 140)]
+                )
+            else:
+                base = np.array(  # green felt, BGR
+                    [self._uniform(50, 105), self._uniform(85, 150), self._uniform(35, 85)]
+                )
             field = np.full((height, width, 3), base, np.float32)
             field += self.rng.normal(0, 12, (height, width, 1))
             return np.clip(field, 0, 255).astype(np.uint8)
@@ -135,7 +152,9 @@ class Synthesiser:
         out = image.astype(np.float32)
         out *= self._uniform(0.55, 1.35)  # exposure
         out = (out - 128) * self._uniform(0.7, 1.3) + 128  # contrast
-        out *= self.rng.uniform(0.88, 1.12, 3)  # white balance
+        # Wider than a phone's own variation, because felt bounces its colour onto the tile: on the
+        # green table a white face measures a* -3 rather than 0.
+        out *= self.rng.uniform(0.82, 1.18, 3)  # white balance
         out = np.clip(out, 0, 255)
 
         gamma = self._uniform(0.7, 1.4)
@@ -181,6 +200,29 @@ class Synthesiser:
         return image
 
     # ── the sample ─────────────────────────────────────────────────────────
+
+    def sample_negative(self) -> np.ndarray:
+        """Something a crop might contain that is not one tile face."""
+        pad = int(self._uniform(60, 200))
+        canvas = self._background(pad, pad, exclude=0, tiles=False)
+        choice = self.rng.integers(0, 3)
+        if choice == 0:
+            # Two tiles meeting, which is what a misaligned grid produces.
+            first, second = (int(self.rng.integers(0, len(self.faces))) for _ in range(2))
+            split = int(pad * self._uniform(0.25, 0.75))
+            top = cv2.resize(self.faces[first], (pad, max(split, 1)))
+            bottom = cv2.resize(self.faces[second], (pad, max(pad - split, 1)))
+            canvas = np.vstack([top, bottom])[:pad]
+            if self.rng.random() < 0.5:
+                canvas = np.rot90(canvas).copy()
+        elif choice == 1:
+            # A sliver of one tile against its surroundings, or a tile seen edge-on.
+            face = self.faces[int(self.rng.integers(0, len(self.faces)))]
+            # Floored: the widened ranges can stretch this fraction to zero, and an empty slice
+            # takes cv2.resize down with it mid-training.
+            keep = max(int(face.shape[1] * self._uniform(0.05, 0.3)), 3)
+            canvas = cv2.resize(face[:, :keep], (pad, pad))
+        return self._photometric(cv2.resize(canvas, (self.size, self.size)))
 
     def sample(self, index: int) -> np.ndarray:
         """One augmented square BGR image of the tile at `index`."""
