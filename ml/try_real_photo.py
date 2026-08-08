@@ -5,12 +5,15 @@ of butted tiles, bright and nearly colourless against strongly coloured felt, so
 a thresholding problem rather than a detection problem — no trained detector, and none of the labelled
 photos that would need.
 
-Splitting the line is the part that needs care. The tiles touch, so the line comes back as one blob,
-and a brightness profile along it does not show the seams reliably: the engraved characters dip just
-as deep. What works instead is to let the classifier find its own alignment. Sweep the start and the
-pitch, score each candidate by the mean confidence over the tiles it produces, and keep the best. A
-misaligned crop is half of one tile and half of the next, which the classifier is not confident about
-— so confidence is exactly the signal that says the grid is wrong.
+Splitting the line is the part that needs care. The tiles touch, so the line comes back as one blob.
+The grid is found geometrically first — see grid_fit.py — and the classifier is then used only to
+choose between runs and to nudge the fit by a pixel or two. Confidence is the right signal for that
+nudging: a misaligned crop is half of one tile and half of the next, which the classifier is not
+confident about.
+
+Doing it the other way round was the first version and it was far too slow to ship: brute-forcing
+count, pitch and offset cost 1,680 grid hypotheses and 22,680 tile classifications on one photo, some
+21 seconds of inference. The geometry was in the pixels the whole time.
 
 On one real photo, from a table the model has never seen and felt a different colour from the
 calibration photo, this reads 13 of 13 tiles correctly, ten of them above 0.85.
@@ -23,6 +26,7 @@ import cv2
 import numpy as np
 import torch
 
+from grid_fit import fit_grid
 from synthesize import DATA, SIZE
 from train_classifier import RUNS, TileNet
 
@@ -31,6 +35,12 @@ MIN_LIGHTNESS = 150
 MAX_CHROMA = 26
 
 MIN_RUN_ASPECT = 2.0  # below this a blob is a single tile, not a line of them
+
+# How far the classifier is allowed to move the geometric fit. Small on purpose: the fit is already
+# within a pixel of the brute-force answer, and every step here costs a forward pass per tile.
+PITCH_NUDGE = (0.99, 1.0, 1.01)
+OFFSET_NUDGE = (-0.04, 0.0, 0.04)
+COUNT_NUDGE = (-1, 0, 1)  # the run's box can clip a tile at either end
 CONFIDENT = 0.8  # hand back anything under this rather than guess
 
 # Mean confidence alone is an exploitable objective. A 272x110 blob cut into fifteen 17px slivers
@@ -77,31 +87,54 @@ def candidate_runs(bgr: np.ndarray) -> list[tuple[int, int, int, int]]:
 def read_line(
     model: torch.nn.Module,
     bgr: np.ndarray,
+    light: np.ndarray,
     box: tuple[int, int, int, int],
     size: int,
-    counts: range,
-) -> tuple[float, int, float, torch.Tensor, torch.Tensor]:
-    """Best (start, pitch, count) for the line, chosen by the classifier's own mean confidence."""
+    refine: bool,
+) -> tuple[float, int, float, float, torch.Tensor, torch.Tensor] | None:
+    """Reads one run, starting from its geometric fit.
+
+    With `refine` false this costs a single forward pass, which is all that is needed to tell a row of
+    tiles from a strip of the table's plastic housing. The winner is then read again with `refine` on.
+    """
     x, y, w, h = box
     vertical = h >= w
-    length = h if vertical else w
+    fit = fit_grid(light, box, vertical)
+    if fit is None:
+        return None
+    pitch, offset, count = fit
+
+    combinations = (
+        [
+            (pitch * p, offset + pitch * o, count + c)
+            for p in PITCH_NUDGE
+            for o in OFFSET_NUDGE
+            for c in COUNT_NUDGE
+        ]
+        if refine
+        else [(pitch, offset, count)]
+    )
+
     best = None
-    across = w if vertical else h
-    for count in counts:
-        nominal = length / count
-        if not MIN_TILE_RATIO <= nominal / across <= MAX_TILE_RATIO:
+    for candidate_pitch, candidate_offset, candidate_count in combinations:
+        if candidate_count < 1:
             continue
-        for pitch in np.arange(nominal * 0.94, nominal * 1.07, nominal * 0.01):
-            for start in np.arange(-nominal * 0.3, nominal * 0.3, nominal * 0.04):
-                crops = slice_line(bgr, box, vertical, start, float(pitch), count, size)
-                if crops is None:
-                    continue
-                confidence, predicted = classify(model, crops)
-                score = float(confidence.mean())
-                if best is None or score > best[0]:
-                    best = (score, count, float(pitch), float(start), confidence, predicted)
-    if best is None:
-        raise SystemExit("could not fit a grid to the line")
+        crops = slice_line(
+            bgr, box, vertical, candidate_offset, candidate_pitch, candidate_count, size
+        )
+        if crops is None:
+            continue
+        confidence, predicted = classify(model, crops)
+        score = float(confidence.mean())
+        if best is None or score > best[0]:
+            best = (
+                score,
+                candidate_count,
+                candidate_pitch,
+                candidate_offset,
+                confidence,
+                predicted,
+            )
     return best
 
 
@@ -169,20 +202,27 @@ def main() -> None:
     model.load_state_dict(checkpoint["state"])
     model.eval()
 
+    light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
     runs = candidate_runs(bgr)
     print(f"{args.photo.name} at {bgr.shape[1]}x{bgr.shape[0]}, {len(runs)} candidate runs")
-    best = None
+
+    # One pass each to pick the run, then the neighbourhood search on the winner alone.
+    scored = []
     for box in runs:
-        try:
-            fit = read_line(model, bgr, box, size, range(args.min_tiles, args.max_tiles + 1))
-        except SystemExit:
+        fit = read_line(model, bgr, light, box, size, refine=False)
+        if fit is None:
+            print(f"  {box}: no grid fits")
             continue
-        print(f"  {box}: mean confidence {fit[0]:.3f} over {fit[1]} tiles")
-        if best is None or fit[0] > best[0][0]:
-            best = (fit, box)
-    if best is None:
+        print(f"  {box}: {fit[1]} tiles at pitch {fit[2]:.1f}px, confidence {fit[0]:.3f}")
+        scored.append((fit[0], box))
+    if not scored:
         raise SystemExit("no run could be read")
-    (score, count, pitch, start, confidence, predicted), box = best
+    box = max(scored)[1]
+
+    refined = read_line(model, bgr, light, box, size, refine=True)
+    if refined is None:
+        raise SystemExit("no run could be read")
+    score, count, pitch, start, confidence, predicted = refined
     print(f"\nchose {box}: {count} tiles, pitch {pitch:.1f}px, mean confidence {score:.3f}\n")
     for i, (guess, sure) in enumerate(zip(predicted.tolist(), confidence.tolist()), 1):
         mark = "" if sure >= CONFIDENT else "   <- hand this one back"
