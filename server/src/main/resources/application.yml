@@ -42,8 +42,13 @@ app:
 google:
   client-id: 471645797225-qtqf1nlv8l807tblfhpa9d36p5q456l3.apps.googleusercontent.com
 
-# Photo hand recognition. Keys stay server-side — never expose them to the browser.
-# Comma-separate several keys to rotate away from one that hit its quota.
+# Models are a fallback chain, tried in order: a 503 is that model being over capacity, which every
+# key sees alike, so the only thing that helps is a different model.
+# All GA, all vision-capable, each its own capacity pool. The -lite hop is a deliberate last resort:
+# it is weaker at counting tiles and telling 4s from 5s, so check its output before saving — but a
+# shaky read beats no read when both flash tiers are full.
+# Still excluded: -pro (recognition already takes 11-24s; pro risks the 100s gateway ceiling) and
+# -preview (those names get withdrawn, which would turn the fallback into a 404).
 gemini:
   api-keys: ${GEMINI_API_KEYS:}
-  model: ${GEMINI_MODEL:gemini-3.6-flash}
+  models: ${GEMINI_MODELS:gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite}

@@ -33,6 +33,14 @@ public class GlobalExceptionHandler {
     return ResponseEntity.notFound().build();
   }
 
+  /**
+   * Only reached when the 405 comes from a {@code @Controller} path, where the exception is thrown
+   * by handler mapping and leaves the handler null. A 405 on a static resource keeps a non-null,
+   * non-{@code HandlerMethod} handler, and {@code AbstractHandlerMethodExceptionResolver} skips
+   * {@code @ControllerAdvice} entirely in that case — those land on Spring's default resolver and
+   * log without a path. That is the scanner traffic (POST/PROPFIND against {@code /}), and leaving
+   * it as an empty 405 is correct; this handler exists to give our own frontend a JSON body.
+   */
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   public ResponseEntity<Map<String, String>> handleMethodNotSupported(
       HttpRequestMethodNotSupportedException e, HttpServletRequest request) {

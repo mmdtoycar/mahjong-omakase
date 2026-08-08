@@ -140,7 +140,7 @@ public class TileRecognitionService {
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
   private final List<String> apiKeys;
-  private final String model;
+  private final List<String> models;
   private final String legendBase64;
   private final AtomicInteger keyCursor = new AtomicInteger();
 
@@ -148,88 +148,131 @@ public class TileRecognitionService {
       ObjectMapper objectMapper,
       RestClient geminiRestClient,
       @Value("${gemini.api-keys:}") String rawApiKeys,
-      @Value("${gemini.model:}") String model) {
+      @Value("${gemini.models:}") String rawModels) {
     this.objectMapper = objectMapper;
-    this.model = model == null || model.isBlank() ? DEFAULT_MODEL : model;
-    this.apiKeys =
-        Arrays.stream(rawApiKeys.split(",")).map(String::trim).filter(k -> !k.isEmpty()).toList();
+    this.apiKeys = splitList(rawApiKeys);
+    List<String> configured = splitList(rawModels);
+    this.models = configured.isEmpty() ? List.of(DEFAULT_MODEL) : configured;
     this.restClient = geminiRestClient;
     this.legendBase64 = loadCalibrationLegend();
 
     if (apiKeys.isEmpty()) {
-      log.warn("GEMINI_API_KEYS is not set — photo recognition will return 503 until configured");
+      log.warn("GEMINI_API_KEYS is not set — photo recognition will fail until configured");
     } else {
-      log.info("Photo recognition ready: {} Gemini key(s), model {}", apiKeys.size(), this.model);
+      log.info("Photo recognition ready: {} Gemini key(s), models {}", apiKeys.size(), this.models);
     }
+  }
+
+  private static List<String> splitList(String raw) {
+    if (raw == null) {
+      return List.of();
+    }
+    return Arrays.stream(raw.split(",")).map(String::trim).filter(v -> !v.isEmpty()).toList();
   }
 
   /**
    * Returns the model's raw JSON text for one hand photo.
    *
-   * @throws IllegalStateException if no key is configured or every key failed
+   * <p>Failures advance whichever dimension can actually help, which is why there are two cursors
+   * rather than one loop over keys. A 429 is our key's own allowance, so the next key is tried on
+   * the same model. A 503 is the model being over capacity — global to that model, identical for
+   * every key — so rotating keys there is three guaranteed failures in a row, as production showed;
+   * the next model is tried on the same key instead.
+   *
+   * @throws IllegalStateException if no key is configured, or nothing left to fall back to
    */
   public String recognize(String imageBase64, String mimeType) {
     if (apiKeys.isEmpty()) {
       throw new IllegalStateException("服务端未配置 Gemini API Key，请联系管理员");
     }
 
-    String url = String.format(ENDPOINT, model);
     Map<String, Object> payload = buildPayload(imageBase64, mimeType);
-    int start = keyCursor.get();
+    int firstKey = keyCursor.get();
+    int keyOffset = 0;
+    int modelIndex = 0;
     String lastError = null;
     // Log on the way in as well as on failure: Gemini takes tens of seconds for two images, and
     // without this a request in flight looks identical to one that never arrived.
     long startedAtNanos = System.nanoTime();
     log.info("Recognition request received: {} KB of {}", imageBase64.length() / 1024, mimeType);
 
-    for (int attempt = 0; attempt < apiKeys.size(); attempt++) {
+    while (true) {
       long elapsedMs = (System.nanoTime() - startedAtNanos) / 1_000_000;
-      if (attempt > 0 && elapsedMs > RETRY_BUDGET_MS) {
-        log.warn(
-            "Stopping after {} of {} keys: {} ms spent, not enough left before the gateway gives up",
-            attempt,
-            apiKeys.size(),
-            elapsedMs);
+      if ((keyOffset > 0 || modelIndex > 0) && elapsedMs > RETRY_BUDGET_MS) {
+        log.warn("Giving up after {} ms: not enough left before the gateway gives up", elapsedMs);
         break;
       }
-      int index = (start + attempt) % apiKeys.size();
+
+      int keyIndex = (firstKey + keyOffset) % apiKeys.size();
+      String model = models.get(modelIndex);
       try {
         String body =
             restClient
                 .post()
-                .uri(url)
-                .header("x-goog-api-key", apiKeys.get(index))
+                .uri(String.format(ENDPOINT, model))
+                .header("x-goog-api-key", apiKeys.get(keyIndex))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(payload)
                 .retrieve()
                 .body(String.class);
         // Success: next request starts at the key after this one.
-        keyCursor.set((index + 1) % apiKeys.size());
+        keyCursor.set((keyIndex + 1) % apiKeys.size());
         String text = extractText(body);
         log.info(
-            "Recognition succeeded in {} ms on key #{} ({} chars returned)",
+            "Recognition succeeded in {} ms on key #{} with {} ({} chars returned)",
             (System.nanoTime() - startedAtNanos) / 1_000_000,
-            index,
+            keyIndex,
+            model,
             text.length());
         return text;
       } catch (RestClientResponseException e) {
         int status = e.getStatusCode().value();
         String detail = errorMessage(e.getResponseBodyAsString());
+        // errorMessage() yields "" for an empty or non-JSON body, and an empty reason would travel
+        // all the way out as {"message":""}. The status is then the only thing left to report, and
+        // it is worth reporting: it still says whether this was quota or capacity.
+        String reason =
+            detail.isBlank() ? "Gemini returned HTTP " + status + " with no message" : detail;
         if (!isRetryable(status, detail)) {
-          log.warn("Gemini rejected the request ({}): {}", status, detail);
-          throw new IllegalStateException(detail.isEmpty() ? "识别服务返回错误" : detail, e);
+          log.warn("Gemini rejected the request ({} on {}): {}", status, model, detail);
+          throw new IllegalStateException(reason, e);
         }
-        log.warn("Gemini key #{} exhausted ({}): {}", index, status, detail);
-        lastError = detail;
+        lastError = reason;
+        if (isQuotaFailure(status, detail)) {
+          log.warn("Gemini key #{} is out of quota ({}): {}", keyIndex, status, detail);
+          keyCursor.set((keyIndex + 1) % apiKeys.size());
+          keyOffset++;
+          if (keyOffset >= apiKeys.size()) {
+            log.warn("All {} keys are out of quota", apiKeys.size());
+            break;
+          }
+        } else {
+          log.warn("Model {} is over capacity ({}): {}", model, status, detail);
+          modelIndex++;
+          if (modelIndex >= models.size()) {
+            log.warn("All {} models are over capacity: {}", models.size(), models);
+            break;
+          }
+          log.info("Falling back to model {}", models.get(modelIndex));
+        }
       } catch (ResourceAccessException e) {
-        log.warn("Gemini request failed on key #{}: {}", index, e.getMessage());
-        lastError = "识别服务连接超时，请重试";
+        // A timeout says nothing about which model or key is at fault, so treat it like the key
+        // being unusable and move on rather than hammering the same one.
+        log.warn("Gemini request failed on key #{} with {}: {}", keyIndex, model, e.getMessage());
+        // Coalesced because a null would reach Map.of("message", ...) in the controller and NPE
+        // into a 500, hiding the timeout behind "An unexpected error occurred".
+        lastError = e.getMessage() != null ? e.getMessage() : "Upstream request failed";
+        keyCursor.set((keyIndex + 1) % apiKeys.size());
+        keyOffset++;
+        if (keyOffset >= apiKeys.size()) {
+          break;
+        }
       }
-      // Skip past the key that just failed so the next request does not retry it first.
-      keyCursor.set((index + 1) % apiKeys.size());
     }
 
-    throw new IllegalStateException(lastError == null ? "所有 Gemini API Key 均不可用" : lastError);
+    // Non-null by construction: apiKeys is non-empty, so the loop ran at least once, and every path
+    // out of an attempt either returns, throws, or records a reason here.
+    throw new IllegalStateException(lastError);
   }
 
   private Map<String, Object> buildPayload(String imageBase64, String mimeType) {
@@ -287,11 +330,20 @@ public class TileRecognitionService {
 
   /** Quota, rate limit and transient upstream failures are worth trying another key. */
   private boolean isRetryable(int status, String detail) {
-    if (status == 429 || status == 503 || status == 500) {
-      return true;
-    }
+    return status == 503 || status == 500 || isQuotaFailure(status, detail);
+  }
+
+  /**
+   * Whether the key itself ran out, as opposed to Gemini being over capacity — a 503 "experiencing
+   * high demand" is Google's own problem and hits every key at once, so reporting it as an
+   * exhausted key sends anyone reading the log to look at their quota instead of at the upstream
+   * status.
+   */
+  private static boolean isQuotaFailure(int status, String detail) {
     String lower = detail.toLowerCase(Locale.ROOT);
-    return lower.contains("quota") || lower.contains("resource has been exhausted");
+    return status == 429
+        || lower.contains("quota")
+        || lower.contains("resource has been exhausted");
   }
 
   private String loadCalibrationLegend() {

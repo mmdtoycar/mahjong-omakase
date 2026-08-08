@@ -31,9 +31,9 @@ public class TileRecognitionController {
       String rawJson = service.recognize(request.getImageBase64(), request.getMimeType());
       return ResponseEntity.ok(new TileRecognitionResponse(rawJson));
     } catch (IllegalStateException e) {
-      // Upstream/config failure rather than a bad client request — 502 keeps that distinction.
       log.warn("Photo recognition unavailable: {}", e.getMessage());
-      return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("message", e.getMessage()));
+      return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+          .body(Map.of("message", e.getMessage()));
     }
   }
 }
