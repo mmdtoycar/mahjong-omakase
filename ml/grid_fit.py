@@ -94,12 +94,22 @@ def _edge_profile(light: np.ndarray, box: tuple[int, int, int, int], vertical: b
 
 
 def fit_grid(
-    light: np.ndarray, box: tuple[int, int, int, int], vertical: bool
+    light: np.ndarray, box: tuple[int, int, int, int], vertical: bool, expect: int | None = None
 ) -> tuple[float, float, int] | None:
-    """Pitch, offset and tile count for one run, along its long axis and relative to its own box."""
+    """Pitch, offset and tile count for one run, along its long axis and relative to its own box.
+
+    `expect` narrows the candidate pitches to those that would produce that many tiles. It is for
+    callers that know the answer by construction — slicing a calibration photo whose layout is fixed —
+    and is not a substitute for the search: the 条 suit is itself a row of vertical bars, and on the
+    green photo, where the tiles lie a quarter turn over so those bars run along the axis being fitted,
+    the unconstrained fit answers thirteen tiles instead of nine.
+    """
     x, y, w, h = box
     length, across = (h, w) if vertical else (w, h)
     low, high = across * MIN_PITCH_RATIO, across * MAX_PITCH_RATIO
+    if expect:
+        nominal = length / expect
+        low, high = max(low, nominal * 0.9), min(high, nominal * 1.1)
 
     marks = _extrema(_edge_profile(light, box, vertical), int(low * MIN_SEPARATION))
     if len(marks) < 3:

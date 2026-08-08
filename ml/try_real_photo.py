@@ -27,7 +27,7 @@ import numpy as np
 import torch
 
 from grid_fit import fit_grid
-from synthesize import DATA, SIZE
+from synthesize import BACK, DATA, NOT_A_TILE, SIZE
 from train_classifier import RUNS, TileNet
 
 # A tile face is near-white: bright, and far less coloured than green felt or a brown table.
@@ -41,6 +41,10 @@ MIN_RUN_ASPECT = 2.0  # below this a blob is a single tile, not a line of them
 PITCH_NUDGE = (0.99, 1.0, 1.01)
 OFFSET_NUDGE = (-0.04, 0.0, 0.04)
 COUNT_NUDGE = (-1, 0, 1)  # the run's box can clip a tile at either end
+
+# What a run of this length is. Three or four tiles set aside is a meld; the long run is the standing
+# hand. Nothing else is part of the hand — a discard pile is neither.
+MELD_SIZES = (3, 4)
 CONFIDENT = 0.8  # hand back anything under this rather than guess
 
 # Mean confidence alone is an exploitable objective. A 272x110 blob cut into fifteen 17px slivers
@@ -212,18 +216,20 @@ def main() -> None:
     runs = candidate_runs(bgr)
     print(f"{args.photo.name} at {bgr.shape[1]}x{bgr.shape[0]}, {len(runs)} candidate runs")
 
-    # One pass each to pick the run, then the neighbourhood search on the winner alone.
-    scored = []
+    # The standing hand and the melds are separate runs — the melds are set aside on the right with a
+    # gap, so the mask gives them their own blobs. Read every run that could be either.
+    hand_candidates, melds = [], []
     for box in runs:
-        fit = read_line(model, bgr, light, box, size, refine=False, counts=counts)
-        if fit is None:
-            print(f"  {box}: no grid fits")
-            continue
-        print(f"  {box}: {fit[1]} tiles at pitch {fit[2]:.1f}px, confidence {fit[0]:.3f}")
-        scored.append((fit[0], box))
-    if not scored:
-        raise SystemExit("no run could be read")
-    box = max(scored)[1]
+        for sizes, bucket in ((counts, hand_candidates), (MELD_SIZES, melds)):
+            fit = read_line(model, bgr, light, box, size, refine=False, counts=sizes)
+            if fit is None:
+                continue
+            print(f"  {box}: {fit[1]} tiles at pitch {fit[2]:.1f}px, confidence {fit[0]:.3f}")
+            bucket.append((fit[0], box))
+            break
+    if not hand_candidates:
+        raise SystemExit("no run long enough to be a hand")
+    box = max(hand_candidates)[1]
 
     refined = read_line(model, bgr, light, box, size, refine=True, counts=counts)
     if refined is None:
@@ -232,9 +238,11 @@ def main() -> None:
     print(f"\nchose {box}: {count} tiles, pitch {pitch:.1f}px, mean confidence {score:.3f}\n")
     for i, (guess, sure) in enumerate(zip(predicted.tolist(), confidence.tolist()), 1):
         mark = "" if sure >= CONFIDENT else "   <- hand this one back"
-        print(f"  {i:2d}. {labels[guess]:3s} {sure:.2f}{mark}")
-    kept = sum(1 for s in confidence.tolist() if s >= CONFIDENT)
-    print(f"\n{kept}/{count} at confidence >= {CONFIDENT}")
+        print(f"  {i:2d}. {labels[guess]:4s} {sure:.2f}{mark}")
+    kept = sum(1 for c in confidence.tolist() if c >= CONFIDENT)
+    print(f"\n{kept}/{count} at confidence >= {CONFIDENT}\n")
+
+    read_melds(model, bgr, light, melds, box, size, labels)
 
     x, y, w, h = box
     vertical = h >= w
@@ -242,6 +250,66 @@ def main() -> None:
     out = args.output or DATA / f"{args.photo.stem}_read.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     sheet(crops, labels, predicted, confidence, out)
+
+
+def meld_kind(tiles: list[str]) -> str:
+    """From the tiles alone. Four is a gang, three alike is a ke, anything else a shun."""
+    if len(tiles) >= 4:
+        return "gang"
+    return "ke" if len(set(tiles)) == 1 else "shun"
+
+
+def read_melds(
+    model: torch.nn.Module,
+    bgr: np.ndarray,
+    light: np.ndarray,
+    melds: list[tuple[float, tuple[int, int, int, int]]],
+    hand_box: tuple[int, int, int, int],
+    size: int,
+    labels: list[str],
+) -> None:
+    """Reads the runs of three or four set aside beside the hand.
+
+    Two distinctions here decide the score rather than just the display:
+
+    A 暗杠 is four tiles with two of them turned face down. It is *not* 副露 — it leaves the hand
+    concealed and 门前清 intact — so it carries isOpen false, while 吃, 碰 and 明杠 all carry true.
+    That is the whole reason the face-down tile is its own class instead of part of "not a tile".
+
+    The two turned-over tiles of a 暗杠 cannot be read, and do not need to be: a gang is four of one
+    tile, so the pair that is face up names all four.
+    """
+    for _, box in melds:
+        if box == hand_box:
+            continue
+        fit = read_line(model, bgr, light, box, size, refine=True, counts=range(3, 5))
+        if fit is None:
+            continue
+        _, count, _, _, confidence, predicted = fit
+        tiles = [labels[int(g)] for g in predicted]
+        lowest = min(float(c) for c in confidence)
+        # A meld has to be read outright. Three or four tiles is a short run and the geometry alone is
+        # weak evidence — on the first photo tried, a corner of the discard pile fitted four cells and
+        # came back as a gang of 1p at 0.00 confidence. There is no partial credit for a meld: get one
+        # tile of it wrong and the hand is a different hand.
+        if lowest < CONFIDENT:
+            print(f"  meld at {box}: {tiles} — lowest confidence {lowest:.2f}, not read")
+            continue
+        backs = [t for t in tiles if t == BACK]
+        faces = [t for t in tiles if t not in (BACK, NOT_A_TILE)]
+        if backs:
+            # A 暗杠: name it from the tiles that are face up, which must agree with each other.
+            if len(set(faces)) != 1 or count != 4:
+                print(f"  meld at {box}: {tiles} — face-down tiles but not a readable 暗杠, skipped")
+                continue
+            tiles = [faces[0]] * 4
+        elif NOT_A_TILE in tiles:
+            print(f"  meld at {box}: {tiles} — contains something that is not a tile, skipped")
+            continue
+        print(
+            f"  meld at {box}: {meld_kind(tiles)} {tiles}"
+            f" isOpen={not backs} (lowest confidence {lowest:.2f})"
+        )
 
 
 def sheet(

@@ -36,20 +36,37 @@ SIZE = 64  # what the classifier sees; a tile face is a simple shape and this is
 # scored higher than the hand — and it would quietly write invented tiles into the score sheet.
 NOT_A_TILE = "none"
 
+# The face-down tile. Its own label rather than part of NOT_A_TILE, because it is what separates a
+# 暗杠 from a 明杠: four tiles with two of them turned over is concealed, does not count as 副露, and
+# does not break 门前清 — which changes the score. Folded into "not a tile" that is unrecoverable.
+BACK = "back"
+
 # A tile is not always upright in a photo, and the classifier is asked to name the face, not the
 # orientation, so all four quarter turns are the same class.
 QUARTER_TURNS = (0, 1, 2, 3)
 
 
-def load_tiles() -> tuple[list[str], list[np.ndarray], list[np.ndarray]]:
-    """Every face crop with its cut-out mask, labels taken from the filenames."""
-    labels = sorted(p.stem for p in FACES.glob("*.png"))
+def load_tiles() -> tuple[list[str], list[list[np.ndarray]], list[list[np.ndarray]]]:
+    """Every label with each of its appearances and their cut-out masks.
+
+    A label can have more than one appearance because there are two sets of tiles, on two tables. They
+    are near-identical in design and quite different in finish and lighting, and holding both under one
+    label is what pushes the classifier towards the pattern rather than towards the look of one set.
+    """
+    labels = sorted(d.name for d in FACES.iterdir() if d.is_dir())
     if not labels:
         raise SystemExit(f"no crops in {FACES} — run slice_calibration.py first")
-    faces = [cv2.imread(str(FACES / f"{label}.png")) for label in labels]
-    masks = [cv2.imread(str(MASKS / f"{label}.png"), cv2.IMREAD_GRAYSCALE) for label in labels]
-    if any(f is None or m is None for f, m in zip(faces, masks)):
-        raise SystemExit(f"a crop in {FACES} has no matching mask in {MASKS}")
+    faces, masks = [], []
+    for label in labels:
+        variants = sorted(p.name for p in (FACES / label).glob("*.png"))
+        if not variants:
+            raise SystemExit(f"{FACES / label} has no crops")
+        face = [cv2.imread(str(FACES / label / v)) for v in variants]
+        mask = [cv2.imread(str(MASKS / label / v), cv2.IMREAD_GRAYSCALE) for v in variants]
+        if any(f is None or m is None for f, m in zip(face, mask)):
+            raise SystemExit(f"a crop in {FACES / label} has no matching mask")
+        faces.append(face)
+        masks.append(mask)
     return labels, faces, masks
 
 
@@ -58,8 +75,8 @@ class Synthesiser:
 
     def __init__(
         self,
-        faces: list[np.ndarray],
-        masks: list[np.ndarray],
+        faces: list[list[np.ndarray]],
+        masks: list[list[np.ndarray]],
         seed: int,
         hard: bool,
         size: int = SIZE,
@@ -88,6 +105,11 @@ class Synthesiser:
             high = middle + (high - middle) * stretch
         return float(self.rng.uniform(low, high))
 
+    def _variant(self, index: int) -> tuple[np.ndarray, np.ndarray]:
+        """One of the label's appearances, chosen per sample so both sets are seen equally often."""
+        pick = int(self.rng.integers(0, len(self.faces[index])))
+        return self.faces[index][pick], self.masks[index][pick]
+
     def _background(self, height: int, width: int, exclude: int, tiles: bool = True) -> np.ndarray:
         """Whatever surrounds a tile: another tile, the table, or something plain.
 
@@ -98,10 +120,11 @@ class Synthesiser:
         if tiles and choice < 5:
             # A neighbouring tile, which is what a hand actually looks like. Blurred and dimmed a
             # little so it reads as out of frame rather than as a second subject.
-            other = self.faces[int(self.rng.integers(0, len(self.faces)))]
+            index = int(self.rng.integers(0, len(self.faces)))
             if len(self.faces) > 1:
-                while other is self.faces[exclude]:
-                    other = self.faces[int(self.rng.integers(0, len(self.faces)))]
+                while index == exclude:
+                    index = int(self.rng.integers(0, len(self.faces)))
+            other, _ = self._variant(index)
             tiled = cv2.resize(other, (width, height))
             tiled = cv2.GaussianBlur(tiled, (0, 0), max(self._uniform(1.0, 3.0), 0.1))
             return np.clip(tiled * self._uniform(0.75, 1.0), 0, 255).astype(np.uint8)
@@ -210,14 +233,14 @@ class Synthesiser:
             # Two tiles meeting, which is what a misaligned grid produces.
             first, second = (int(self.rng.integers(0, len(self.faces))) for _ in range(2))
             split = int(pad * self._uniform(0.25, 0.75))
-            top = cv2.resize(self.faces[first], (pad, max(split, 1)))
-            bottom = cv2.resize(self.faces[second], (pad, max(pad - split, 1)))
+            top = cv2.resize(self._variant(first)[0], (pad, max(split, 1)))
+            bottom = cv2.resize(self._variant(second)[0], (pad, max(pad - split, 1)))
             canvas = np.vstack([top, bottom])[:pad]
             if self.rng.random() < 0.5:
                 canvas = np.rot90(canvas).copy()
         elif choice == 1:
             # A sliver of one tile against its surroundings, or a tile seen edge-on.
-            face = self.faces[int(self.rng.integers(0, len(self.faces)))]
+            face, _ = self._variant(int(self.rng.integers(0, len(self.faces))))
             # Floored: the widened ranges can stretch this fraction to zero, and an empty slice
             # takes cv2.resize down with it mid-training.
             keep = max(int(face.shape[1] * self._uniform(0.05, 0.3)), 3)
@@ -226,7 +249,7 @@ class Synthesiser:
 
     def sample(self, index: int) -> np.ndarray:
         """One augmented square BGR image of the tile at `index`."""
-        face, mask = self._warp(self.faces[index], self.masks[index])
+        face, mask = self._warp(*self._variant(index))
         height, width = mask.shape
 
         # Pad so the tile can sit anywhere in the frame with background all around it.
