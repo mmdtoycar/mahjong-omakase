@@ -21,6 +21,12 @@ photos, which have no such artefact.
 
 A mask is written alongside each crop. Trimming needs it, and so does the synthetic data: pasting a
 cut-out tile onto random backgrounds is what stops the classifier depending on this one table.
+
+One thing the audit still reports and should: 9s keeps a dark strip along its top edge. It is not
+table but the shadow where 9p meets it, which the chroma settles — the table runs to a* +13, that
+strip to a* -5. Shadow between touching tiles is in every real photo of a hand, so it stays. Telling
+the two apart by colour was tried and does not work in general anyway: the red 中 of 5z sits at
+a* +12, b* +14, which is the table's colour almost exactly.
 """
 
 import sys
@@ -55,12 +61,30 @@ MIN_COVERAGE = 0.9  # a row or column of a crop must be this much tile to be kep
 # whole row of circles and left something a classifier would read as 6p.
 SEAM_LIGHTNESS = 170
 SEAM_WIDTH_FRACTION = 0.8
-SEAM_SEARCH_FRACTION = 0.2  # only near the bottom edge, where a neighbour can have crept in
+# Absolute, not a fraction of the height. A neighbour can only reach ~12px in, and searching deeper
+# finds tile markings instead: the bottom bar of 7z's frame sits 18px up and is dark right across,
+# so a wider search cut the frame off, and the bottom row of circles on 9p is 23px up.
+SEAM_SEARCH_PX = 12
 
 # The lit top edge of the tile below, when a slice of it lands at the bottom of a crop. It is
 # brighter than any part of a face — the whitest margin on these tiles averages 205, a bevel 230 —
 # which is the only reason it is separable, since a check for dark intrusion never sees it at all.
 NEIGHBOUR_BEVEL_MEAN = 215
+
+# Two tiles do not meet at a line but across a band of roughly 8-14px: the left tile's lit side, the
+# shadow between them, then the right tile's lit side. Dividing a row evenly puts the cut inside that
+# band, which leaves a strip of the left-hand neighbour along every crop's left edge — visible on the
+# whole 萬 row and on most of the circles. Trimming cannot find it: on the 萬 row the neighbour's lit
+# side is *brighter* than the face beside it and there is no shadow between them at all.
+#
+# So the edge is simply inset past the band, on the left and at the bottom, and only where there is a
+# neighbour to inset past: not the first tile of a row, and not the last row, which has table below
+# it that the mask already removed.
+#
+# Not the right edge, though: a crop's right edge already lands on its own tile, and taking 8px off
+# there cuts into the design — the frame of 7z, the bamboo of 5s. Nor the top, where row_tops puts
+# the boundary on the row's own lit bevel and the 萬 characters leave little margin to spare.
+NEIGHBOUR_EDGE = 8
 
 
 def tile_mask(bgr: np.ndarray) -> np.ndarray:
@@ -148,7 +172,7 @@ def seam_top(light: np.ndarray) -> int | None:
     height = len(light)
     dark = light < SEAM_LIGHTNESS
     unbroken = np.array([row.mean() > SEAM_WIDTH_FRACTION and runs(row) == 1 for row in dark])
-    for y in range(height - 1, int(height * (1 - SEAM_SEARCH_FRACTION)), -1):
+    for y in range(height - 1, max(height - 1 - SEAM_SEARCH_PX, 0), -1):
         if not unbroken[y]:
             continue
         top = y
@@ -196,12 +220,16 @@ def main() -> None:
     tops = row_tops(light, len(ROWS))
     cells = []
     for i, (top, labels) in enumerate(zip(tops, ROWS)):
-        bottom = row_bottom(light, top, tops[i + 1] if i + 1 < len(tops) else None)
+        next_top = tops[i + 1] if i + 1 < len(tops) else None
+        bottom = row_bottom(light, top, next_top)
+        if next_top is not None:
+            bottom -= NEIGHBOUR_EDGE
         left, right = row_extent(mask, top, bottom)
         step = (right - left) / len(labels)
         for j, label in enumerate(labels):
+            nominal_x0 = int(left + j * step) + (NEIGHBOUR_EDGE if j else 0)
             x0, x1, y0, y1 = trim(
-                light, mask, int(left + j * step), int(left + (j + 1) * step), top, bottom
+                light, mask, nominal_x0, int(left + (j + 1) * step), top, bottom
             )
             crop = bgr[y0:y1, x0:x1]
             cv2.imwrite(str(faces / f"{label}.png"), crop)
@@ -210,7 +238,35 @@ def main() -> None:
         print(f"row {i + 1}: y {top}-{bottom}, x {left}-{right}, {len(labels)} tiles")
 
     print(f"wrote {len(cells)} crops to {faces} and masks to {masks}")
+    audit(cells)
     contact_sheet(cells)
+
+
+def audit(cells: list[tuple[str, np.ndarray]]) -> None:
+    """Reports whatever is left along the edges of each crop.
+
+    Every problem found in this routine so far was spotted by eye first, because each check written
+    only caught one kind: a test for dark intrusion is blind to a neighbour's lit edge, which is
+    brighter than the face it sits against. So both directions get reported, per edge, and the sizes
+    with them — a crop that comes out much shorter or narrower than its neighbours has been cut into.
+    """
+    print("\n         size      dark% t/b/l/r      bright% t/b/l/r")
+    for label, crop in cells:
+        light = cv2.cvtColor(crop, cv2.COLOR_BGR2LAB)[:, :, 0]
+        edges = (light[:4, :], light[-4:, :], light[:, :4], light[:, -4:])
+        dark = [(edge < 120).mean() * 100 for edge in edges]
+        bright = [(edge > 240).mean() * 100 for edge in edges]
+        # The top is exempt from the brightness check. The light comes from above, so a tile's own
+        # top bevel is the brightest thing in the photo — 92% of 8m's top edge clears this bar, and
+        # 8m is in the first row with nothing above it but table. Real photos show that rim too.
+        flag = " <-- check" if max(dark) > 25 or max(bright[1:]) > 30 else ""
+        print(
+            f"  {label:3s} {crop.shape[1]:3d}x{crop.shape[0]:<3d}  "
+            + " ".join(f"{v:4.0f}" for v in dark)
+            + "     "
+            + " ".join(f"{v:4.0f}" for v in bright)
+            + flag
+        )
 
 
 def contact_sheet(cells: list[tuple[str, np.ndarray]], cell: int = 120) -> None:
