@@ -1,0 +1,7 @@
+# Regenerable from the calibration photo and the collected samples — never worth committing.
+.venv/
+data/
+runs/
+*.pt
+*.onnx
+__pycache__/
