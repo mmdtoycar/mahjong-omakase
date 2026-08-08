@@ -35,8 +35,12 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from grid_fit import fit_grid
+from synthesize import BACK
+
 ROOT = Path(__file__).resolve().parents[1]
 CALIBRATION = ROOT / "server/src/main/resources/calibration/system_mahjong_calibration.jpg"
+CALIBRATION_2 = ROOT / "server/src/main/resources/calibration/system_mahjong_calibration_2.jpg"
 OUT = Path(__file__).resolve().parent / "data"
 
 # Row layout of the photo, in the order the tiles appear.
@@ -54,6 +58,7 @@ FACE_LIGHTNESS = 130  # a tile face is comfortably above this, bare table well b
 MASK_LIGHTNESS = 140
 
 MIN_COVERAGE = 0.9  # a row or column of a crop must be this much tile to be kept
+
 
 # The shadow line where one tile meets the next: dark across nearly the whole width, and unbroken.
 # Unbroken is the part that matters. The three circles along the bottom of 9p cover 83% of the width
@@ -206,6 +211,95 @@ def trim(
     return tx0, tx1, ty0, ty1 if seam is None else ty0 + seam
 
 
+def write_variant(label: str, source: str, crop: np.ndarray, mask: np.ndarray) -> None:
+    """One appearance of one tile. A label can have several — see the note in synthesize.py."""
+    for directory, image in (("faces", crop), ("masks", mask.astype(np.uint8) * 255)):
+        path = OUT / directory / label
+        path.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(path / f"{source}.png"), image)
+
+
+# The second photo is the other set of tiles, on the other table. Laid out as four columns of nine
+# rather than four rows, rotated a quarter turn, and with a tile back of each colour above the honours.
+# Reading each column from the bottom gives the ascending order.
+COLUMNS = [
+    [f"{n}m" for n in range(1, 10)],
+    [f"{n}s" for n in range(1, 10)],
+    [f"{n}p" for n in range(1, 10)],
+    [f"{n}z" for n in range(1, 8)] + [BACK, BACK],
+]
+
+# The felt is far darker than the brown table was, so the threshold that separates tile from
+# background is different — and the blue tile back is strongly coloured, so it is admitted on
+# lightness alone rather than being required to be neutral.
+GREEN_FELT_LIGHTNESS = 70
+GREEN_FELT_CHROMA = 30
+BACK_LIGHTNESS = 110
+
+
+def slice_second_set() -> list[tuple[str, np.ndarray]]:
+    """Cuts the green-felt photo, adding a second appearance of every face plus the tile backs."""
+    bgr = cv2.imread(str(CALIBRATION_2))
+    if bgr is None:
+        print(f"no second calibration photo at {CALIBRATION_2}, skipping")
+        return []
+    lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
+    light = lab[:, :, 0].astype(np.int16)
+    chroma = np.hypot(lab[:, :, 1].astype(np.int16) - 128, lab[:, :, 2].astype(np.int16) - 128)
+    solid = (
+        (light > GREEN_FELT_LIGHTNESS)
+        & ((chroma < GREEN_FELT_CHROMA) | (light > BACK_LIGHTNESS))
+    ).astype(np.uint8)
+    solid = cv2.morphologyEx(solid, cv2.MORPH_CLOSE, np.ones((21, 21), np.uint8))
+
+    count, _, stats, _ = cv2.connectedComponentsWithStats(solid, connectivity=4)
+    if count < 2:
+        print("no tiles found in the second calibration photo, skipping")
+        return []
+    block = max(range(1, count), key=lambda i: stats[i][4])
+    _, by, _, bh = (int(v) for v in stats[block][:4])
+
+    # The horizontal span comes from where the mask actually covers the height, not from the blob's
+    # bounding box: closing the mask rounds its corners outward and the box ends up some twenty pixels
+    # wider than the tiles, which is enough drift over four columns to put the last crop on the felt.
+    covered = np.flatnonzero((solid[by : by + bh] > 0).mean(axis=0) > 0.5)
+    if covered.size == 0:
+        print("no columns found in the second calibration photo, skipping")
+        return []
+    bx, bw = int(covered[0]), int(covered[-1]) - int(covered[0]) + 1
+
+    # The columns are butted, so they are divided evenly — but the rows within a column are found by
+    # grid_fit, which is what stops the top tile of each column being cropped with a swathe of felt.
+    light_f = light.astype(float)
+    cells = []
+    for index, labels in enumerate(COLUMNS):
+        x0 = bx + index * bw // len(COLUMNS)
+        width = bw // len(COLUMNS)
+        fit = fit_grid(light_f, (x0, by, width, bh), vertical=True, expect=len(labels))
+        if fit is None or fit[2] != len(labels):
+            print(f"column {index + 1}: expected {len(labels)} tiles, fit gave {fit}")
+            continue
+        pitch, offset, _ = fit
+        # The low numbers sit at the bottom of the column, so label i belongs to the i-th cell up
+        # from the bottom. Reversing the labels *and* counting the rows down was two reversals that
+        # cancelled, which put 9m at the foot of the column and 1m at its head.
+        for index, label in enumerate(labels):
+            top = by + int(offset + (len(labels) - 1 - index) * pitch)
+            # A uniform inset on every side. The grid fit puts the boundaries within a pixel or two,
+            # so unlike the brown photo there is nothing here that needs edge-by-edge treatment.
+            box = (
+                slice(top + NEIGHBOUR_EDGE, top + int(pitch) - NEIGHBOUR_EDGE),
+                slice(x0 + NEIGHBOUR_EDGE, x0 + width - NEIGHBOUR_EDGE),
+            )
+            crop, piece = bgr[box], solid[box]
+            if crop.size == 0:
+                continue
+            source = f"green{index + 1}" if label == BACK else "green"
+            write_variant(label, source, crop, piece > 0)
+            cells.append((f"{label}/{source}", crop))
+    return cells
+
+
 def main() -> None:
     bgr = cv2.imread(str(CALIBRATION))
     if bgr is None:
@@ -232,11 +326,11 @@ def main() -> None:
                 light, mask, nominal_x0, int(left + (j + 1) * step), top, bottom
             )
             crop = bgr[y0:y1, x0:x1]
-            cv2.imwrite(str(faces / f"{label}.png"), crop)
-            cv2.imwrite(str(masks / f"{label}.png"), mask[y0:y1, x0:x1].astype(np.uint8) * 255)
+            write_variant(label, "brown", crop, mask[y0:y1, x0:x1])
             cells.append((label, crop))
         print(f"row {i + 1}: y {top}-{bottom}, x {left}-{right}, {len(labels)} tiles")
 
+    cells += slice_second_set()
     print(f"wrote {len(cells)} crops to {faces} and masks to {masks}")
     audit(cells)
     contact_sheet(cells)

@@ -681,16 +681,28 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
           {/* Main Upload Area */}
           <div>
             {!imagePreview ? (
-              <label className="upload-dropzone">
-                {/* No capture attribute: it would force the camera and hide the photo library,
-                    contradicting the label below. */}
-                <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-                <div className="dropzone-content">
-                  <div className="upload-icon">📸</div>
-                  <p className="upload-main-text">点击选择照片 或 拍照</p>
-                  <p className="upload-sub-text">支持桌面或手机拍摄的麻将手牌</p>
-                </div>
-              </label>
+              <>
+                <label className="upload-dropzone">
+                  {/* No capture attribute: it would force the camera and hide the photo library,
+                      contradicting the label below. */}
+                  <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+                  <div className="dropzone-content">
+                    <div className="upload-icon">📸</div>
+                    <p className="upload-main-text">点击选择照片 或 拍照</p>
+                    <p className="upload-sub-text">支持桌面或手机拍摄的麻将手牌</p>
+                  </div>
+                </label>
+                {/* Only what changes the result, and each of these is something the pipeline relies
+                    on. Left/right is how the prompt splits the hand into concealed and melds. Two
+                    tiles turned over is what makes a 杠 concealed, which keeps 门前清 and so changes
+                    the score. The rightmost standing tile is the winning tile: the prompt requires
+                    that order to be preserved and both calculators score from the last element. */}
+                <ul className="photo-rec-tips">
+                  <li>立牌在左、副露在右，中间留空；和牌张放立牌最右边</li>
+                  <li>暗杠扣两张，明杠全朝上</li>
+                  <li>从正上方拍，只拍手牌，别带进弃牌和牌墙</li>
+                </ul>
+              </>
             ) : (
               <div className="image-preview-wrapper">
                 {previewFailed ? (

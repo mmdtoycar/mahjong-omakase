@@ -81,6 +81,18 @@ public class TileRecognitionService {
          - An-Gang (暗杠): 4 tiles (2 face-UP, 2 face-DOWN backs) -> { "type": "gang", "tiles": ["8s","8s","8s","8s"], "isOpen": false }
          - DO NOT mix right-side exposed melds into the left-side concealed hand!
 
+      3. **ORDER OF "concealed" CARRIES THE WINNING TILE (和牌张)**:
+         - The players place the winning tile at the END of the standing hand, deliberately, when they
+           arrange it. The last standing tile in the photo is therefore the winning tile.
+         - **List "concealed" in the order the tiles appear, left to right. NEVER sort it.** The app
+           reads the last element as the winning tile and scores from it — the winning tile decides
+           fu, whether the hand counts as self-drawn concealed, and the wait shape. Sorting the array
+           moves the winning tile into the middle and the score comes out wrong with nothing to show
+           that it did.
+         - Also repeat that tile in "winningTile". Leave it in "concealed" as well.
+         - If the standing tiles do not read as one row, or you cannot tell which end is the end, keep
+           the order you see, set "winningTile" to null, and say so in "notes".
+
       ### Critical Tile Pattern Audit Rules (防错识别自查规则):
       1. **5s (五条) vs 4s (四条)**:
          - **5s (五条)**: Has 4 corner bamboo sticks PLUS ONE DISTINCT RED BAMBOO STICK IN THE EXACT CENTER!

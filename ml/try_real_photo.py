@@ -5,12 +5,15 @@ of butted tiles, bright and nearly colourless against strongly coloured felt, so
 a thresholding problem rather than a detection problem — no trained detector, and none of the labelled
 photos that would need.
 
-Splitting the line is the part that needs care. The tiles touch, so the line comes back as one blob,
-and a brightness profile along it does not show the seams reliably: the engraved characters dip just
-as deep. What works instead is to let the classifier find its own alignment. Sweep the start and the
-pitch, score each candidate by the mean confidence over the tiles it produces, and keep the best. A
-misaligned crop is half of one tile and half of the next, which the classifier is not confident about
-— so confidence is exactly the signal that says the grid is wrong.
+Splitting the line is the part that needs care. The tiles touch, so the line comes back as one blob.
+The grid is found geometrically first — see grid_fit.py — and the classifier is then used only to
+choose between runs and to nudge the fit by a pixel or two. Confidence is the right signal for that
+nudging: a misaligned crop is half of one tile and half of the next, which the classifier is not
+confident about.
+
+Doing it the other way round was the first version and it was far too slow to ship: brute-forcing
+count, pitch and offset cost 1,680 grid hypotheses and 22,680 tile classifications on one photo, some
+21 seconds of inference. The geometry was in the pixels the whole time.
 
 On one real photo, from a table the model has never seen and felt a different colour from the
 calibration photo, this reads 13 of 13 tiles correctly, ten of them above 0.85.
@@ -23,7 +26,8 @@ import cv2
 import numpy as np
 import torch
 
-from synthesize import DATA, SIZE
+from grid_fit import fit_grid
+from synthesize import BACK, DATA, SIZE
 from train_classifier import RUNS, TileNet
 
 # A tile face is near-white: bright, and far less coloured than green felt or a brown table.
@@ -31,6 +35,31 @@ MIN_LIGHTNESS = 150
 MAX_CHROMA = 26
 
 MIN_RUN_ASPECT = 2.0  # below this a blob is a single tile, not a line of them
+
+# How far the classifier is allowed to move the geometric fit. Small on purpose: the fit is already
+# within a pixel of the brute-force answer, and every step here costs a forward pass per tile.
+PITCH_NUDGE = (0.99, 1.0, 1.01)
+OFFSET_NUDGE = (-0.04, 0.0, 0.04)
+COUNT_NUDGE = (-1, 0, 1)  # the run's box can clip a tile at either end
+
+# What a run of this length is. Three or four tiles set aside is a meld; the long run is the standing
+# hand. Nothing else is part of the hand — a discard pile is neither.
+MELD_SIZES = (3, 4)
+
+# A meld is made of the same physical tiles as the hand, photographed from the same distance, so the
+# spacing along it has to match the hand's. This is checked before the classifier is asked anything:
+# on the first photo tried, a corner of the discard pile fitted four cells at a pitch of 63 against the
+# hand's 87 — 72%, which no tile of that set can be — and it was still read (as a gang of 1p, at 0.00
+# confidence) before being thrown out on confidence alone.
+#
+# Framing the photo to exclude the discards would also have removed that candidate, and is worth doing.
+# It is not relied on: a rule the photographer maintains is not a guarantee the code can hold.
+MIN_PITCH_MATCH = 0.8
+MAX_PITCH_MATCH = 1.25
+
+# A crop this sure it is not a tile disqualifies the whole meld. Melds have no partial credit: one
+# wrong tile is a different hand.
+NOTHING_LIMIT = 0.3
 CONFIDENT = 0.8  # hand back anything under this rather than guess
 
 # Mean confidence alone is an exploitable objective. A 272x110 blob cut into fifteen 17px slivers
@@ -77,31 +106,60 @@ def candidate_runs(bgr: np.ndarray) -> list[tuple[int, int, int, int]]:
 def read_line(
     model: torch.nn.Module,
     bgr: np.ndarray,
+    light: np.ndarray,
     box: tuple[int, int, int, int],
     size: int,
+    refine: bool,
     counts: range,
-) -> tuple[float, int, float, torch.Tensor, torch.Tensor]:
-    """Best (start, pitch, count) for the line, chosen by the classifier's own mean confidence."""
-    x, y, w, h = box
+) -> tuple[float, int, float, float, torch.Tensor, torch.Tensor, torch.Tensor] | None:
+    """Reads one run, starting from its geometric fit.
+
+    With `refine` false this costs a single forward pass, which is all that is needed to tell a row of
+    tiles from a strip of the table's plastic housing. The winner is then read again with `refine` on.
+    """
+    _, _, w, h = box
     vertical = h >= w
-    length = h if vertical else w
+    fit = fit_grid(light, box, vertical)
+    if fit is None:
+        return None
+    pitch, offset, count = fit
+    # A geometric fit knows nothing about mahjong, so it will happily describe the table's plastic
+    # housing as eighteen tiles. Anything outside the range of a hand is not a hand.
+    if count not in counts:
+        return None
+
+    combinations = (
+        [
+            (pitch * p, offset + pitch * o, count + c)
+            for p in PITCH_NUDGE
+            for o in OFFSET_NUDGE
+            for c in COUNT_NUDGE
+        ]
+        if refine
+        else [(pitch, offset, count)]
+    )
+
     best = None
-    across = w if vertical else h
-    for count in counts:
-        nominal = length / count
-        if not MIN_TILE_RATIO <= nominal / across <= MAX_TILE_RATIO:
+    for candidate_pitch, candidate_offset, candidate_count in combinations:
+        if candidate_count not in counts:
             continue
-        for pitch in np.arange(nominal * 0.94, nominal * 1.07, nominal * 0.01):
-            for start in np.arange(-nominal * 0.3, nominal * 0.3, nominal * 0.04):
-                crops = slice_line(bgr, box, vertical, start, float(pitch), count, size)
-                if crops is None:
-                    continue
-                confidence, predicted = classify(model, crops)
-                score = float(confidence.mean())
-                if best is None or score > best[0]:
-                    best = (score, count, float(pitch), float(start), confidence, predicted)
-    if best is None:
-        raise SystemExit("could not fit a grid to the line")
+        crops = slice_line(
+            bgr, box, vertical, candidate_offset, candidate_pitch, candidate_count, size
+        )
+        if crops is None:
+            continue
+        confidence, predicted, nothing = classify(model, crops)
+        score = float(confidence.mean())
+        if best is None or score > best[0]:
+            best = (
+                score,
+                candidate_count,
+                candidate_pitch,
+                candidate_offset,
+                confidence,
+                predicted,
+                nothing,
+            )
     return best
 
 
@@ -131,18 +189,24 @@ def slice_line(
     return np.stack(crops)
 
 
-def classify(model: torch.nn.Module, crops: np.ndarray) -> tuple[torch.Tensor, torch.Tensor]:
-    """Best tile class per crop, with its probability. The none class is reported separately."""
+def classify(
+    model: torch.nn.Module, crops: np.ndarray
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Best tile class per crop with its probability, and separately the probability of `none`.
+
+    Kept apart because the two are wanted for different things. Ranking candidate runs by plain top-1
+    confidence picked the table's plastic housing over the hand: read as fifteen crops of nothing it
+    scored 0.844 of confident "none" against the hand's 0.731, so selection has to score confidence
+    that something is *a tile*. But whether a crop is nothing at all is still worth knowing, and if
+    `none` is simply excluded it becomes unreachable — the check for it downstream was dead code.
+    """
     rgb = (crops[:, :, :, ::-1].astype(np.float32) / 255.0) - 0.5
     with torch.no_grad():
         probabilities = torch.softmax(
             model(torch.from_numpy(np.ascontiguousarray(rgb.transpose(0, 3, 1, 2)))), 1
         )
-    # Score on the tile classes only. Ranking candidate runs by plain top-1 confidence picked the
-    # table's plastic housing over the hand: read as fifteen crops of nothing, it scored 0.844 of
-    # confident "none" against the hand's 0.731. Confidence that something is *a tile* is the
-    # quantity that was wanted all along.
-    return probabilities[:, :-1].max(1)
+    confidence, predicted = probabilities[:, :-1].max(1)
+    return confidence, predicted, probabilities[:, -1]
 
 
 def main() -> None:
@@ -169,26 +233,38 @@ def main() -> None:
     model.load_state_dict(checkpoint["state"])
     model.eval()
 
+    light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
+    counts = range(args.min_tiles, args.max_tiles + 1)
     runs = candidate_runs(bgr)
     print(f"{args.photo.name} at {bgr.shape[1]}x{bgr.shape[0]}, {len(runs)} candidate runs")
-    best = None
+
+    # The standing hand and the melds are separate runs — the melds are set aside on the right with a
+    # gap, so the mask gives them their own blobs. Read every run that could be either.
+    hand_candidates, melds = [], []
     for box in runs:
-        try:
-            fit = read_line(model, bgr, box, size, range(args.min_tiles, args.max_tiles + 1))
-        except SystemExit:
-            continue
-        print(f"  {box}: mean confidence {fit[0]:.3f} over {fit[1]} tiles")
-        if best is None or fit[0] > best[0][0]:
-            best = (fit, box)
-    if best is None:
+        for sizes, bucket in ((counts, hand_candidates), (MELD_SIZES, melds)):
+            fit = read_line(model, bgr, light, box, size, refine=False, counts=sizes)
+            if fit is None:
+                continue
+            print(f"  {box}: {fit[1]} tiles at pitch {fit[2]:.1f}px, confidence {fit[0]:.3f}")
+            bucket.append((fit[0], box))
+            break
+    if not hand_candidates:
+        raise SystemExit("no run long enough to be a hand")
+    box = max(hand_candidates)[1]
+
+    refined = read_line(model, bgr, light, box, size, refine=True, counts=counts)
+    if refined is None:
         raise SystemExit("no run could be read")
-    (score, count, pitch, start, confidence, predicted), box = best
+    score, count, pitch, start, confidence, predicted, _ = refined
     print(f"\nchose {box}: {count} tiles, pitch {pitch:.1f}px, mean confidence {score:.3f}\n")
     for i, (guess, sure) in enumerate(zip(predicted.tolist(), confidence.tolist()), 1):
         mark = "" if sure >= CONFIDENT else "   <- hand this one back"
-        print(f"  {i:2d}. {labels[guess]:3s} {sure:.2f}{mark}")
-    kept = sum(1 for s in confidence.tolist() if s >= CONFIDENT)
-    print(f"\n{kept}/{count} at confidence >= {CONFIDENT}")
+        print(f"  {i:2d}. {labels[guess]:4s} {sure:.2f}{mark}")
+    kept = sum(1 for c in confidence.tolist() if c >= CONFIDENT)
+    print(f"\n{kept}/{count} at confidence >= {CONFIDENT}\n")
+
+    read_melds(model, bgr, light, melds, box, pitch, size, labels)
 
     x, y, w, h = box
     vertical = h >= w
@@ -196,6 +272,94 @@ def main() -> None:
     out = args.output or DATA / f"{args.photo.stem}_read.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     sheet(crops, labels, predicted, confidence, out)
+
+
+NUMBERED_SUITS = ("m", "p", "s")
+
+
+def meld_kind(tiles: list[str]) -> str | None:
+    """From the tiles alone, or None when they do not form a meld at all.
+
+    "Anything that is not three alike is a 吃" was the first version and it is wrong in a way that
+    matters: three tiles that merely passed the confidence floor — a corner of the discard pile, say —
+    would be reported as a 吃 and scored as one. A 吃 is three consecutive numbers in one suit, and
+    nothing else. A run that cannot be named is not a meld, and saying so is the only safe answer.
+    """
+    if len(set(tiles)) == 1:
+        return "gang" if len(tiles) == 4 else "ke" if len(tiles) == 3 else None
+    if len(tiles) != 3:
+        return None
+    suits = {tile[-1] for tile in tiles}
+    if len(suits) != 1 or suits.pop() not in NUMBERED_SUITS:
+        return None
+    ranks = sorted(int(tile[0]) for tile in tiles)
+    return "shun" if ranks[2] - ranks[0] == 2 and len(set(ranks)) == 3 else None
+
+
+def read_melds(
+    model: torch.nn.Module,
+    bgr: np.ndarray,
+    light: np.ndarray,
+    melds: list[tuple[float, tuple[int, int, int, int]]],
+    hand_box: tuple[int, int, int, int],
+    hand_pitch: float,
+    size: int,
+    labels: list[str],
+) -> None:
+    """Reads the runs of three or four set aside beside the hand.
+
+    Two distinctions here decide the score rather than just the display:
+
+    A 暗杠 is four tiles with two of them turned face down. It is *not* 副露 — it leaves the hand
+    concealed and 门前清 intact — so it carries isOpen false, while 吃, 碰 and 明杠 all carry true.
+    That is the whole reason the face-down tile is its own class instead of part of "not a tile".
+
+    The two turned-over tiles of a 暗杠 cannot be read, and do not need to be: a gang is four of one
+    tile, so the pair that is face up names all four.
+    """
+    for _, box in melds:
+        if box == hand_box:
+            continue
+        fit = read_line(model, bgr, light, box, size, refine=True, counts=range(3, 5))
+        if fit is None:
+            continue
+        ratio = fit[2] / hand_pitch
+        if not MIN_PITCH_MATCH <= ratio <= MAX_PITCH_MATCH:
+            print(
+                f"  meld at {box}: pitch {fit[2]:.1f}px is {ratio:.0%} of the hand's"
+                f" {hand_pitch:.1f}px, not the same tiles"
+            )
+            continue
+        _, count, _, _, confidence, predicted, nothing = fit
+        tiles = [labels[int(g)] for g in predicted]
+        # The none class is checked on its own probability, not by looking for it among `tiles`:
+        # classify ranks the tile classes only, so it can never be the argmax there.
+        emptiest = float(nothing.max())
+        if emptiest >= NOTHING_LIMIT:
+            print(f"  meld at {box}: a crop is {emptiest:.0%} not-a-tile, skipped")
+            continue
+        lowest = min(float(c) for c in confidence)
+        # A meld has to be read outright. Three or four tiles is a short run and the geometry alone is
+        # weak evidence — on the first photo tried, a corner of the discard pile fitted four cells and
+        # came back as a gang of 1p at 0.00 confidence. There is no partial credit for a meld: get one
+        # tile of it wrong and the hand is a different hand.
+        if lowest < CONFIDENT:
+            print(f"  meld at {box}: {tiles} — lowest confidence {lowest:.2f}, not read")
+            continue
+        backs = [t for t in tiles if t == BACK]
+        faces = [t for t in tiles if t != BACK]
+        if backs:
+            # A 暗杠: name it from the tiles that are face up, which must agree with each other.
+            if len(set(faces)) != 1 or count != 4:
+                print(f"  meld at {box}: {tiles} — face-down tiles but not a readable 暗杠, skipped")
+                continue
+            tiles = [faces[0]] * 4
+
+        kind = meld_kind(tiles)
+        if kind is None:
+            print(f"  meld at {box}: {tiles} — not a 吃, 碰 or 杠, skipped")
+            continue
+        print(f"  meld at {box}: {kind} {tiles} isOpen={not backs} (lowest confidence {lowest:.2f})")
 
 
 def sheet(
