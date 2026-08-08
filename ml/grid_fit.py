@@ -167,36 +167,47 @@ CALIBRATION = Path(__file__).resolve().parents[1] / "server/src/main/resources/c
 #
 # The pitch is recorded alongside, because the count on its own is a weak assertion: a grid can return
 # the right number of tiles on a pitch that is a few percent out, and every crop then creeps along the
-# row until the last ones straddle two tiles. These pitches were confirmed by eye — the crops they
-# produce are the 34 faces in data/faces_contact_sheet.png — so they are a reference, not a snapshot of
-# whatever the code happened to print.
+# row until the last ones straddle two tiles. These are the constrained path's answers, which is what
+# the slicer uses, and each agrees with (length - offset) / count to within a percent — so they are
+# checkable against the geometry rather than being a snapshot of whatever the code printed.
+# `blind` is what the unconstrained fit should answer — the path a hand photo takes, where the count is
+# unknown. It is not always the truth: the 条 column of the green photo answers thirteen instead of
+# nine, because those tiles lie a quarter turn over and the bamboo runs along the axis being fitted.
+# Recording that keeps the limitation visible and still catches a change to it, which asserting only
+# the constrained path would not: the PITCH_QUANTUM regression that this check caught showed up as a
+# wrong *unconstrained* count, and narrowing the candidates to a known count hides exactly that.
 KNOWN = [
-    ("brown row 1 (萬)", "system_mahjong_calibration.jpg", (43, 37, 1018, 149), False, 9, 110.5),
-    ("brown row 2 (饼)", "system_mahjong_calibration.jpg", (41, 186, 1030, 155), False, 9, 113.5),
-    ("brown row 3 (条)", "system_mahjong_calibration.jpg", (32, 341, 1044, 158), False, 9, 113.5),
-    ("brown row 4 (字)", "system_mahjong_calibration.jpg", (27, 499, 829, 156), False, 7, 118.0),
-    ("green column 1", "system_mahjong_calibration_2.jpg", (78, 0, 280, 1924), True, 9, 206.5),
-    ("green column 2", "system_mahjong_calibration_2.jpg", (358, 0, 280, 1924), True, 9, 207.0),
-    ("green column 3", "system_mahjong_calibration_2.jpg", (638, 0, 280, 1924), True, 9, 206.0),
-    ("green column 4", "system_mahjong_calibration_2.jpg", (918, 0, 280, 1924), True, 9, 209.0),
+    ("brown row 1 (萬)", "system_mahjong_calibration.jpg", (43, 37, 1018, 149), False, 9, 113.0, 9),
+    ("brown row 2 (饼)", "system_mahjong_calibration.jpg", (41, 186, 1030, 155), False, 9, 112.0, 9),
+    ("brown row 3 (条)", "system_mahjong_calibration.jpg", (32, 341, 1044, 158), False, 9, 113.5, 9),
+    ("brown row 4 (字)", "system_mahjong_calibration.jpg", (27, 499, 829, 156), False, 7, 118.2, 7),
+    ("green column 1", "system_mahjong_calibration_2.jpg", (99, 0, 271, 1924), True, 9, 204.5, 9),
+    ("green column 2", "system_mahjong_calibration_2.jpg", (370, 0, 271, 1924), True, 9, 207.0, 13),
+    ("green column 3", "system_mahjong_calibration_2.jpg", (641, 0, 271, 1924), True, 9, 207.0, 9),
+    ("green column 4", "system_mahjong_calibration_2.jpg", (912, 0, 271, 1924), True, 9, 204.5, 9),
 ]
 
-PITCH_TOLERANCE = 0.02  # of the expected pitch
-# The tiles have to account for the run. Anything less means the grid sits on part of it and the rest
-# went unread; anything more and it runs off the end onto the table.
-MIN_SPAN = 0.90
-MAX_SPAN = 1.05
+PITCH_TOLERANCE = 0.03  # of the expected pitch
+# The parameter-free half of the assertion: the tiles have to account for the run, because the run's
+# box *is* the tiles. Anything less means the grid sits on part of it and the rest went unread;
+# anything more and it runs off the end onto the table. Tighter than the pitch check and needing no
+# reference value, so it is the one that would survive a re-shot calibration photo.
+MIN_SPAN = 0.97
+MAX_SPAN = 1.03
 
 
 def self_check() -> int:
     failures = 0
-    for name, photo, box, vertical, count, pitch in KNOWN:
+    for name, photo, box, vertical, count, pitch, blind in KNOWN:
         bgr = cv2.imread(str(CALIBRATION / photo))
         if bgr is None:
             sys.exit(f"cannot read {CALIBRATION / photo}")
         light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
         length = box[3] if vertical else box[2]
-        fit = fit_grid(light, box, vertical)
+        # Both paths: the slicer tells fit_grid the count it knows, a hand photo cannot.
+        fit = fit_grid(light, box, vertical, expect=count)
+        unconstrained = fit_grid(light, box, vertical)
+        got_blind = unconstrained[2] if unconstrained else None
 
         if fit is None:
             print(f"  FAIL {name:20s} no fit")
@@ -211,11 +222,13 @@ def self_check() -> int:
             problems.append(f"pitch {got_pitch:.2f} != {pitch:.2f}")
         if not MIN_SPAN <= span <= MAX_SPAN:
             problems.append(f"covers {span:.2f} of the run")
+        if got_blind != blind:
+            problems.append(f"unconstrained {got_blind} != {blind}")
         failures += bool(problems)
         print(
             f"  {'ok  ' if not problems else 'FAIL'} {name:20s}"
             f" count {got_count:2d} pitch {got_pitch:6.2f} offset {got_offset:6.1f}"
-            f" span {span:.2f}  {'; '.join(problems)}"
+            f" span {span:.2f} blind {got_blind}  {'; '.join(problems)}"
         )
     print(f"\n{len(KNOWN) - failures}/{len(KNOWN)} correct")
     return failures

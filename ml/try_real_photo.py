@@ -27,7 +27,7 @@ import numpy as np
 import torch
 
 from grid_fit import fit_grid
-from synthesize import BACK, DATA, NOT_A_TILE, SIZE
+from synthesize import BACK, DATA, SIZE
 from train_classifier import RUNS, TileNet
 
 # A tile face is near-white: bright, and far less coloured than green felt or a brown table.
@@ -56,6 +56,10 @@ MELD_SIZES = (3, 4)
 # It is not relied on: a rule the photographer maintains is not a guarantee the code can hold.
 MIN_PITCH_MATCH = 0.8
 MAX_PITCH_MATCH = 1.25
+
+# A crop this sure it is not a tile disqualifies the whole meld. Melds have no partial credit: one
+# wrong tile is a different hand.
+NOTHING_LIMIT = 0.3
 CONFIDENT = 0.8  # hand back anything under this rather than guess
 
 # Mean confidence alone is an exploitable objective. A 272x110 blob cut into fifteen 17px slivers
@@ -107,13 +111,13 @@ def read_line(
     size: int,
     refine: bool,
     counts: range,
-) -> tuple[float, int, float, float, torch.Tensor, torch.Tensor] | None:
+) -> tuple[float, int, float, float, torch.Tensor, torch.Tensor, torch.Tensor] | None:
     """Reads one run, starting from its geometric fit.
 
     With `refine` false this costs a single forward pass, which is all that is needed to tell a row of
     tiles from a strip of the table's plastic housing. The winner is then read again with `refine` on.
     """
-    x, y, w, h = box
+    _, _, w, h = box
     vertical = h >= w
     fit = fit_grid(light, box, vertical)
     if fit is None:
@@ -144,7 +148,7 @@ def read_line(
         )
         if crops is None:
             continue
-        confidence, predicted = classify(model, crops)
+        confidence, predicted, nothing = classify(model, crops)
         score = float(confidence.mean())
         if best is None or score > best[0]:
             best = (
@@ -154,6 +158,7 @@ def read_line(
                 candidate_offset,
                 confidence,
                 predicted,
+                nothing,
             )
     return best
 
@@ -184,18 +189,24 @@ def slice_line(
     return np.stack(crops)
 
 
-def classify(model: torch.nn.Module, crops: np.ndarray) -> tuple[torch.Tensor, torch.Tensor]:
-    """Best tile class per crop, with its probability. The none class is reported separately."""
+def classify(
+    model: torch.nn.Module, crops: np.ndarray
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Best tile class per crop with its probability, and separately the probability of `none`.
+
+    Kept apart because the two are wanted for different things. Ranking candidate runs by plain top-1
+    confidence picked the table's plastic housing over the hand: read as fifteen crops of nothing it
+    scored 0.844 of confident "none" against the hand's 0.731, so selection has to score confidence
+    that something is *a tile*. But whether a crop is nothing at all is still worth knowing, and if
+    `none` is simply excluded it becomes unreachable — the check for it downstream was dead code.
+    """
     rgb = (crops[:, :, :, ::-1].astype(np.float32) / 255.0) - 0.5
     with torch.no_grad():
         probabilities = torch.softmax(
             model(torch.from_numpy(np.ascontiguousarray(rgb.transpose(0, 3, 1, 2)))), 1
         )
-    # Score on the tile classes only. Ranking candidate runs by plain top-1 confidence picked the
-    # table's plastic housing over the hand: read as fifteen crops of nothing, it scored 0.844 of
-    # confident "none" against the hand's 0.731. Confidence that something is *a tile* is the
-    # quantity that was wanted all along.
-    return probabilities[:, :-1].max(1)
+    confidence, predicted = probabilities[:, :-1].max(1)
+    return confidence, predicted, probabilities[:, -1]
 
 
 def main() -> None:
@@ -245,7 +256,7 @@ def main() -> None:
     refined = read_line(model, bgr, light, box, size, refine=True, counts=counts)
     if refined is None:
         raise SystemExit("no run could be read")
-    score, count, pitch, start, confidence, predicted = refined
+    score, count, pitch, start, confidence, predicted, _ = refined
     print(f"\nchose {box}: {count} tiles, pitch {pitch:.1f}px, mean confidence {score:.3f}\n")
     for i, (guess, sure) in enumerate(zip(predicted.tolist(), confidence.tolist()), 1):
         mark = "" if sure >= CONFIDENT else "   <- hand this one back"
@@ -263,11 +274,26 @@ def main() -> None:
     sheet(crops, labels, predicted, confidence, out)
 
 
-def meld_kind(tiles: list[str]) -> str:
-    """From the tiles alone. Four is a gang, three alike is a ke, anything else a shun."""
-    if len(tiles) >= 4:
-        return "gang"
-    return "ke" if len(set(tiles)) == 1 else "shun"
+NUMBERED_SUITS = ("m", "p", "s")
+
+
+def meld_kind(tiles: list[str]) -> str | None:
+    """From the tiles alone, or None when they do not form a meld at all.
+
+    "Anything that is not three alike is a 吃" was the first version and it is wrong in a way that
+    matters: three tiles that merely passed the confidence floor — a corner of the discard pile, say —
+    would be reported as a 吃 and scored as one. A 吃 is three consecutive numbers in one suit, and
+    nothing else. A run that cannot be named is not a meld, and saying so is the only safe answer.
+    """
+    if len(set(tiles)) == 1:
+        return "gang" if len(tiles) == 4 else "ke" if len(tiles) == 3 else None
+    if len(tiles) != 3:
+        return None
+    suits = {tile[-1] for tile in tiles}
+    if len(suits) != 1 or suits.pop() not in NUMBERED_SUITS:
+        return None
+    ranks = sorted(int(tile[0]) for tile in tiles)
+    return "shun" if ranks[2] - ranks[0] == 2 and len(set(ranks)) == 3 else None
 
 
 def read_melds(
@@ -304,8 +330,14 @@ def read_melds(
                 f" {hand_pitch:.1f}px, not the same tiles"
             )
             continue
-        _, count, _, _, confidence, predicted = fit
+        _, count, _, _, confidence, predicted, nothing = fit
         tiles = [labels[int(g)] for g in predicted]
+        # The none class is checked on its own probability, not by looking for it among `tiles`:
+        # classify ranks the tile classes only, so it can never be the argmax there.
+        emptiest = float(nothing.max())
+        if emptiest >= NOTHING_LIMIT:
+            print(f"  meld at {box}: a crop is {emptiest:.0%} not-a-tile, skipped")
+            continue
         lowest = min(float(c) for c in confidence)
         # A meld has to be read outright. Three or four tiles is a short run and the geometry alone is
         # weak evidence — on the first photo tried, a corner of the discard pile fitted four cells and
@@ -315,20 +347,19 @@ def read_melds(
             print(f"  meld at {box}: {tiles} — lowest confidence {lowest:.2f}, not read")
             continue
         backs = [t for t in tiles if t == BACK]
-        faces = [t for t in tiles if t not in (BACK, NOT_A_TILE)]
+        faces = [t for t in tiles if t != BACK]
         if backs:
             # A 暗杠: name it from the tiles that are face up, which must agree with each other.
             if len(set(faces)) != 1 or count != 4:
                 print(f"  meld at {box}: {tiles} — face-down tiles but not a readable 暗杠, skipped")
                 continue
             tiles = [faces[0]] * 4
-        elif NOT_A_TILE in tiles:
-            print(f"  meld at {box}: {tiles} — contains something that is not a tile, skipped")
+
+        kind = meld_kind(tiles)
+        if kind is None:
+            print(f"  meld at {box}: {tiles} — not a 吃, 碰 or 杠, skipped")
             continue
-        print(
-            f"  meld at {box}: {meld_kind(tiles)} {tiles}"
-            f" isOpen={not backs} (lowest confidence {lowest:.2f})"
-        )
+        print(f"  meld at {box}: {kind} {tiles} isOpen={not backs} (lowest confidence {lowest:.2f})")
 
 
 def sheet(
