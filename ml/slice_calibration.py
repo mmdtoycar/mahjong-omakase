@@ -1,16 +1,26 @@
 """Cuts the 34-face calibration photo into one labelled crop per tile.
 
-Everything downstream needs these crops: they are the only images of *this* tile set that come
-with certain labels, so they seed the synthetic training data for the face classifier.
+Everything downstream needs these crops: they are the only images of *this* tile set that come with
+certain labels, so they seed the synthetic training data for the face classifier.
 
 Finding the rows takes one non-obvious observation. The tiles are butted together with no gap, so
 there is no dark seam to look for — between two rows the photo is actually *brighter* than a tile
 face, because the lower tile's bevelled top edge catches the light. Those bevels show up as four
 sharp spikes in the vertical lightness profile, one per row, and that is what the rows are found by.
 
-Within a row the tiles are butted too, so the row is simply divided by its known tile count. The
-resulting boxes are a pixel or two off in places, which is harmless and arguably useful: the
-classifier should not depend on a perfectly centred crop.
+Within a row the tiles are butted too, so the row is divided by its known tile count and each
+nominal box is then trimmed down to the largest rectangle containing no table. That trimming is not
+cosmetic. The rows tilt by about a degree and the last row is shorter than the rest, so a single
+rectangle per row leaves bare table inside the boxes at the ends of a row: 9s came out with its
+bottom row of bamboo cut off, which would have taught the classifier that a 9s looks like a 6s.
+
+Leftover table matters more than the small amount of it suggests, because there is exactly one
+source image per class — so any artefact that survives is a *perfect* cue for that class, and one
+the classifier will happily learn instead of the tile pattern. It would then collapse on real
+photos, which have no such artefact.
+
+A mask is written alongside each crop. Trimming needs it, and so does the synthetic data: pasting a
+cut-out tile onto random backgrounds is what stops the classifier depending on this one table.
 """
 
 import sys
@@ -21,7 +31,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 CALIBRATION = ROOT / "server/src/main/resources/calibration/system_mahjong_calibration.jpg"
-OUT = Path(__file__).resolve().parent / "data/faces"
+OUT = Path(__file__).resolve().parent / "data"
 
 # Row layout of the photo, in the order the tiles appear.
 ROWS = [
@@ -34,11 +44,28 @@ ROWS = [
 BEVEL_LIGHTNESS = 175  # a lit edge; tile faces sit near 150-190, the table near 100
 MIN_ROW_PITCH = 100  # rows are ~150px apart, so this only ever merges one bevel's own width
 FACE_LIGHTNESS = 130  # a tile face is comfortably above this, bare table well below
-INSET = 3  # trimmed off each crop so a neighbour's edge cannot leak in
+
+MASK_LIGHTNESS = 140
+
+MIN_COVERAGE = 0.9  # a row or column of a crop must be this much tile to be kept
 
 
-def lightness(bgr: np.ndarray) -> np.ndarray:
-    return cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
+def tile_mask(bgr: np.ndarray) -> np.ndarray:
+    """True where the photo shows a tile face rather than the table.
+
+    Thresholding lightness finds the white of a face but leaves the engraved characters as holes,
+    and those are not all small — the bird of 1s is wider than any closing kernel that would still
+    be safe to use here. What separates a character from the table is topology rather than size: a
+    character is enclosed by the face around it, while the table reaches the edge of the photo. So
+    every dark region the border cannot reach is filled back in.
+    """
+    light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0]
+    solid = light > MASK_LIGHTNESS
+    _, regions = cv2.connectedComponents((~solid).astype(np.uint8))
+    touching_border = np.unique(
+        np.concatenate([regions[0], regions[-1], regions[:, 0], regions[:, -1]])
+    )
+    return solid | ~np.isin(regions, touching_border)
 
 
 def row_tops(light: np.ndarray, expected: int) -> list[int]:
@@ -46,7 +73,7 @@ def row_tops(light: np.ndarray, expected: int) -> list[int]:
     # Sample the left portion only: the shortest row leaves bare table on the right, which would
     # drag its average down and flatten the peak being looked for.
     profile = light[:, : int(light.shape[1] * 0.7)].mean(axis=1)
-    peaks = []
+    peaks: list[int] = []
     for y in np.flatnonzero(profile > BEVEL_LIGHTNESS):
         if not peaks or y - peaks[-1] > MIN_ROW_PITCH:
             peaks.append(int(y))
@@ -71,35 +98,62 @@ def row_bottom(light: np.ndarray, top: int, next_top: int | None) -> int:
     return top + MIN_ROW_PITCH + int(dark[0]) if dark.size else light.shape[0]
 
 
-def row_extent(light: np.ndarray, top: int, bottom: int) -> tuple[int, int]:
+def row_extent(mask: np.ndarray, top: int, bottom: int) -> tuple[int, int]:
     """Horizontal span of the tiles in one row, so a short row is not divided across bare table."""
-    columns = light[top:bottom].mean(axis=0) > BEVEL_LIGHTNESS * 0.6
-    on = np.flatnonzero(columns)
+    on = np.flatnonzero(mask[top:bottom].mean(axis=0) > 0.5)
     return int(on[0]), int(on[-1]) + 1
+
+
+def solid_run(coverage: np.ndarray, offset: int) -> tuple[int, int]:
+    """The stretch of full-coverage lines around the middle, cut short at the first thin one."""
+    middle = len(coverage) // 2
+    thin = coverage < MIN_COVERAGE
+    before = np.flatnonzero(thin[:middle])
+    after = np.flatnonzero(thin[middle:])
+    start = int(before[-1]) + 1 if before.size else 0
+    end = middle + int(after[0]) if after.size else len(coverage)
+    return offset + start, offset + end
+
+
+def trim(mask: np.ndarray, x0: int, x1: int, y0: int, y1: int) -> tuple[int, int, int, int]:
+    """Shrinks a nominal box to the largest rectangle inside it that holds no table.
+
+    Only ever shrinks. Two butted rows have no dark seam between them, so a box allowed to grow
+    would run straight into the row above.
+    """
+    ty0, ty1 = solid_run(mask[y0:y1, x0:x1].mean(axis=1), y0)
+    tx0, tx1 = solid_run(mask[ty0:ty1, x0:x1].mean(axis=0), x0)
+    return tx0, tx1, ty0, ty1
 
 
 def main() -> None:
     bgr = cv2.imread(str(CALIBRATION))
     if bgr is None:
         sys.exit(f"cannot read {CALIBRATION}")
-    light = lightness(bgr)
-    OUT.mkdir(parents=True, exist_ok=True)
+    light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
+    mask = tile_mask(bgr)
+
+    faces, masks = OUT / "faces", OUT / "masks"
+    for directory in (faces, masks):
+        directory.mkdir(parents=True, exist_ok=True)
 
     tops = row_tops(light, len(ROWS))
     cells = []
     for i, (top, labels) in enumerate(zip(tops, ROWS)):
         bottom = row_bottom(light, top, tops[i + 1] if i + 1 < len(tops) else None)
-        left, right = row_extent(light, top, bottom)
+        left, right = row_extent(mask, top, bottom)
         step = (right - left) / len(labels)
         for j, label in enumerate(labels):
-            x0 = int(left + j * step) + INSET
-            x1 = int(left + (j + 1) * step) - INSET
-            crop = bgr[top + INSET : bottom - INSET, x0:x1]
-            cv2.imwrite(str(OUT / f"{label}.png"), crop)
+            x0, x1, y0, y1 = trim(
+                mask, int(left + j * step), int(left + (j + 1) * step), top, bottom
+            )
+            crop = bgr[y0:y1, x0:x1]
+            cv2.imwrite(str(faces / f"{label}.png"), crop)
+            cv2.imwrite(str(masks / f"{label}.png"), mask[y0:y1, x0:x1].astype(np.uint8) * 255)
             cells.append((label, crop))
         print(f"row {i + 1}: y {top}-{bottom}, x {left}-{right}, {len(labels)} tiles")
 
-    print(f"wrote {len(cells)} crops to {OUT}")
+    print(f"wrote {len(cells)} crops to {faces} and masks to {masks}")
     contact_sheet(cells)
 
 
@@ -125,7 +179,7 @@ def contact_sheet(cells: list[tuple[str, np.ndarray]], cell: int = 120) -> None:
             1,
             cv2.LINE_AA,
         )
-    path = OUT.parent / "faces_contact_sheet.png"
+    path = OUT / "faces_contact_sheet.png"
     cv2.imwrite(str(path), sheet)
     print(f"contact sheet: {path}")
 
