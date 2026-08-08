@@ -681,16 +681,28 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
           {/* Main Upload Area */}
           <div>
             {!imagePreview ? (
-              <label className="upload-dropzone">
-                {/* No capture attribute: it would force the camera and hide the photo library,
-                    contradicting the label below. */}
-                <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-                <div className="dropzone-content">
-                  <div className="upload-icon">📸</div>
-                  <p className="upload-main-text">点击选择照片 或 拍照</p>
-                  <p className="upload-sub-text">支持桌面或手机拍摄的麻将手牌</p>
-                </div>
-              </label>
+              <>
+                <label className="upload-dropzone">
+                  {/* No capture attribute: it would force the camera and hide the photo library,
+                      contradicting the label below. */}
+                  <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+                  <div className="dropzone-content">
+                    <div className="upload-icon">📸</div>
+                    <p className="upload-main-text">点击选择照片 或 拍照</p>
+                    <p className="upload-sub-text">支持桌面或手机拍摄的麻将手牌</p>
+                  </div>
+                </label>
+                {/* Only the conventions that change the result. Left/right is how the hand is split
+                    into concealed and melds; the last standing tile is the one scored as the winning
+                    tile; two tiles turned over is what makes a 杠 concealed and keeps 门前清. */}
+                <ul className="photo-rec-tips">
+                  <li>立牌摆左边，副露摆右边，中间留一点空隙</li>
+                  <li>和牌张放在立牌最右边 —— 算番按最后一张算</li>
+                  <li>暗杠把 4 张里的 2 张扣过来，明杠全部朝上</li>
+                  <li>只拍手牌，尽量别带进弃牌和牌墙</li>
+                  <li>从正上方拍，光线足一点；拍歪了可以在下一步转正</li>
+                </ul>
+              </>
             ) : (
               <div className="image-preview-wrapper">
                 {previewFailed ? (

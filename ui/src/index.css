@@ -3634,6 +3634,14 @@ table.auto-table {
   margin: 0;
 }
 
+.photo-rec-tips {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: var(--text-light);
+}
+
 .image-preview-wrapper {
   position: relative;
   display: flex;
