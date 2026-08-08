@@ -692,15 +692,15 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
                     <p className="upload-sub-text">支持桌面或手机拍摄的麻将手牌</p>
                   </div>
                 </label>
-                {/* Only the conventions that change the result. Left/right is how the hand is split
-                    into concealed and melds; the last standing tile is the one scored as the winning
-                    tile; two tiles turned over is what makes a 杠 concealed and keeps 门前清. */}
+                {/* Only what changes the result, and each of these is something the pipeline relies
+                    on. Left/right is how the prompt splits the hand into concealed and melds. Two
+                    tiles turned over is what makes a 杠 concealed, which keeps 门前清 and so changes
+                    the score. The rightmost standing tile is the winning tile: the prompt requires
+                    that order to be preserved and both calculators score from the last element. */}
                 <ul className="photo-rec-tips">
-                  <li>立牌摆左边，副露摆右边，中间留一点空隙</li>
-                  <li>和牌张放在立牌最右边 —— 算番按最后一张算</li>
-                  <li>暗杠把 4 张里的 2 张扣过来，明杠全部朝上</li>
-                  <li>只拍手牌，尽量别带进弃牌和牌墙</li>
-                  <li>从正上方拍，光线足一点；拍歪了可以在下一步转正</li>
+                  <li>立牌在左、副露在右，中间留空；和牌张放立牌最右边</li>
+                  <li>暗杠扣两张，明杠全朝上</li>
+                  <li>从正上方拍，只拍手牌，别带进弃牌和牌墙</li>
                 </ul>
               </>
             ) : (
