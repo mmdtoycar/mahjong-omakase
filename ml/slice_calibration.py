@@ -49,6 +49,19 @@ MASK_LIGHTNESS = 140
 
 MIN_COVERAGE = 0.9  # a row or column of a crop must be this much tile to be kept
 
+# The shadow line where one tile meets the next: dark across nearly the whole width, and unbroken.
+# Unbroken is the part that matters. The three circles along the bottom of 9p cover 83% of the width
+# — as much as a seam — but they come in separate pieces, and cutting there would have removed a
+# whole row of circles and left something a classifier would read as 6p.
+SEAM_LIGHTNESS = 170
+SEAM_WIDTH_FRACTION = 0.8
+SEAM_SEARCH_FRACTION = 0.2  # only near the bottom edge, where a neighbour can have crept in
+
+# The lit top edge of the tile below, when a slice of it lands at the bottom of a crop. It is
+# brighter than any part of a face — the whitest margin on these tiles averages 205, a bevel 230 —
+# which is the only reason it is separable, since a check for dark intrusion never sees it at all.
+NEIGHBOUR_BEVEL_MEAN = 215
+
 
 def tile_mask(bgr: np.ndarray) -> np.ndarray:
     """True where the photo shows a tile face rather than the table.
@@ -115,15 +128,58 @@ def solid_run(coverage: np.ndarray, offset: int) -> tuple[int, int]:
     return offset + start, offset + end
 
 
-def trim(mask: np.ndarray, x0: int, x1: int, y0: int, y1: int) -> tuple[int, int, int, int]:
-    """Shrinks a nominal box to the largest rectangle inside it that holds no table.
+def runs(flags: np.ndarray) -> int:
+    """How many separate stretches of True there are."""
+    return int(flags[0]) + int((np.diff(flags.astype(int)) == 1).sum())
+
+
+def seam_top(light: np.ndarray) -> int | None:
+    """Where the tile below starts, if any of it got into this crop.
+
+    A row of tiles is butted against the next, so the bottom of a crop tends to carry a slice of the
+    neighbour: its lit top bevel, brighter than the face above it and therefore invisible to any
+    check for dark intrusion. The giveaway is the shadow line just before it.
+
+    Worth removing even though every tile in rows 1-3 has one, because the seven honours sit in the
+    last row and have no neighbour below. "Has a bright band at the bottom" would then be a cue for
+    "is not an honour" — free accuracy on synthetic data, and gone the moment a real photo arrives
+    with the honours butted against other tiles.
+    """
+    height = len(light)
+    dark = light < SEAM_LIGHTNESS
+    unbroken = np.array([row.mean() > SEAM_WIDTH_FRACTION and runs(row) == 1 for row in dark])
+    for y in range(height - 1, int(height * (1 - SEAM_SEARCH_FRACTION)), -1):
+        if not unbroken[y]:
+            continue
+        top = y
+        while top > 0 and unbroken[top - 1]:
+            top -= 1
+        return top
+    return None
+
+
+def drop_neighbour_bevel(light: np.ndarray) -> int:
+    """Height with any trailing slice of the tile below removed."""
+    height = len(light)
+    means = light.mean(axis=1)
+    while height > 0 and means[height - 1] > NEIGHBOUR_BEVEL_MEAN:
+        height -= 1
+    return height
+
+
+def trim(
+    light: np.ndarray, mask: np.ndarray, x0: int, x1: int, y0: int, y1: int
+) -> tuple[int, int, int, int]:
+    """Shrinks a nominal box to hold one tile and nothing else.
 
     Only ever shrinks. Two butted rows have no dark seam between them, so a box allowed to grow
     would run straight into the row above.
     """
     ty0, ty1 = solid_run(mask[y0:y1, x0:x1].mean(axis=1), y0)
     tx0, tx1 = solid_run(mask[ty0:ty1, x0:x1].mean(axis=0), x0)
-    return tx0, tx1, ty0, ty1
+    ty1 = ty0 + drop_neighbour_bevel(light[ty0:ty1, tx0:tx1])
+    seam = seam_top(light[ty0:ty1, tx0:tx1])
+    return tx0, tx1, ty0, ty1 if seam is None else ty0 + seam
 
 
 def main() -> None:
@@ -145,7 +201,7 @@ def main() -> None:
         step = (right - left) / len(labels)
         for j, label in enumerate(labels):
             x0, x1, y0, y1 = trim(
-                mask, int(left + j * step), int(left + (j + 1) * step), top, bottom
+                light, mask, int(left + j * step), int(left + (j + 1) * step), top, bottom
             )
             crop = bgr[y0:y1, x0:x1]
             cv2.imwrite(str(faces / f"{label}.png"), crop)

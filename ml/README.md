@@ -20,8 +20,12 @@ uv pip install -r requirements.txt
 .venv/bin/python slice_calibration.py
 ```
 
-Writes 34 labelled tile faces to `data/faces/`, plus `data/faces_contact_sheet.png` to eyeball the
-cut in one look.
+Writes 34 labelled tile faces to `data/faces/`, a cut-out mask for each to `data/masks/`, and
+`data/faces_contact_sheet.png` to eyeball the cut in one look.
+
+Getting the boxes clean took several passes — see the script docstring. Worth the effort because
+there is only one source image per class, so any leftover neighbour or table is a *perfect* cue for
+that class and the classifier will use it instead of the tile pattern.
 
 **1. Face classifier (35 classes)** — synthetic data augmented from the 34 crops. Needs no photos.
 
