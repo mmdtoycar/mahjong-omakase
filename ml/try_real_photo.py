@@ -45,6 +45,17 @@ COUNT_NUDGE = (-1, 0, 1)  # the run's box can clip a tile at either end
 # What a run of this length is. Three or four tiles set aside is a meld; the long run is the standing
 # hand. Nothing else is part of the hand — a discard pile is neither.
 MELD_SIZES = (3, 4)
+
+# A meld is made of the same physical tiles as the hand, photographed from the same distance, so the
+# spacing along it has to match the hand's. This is checked before the classifier is asked anything:
+# on the first photo tried, a corner of the discard pile fitted four cells at a pitch of 63 against the
+# hand's 87 — 72%, which no tile of that set can be — and it was still read (as a gang of 1p, at 0.00
+# confidence) before being thrown out on confidence alone.
+#
+# Framing the photo to exclude the discards would also have removed that candidate, and is worth doing.
+# It is not relied on: a rule the photographer maintains is not a guarantee the code can hold.
+MIN_PITCH_MATCH = 0.8
+MAX_PITCH_MATCH = 1.25
 CONFIDENT = 0.8  # hand back anything under this rather than guess
 
 # Mean confidence alone is an exploitable objective. A 272x110 blob cut into fifteen 17px slivers
@@ -242,7 +253,7 @@ def main() -> None:
     kept = sum(1 for c in confidence.tolist() if c >= CONFIDENT)
     print(f"\n{kept}/{count} at confidence >= {CONFIDENT}\n")
 
-    read_melds(model, bgr, light, melds, box, size, labels)
+    read_melds(model, bgr, light, melds, box, pitch, size, labels)
 
     x, y, w, h = box
     vertical = h >= w
@@ -265,6 +276,7 @@ def read_melds(
     light: np.ndarray,
     melds: list[tuple[float, tuple[int, int, int, int]]],
     hand_box: tuple[int, int, int, int],
+    hand_pitch: float,
     size: int,
     labels: list[str],
 ) -> None:
@@ -284,6 +296,13 @@ def read_melds(
             continue
         fit = read_line(model, bgr, light, box, size, refine=True, counts=range(3, 5))
         if fit is None:
+            continue
+        ratio = fit[2] / hand_pitch
+        if not MIN_PITCH_MATCH <= ratio <= MAX_PITCH_MATCH:
+            print(
+                f"  meld at {box}: pitch {fit[2]:.1f}px is {ratio:.0%} of the hand's"
+                f" {hand_pitch:.1f}px, not the same tiles"
+            )
             continue
         _, count, _, _, confidence, predicted = fit
         tiles = [labels[int(g)] for g in predicted]
