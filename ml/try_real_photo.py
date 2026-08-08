@@ -91,6 +91,7 @@ def read_line(
     box: tuple[int, int, int, int],
     size: int,
     refine: bool,
+    counts: range,
 ) -> tuple[float, int, float, float, torch.Tensor, torch.Tensor] | None:
     """Reads one run, starting from its geometric fit.
 
@@ -103,6 +104,10 @@ def read_line(
     if fit is None:
         return None
     pitch, offset, count = fit
+    # A geometric fit knows nothing about mahjong, so it will happily describe the table's plastic
+    # housing as eighteen tiles. Anything outside the range of a hand is not a hand.
+    if count not in counts:
+        return None
 
     combinations = (
         [
@@ -117,7 +122,7 @@ def read_line(
 
     best = None
     for candidate_pitch, candidate_offset, candidate_count in combinations:
-        if candidate_count < 1:
+        if candidate_count not in counts:
             continue
         crops = slice_line(
             bgr, box, vertical, candidate_offset, candidate_pitch, candidate_count, size
@@ -203,13 +208,14 @@ def main() -> None:
     model.eval()
 
     light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
+    counts = range(args.min_tiles, args.max_tiles + 1)
     runs = candidate_runs(bgr)
     print(f"{args.photo.name} at {bgr.shape[1]}x{bgr.shape[0]}, {len(runs)} candidate runs")
 
     # One pass each to pick the run, then the neighbourhood search on the winner alone.
     scored = []
     for box in runs:
-        fit = read_line(model, bgr, light, box, size, refine=False)
+        fit = read_line(model, bgr, light, box, size, refine=False, counts=counts)
         if fit is None:
             print(f"  {box}: no grid fits")
             continue
@@ -219,7 +225,7 @@ def main() -> None:
         raise SystemExit("no run could be read")
     box = max(scored)[1]
 
-    refined = read_line(model, bgr, light, box, size, refine=True)
+    refined = read_line(model, bgr, light, box, size, refine=True, counts=counts)
     if refined is None:
         raise SystemExit("no run could be read")
     score, count, pitch, start, confidence, predicted = refined

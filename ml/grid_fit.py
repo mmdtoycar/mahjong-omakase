@@ -106,9 +106,9 @@ def fit_grid(
         return None
 
     # Candidate pitches come from the gaps between marks. A gap can span more than one tile — an
-    # undetected boundary leaves a double gap — so each is also divided by 2, 3 and 4. Rounded to
-    # half a pixel: the marks themselves are only that accurate, and without it a photo of this size
-    # produces a couple of thousand near-duplicate candidates and the search dominates the runtime.
+    # undetected boundary leaves a double gap — so each is also divided by 2, 3 and 4. They are then
+    # rounded to PITCH_QUANTUM, which collapses a couple of thousand near-duplicates; see the note on
+    # that constant for why the coarseness matters.
     positions = np.array(marks, dtype=float)
     gaps = positions[None, :] - positions[:, None]
     pitches = np.concatenate([gaps[gaps > 0] / divisor for divisor in (1, 2, 3, 4)])
@@ -154,31 +154,59 @@ CALIBRATION = Path(__file__).resolve().parents[1] / "server/src/main/resources/c
 # Rows of the brown-table photo and columns of the green-felt one, with the counts that are known by
 # construction. The 7-tile row matters: it is the one case where the count differs from the others, so
 # it catches a fit that has quietly learned to answer nine.
+#
+# The pitch is recorded alongside, because the count on its own is a weak assertion: a grid can return
+# the right number of tiles on a pitch that is a few percent out, and every crop then creeps along the
+# row until the last ones straddle two tiles. These pitches were confirmed by eye — the crops they
+# produce are the 34 faces in data/faces_contact_sheet.png — so they are a reference, not a snapshot of
+# whatever the code happened to print.
 KNOWN = [
-    ("brown row 1 (萬)", "system_mahjong_calibration.jpg", (43, 37, 1018, 149), False, 9),
-    ("brown row 2 (饼)", "system_mahjong_calibration.jpg", (41, 186, 1030, 155), False, 9),
-    ("brown row 3 (条)", "system_mahjong_calibration.jpg", (32, 341, 1044, 158), False, 9),
-    ("brown row 4 (字)", "system_mahjong_calibration.jpg", (27, 499, 829, 156), False, 7),
-    ("green column 1", "system_mahjong_calibration_2.jpg", (78, 0, 280, 1924), True, 9),
-    ("green column 2", "system_mahjong_calibration_2.jpg", (358, 0, 280, 1924), True, 9),
-    ("green column 3", "system_mahjong_calibration_2.jpg", (638, 0, 280, 1924), True, 9),
-    ("green column 4", "system_mahjong_calibration_2.jpg", (918, 0, 280, 1924), True, 9),
+    ("brown row 1 (萬)", "system_mahjong_calibration.jpg", (43, 37, 1018, 149), False, 9, 110.5),
+    ("brown row 2 (饼)", "system_mahjong_calibration.jpg", (41, 186, 1030, 155), False, 9, 113.5),
+    ("brown row 3 (条)", "system_mahjong_calibration.jpg", (32, 341, 1044, 158), False, 9, 113.5),
+    ("brown row 4 (字)", "system_mahjong_calibration.jpg", (27, 499, 829, 156), False, 7, 118.0),
+    ("green column 1", "system_mahjong_calibration_2.jpg", (78, 0, 280, 1924), True, 9, 206.5),
+    ("green column 2", "system_mahjong_calibration_2.jpg", (358, 0, 280, 1924), True, 9, 207.0),
+    ("green column 3", "system_mahjong_calibration_2.jpg", (638, 0, 280, 1924), True, 9, 206.0),
+    ("green column 4", "system_mahjong_calibration_2.jpg", (918, 0, 280, 1924), True, 9, 209.0),
 ]
+
+PITCH_TOLERANCE = 0.02  # of the expected pitch
+# The tiles have to account for the run. Anything less means the grid sits on part of it and the rest
+# went unread; anything more and it runs off the end onto the table.
+MIN_SPAN = 0.90
+MAX_SPAN = 1.05
 
 
 def self_check() -> int:
     failures = 0
-    for name, photo, box, vertical, expected in KNOWN:
+    for name, photo, box, vertical, count, pitch in KNOWN:
         bgr = cv2.imread(str(CALIBRATION / photo))
         if bgr is None:
             sys.exit(f"cannot read {CALIBRATION / photo}")
         light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
+        length = box[3] if vertical else box[2]
         fit = fit_grid(light, box, vertical)
-        got = fit[2] if fit else None
-        ok = got == expected
-        failures += not ok
-        detail = f"pitch {fit[0]:6.2f} offset {fit[1]:6.1f}" if fit else "no fit"
-        print(f"  {'ok  ' if ok else 'FAIL'} {name:20s} expected {expected:2d} got {got}  {detail}")
+
+        if fit is None:
+            print(f"  FAIL {name:20s} no fit")
+            failures += 1
+            continue
+        got_pitch, got_offset, got_count = fit
+        span = (got_offset + got_count * got_pitch) / length
+        problems = []
+        if got_count != count:
+            problems.append(f"count {got_count} != {count}")
+        if abs(got_pitch - pitch) > pitch * PITCH_TOLERANCE:
+            problems.append(f"pitch {got_pitch:.2f} != {pitch:.2f}")
+        if not MIN_SPAN <= span <= MAX_SPAN:
+            problems.append(f"covers {span:.2f} of the run")
+        failures += bool(problems)
+        print(
+            f"  {'ok  ' if not problems else 'FAIL'} {name:20s}"
+            f" count {got_count:2d} pitch {got_pitch:6.2f} offset {got_offset:6.1f}"
+            f" span {span:.2f}  {'; '.join(problems)}"
+        )
     print(f"\n{len(KNOWN) - failures}/{len(KNOWN)} correct")
     return failures
 
