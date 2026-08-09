@@ -699,13 +699,6 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
   }
 
   // Quick Tile Modification in Result
-  const handleRemoveTile = (index: number) => {
-    if (!result) return
-    const updatedConcealed = [...result.concealed]
-    updatedConcealed.splice(index, 1)
-    setResult({ ...result, concealed: updatedConcealed })
-  }
-
   const handleReplaceTile = (index: number, newTile: Tile) => {
     if (!result) return
     const updatedConcealed = [...result.concealed]
@@ -875,15 +868,6 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
                         size="small"
                         isWinning={idx === result.concealed.length - 1 && result.concealed.length % 3 === 2}
                       />
-                      <button
-                        className="tile-del-btn"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleRemoveTile(idx)
-                        }}
-                      >
-                        ×
-                      </button>
                     </div>
                   ))}
                   <button className="tile-add-btn" title="补一张牌" onClick={() => setEditingTileIndex(-1)}>
