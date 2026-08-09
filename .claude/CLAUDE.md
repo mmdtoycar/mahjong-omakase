@@ -41,6 +41,19 @@ When your changes create orphans:
 - Remove imports/variables/functions that YOUR changes made unused.
 - Don't remove pre-existing dead code unless asked.
 
+Before adding a rule, class, or helper — check whether one already exists:
+- Grep for it. Half the "duplication" in this codebase turns out to be an inline style that
+  restates a CSS rule already applying to that element. The fix is to delete the inline, not to
+  author a class.
+- Then check the blast radius of any *shared* rule you are about to add: list every element the
+  selector would hit and confirm they all want it. `.card > .flex-between` looked right for two
+  header rows and would have added 16px to four others.
+- Follow the convention already in the file over one you would introduce. If the codebase has
+  `.col-num` / `.text-right`, add `.text-center`; do not invent a parallel utility scheme.
+- And check what the existing convention deliberately omits. Table column classes here carry no
+  width on purpose — `table-layout: fixed` shares the remainder — so "move this width into the
+  col-\* class" would break the layout it was written to protect.
+
 The test: Every changed line should trace directly to the user's request.
 
 ## 4. Goal-Driven Execution
