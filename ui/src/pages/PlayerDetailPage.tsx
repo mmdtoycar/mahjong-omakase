@@ -174,11 +174,7 @@ export default function PlayerDetailPage() {
               </thead>
               <tbody>
                 {player.games.map((g) => (
-                  <tr
-                    key={g.sessionId}
-                    onClick={() => navigate(`/session/${g.sessionId}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
+                  <tr key={g.sessionId} onClick={() => navigate(`/session/${g.sessionId}`)}>
                     <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {g.sessionName || `Game #${g.sessionId}`}
                     </td>

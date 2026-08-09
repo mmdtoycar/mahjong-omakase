@@ -32,6 +32,27 @@ Read `ui/src/index.css` and all files in `ui/src/pages/` for issues on screens u
 
 > Manual check; no automated tool covers this category.
 
+## Part 2b: Touch-Only Devices (iPhone / iPad)
+
+The app has no mouse. Two things are therefore always findings:
+
+```bash
+# :hover rules — none should exist
+grep -rnE ':hover' ui/src
+
+# cursor: pointer — CSS declarations and JSX inline styles, whatever the spacing or quoting
+grep -rnE "cursor[[:space:]]*:[[:space:]]*['\"]?pointer" ui/src
+```
+
+Report every hit. Two of them are worse than the rest and should be called out separately:
+
+- A rule that makes something **visible** only on hover (`opacity: 0` in the base rule, `opacity: 1`
+  under `:hover`) is a control that cannot be seen on the primary devices — a functional bug, not a
+  style preference.
+- Removing a `:hover` rule that was the only feedback on an interactive element leaves nothing at
+  all. Check whether the element has an `:active` rule; if not, that has to be added in the same
+  change, not left for later. `grep -cE ':active' ui/src/index.css` for the current count.
+
 ## Part 3: UI Consistency
 Check all pages for consistent use of shared patterns:
 - **Badges**: Use `.badge` + `.badge-progress`/`.badge-completed` (`.badge-sm` for compact). Flag custom status classes.

@@ -87,7 +87,7 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div>
       <header className="app-header">
         <Link to="/home" className="logo-link">
           <img src="/logo-header.png" alt="Mahjong Omakase" className="logo" />

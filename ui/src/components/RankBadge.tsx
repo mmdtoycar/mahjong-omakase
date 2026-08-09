@@ -69,7 +69,7 @@ export const RankBadge: React.FC<Props> = ({
         onClick={onClick}
         title="机器人"
       >
-        <div className="rank-badge-progress">🤖</div>
+        <div>🤖</div>
       </div>
     )
   }
@@ -92,7 +92,7 @@ export const RankBadge: React.FC<Props> = ({
   if (tier === 'UNRANKED') {
     return (
       <div className={`rank-badge rank-badge-unranked rank-badge-${size} ${className ?? ''}`} onClick={onClick}>
-        <div className="rank-badge-progress">{showProgress ? `${progressPlayed}/5` : '未定段'}</div>
+        <div>{showProgress ? `${progressPlayed}/5` : '未定段'}</div>
         {rating !== undefined && <span className="rank-badge-rating">{skillRatingText(rating, 'UNRANKED')}</span>}
       </div>
     )

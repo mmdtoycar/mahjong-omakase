@@ -66,7 +66,7 @@ const CalculatorPage: React.FC = () => {
   const handleSelectScore = () => {}
 
   return (
-    <div className="container calc-page-wrapper">
+    <div className="calc-page-wrapper">
       <div className="tabs">
         <button
           className={`calc-mode-tab-btn ${activeTab === 'GUOBIAO' ? 'active' : ''}`}
