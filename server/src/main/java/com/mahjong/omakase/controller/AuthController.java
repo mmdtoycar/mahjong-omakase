@@ -258,8 +258,6 @@ public class AuthController {
     String trimmedUserName = userName.trim();
     String trimmedFirstName = firstName.trim();
     String trimmedLastName = lastName.trim();
-    // Enforced here, not only in the browser: every table on the site sizes its name column against
-    // this bound, and a longer name wraps and pushes the statistic columns out of their cells.
     if (trimmedUserName.length() > MAX_USERNAME_LENGTH) {
       return ResponseEntity.badRequest()
           .body(Map.of("error", "用户名最长 " + MAX_USERNAME_LENGTH + " 个字符"));
