@@ -21,6 +21,7 @@ calibration photo, this reads 13 of 13 tiles correctly, ten of them above 0.85.
 
 import argparse
 from pathlib import Path
+from typing import NamedTuple
 
 import cv2
 import numpy as np
@@ -110,16 +111,23 @@ def read_line(
     box: tuple[int, int, int, int],
     size: int,
     refine: bool,
-    counts: range,
+    counts,
+    expect: int | None = None,
 ) -> tuple[float, int, float, float, torch.Tensor, torch.Tensor, torch.Tensor] | None:
     """Reads one run, starting from its geometric fit.
 
     With `refine` false this costs a single forward pass, which is all that is needed to tell a row of
     tiles from a strip of the table's plastic housing. The winner is then read again with `refine` on.
+
+    `expect` is forwarded to the fit for callers that nearly know the count. A meld is three tiles or
+    four and nothing else, and the unconstrained fit is at its weakest on a run that short — there are
+    only two or three interior boundaries to work with, and on a composed three-tile 碰 it answered four
+    cells at 70% of the true pitch, which the pitch check downstream then rejected as "not the same
+    tiles". Asking for each candidate count outright costs one more fit and removes that whole failure.
     """
     _, _, w, h = box
     vertical = h >= w
-    fit = fit_grid(light, box, vertical)
+    fit = fit_grid(light, box, vertical, expect=expect)
     if fit is None:
         return None
     pitch, offset, count = fit
@@ -311,6 +319,68 @@ def meld_kind(tiles: list[str]) -> str | None:
     return "shun" if ranks[2] - ranks[0] == 2 and len(set(ranks)) == 3 else None
 
 
+class Meld(NamedTuple):
+    kind: str
+    tiles: list[str]
+    is_open: bool
+
+
+def judge_meld(
+    tiles: list[str], confidence: list[float], nothing: list[float]
+) -> Meld | str:
+    """What a run of three or four crops is, or the reason it is not a meld.
+
+    Kept free of images so it can be checked against numbers rather than against a composed photograph —
+    see self_check. The first attempt at that check built melds out of the calibration crops, and every
+    failure it produced came from the composition rather than from this logic, which is worse than no
+    check at all: the temptation is then to loosen the code until the fixture passes.
+
+    The two roles are judged separately, and lumping them together is what silently dropped 暗杠.
+
+    A face-up tile carries the meld's identity, so it has to be named outright — hence the floor. A
+    face-down tile names nothing; the pair that is face up already decides all four. All it has to
+    establish is that it is a tile back rather than a patch of table, and that question needs no
+    threshold: `back` simply has to beat `none`.
+
+    Held to the face-up floor instead, the backs fail. Of the twenty tile-back crops there are, seven sit
+    under 0.8 and two of those also read 32% not-a-tile — every one of them a pale back, whose faint
+    pattern is nearly gone by 64px. A 暗杠 photographed with those tiles was thrown away here, with
+    nothing in the output to show that it had been.
+    """
+    faces = [i for i, t in enumerate(tiles) if t != BACK]
+    backs = [i for i, t in enumerate(tiles) if t == BACK]
+
+    # The none class is checked on its own probability, not by looking for it among `tiles`: classify
+    # ranks the tile classes only, so it can never be the argmax there.
+    emptiest = max((nothing[i] for i in faces), default=0.0)
+    if emptiest >= NOTHING_LIMIT:
+        return f"a face-up crop is {emptiest:.0%} not-a-tile"
+    if any(confidence[i] <= nothing[i] for i in backs):
+        return "a face-down crop is likelier nothing than a back"
+    # A meld has to be read outright. Three or four tiles is a short run and the geometry alone is weak
+    # evidence — on the first photo tried, a corner of the discard pile fitted four cells and came back
+    # as a gang of 1p at 0.00 confidence. There is no partial credit: get one tile wrong and the hand is
+    # a different hand.
+    lowest = min((confidence[i] for i in faces), default=0.0)
+    if lowest < CONFIDENT:
+        return f"lowest face-up confidence {lowest:.2f}"
+    if backs:
+        # A 暗杠 is four tiles with exactly two of them turned over: the way this project photographs one,
+        # what the Gemini prompt describes, and what the on-screen instructions ask for.
+        #
+        # Requiring that shape is a stronger guard than the confidence floor it replaces for these crops,
+        # not a weaker one. Without it a run reading [back, back, back, 5p] would be scored as a gang of
+        # 5p on the evidence of a single face-up tile — and the point of getting 暗杠 right is that it
+        # leaves the hand 门前清, which changes the score.
+        if len(backs) != 2 or len(faces) != 2 or len({tiles[i] for i in faces}) != 1:
+            return "face-down tiles but not a readable 暗杠"
+        tiles = [tiles[faces[0]]] * 4
+    kind = meld_kind(tiles)
+    if kind is None:
+        return "not a 吃, 碰 or 杠"
+    return Meld(kind, tiles, not backs)
+
+
 def read_melds(
     model: torch.nn.Module,
     bgr: np.ndarray,
@@ -320,8 +390,8 @@ def read_melds(
     hand_pitch: float,
     size: int,
     labels: list[str],
-) -> None:
-    """Reads the runs of three or four set aside beside the hand.
+) -> list[Meld]:
+    """Reads the runs of three or four set aside beside the hand, as (kind, tiles, isOpen).
 
     Two distinctions here decide the score rather than just the display:
 
@@ -332,10 +402,19 @@ def read_melds(
     The two turned-over tiles of a 暗杠 cannot be read, and do not need to be: a gang is four of one
     tile, so the pair that is face up names all four.
     """
+    found = []
     for _, box in melds:
         if box == hand_box:
             continue
-        fit = read_line(model, bgr, light, box, size, refine=True, counts=range(3, 5))
+        # Each meld length asked for by name, keeping whichever the classifier is happiest with. See
+        # the note on `expect` in read_line for why the blind fit is not good enough on a run this short.
+        fit = None
+        for length in MELD_SIZES:
+            attempt = read_line(
+                model, bgr, light, box, size, refine=True, counts=(length,), expect=length
+            )
+            if attempt is not None and (fit is None or attempt[0] > fit[0]):
+                fit = attempt
         if fit is None:
             continue
         ratio = fit[2] / hand_pitch
@@ -345,36 +424,15 @@ def read_melds(
                 f" {hand_pitch:.1f}px, not the same tiles"
             )
             continue
-        _, count, _, _, confidence, predicted, nothing = fit
+        _, _, _, _, confidence, predicted, nothing = fit
         tiles = [labels[int(g)] for g in predicted]
-        # The none class is checked on its own probability, not by looking for it among `tiles`:
-        # classify ranks the tile classes only, so it can never be the argmax there.
-        emptiest = float(nothing.max())
-        if emptiest >= NOTHING_LIMIT:
-            print(f"  meld at {box}: a crop is {emptiest:.0%} not-a-tile, skipped")
+        verdict = judge_meld(tiles, [float(c) for c in confidence], [float(n) for n in nothing])
+        if isinstance(verdict, str):
+            print(f"  meld at {box}: {tiles} — {verdict}, skipped")
             continue
-        lowest = min(float(c) for c in confidence)
-        # A meld has to be read outright. Three or four tiles is a short run and the geometry alone is
-        # weak evidence — on the first photo tried, a corner of the discard pile fitted four cells and
-        # came back as a gang of 1p at 0.00 confidence. There is no partial credit for a meld: get one
-        # tile of it wrong and the hand is a different hand.
-        if lowest < CONFIDENT:
-            print(f"  meld at {box}: {tiles} — lowest confidence {lowest:.2f}, not read")
-            continue
-        backs = [t for t in tiles if t == BACK]
-        faces = [t for t in tiles if t != BACK]
-        if backs:
-            # A 暗杠: name it from the tiles that are face up, which must agree with each other.
-            if len(set(faces)) != 1 or count != 4:
-                print(f"  meld at {box}: {tiles} — face-down tiles but not a readable 暗杠, skipped")
-                continue
-            tiles = [faces[0]] * 4
-
-        kind = meld_kind(tiles)
-        if kind is None:
-            print(f"  meld at {box}: {tiles} — not a 吃, 碰 or 杠, skipped")
-            continue
-        print(f"  meld at {box}: {kind} {tiles} isOpen={not backs} (lowest confidence {lowest:.2f})")
+        print(f"  meld at {box}: {verdict.kind} {verdict.tiles} isOpen={verdict.is_open}")
+        found.append(verdict)
+    return found
 
 
 def sheet(
@@ -405,5 +463,65 @@ def sheet(
     print(f"annotated: {path}")
 
 
+# ── self-check ─────────────────────────────────────────────────────────────
+#
+# The meld path has never been run against a photograph of a real 副露 or 暗杠, because none has been
+# taken. Until one is, this is the only thing between a change here and a silently wrong score.
+#
+# It checks judge_meld against numbers rather than images, so it cannot tell whether a real 暗杠 would be
+# *found* in a photo — only that every decision made once one is found is the right one. The confidences
+# below are not invented: the 暗杠 case carries the worst pair of tile backs actually measured, 0.63 and
+# 0.67 with 32% and 27% not-a-tile, which is the combination that used to be discarded.
+
+
+def self_check() -> int:
+    good, bad = 0.93, 0.55
+    cases = [
+        # The regression this was written for. Both the old gates rejected this: 0.63 < 0.8, and 0.32
+        # over the not-a-tile limit of 0.3.
+        (
+            "暗杠, worst real backs",
+            ["5p", "5p", BACK, BACK],
+            [good, 0.94, 0.63, 0.67],
+            [0.01, 0.01, 0.32, 0.27],
+            Meld("gang", ["5p"] * 4, False),
+        ),
+        ("明杠", ["7s"] * 4, [good] * 4, [0.01] * 4, Meld("gang", ["7s"] * 4, True)),
+        ("碰", ["2z"] * 3, [good] * 3, [0.01] * 3, Meld("ke", ["2z"] * 3, True)),
+        (
+            "吃",
+            ["3m", "4m", "5m"],
+            [good] * 3,
+            [0.01] * 3,
+            Meld("shun", ["3m", "4m", "5m"], True),
+        ),
+        # Three turned over leaves one face-up tile deciding a whole gang. Refused on shape, which is
+        # what keeps the looser rule for backs from being a way in.
+        ("three backs", ["5p", BACK, BACK, BACK], [good, 0.9, 0.9, 0.9], [0.01] * 4, None),
+        ("backs, faces disagree", ["5p", "6p", BACK, BACK], [good, good, 0.9, 0.9], [0.01] * 4, None),
+        ("face-up too uncertain", ["5p", "5p", BACK, BACK], [good, bad, 0.9, 0.9], [0.01] * 4, None),
+        # A back has to beat `none`, and this one does not — a patch of felt rather than a tile.
+        ("back is likelier nothing", ["5p", "5p", BACK, BACK], [good, good, 0.2, 0.9], [0.01, 0.01, 0.7, 0.01], None),
+        ("face-up is nothing", ["1p"] * 3, [good] * 3, [0.5, 0.01, 0.01], None),
+        ("three tiles, no meld", ["1m", "9p", "1z"], [good] * 3, [0.01] * 3, None),
+        # 吃 needs one suit and three consecutive ranks; neither of these is a meld.
+        ("same suit, not consecutive", ["1m", "3m", "5m"], [good] * 3, [0.01] * 3, None),
+        ("consecutive, mixed suits", ["3m", "4p", "5s"], [good] * 3, [0.01] * 3, None),
+    ]
+    failures = 0
+    for name, tiles, confidence, nothing, expected in cases:
+        got = judge_meld(tiles, confidence, nothing)
+        ok = got == expected if expected else isinstance(got, str)
+        failures += not ok
+        shown = got if not isinstance(got, str) else f"rejected: {got}"
+        print(f"  {'ok  ' if ok else 'FAIL'} {name:26s} -> {shown}")
+    print(f"\n{len(cases) - failures}/{len(cases)} correct")
+    return failures
+
+
 if __name__ == "__main__":
+    import sys
+
+    if "--self-check" in sys.argv:
+        sys.exit(1 if self_check() else 0)
     main()

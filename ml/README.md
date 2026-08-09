@@ -57,6 +57,7 @@ written invented tiles into the score sheet. `back` is the face-down tile, which
 
 ```bash
 .venv/bin/python try_real_photo.py data/test_hand.jpg
+.venv/bin/python try_real_photo.py --self-check   # the meld logic, which has no real photo yet
 ```
 
 On `data/test_hand.jpg` — a 13-tile standing hand at the edge of a green table, every tile a quarter
@@ -117,6 +118,33 @@ On the widened split:
 So a threshold of 0.8 answers eleven tiles in twelve and is essentially never wrong on those.
 (Confidence saturates near 0.95 because of the label smoothing, so thresholds above that are not
 meaningful.)
+
+### The 0.8 confidence floor has never rejected a real error
+
+Worth being precise about, because it is easy to read the table above as though 0.8 were established.
+
+It is not a rejection threshold today. For the standing hand it is a *label*: every tile is reported
+whatever its confidence, and the ones below 0.8 are printed and drawn in red for review. Nothing is
+dropped.
+
+Where it did drop things was melds, which required every tile in the run to clear it — and that is how
+it came to discard 暗杠. Tile backs read 0.63 to 0.97, so seven of the twenty back crops sat under the
+floor and two also tripped the not-a-tile gate at 32%. A 暗杠 photographed with a pale-backed tile would
+have vanished from the output with nothing to say it had. Fixed by judging the two roles apart: a face-up
+tile carries the meld's identity and must be named outright, a face-down one names nothing and only has
+to be likelier a back than nothing at all, which needs no threshold. To keep that from being a way in,
+the shape is now required too — exactly two turned over and two agreeing faces, which is what this
+project photographs and what the Gemini prompt describes. Previously `[back, back, back, 5p]` would have
+been scored as a gang of 5p on the evidence of one face-up tile.
+
+On the number itself: it came from the synthetic abstain table, where 0.8 buys 0.9997 per tile against
+0.9914. On the one real photo it has flagged 3 or 4 correct tiles and caught **zero errors** — the photo
+reads 13 of 13 with no threshold at all. So its benefit is entirely synthetic and its cost is real. The
+asymmetry that motivates *having* a review signal is sound — a wrong tile silently changes the score, a
+flagged one costs a glance — but it does not justify this particular value, and thirteen tiles are not
+enough to calibrate one. That number should come from the collected samples measured against Gemini's
+answers, which is the offline evaluation still to be written.
+
 
 ### The synthetic numbers and the real photo moved in opposite directions
 
@@ -227,7 +255,9 @@ widened split. Those come with low confidence, which is why the threshold works.
 
 **The meld path has still never run against real data**, because no hand photo with a 副露 or a 暗杠 has
 been taken yet. `back` now works on every crop there is, but "works on the calibration crops" is not the
-same claim as "works on a 暗杠 in a photograph".
+same claim as "works on a 暗杠 in a photograph". `--self-check` covers the decisions made once a meld is
+found — twelve cases over judge_meld, carrying the worst tile-back confidences actually measured — and
+says nothing about whether one would be found.
 
 ## How the `back` class was fixed, and what it cost to find out
 
