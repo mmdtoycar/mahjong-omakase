@@ -3,11 +3,15 @@
 Everything downstream needs these crops: they are the only images of *these* tile sets that come with
 certain labels, so they seed the synthetic training data for the face classifier.
 
-There are two photos, one per set and table, and both lay the whole set out as a 4x9 grid of upright
-tiles — the three suits in the first three rows, and the seven honours plus the two tile backs in the
-last. So one routine reads both, and the only thing that differs is how bright the background is.
+Six photos, for two sets of tiles on two tables. Two of them are the full sets, each laid out as a 4x9
+grid of upright tiles — the three suits in the first three rows, the seven honours and two tile backs in
+the last. The other four are tile backs only, four butted tiles per file, one file per back colour per
+set, because the backs needed far more examples than the grids gave; see the note in the README.
 
-**The layout is read off the photo, not assumed.** Both photos have now been re-shot twice, and the
+One routine reads all six. A photo is described by its rows of labels, optionally a quarter turn to get
+those rows the right way round, and which of the two mask rules applies.
+
+**The layout is read off the photo, not assumed.** Both grid photos have been re-shot twice, and the
 arrangement changed each time — four rows, then four columns with the tiles a quarter turn over, then
 four rows again — so the layout lives in a table here rather than in the shape of the code. The honours
 order is the part worth spelling out: it runs 東西南北白發中, *not* the canonical 東南西北, and one of
@@ -18,22 +22,22 @@ permutation of the set — each of the 34 faces exactly once, plus the backs. Us
 the photos were replaced makes that an independent check rather than a circular one, and it is how the
 next re-shoot should be settled too.
 
-Within the grid, the four rows come from dividing the block evenly, and the nine cells of each row from
-a periodic fit — see grid_fit.py. That split is not arbitrary. Nine tiles give a row eight interior
+Within a grid, the four rows come from dividing the block evenly, and the nine cells of each row from a
+periodic fit — see grid_fit.py. That split is not arbitrary. Nine tiles give a row eight interior
 boundaries to fit, which is plenty; four tiles give a column three, and fitting the vertical axis that
 way is visibly unstable — across the nine column strips of one photo it answered pitches from 190 to
 215 and twice claimed three tiles instead of four. Dividing evenly instead leans on the block's extent,
 which is the strongest thing known about the vertical axis: four butted rows *are* the block's height.
 
-Leftover background matters more than the small amount of it suggests, because there are only two
-source images per class — so any artefact that survives is a *near-perfect* cue for that class, and one
+Leftover background matters more than the small amount of it suggests, because a class has only a
+handful of source images — so any artefact that survives is a near-perfect cue for that class, and one
 the classifier will happily learn instead of the tile pattern. It would then collapse on real photos,
 which have no such artefact. Hence the trim and the edge audit this prints. The contact sheet is still
 the arbiter, though: every problem found in the cut so far was spotted by eye before any check caught
 it, and each check written afterwards caught only the one kind it was written for.
 
 A mask is written alongside each crop, because pasting a cut-out tile onto random backgrounds is what
-stops the classifier depending on these two tables.
+stops the classifier depending on these particular tables.
 """
 
 import shutil
@@ -58,17 +62,22 @@ class Photo(NamedTuple):
     name: str
     source: str
     rows: list[list[str]]
-    # A tile back is admitted on lightness alone rather than being required to be neutral, because one
-    # of them is strongly coloured: on the green table it measures L 118 with a chroma of 52, further
-    # from grey than the felt around it, and the face threshold keeps none of it. Only usable where the
-    # background is dark enough — on the brown photo the wall behind the tiles reaches L 150, so
-    # relaxing chroma there swallows the whole frame, and both of its backs clear the face threshold
-    # anyway.
-    back_lightness: int | None
+    # Applied before anything else, so `rows` can always describe the photo as rows. The tile-back
+    # photos are single files of four tiles stacked vertically, which is one row once turned. Rotating
+    # costs nothing and loses nothing: all four quarter turns of a face are the same class anyway.
+    quarter_turns: int = 0
+    # Whether the photo shows tile backs rather than faces. It picks which of the two mask rules below
+    # applies, and the two are not interchangeable — see back_mask.
+    blank: bool = False
+    # Only for a photo whose grid contains a tile back too dark for the face rule. On the green table
+    # that back measures L 118 at a chroma of 52, further from grey than the felt around it, so the face
+    # rule keeps none of it — and a cell with an empty mask is worse than no cell at all, because the
+    # synthesiser composites through the mask and would paste pure background under that label.
+    back_lightness: int | None = None
 
 
-# Both photos currently agree on this. Kept as one table because they do, and named per photo because
-# they have not always: whichever is re-shot next has to be re-read, not assumed to match the other.
+# Both calibration photos currently agree on this. Kept as one table because they do, and named per
+# photo because they have not always: whichever is re-shot next has to be re-read, not assumed to match.
 LAYOUT = [
     [f"{n}m" for n in range(1, 10)],  # 一萬 to 九萬
     [f"{n}p" for n in range(1, 10)],  # 1饼/筒 to 9饼/筒
@@ -76,16 +85,41 @@ LAYOUT = [
     ["1z", "3z", "2z", "4z", "7z", "6z", "5z", BACK, BACK],  # 東西南北白發中, then the two backs
 ]
 
+# Four tiles butted in a line, all of them the same back. Two back colours per set, one file each.
+BACK_RUN = [[BACK] * 4]
+
 PHOTOS = [
-    Photo("system_mahjong_calibration.jpg", "brown", LAYOUT, back_lightness=None),
+    Photo("system_mahjong_calibration.jpg", "brown", LAYOUT),
     Photo("system_mahjong_calibration_2.jpg", "green", LAYOUT, back_lightness=105),
+    Photo("system_mahjong_calibration_back_1.jpg", "brown_cream", BACK_RUN, 1, blank=True),
+    Photo("system_mahjong_calibration_back_2.jpg", "brown_blue", BACK_RUN, 1, blank=True),
+    Photo("system_mahjong_calibration_2_back_1.jpg", "green_blue", BACK_RUN, 1, blank=True),
+    Photo("system_mahjong_calibration_2_back_2.jpg", "green_cream", BACK_RUN, 1, blank=True),
 ]
 
-# A tile face is near-white: bright, and far less coloured than green felt or a brown table. This one
-# threshold covers both photos, which are lit very differently — the faces measure L 157 on the dimmer
-# one and the backgrounds 59 and below.
+# A tile face is near-white: bright, and far less coloured than green felt or a brown table.
 TILE_LIGHTNESS = 150
 TILE_CHROMA = 30
+
+# For the tile-back photos, brightness plus *smoothness* — glossy plastic against felt or carpet, which
+# are fabric and show their weave. This is the one threshold decision here with real evidence behind it.
+#
+# Colour was the obvious choice and it does not survive a change of light. The same brown carpet measures
+# a chroma of 37 in one back photo and 11 in another; in the second the *tile* is the more coloured of
+# the two, at 42, so "a tile is the less coloured thing" gets that photo exactly backwards. Lightness
+# alone is no better there: the carpet reaches L 147 and the tile starts at 149, a two-unit gap. Otsu
+# merges them outright, because the carpet is genuinely bright. Local variation separates all four with
+# room to spare — a back measures 2 to 6, felt and carpet 4 to 19 — and it is a property of the material
+# rather than of the light, which is why it holds across photos taken hours apart under different lamps.
+# It also admits the strongly coloured blue back with no special case.
+#
+# It does *not* generalise to the faces, and that is not a threshold to be tuned: engraving is exactly
+# what local variation measures. Applied to the calibration grids it kept as little as 4% of a 条 face,
+# and the hole filling could not recover it, because the raised edges of the characters are high-variation
+# too and link the gaps into one region that reaches the border. Blank tiles and engraved tiles are
+# different problems and get different rules.
+BACK_VARIATION = 8
+VARIATION_WINDOW = 9
 
 # Closing joins the faces of a column into one block across the shadow seams between them. It also
 # rounds the block's corners outward by about its own width, which is why the extent below is taken
@@ -129,8 +163,28 @@ def trim(mask: np.ndarray) -> tuple[slice, slice]:
     return rows, solid_run(mask[rows].mean(axis=0))
 
 
-def tile_mask(bgr: np.ndarray, back_lightness: int | None) -> np.ndarray:
-    """True where the photo shows a tile rather than the table.
+def local_variation(lightness: np.ndarray) -> np.ndarray:
+    """Standard deviation of lightness in a small window around every pixel."""
+    values = lightness.astype(np.float32)
+    window = (VARIATION_WINDOW, VARIATION_WINDOW)
+    mean = cv2.boxFilter(values, -1, window)
+    mean_square = cv2.boxFilter(values * values, -1, window)
+    return np.sqrt(np.maximum(mean_square - mean * mean, 0))
+
+
+def close(solid: np.ndarray) -> np.ndarray:
+    return cv2.morphologyEx(solid.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((CLOSE, CLOSE), np.uint8))
+
+
+def back_mask(bgr: np.ndarray) -> np.ndarray:
+    """True where the photo shows a tile back: bright and smooth. See BACK_VARIATION."""
+    lightness = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0]
+    bright = lightness.astype(np.int16) > TILE_LIGHTNESS
+    return close(bright & (local_variation(lightness) < BACK_VARIATION))
+
+
+def face_mask(bgr: np.ndarray, back_lightness: int | None) -> np.ndarray:
+    """True where the photo shows a tile face rather than the table.
 
     Thresholding finds the white of a face but leaves the engraved characters as holes, and those are
     not all small — the bird of 1s is wider than any closing kernel that would still be safe to use
@@ -151,9 +205,11 @@ def tile_mask(bgr: np.ndarray, back_lightness: int | None) -> np.ndarray:
     touching_border = np.unique(
         np.concatenate([regions[0], regions[-1], regions[:, 0], regions[:, -1]])
     )
-    filled = solid | ~np.isin(regions, touching_border)
-    kernel = np.ones((CLOSE, CLOSE), np.uint8)
-    return cv2.morphologyEx(filled.astype(np.uint8), cv2.MORPH_CLOSE, kernel)
+    return close(solid | ~np.isin(regions, touching_border))
+
+
+def tile_mask(bgr: np.ndarray, photo: "Photo") -> np.ndarray:
+    return back_mask(bgr) if photo.blank else face_mask(bgr, photo.back_lightness)
 
 
 def extent(mask: np.ndarray, axis: int) -> tuple[int, int]:
@@ -186,7 +242,9 @@ def slice_photo(photo: Photo) -> list[tuple[str, np.ndarray, np.ndarray]]:
     bgr = cv2.imread(str(CALIBRATION / photo.name))
     if bgr is None:
         sys.exit(f"cannot read {CALIBRATION / photo.name}")
-    mask = tile_mask(bgr, photo.back_lightness)
+    if photo.quarter_turns:
+        bgr = np.rot90(bgr, photo.quarter_turns).copy()
+    mask = tile_mask(bgr, photo)
     left, top, width, height = block(mask)
 
     light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)

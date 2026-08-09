@@ -46,7 +46,9 @@ def main() -> None:
         for target in range(len(labels)):
             for n in range(args.per_class):
                 seed = low + (target * args.per_class + n) % (high - low)
-                synth = Synthesiser(faces, masks, seed=seed, hard=args.hard, size=size)
+                synth = Synthesiser(
+                    faces, masks, seed=seed, hard=args.hard, size=size, labels=face_labels
+                )
                 image = (
                     synth.sample_negative()
                     if labels[target] == NOT_A_TILE
