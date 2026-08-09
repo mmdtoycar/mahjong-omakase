@@ -625,6 +625,175 @@ table.auto-table {
   font-weight: 500;
 }
 
+/* 个人页从内联样式搬过来的, 值一个没改 */
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 20px;
+  gap: 24px;
+  max-width: 550px;
+  margin: 0 auto;
+}
+
+.profile-page .empty-state .btn-signup {
+  margin-top: 20px;
+}
+
+.profile-banner {
+  padding: 30px 25px;
+  background: var(--mj-teal);
+  color: var(--text-on-accent);
+  text-align: center;
+}
+
+.profile-banner h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.profile-banner-handle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: rgb(255 255 255 / 85%);
+  font-weight: 500;
+}
+
+.profile-card-body {
+  padding: 25px;
+}
+
+.profile-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.profile-section-head h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-value-pct {
+  font-size: 0.6rem;
+  color: var(--text-light);
+  vertical-align: bottom;
+  margin-left: 2px;
+}
+
+.profile-achievements {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.profile-achievements h4 {
+  margin: 0 0 16px;
+  font-size: 15px;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-achievement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-achievement-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, rgb(33 140 116 / 2%), rgb(181 137 0 / 2%));
+  border: 1px solid #eef7f4;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.profile-achievement-name {
+  font-weight: 700;
+  color: var(--mj-teal);
+  font-size: 15px;
+}
+
+.profile-achievement-date {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+.profile-claim-card h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: var(--mj-gold);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-claim-hint {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.profile-claim-hint p {
+  margin: 0;
+}
+
+.profile-claim-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile-field-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.profile-field-input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-muted);
+  font-size: 14px;
+}
+
+.profile-claim-submit {
+  background: var(--mj-gold);
+  color: var(--text-on-accent);
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.profile-claim-submit:disabled {
+  opacity: 0.6;
+}
+
 .user-profile-capsule {
   display: flex;
   align-items: center;
@@ -673,6 +842,10 @@ table.auto-table {
 .claim-name-row {
   display: flex;
   gap: 12px;
+}
+
+.claim-name-col {
+  flex: 1;
 }
 
 .stat-card {

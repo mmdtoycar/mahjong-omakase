@@ -68,7 +68,7 @@ export default function ProfilePage() {
     return (
       <div className="empty-state">
         <p>尚未登录或身份信息已失效</p>
-        <button onClick={() => navigate('/login')} className="btn-signup" style={{ marginTop: '20px' }}>
+        <button onClick={() => navigate('/login')} className="btn-signup">
           前往登录
         </button>
       </div>
@@ -132,37 +132,16 @@ export default function ProfilePage() {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '30px 20px',
-        gap: '24px',
-        maxWidth: '550px',
-        margin: '0 auto',
-      }}
-    >
+    <div className="profile-page">
       {/* 1. 个人资料主卡片 */}
       <div className="profile-card profile-card-banner">
-        <div
-          style={{
-            padding: '30px 25px',
-            background: 'var(--mj-teal)',
-            color: '#ffffff',
-            textAlign: 'center',
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 700, letterSpacing: '0.5px' }}>{displayName}</h2>
-          {me.merged && (
-            <p style={{ margin: '6px 0 0 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: 500 }}>
-              @{me.userName}
-            </p>
-          )}
+        <div className="profile-banner">
+          <h2>{displayName}</h2>
+          {me.merged && <p className="profile-banner-handle">@{me.userName}</p>}
         </div>
 
-        <div style={{ padding: '25px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="profile-card-body">
+          <div className="profile-info-list">
             <div className="profile-info-row">
               <span className="profile-info-label">绑定邮箱</span>
               <span className="profile-info-value">{me.email || '未绑定'}</span>
@@ -184,28 +163,8 @@ export default function ProfilePage() {
           const hasStats = stats && stats.gamesPlayed > 0
           return (
             <div className="profile-card">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '20px',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: '18px',
-                    color: 'var(--primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  📊 个人战绩
-                </h3>
+              <div className="profile-section-head">
+                <h3>📊 个人战绩</h3>
                 <select
                   value={selectedMode}
                   onChange={(e) => setSelectedMode(e.target.value as GameModeKey)}
@@ -243,16 +202,7 @@ export default function ProfilePage() {
                   <div className="stat-card">
                     <div className="stat-value">
                       {stats.wins}
-                      <span
-                        style={{
-                          fontSize: '0.6rem',
-                          color: 'var(--text-light)',
-                          verticalAlign: 'bottom',
-                          marginLeft: 2,
-                        }}
-                      >
-                        ({((stats.wins / stats.gamesPlayed) * 100).toFixed(0)}%)
-                      </span>
+                      <span className="stat-value-pct">({((stats.wins / stats.gamesPlayed) * 100).toFixed(0)}%)</span>
                     </div>
                     <div className="stat-label">胜场</div>
                   </div>
@@ -265,39 +215,15 @@ export default function ProfilePage() {
 
               {/* 番种成就只在国标模式下显示(其他模式没有番种系统) */}
               {selectedMode === 'GUOBIAO' && (
-                <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-muted)' }}>
-                  <h4
-                    style={{
-                      margin: '0 0 16px 0',
-                      fontSize: '15px',
-                      color: 'var(--primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    🏆 番种成就
-                  </h4>
+                <div className="profile-achievements">
+                  <h4>🏆 番种成就</h4>
                   {discoveries.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="profile-achievement-list">
                       {discoveries.map((fd, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            background: 'linear-gradient(135deg, rgba(33, 140, 116, 0.02), rgba(181, 137, 0, 0.02))',
-                            border: '1px solid #eef7f4',
-                            borderRadius: '10px',
-                            padding: '12px 16px',
-                          }}
-                        >
+                        <div key={i} className="profile-achievement-item">
                           <div>
-                            <div style={{ fontWeight: 700, color: 'var(--mj-teal)', fontSize: '15px' }}>
-                              🏅 {fd.fanName}
-                            </div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '4px' }}>
+                            <div className="profile-achievement-name">🏅 {fd.fanName}</div>
+                            <div className="profile-achievement-date">
                               发现日期:{' '}
                               {new Date(fd.discoveredAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}
                             </div>
@@ -318,101 +244,40 @@ export default function ProfilePage() {
 
       {/* 4. 完善账号:关联老账号 / 注册新账号 */}
       {!me.merged && (
-        <div className="profile-card profile-card-warning">
-          <h3
-            style={{
-              margin: '0 0 10px 0',
-              fontSize: '18px',
-              color: 'var(--mj-gold)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            🎯 完善账号
-          </h3>
-          <div style={{ margin: '0 0 16px 0', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            <p style={{ margin: 0 }}>填写下方信息完成账号绑定。</p>
-            <p style={{ margin: 0 }}>
-              如果系统已存在匹配的历史账号, 将自动关联并继承战绩, 否则会注册一个全新雀士档案。
-            </p>
+        <div className="profile-card profile-card-warning profile-claim-card">
+          <h3>🎯 完善账号</h3>
+          <div className="profile-claim-hint">
+            <p>填写下方信息完成账号绑定。</p>
+            <p>如果系统已存在匹配的历史账号, 将自动关联并继承战绩, 否则会注册一个全新雀士档案。</p>
           </div>
 
-          <form onSubmit={handleSetupSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <form onSubmit={handleSetupSubmit} className="profile-claim-form">
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '12px',
-                  color: 'var(--text-muted)',
-                  fontWeight: 600,
-                  marginBottom: '6px',
-                }}
-              >
-                用户名
-              </label>
+              <label className="profile-field-label">用户名</label>
               <input
                 type="text"
+                className="profile-field-input"
                 value={setupForm.userName}
                 onChange={(e) => setSetupForm({ ...setupForm, userName: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-muted)',
-                  fontSize: '14px',
-                }}
               />
             </div>
             <div className="claim-name-row">
-              <div style={{ flex: 1 }}>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '12px',
-                    color: 'var(--text-muted)',
-                    fontWeight: 600,
-                    marginBottom: '6px',
-                  }}
-                >
-                  名
-                </label>
+              <div className="claim-name-col">
+                <label className="profile-field-label">名</label>
                 <input
                   type="text"
+                  className="profile-field-input"
                   value={setupForm.firstName}
                   onChange={(e) => setSetupForm({ ...setupForm, firstName: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-muted)',
-                    fontSize: '14px',
-                  }}
                 />
               </div>
-              <div style={{ flex: 1 }}>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '12px',
-                    color: 'var(--text-muted)',
-                    fontWeight: 600,
-                    marginBottom: '6px',
-                  }}
-                >
-                  姓
-                </label>
+              <div className="claim-name-col">
+                <label className="profile-field-label">姓</label>
                 <input
                   type="text"
+                  className="profile-field-input"
                   value={setupForm.lastName}
                   onChange={(e) => setSetupForm({ ...setupForm, lastName: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-muted)',
-                    fontSize: '14px',
-                  }}
                 />
               </div>
             </div>
@@ -428,19 +293,7 @@ export default function ProfilePage() {
                 <span className="alert-body">{setupSuccess}</span>
               </div>
             )}
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                background: 'var(--mj-gold)',
-                color: '#fff',
-                border: 'none',
-                padding: '12px',
-                borderRadius: '8px',
-                fontWeight: 700,
-                cursor: submitting ? 'not-allowed' : 'pointer',
-              }}
-            >
+            <button type="submit" className="profile-claim-submit" disabled={submitting}>
               {submitting ? '处理中...' : '确认提交'}
             </button>
           </form>
