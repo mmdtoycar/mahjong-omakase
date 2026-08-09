@@ -166,33 +166,33 @@ def fit_grid(
 
 CALIBRATION = Path(__file__).resolve().parents[1] / "server/src/main/resources/calibration"
 
-# The four columns of each calibration photo, with the counts that are known by construction. Both
-# photos hold the same set of thirty-four faces plus two tile backs as four columns of nine, so every
-# case here expects nine — which the `blind` column is what saves from being a weak assertion, since a
-# fit that had quietly learned to answer nine would still pass the constrained half.
+# The four rows of each calibration photo, with the counts that are known by construction. Both photos
+# hold the same set of thirty-four faces plus two tile backs as a 4x9 grid, so every case here expects
+# nine — which the `blind` column is what saves from being a weak assertion, since a fit that had
+# quietly learned to answer nine would still pass the constrained half.
 #
 # The pitch is recorded alongside, because the count on its own is weak too: a grid can return the right
-# number of tiles on a pitch that is a few percent out, and every crop then creeps along the column
-# until the last ones straddle two tiles. These are the constrained path's answers on the exact boxes
+# number of tiles on a pitch that is a few percent out, and every crop then creeps along the row until
+# the last ones straddle two tiles. These are the constrained path's answers on the exact boxes
 # slice_calibration.py hands it, and each agrees with (length - offset) / count to within a percent — so
 # they are checkable against the geometry rather than being a snapshot of whatever the code printed.
 #
 # `blind` is what the unconstrained fit should answer — the path a hand photo takes, where the count is
-# unknown. It is not always the truth, and the three cases here that are wrong are worth having: the 条
-# and 饼 columns of the brown photo answer eleven and thirteen because their own repeating detail, bars
-# and rings, runs along the axis being fitted. Recording that keeps the limitation visible and still
-# catches a change to it, which asserting only the constrained path would not — the PITCH_QUANTUM
-# regression this check caught showed up as a wrong *unconstrained* count, and narrowing the candidates
-# to a known count hides exactly that.
+# unknown. It is not always the truth, and the four cases here that are wrong are worth having: a suit
+# whose own design repeats along the row, the rings of 饼 or the bars of 条, litters the profile with
+# spurious marks and pulls the blind fit up to twelve or thirteen. Recording that keeps the limitation
+# visible and still catches a change to it, which asserting only the constrained path would not — the
+# PITCH_QUANTUM regression this check once caught showed up as a wrong *unconstrained* count, and
+# narrowing the candidates to a known count hides exactly that.
 KNOWN = [
-    ("brown column 1", "system_mahjong_calibration.jpg", (173, 364, 204, 1377), True, 9, 150.0, 11),
-    ("brown column 2", "system_mahjong_calibration.jpg", (377, 363, 204, 1377), True, 9, 150.7, 9),
-    ("brown column 3", "system_mahjong_calibration.jpg", (581, 364, 204, 1378), True, 9, 151.3, 13),
-    ("brown column 4", "system_mahjong_calibration.jpg", (785, 361, 204, 1376), True, 9, 151.5, 9),
-    ("green column 1", "system_mahjong_calibration_2.jpg", (98, 105, 272, 1805), True, 9, 197.0, 9),
-    ("green column 2", "system_mahjong_calibration_2.jpg", (370, 110, 272, 1810), True, 9, 198.2, 9),
-    ("green column 3", "system_mahjong_calibration_2.jpg", (642, 120, 272, 1801), True, 9, 195.0, 9),
-    ("green column 4", "system_mahjong_calibration_2.jpg", (914, 120, 272, 1800), True, 9, 196.5, 9),
+    ("brown row 1 (m)", "system_mahjong_calibration.jpg", (156, 86, 1376, 205), False, 9, 151.3, 13),
+    ("brown row 2 (p)", "system_mahjong_calibration.jpg", (159, 291, 1378, 205), False, 9, 151.5, 13),
+    ("brown row 3 (s)", "system_mahjong_calibration.jpg", (158, 496, 1377, 205), False, 9, 151.8, 9),
+    ("brown row 4 (z)", "system_mahjong_calibration.jpg", (159, 701, 1380, 205), False, 9, 151.8, 9),
+    ("green row 1 (m)", "system_mahjong_calibration_2.jpg", (139, 168, 1541, 232), False, 9, 168.7, 9),
+    ("green row 2 (p)", "system_mahjong_calibration_2.jpg", (139, 400, 1545, 232), False, 9, 169.0, 13),
+    ("green row 3 (s)", "system_mahjong_calibration_2.jpg", (141, 633, 1545, 232), False, 9, 169.2, 9),
+    ("green row 4 (z)", "system_mahjong_calibration_2.jpg", (144, 866, 1539, 232), False, 9, 169.5, 12),
 ]
 
 PITCH_TOLERANCE = 0.03  # of the expected pitch

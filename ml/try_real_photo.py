@@ -212,7 +212,19 @@ def classify(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("photo", type=Path)
-    parser.add_argument("--scale", type=float, default=0.25)
+    # A target size rather than a scale factor, because what matters is how many pixels a tile ends up
+    # being, and that follows from the absolute size. This was a fixed 0.25, which suited the 5712px
+    # photo it was written against and silently miscounted a 1280px one — 12 tiles instead of 13, at
+    # 0.55 mean confidence, because each tile came out 31px wide.
+    #
+    # 900 puts a tile at roughly 55px. Both hand photos tried frame the hand about the same way, so the
+    # pitch comes to 6.1% of the long side in both, and this is the one setting that read every tile
+    # correctly with the most of them above the confidence floor. It is close to the classifier's own
+    # 64px input, which is the sense in which it is not arbitrary: shrinking further throws away detail
+    # the model would use, and going much larger only sharpens the crop's edges into features the
+    # synthetic training data does not have. Every setting from 640 to 1707 read this photo correctly,
+    # so the exact number is not delicate — 0.25 was simply far below the range.
+    parser.add_argument("--long-side", type=int, default=900)
     parser.add_argument("--min-tiles", type=int, default=12)
     parser.add_argument("--max-tiles", type=int, default=15)
     # Under data/ rather than /tmp: that directory is this script's own and gitignored, so two runs on
@@ -223,8 +235,11 @@ def main() -> None:
     bgr = cv2.imread(str(args.photo))
     if bgr is None:
         raise SystemExit(f"cannot read {args.photo}")
-    if args.scale != 1.0:
-        bgr = cv2.resize(bgr, None, fx=args.scale, fy=args.scale, interpolation=cv2.INTER_AREA)
+    # Only ever down. Enlarging a photo that is already smaller than this invents no detail and would
+    # push the tiles past the size the model was trained to see.
+    scale = min(1.0, args.long_side / max(bgr.shape[:2]))
+    if scale < 1.0:
+        bgr = cv2.resize(bgr, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
     checkpoint = torch.load(RUNS / "classifier.pt")
     labels = checkpoint["labels"]

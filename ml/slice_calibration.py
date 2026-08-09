@@ -3,24 +3,27 @@
 Everything downstream needs these crops: they are the only images of *these* tile sets that come with
 certain labels, so they seed the synthetic training data for the face classifier.
 
-There are two photos, one per set and table, and both lay the whole set out the same way — four butted
-columns of nine, the tiles a quarter turn over, seven honours and two tile backs filling the last
-column. So one routine reads both, and the only thing that differs is the labels and how dark the
-background is.
+There are two photos, one per set and table, and both lay the whole set out as a 4x9 grid of upright
+tiles — the three suits in the first three rows, and the seven honours plus the two tile backs in the
+last. So one routine reads both, and the only thing that differs is how bright the background is.
 
-**The layout is read off the photo, not assumed.** The two sets were arranged independently and agree
-about nothing: the first runs its numbers down the column and its honours 東西南北白發中, the second
-runs them up and its honours 東南西北中發白. The obvious guess — that both use the canonical 東南西北 —
-is wrong for the first one. Both orders here were read back by having the classifier name all 36 cells
-and checking the result was a legal permutation of the set, which is also how the arrangement of a
-re-shot photo should be settled. Nothing in the tables below is derived from anything else, either:
-the one bug this code has had was a derivation, "the low numbers are at the bottom", applied twice so
-that the two reversals cancelled and put 9m at the foot of the column.
+**The layout is read off the photo, not assumed.** Both photos have now been re-shot twice, and the
+arrangement changed each time — four rows, then four columns with the tiles a quarter turn over, then
+four rows again — so the layout lives in a table here rather than in the shape of the code. The honours
+order is the part worth spelling out: it runs 東西南北白發中, *not* the canonical 東南西北, and one of
+the two sets used a different order before it was re-shot. Guessing it mislabels four classes silently.
 
-The columns are butted, so they are divided evenly. The rows within a column are not: the block's
-extent overstates them, because the row nearest the camera shows its front bevel as well as its face,
-and dividing that evenly walks every boundary down the column until the last crop straddles two tiles.
-So the rows come from a periodic fit — see grid_fit.py — told how many to expect.
+Each layout was read back by having the classifier name all 36 cells and checking the answer is a legal
+permutation of the set — each of the 34 faces exactly once, plus the backs. Using a model trained before
+the photos were replaced makes that an independent check rather than a circular one, and it is how the
+next re-shoot should be settled too.
+
+Within the grid, the four rows come from dividing the block evenly, and the nine cells of each row from
+a periodic fit — see grid_fit.py. That split is not arbitrary. Nine tiles give a row eight interior
+boundaries to fit, which is plenty; four tiles give a column three, and fitting the vertical axis that
+way is visibly unstable — across the nine column strips of one photo it answered pitches from 190 to
+215 and twice claimed three tiles instead of four. Dividing evenly instead leans on the block's extent,
+which is the strongest thing known about the vertical axis: four butted rows *are* the block's height.
 
 Leftover background matters more than the small amount of it suggests, because there are only two
 source images per class — so any artefact that survives is a *near-perfect* cue for that class, and one
@@ -49,51 +52,33 @@ CALIBRATION = ROOT / "server/src/main/resources/calibration"
 OUT = Path(__file__).resolve().parent / "data"
 
 
-def ascending(suit: str) -> list[str]:
-    """The suit as it reads top to bottom when the low numbers are at the top."""
-    return [f"{n}{suit}" for n in range(1, 10)]
-
-
-def descending(suit: str) -> list[str]:
-    return [f"{n}{suit}" for n in range(9, 0, -1)]
-
-
 class Photo(NamedTuple):
-    """One calibration photo: its columns left to right, each labelled top to bottom."""
+    """One calibration photo: its rows top to bottom, each labelled left to right."""
 
     name: str
     source: str
-    columns: list[list[str]]
+    rows: list[list[str]]
     # A tile back is admitted on lightness alone rather than being required to be neutral, because one
-    # of them is strongly coloured: on the green table it measures a chroma of 48, further from grey
-    # than the felt is. Only needed where the background is dark enough for that to be safe, which is
-    # why the brown photo leaves it off — see TILE_LIGHTNESS.
+    # of them is strongly coloured: on the green table it measures L 118 with a chroma of 52, further
+    # from grey than the felt around it, and the face threshold keeps none of it. Only usable where the
+    # background is dark enough — on the brown photo the wall behind the tiles reaches L 150, so
+    # relaxing chroma there swallows the whole frame, and both of its backs clear the face threshold
+    # anyway.
     back_lightness: int | None
 
 
+# Both photos currently agree on this. Kept as one table because they do, and named per photo because
+# they have not always: whichever is re-shot next has to be re-read, not assumed to match the other.
+LAYOUT = [
+    [f"{n}m" for n in range(1, 10)],  # 一萬 to 九萬
+    [f"{n}p" for n in range(1, 10)],  # 1饼/筒 to 9饼/筒
+    [f"{n}s" for n in range(1, 10)],  # 1条/索 to 9条/索
+    ["1z", "3z", "2z", "4z", "7z", "6z", "5z", BACK, BACK],  # 東西南北白發中, then the two backs
+]
+
 PHOTOS = [
-    Photo(
-        name="system_mahjong_calibration.jpg",
-        source="brown",
-        columns=[
-            ["1z", "3z", "2z", "4z", "7z", "6z", "5z", BACK, BACK],  # 東西南北白發中
-            ascending("s"),
-            ascending("p"),
-            ascending("m"),
-        ],
-        back_lightness=None,
-    ),
-    Photo(
-        name="system_mahjong_calibration_2.jpg",
-        source="green",
-        columns=[
-            descending("m"),
-            descending("s"),
-            descending("p"),
-            [BACK, BACK, "7z", "6z", "5z", "4z", "3z", "2z", "1z"],  # 白發中北西南東
-        ],
-        back_lightness=110,
-    ),
+    Photo("system_mahjong_calibration.jpg", "brown", LAYOUT, back_lightness=None),
+    Photo("system_mahjong_calibration_2.jpg", "green", LAYOUT, back_lightness=105),
 ]
 
 # A tile face is near-white: bright, and far less coloured than green felt or a brown table. This one
@@ -179,54 +164,58 @@ def extent(mask: np.ndarray, axis: int) -> tuple[int, int]:
     return int(on[0]), int(on[-1]) - int(on[0]) + 1
 
 
+def block(mask: np.ndarray) -> tuple[int, int, int, int]:
+    """The rectangle the grid of tiles occupies.
+
+    Not the largest blob's own bounding box: closing rounds the mask outward, and on one photo it also
+    reached past the last row down to the bottom of the frame. Both axes come from where the mask
+    actually covers the run instead.
+    """
+    count, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=4)
+    if count < 2:
+        sys.exit("no tiles found in the calibration photo")
+    largest = max(range(1, count), key=lambda i: stats[i][4])
+    _, y, _, h = (int(v) for v in stats[largest][:4])
+    left, width = extent(mask[y : y + h], 0)
+    top, height = extent(mask[:, left : left + width], 1)
+    return left, top, width, height
+
+
 def slice_photo(photo: Photo) -> list[tuple[str, np.ndarray, np.ndarray]]:
     """Writes every cell of one photo, returning each crop with the name it was written under."""
     bgr = cv2.imread(str(CALIBRATION / photo.name))
     if bgr is None:
         sys.exit(f"cannot read {CALIBRATION / photo.name}")
     mask = tile_mask(bgr, photo.back_lightness)
-
-    count, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=4)
-    if count < 2:
-        sys.exit(f"no tiles found in {photo.name}")
-    block = max(range(1, count), key=lambda i: stats[i][4])
-    _, y, _, h = (int(v) for v in stats[block][:4])
-    # The block's own bounding box is not the tiles: on the brown photo the mask reaches past the last
-    # row down to the bottom of the frame. Both axes come from the coverage instead.
-    left, width = extent(mask[y : y + h], 0)
-    top, height = extent(mask[:, left : left + width], 1)
+    left, top, width, height = block(mask)
 
     light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
-    column_width = width // len(photo.columns)
+    band = height / len(photo.rows)
     seen: dict[str, int] = {}
     cells = []
-    for index, labels in enumerate(photo.columns):
-        x0 = left + index * column_width
-        # The vertical extent is taken from the column itself, because the block tilts by about a
-        # degree and the four columns do not begin and end together. Where the mask overshoots, that
-        # extent is a whole tile too long and no grid of nine fits it; the block's extent is the
-        # fallback. Both photos need this and for opposite columns, so neither choice alone will do.
-        #
-        # Trying them and letting the fit decide is safe because `expect` pins the pitch to within ten
-        # percent of the box divided by nine: a box a tile too long cannot come back with nine tiles.
-        # The mask fails at the tile backs, which figures — they are the two cells least like a face.
-        for box in (extent(mask[:, x0 : x0 + column_width], 1), (top, height)):
-            column = (x0, box[0], column_width, box[1])
-            fit = fit_grid(light, column, vertical=True, expect=len(labels))
+    for index, labels in enumerate(photo.rows):
+        y0 = top + int(index * band)
+        depth = int(band)
+        # The row's horizontal extent is taken from the row itself, so a row shorter than the others is
+        # not divided across bare table. Where the mask overshoots it, no grid of nine fits and the
+        # block's extent is the fallback; letting the fit decide is safe because `expect` pins the pitch
+        # to within ten percent of the box divided by nine, so a box a tile too long cannot answer nine.
+        for span in (extent(mask[y0 : y0 + depth], 0), (left, width)):
+            fit = fit_grid(light, (span[0], y0, span[1], depth), vertical=False, expect=len(labels))
             if fit is not None and fit[2] == len(labels):
-                pitch, offset, row_top = fit[0], fit[1], box[0]
+                pitch, offset, x_start = fit[0], fit[1], span[0]
                 break
         else:
-            sys.exit(f"{photo.name} column {index + 1}: no grid of {len(labels)} tiles fits it")
-        for row, label in enumerate(labels):
-            y0 = row_top + int(offset + row * pitch)
+            sys.exit(f"{photo.name} row {index + 1}: no grid of {len(labels)} tiles fits it")
+        for column, label in enumerate(labels):
+            x0 = x_start + int(offset + column * pitch)
             box = (
-                slice(y0 + NEIGHBOUR_EDGE, y0 + int(pitch) - NEIGHBOUR_EDGE),
-                slice(x0 + NEIGHBOUR_EDGE, x0 + column_width - NEIGHBOUR_EDGE),
+                slice(y0 + NEIGHBOUR_EDGE, y0 + depth - NEIGHBOUR_EDGE),
+                slice(x0 + NEIGHBOUR_EDGE, x0 + int(pitch) - NEIGHBOUR_EDGE),
             )
             crop, piece = bgr[box], mask[box]
             if crop.size == 0:
-                sys.exit(f"{photo.name} column {index + 1} row {row + 1}: empty crop")
+                sys.exit(f"{photo.name} row {index + 1} column {column + 1}: empty crop")
             rows, columns = trim(piece > 0)
             crop, piece = crop[rows, columns], piece[rows, columns] > 0
             seen[label] = seen.get(label, 0) + 1
@@ -235,7 +224,7 @@ def slice_photo(photo: Photo) -> list[tuple[str, np.ndarray, np.ndarray]]:
             source = f"{photo.source}{seen[label]}"
             write_variant(label, source, crop, piece)
             cells.append((f"{label}/{source}", crop, piece))
-        print(f"{photo.name} column {index + 1}: x {x0}, pitch {pitch:.1f}px, {len(labels)} tiles")
+        print(f"{photo.name} row {index + 1}: y {y0}, pitch {pitch:.1f}px, {len(labels)} tiles")
     return cells
 
 

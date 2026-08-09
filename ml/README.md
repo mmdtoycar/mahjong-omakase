@@ -5,7 +5,8 @@ Experiment to replace the Gemini photo-recognition call with a small local model
 Recognition currently takes 11–24s through the API and can fail on quota, model overload, or the
 gateway timeout. The classifier here runs in **0.93ms per tile on CPU** — some 15ms of inference for a
 whole hand — with none of those failure modes. Naming the tiles is the cheap half: finding them costs
-more, and the last end-to-end measurement on a real photo was 699ms.
+more, and reading a whole photo end to end measures **~490ms**, three quarters of it in the alignment
+refinement.
 
 ## Setup
 
@@ -52,25 +53,28 @@ written invented tiles into the score sheet. `back` is the face-down tile, which
 **2. Reading a real photo** — works, and needed no trained detector
 
 ```bash
-.venv/bin/python try_real_photo.py /tmp/hand.png
+.venv/bin/python try_real_photo.py data/test_hand.jpg
 ```
 
-On the first real photo tried — a table the model had never seen, green felt instead of brown wood,
-every tile at 90 degrees — it finds the hand, works out that there are 13 tiles, and **names all 13
-correctly**. Fully automatic: no region, count or pitch supplied.
+On `data/test_hand.jpg` — a 13-tile standing hand at the edge of a green table, every tile a quarter
+turn over, with a discard pile and the table's plastic housing also in frame — it finds the hand, works
+out that there are 13 tiles, and **names all 13 correctly**. Fully automatic: no region, count or pitch
+supplied. The discard pile is rejected before the classifier is asked anything, on the grounds that its
+spacing is 243% of the hand's and so cannot be the same tiles.
 
-That reading was with the crops and model as they stood before the first calibration photo was re-shot,
-and **has not been repeated since**: the photo itself is gone, so the current model's only real-photo
-evidence is the cross-lighting check further down. Re-shooting a hand and running this is the first
-thing worth doing here — `data/hand_read.png` is the previous model's annotated output to compare
-against.
+The reading is not delicate. Every input size from 640px to 1707px on the long side gave the same 13
+labels; only the old fixed `--scale 0.25` default failed, and it failed by miscounting rather than
+mislabelling — at 31px a tile, it found 12 tiles at 0.55 mean confidence. That default is now a target
+long side instead, for the reasons in the flag's comment.
+
+What it does *not* yet have is a photo containing 副露 or a 暗杠, so the meld path has never been run
+against real data. That is the gap worth closing next.
 
 The staged plan assumed this needed a trained detector and a few dozen labelled photos. It does not.
 A hand is a line of butted tiles, bright and nearly colourless against strongly coloured felt, so
-finding candidate lines is a thresholding problem; and the grid within a line is found by sweeping
-start and pitch and keeping whatever the classifier is most confident about. A misaligned crop is half
-of one tile and half of the next, which the classifier is not confident about, so its own confidence
-is the alignment signal.
+finding candidate lines is a thresholding problem; and the grid within a line is found geometrically
+and then nudged by a pixel or two using the classifier. A misaligned crop is half of one tile and half
+of the next, which the classifier is not confident about, so its own confidence is the alignment signal.
 
 **3. Spatial logic** — concealed vs melds, meld grouping, 暗杠, winning tile. Gemini does this today
 via the prompt; a local model needs it written out.
@@ -82,8 +86,8 @@ has to be right:
 
 | split | per tile | per hand |
 | --- | --- | --- |
-| same distribution as training | 0.9988 | 0.981 |
-| every augmentation range widened | 0.9908 | 0.863 |
+| same distribution as training | 0.9993 | 0.988 |
+| every augmentation range widened | 0.9897 | 0.848 |
 
 **These are not estimates of accuracy on a real photo.** Every image, training and evaluation alike,
 derives from the same 72 crops of two calibration photographs. They measure invariance to the
@@ -101,10 +105,10 @@ On the widened split:
 
 | confidence ≥ | answered | per tile | per hand |
 | --- | --- | --- | --- |
-| 0.0 | 100% | 0.9908 | 0.863 |
-| 0.5 | 98.1% | 0.9958 | 0.934 |
-| **0.8** | **92.0%** | **0.9992** | **0.987** |
-| 0.9 | 81.1% | 0.9997 | 0.995 |
+| 0.0 | 100% | 0.9897 | 0.848 |
+| 0.5 | 98.3% | 0.9961 | 0.940 |
+| **0.8** | **92.4%** | **0.9988** | **0.981** |
+| 0.9 | 81.4% | 0.9999 | 0.998 |
 
 So a threshold of 0.8 answers eleven tiles in twelve and is essentially never wrong on those.
 (Confidence saturates near 0.95 because of the label smoothing, so thresholds above that are not
@@ -112,15 +116,17 @@ meaningful.)
 
 ### The synthetic numbers and the real photo moved in opposite directions
 
-Worth recording, because it is the clearest evidence that the table above is not a deployment
-criterion. Giving each epoch its own augmentation seeds — the training set had been re-drawing the
-same 14k images every epoch — lifted the widened split from 0.9858 to 0.9912 per tile, and per hand
-from 0.796 to 0.869.
+Worth recording, because it is the clearest evidence that the table above is not a deployment criterion.
+This was measured on an earlier model and an earlier hand photo, both since replaced; the numbers below
+are that experiment's, not the current ones.
 
-On the one real photo, the same change left the reading correct at 13 of 13 and **lowered the
-confidences**: tiles at or above 0.8 went from 6 of 13 to 4 of 13. More augmentation variety makes the
-model less sure of itself, which is better calibration on synthetic data and, here, worse coverage on
-the only real data there is. Nine tiles handed back instead of seven is worse to use.
+Giving each epoch its own augmentation seeds — the training set had been re-drawing the same 14k images
+every epoch — lifted the widened split from 0.9858 to 0.9912 per tile, and per hand from 0.796 to 0.869.
+
+On the real photo, the same change left the reading correct at 13 of 13 and **lowered the confidences**:
+tiles at or above 0.8 went from 6 of 13 to 4 of 13. More augmentation variety makes the model less sure
+of itself, which is better calibration on synthetic data and, there, worse coverage on the only real
+data that existed. Nine tiles handed back instead of seven is worse to use.
 
 Neither figure is wrong. They measure different things, and only the second one is about photographs.
 
@@ -141,49 +147,66 @@ Those failures come with low confidence, which is why the threshold above works.
 ## The two tile sets
 
 There are two mahjong tables and a set of tiles for each, with a calibration photo of each set. Both
-lay the whole set out the same way — four butted columns of nine, the tiles a quarter turn over, seven
-honours and two tile backs filling the last column — so one routine slices both, and every class has
-two appearances rather than one.
+now lay the whole set out the same way — a 4x9 grid of upright tiles, the three suits in the first three
+rows and the seven honours plus two tile backs in the last — so one routine slices both, and every class
+has two appearances rather than one.
 
-What the two photos do *not* share is the arrangement or the light. One runs its numbers down the
-column, the other up; one orders its honours 東西南北白發中 and the other 東南西北中發白, so the canonical
-order is not a safe guess for either. Nor is one threshold obviously going to fit both: the brown
-photo's surroundings sit at L 66 with a chroma of 24, the green one's at L 32 and chroma 8, and each
-photo carries a tile back that is nothing like a face — one of them at L 124 with a chroma of 48,
-further from grey than the felt around it. One face threshold does cover both (L above 150, chroma
-below 30); the coloured back needs a per-photo exception.
+"Now" is doing work in that sentence. Both photos have been re-shot twice, and the arrangement changed
+each time: four rows, then four columns with the tiles a quarter turn over, then four rows again. The
+honours order has also differed *between* the two sets in the past. It currently runs 東西南北白發中 in
+both, which is **not** the canonical 東南西北 — guessing it mislabels four classes, and nothing would
+complain.
 
-Neither the layout nor the labels are assumed anywhere. Both were read back by having the classifier
-name all 36 cells of a photo and checking the answer is a legal permutation of the set — each of the 34
-faces exactly once, plus the backs. That is also how a re-shot photo should be settled.
+So the layout lives in a table in `slice_calibration.py`, and each version of it was read back by having
+the classifier name all 36 cells and checking the answer is a legal permutation of the set: each of the
+34 faces exactly once, plus the backs. Doing that with a model trained *before* the photos were replaced
+is what makes it an independent check rather than a circular one.
+
+The two backgrounds still need one threshold apiece to be separated from the tiles. A face is bright and
+nearly colourless (L above 150, chroma below 30) in both, but the blue tile back of set 2 measures L 118
+at a chroma of 52 — further from grey than the felt around it — so it has to be admitted on lightness
+alone. That relaxation is per photo, not global: the wall behind set 1's tiles reaches L 150, and
+applying it there swallows the whole frame.
 
 ### Cross-lighting generalisation, measured
 
-`system_mahjong_calibration.jpg` was re-shot partway through this work: a new photo of the same set,
-under different light, in a different layout, with that set's tile backs added. That makes an unusually
-clean test, because a classifier trained before the swap had never seen any of it.
+The re-shoots make an unusually clean test, because a classifier trained on the previous pair of photos
+had never seen any of the new ones — different light, different layout, and in one case a set of tile
+backs it had no example of.
 
-It named **34 of 34 faces correctly**, at 0.67 to 0.97 confidence, and returned `none` for both tile
-backs — which is right, since the set it was trained on had no back of its own. It also settled the
-honours as 東西南北白發中, which is not the canonical 東南西北 and would have been mislabelled by guessing.
+Measured twice, and the faces held both times:
 
-So the answer to whether one lighting condition transfers to another is yes, on the evidence available.
-The earlier direction was checked the same way and agreed on 32 of 36, its four disagreements all low
-confidence and all bad crops rather than wrong labels.
+- The first replacement was read at **34 of 34 faces correct**, 0.67 to 0.97 confidence.
+- The second replaced *both* photos, and the model trained on the first pair named **all 68 faces
+  correctly**, at a minimum confidence of 0.91.
 
-Set 2 also settles a smaller question. Its 3m is placed upside down, and the model read it at 0.95
-anyway — orientation is trained out, since all four quarter turns of a face are one class. That is
-also why a photo whose every tile lies at 90 degrees reads correctly.
+The tile backs are a separate story and are covered under the weak spots below. Both checks scored them
+by ranking the tile classes only, which flatters them: it asks whether `back` beats the other 34 faces,
+not whether it beats `none`, and against `none` it often does not.
+
+Set 2 also settled a smaller question along the way. One of its 3m photos was placed upside down, and
+the model read it at 0.95 anyway — orientation is trained out, since all four quarter turns of a face
+are one class. That is also why `test_hand.jpg`, whose every tile lies at 90 degrees, reads correctly.
 
 ## Known weak spots
 
-The 萬 suit, where the difference between faces is a stroke count: on the widened split the confusions
-are `2m->1m`, `3m->2m` and back again. Those come with low confidence, which is why the threshold above
-works.
+**`back` does not work, and this is the one that matters.** The current model, asked about the four back
+crops it was itself trained on, calls three of them `none` — at 0.62, 0.65 and 0.84. `back->none` is
+also the most common failure on the widened split. Since `back` is the entire basis for telling a 暗杠
+from a 明杠, and that changes the score, the meld path cannot be trusted until this is fixed.
 
-`back->none` also appears, which is new — the two sets' backs are four quite different images (two
-colours, two lightings) under one label, and it is the class with the least to go on.
+The likely cause, stated as a hypothesis rather than a finding: a tile back is a bright, almost
+featureless rectangle with a faint pattern, and `sample_negative` deliberately generates bright
+featureless patches as `none`. At 64px those two are close to the same image, and `none` has orders of
+magnitude more variety behind it than `back`'s four appearances, so it wins. Two ways out — narrow the
+negative class away from bright plain fields, or photograph more backs — and the second is likely worth
+more, since four images across two colours is very little to generalise from.
 
-發 (6z) read at 0.34-0.53 on the one real hand photo tried, correct but under any sensible threshold.
-Green ink on an off-white tile under green felt is the least well covered part of the synthetic
-distribution. **Unverified against the current model** — see the note in stage 2.
+**發 (6z), confirmed on real data.** It reads 0.55–0.72 on `test_hand.jpg` — correct all three times it
+appears, but under the 0.8 floor, so all three would be handed back. The synthetic failures point at the
+same thing from the other side: `7s->6z` and `6s->6z` are among the most common confusions, so green ink
+on off-white is being confused *both ways* between the 發 character and a field of bamboo bars. That is
+one weakness, not two.
+
+**The 萬 suit**, where the difference between faces is a stroke count: `2m->1m` and `3m->2m` on the
+widened split. Those come with low confidence, which is why the threshold works.

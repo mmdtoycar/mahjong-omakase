@@ -1,7 +1,13 @@
-# Regenerable from the calibration photo and the collected samples — never worth committing.
+# Regenerable from the calibration photos — never worth committing.
 .venv/
-data/
 runs/
 *.pt
 *.onnx
 __pycache__/
+
+# data/ holds the generated crops, masks and contact sheets. Contents rather than the directory itself,
+# so the one thing in there that is an *input* can be kept: test_hand.jpg is the only real photograph
+# the end-to-end read is checked against, and it cannot be regenerated. The previous one lived in /tmp,
+# was lost when that was cleared, and took the only real-data result in the README with it.
+data/*
+!data/test_hand.jpg
