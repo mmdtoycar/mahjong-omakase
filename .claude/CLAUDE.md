@@ -78,16 +78,23 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - If you catch yourself writing a second version of something that already exists, stop — that's the overdesign smell. Reuse instead.
 - Do the requested change and nothing more. No speculative variants, no adjacent "improvements."
 
-## 7. Touch First — No Hover, No Pointer Cursor
+## 7. Mobile First — iPhone and iPad Are the Product
 
-**The app is used on iPhone and iPad. Neither has a mouse pointer.**
+**This app is used on iPhone and iPad. Optimise for those; desktop is incidental.**
+
+- When a tradeoff has to be made, mobile wins: touch target size, one-column layouts, narrow-screen
+  legibility, payload size over a phone connection.
+- Verify against a narrow viewport before calling something done, not after.
+- Desktop-only affordances are not features. They are weight.
+
+**Concretely: no `:hover`, no `cursor: pointer`.** Neither device has a mouse pointer.
 
 - Do NOT write `:hover` styles, and do NOT write `cursor: pointer` (in CSS or in a `style={{}}`).
 - Anything that only appears or only becomes legible on hover is **invisible** on the primary devices.
   A control revealed by `:hover` is a control that does not exist there.
-- Use `:active` for press feedback instead. That is the one state a touch device does have.
-- Native `<button>` and `<a>` already respond to a tap; a `<div>`/`<tr>` with `onClick` needs
-  `:active` if it needs feedback at all.
+- Do NOT replace a removed `:hover` with an `:active` — that adds an effect the primary devices never
+  had. Press feedback earns its place only when the tap produces no immediately visible result, and a
+  spinner or a disabled state is usually the better answer there.
 
 ---
 
