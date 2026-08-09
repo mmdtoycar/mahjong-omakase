@@ -11,9 +11,9 @@ pitch and offset directly. The count then follows from the length. No inference 
 
 Three things about this were learned the hard way, each after getting it wrong first:
 
-**A boundary is not always dark.** On the brown-table calibration photo the tiles are pressed so close
-that what separates two of them is the *lit bevel* of the next one — brighter than the face beside it.
-Looking only for dips read three of its four rows wrong. Both minima and maxima are collected.
+**A boundary is not always dark.** The tiles of a calibration photo are pressed so close that what
+separates two of them is the *lit bevel* of the next one — brighter than the face beside it. Looking
+only for dips gets six of the eight columns below wrong. Both minima and maxima are collected.
 
 **Autocorrelation is not precise enough.** It looked like the obvious tool and returned a pitch of 81
 against a true 86.9 on the real photo. Six percent compounds over thirteen tiles into most of a tile,
@@ -25,9 +25,13 @@ nine tiles. With the tolerance scaled to the pitch, a 3-tile grid over that row 
 36px and caught 13 marks on 4 grid lines, tying the true 9-tile grid. Hence MAX_MARKS_PER_LINE: a
 boundary should account for about one mark, and a grid claiming three each is not describing tiles.
 
-Run `python grid_fit.py` to check all of this against the two calibration photos, whose tile counts
-are known. The margin on the last of those rules is thin — 1.4 passes and 1.5 does not — so the check
-exists to catch the next change that quietly breaks it.
+Run `python grid_fit.py` to check all of this against the two calibration photos, whose tile counts are
+known. Only the first of the three is still pinned by them: the run that forced the third was a row of
+a calibration photo that has since been re-shot in a different layout, and on the photos as they now
+stand MAX_MARKS_PER_LINE can be loosened to 2.0, or PITCH_QUANTUM coarsened five times, with all eight
+columns still read correctly. Both constants stay as they are — the evidence for them was real and this
+check simply no longer reaches it, which is not the same as their being unnecessary. The reading of a
+real hand photo does still depend on them, and it is not a fixture here.
 """
 
 import sys
@@ -48,9 +52,10 @@ MIN_SEPARATION = 0.45  # of the smallest plausible pitch; closer extrema are the
 FIT_TOLERANCE = 0.12  # of the pitch, for a mark to count as explained by a grid line
 MAX_MARKS_PER_LINE = 1.4  # above this the grid is too coarse to be describing tile boundaries
 # Candidate pitches are rounded to this before searching, which collapses a couple of thousand
-# near-duplicates and takes the fit from 450ms to 40ms. Not coarser than this: at half a pixel the
-# 萬 row of the brown photo starts answering fourteen tiles instead of nine, which is what the
-# self-check below is for — the speed-up was written first and this caught it.
+# near-duplicates and takes the fit from 450ms to 40ms. Not coarser than this: at half a pixel the 萬
+# row of a calibration photo started answering fourteen tiles instead of nine — the speed-up was written
+# first and the self-check below caught it. That photo has since been re-shot as columns and no longer
+# reaches the failure, so the check no longer guards this; see the note at the end of the docstring.
 PITCH_QUANTUM = 0.1
 
 
@@ -100,9 +105,9 @@ def fit_grid(
 
     `expect` narrows the candidate pitches to those that would produce that many tiles. It is for
     callers that know the answer by construction — slicing a calibration photo whose layout is fixed —
-    and is not a substitute for the search: the 条 suit is itself a row of vertical bars, and on the
-    green photo, where the tiles lie a quarter turn over so those bars run along the axis being fitted,
-    the unconstrained fit answers thirteen tiles instead of nine.
+    and is not a substitute for the search: a suit whose own design repeats along the axis being fitted,
+    the bars of 条 or the rings of 饼, litters the profile with marks, and two of the eight calibration
+    columns come back with eleven and thirteen tiles when the count is not supplied.
     """
     x, y, w, h = box
     length, across = (h, w) if vertical else (w, h)
@@ -161,30 +166,33 @@ def fit_grid(
 
 CALIBRATION = Path(__file__).resolve().parents[1] / "server/src/main/resources/calibration"
 
-# Rows of the brown-table photo and columns of the green-felt one, with the counts that are known by
-# construction. The 7-tile row matters: it is the one case where the count differs from the others, so
-# it catches a fit that has quietly learned to answer nine.
+# The four rows of each calibration photo, with the counts that are known by construction. Both photos
+# hold the same set of thirty-four faces plus two tile backs as a 4x9 grid, so every case here expects
+# nine — which the `blind` column is what saves from being a weak assertion, since a fit that had
+# quietly learned to answer nine would still pass the constrained half.
 #
-# The pitch is recorded alongside, because the count on its own is a weak assertion: a grid can return
-# the right number of tiles on a pitch that is a few percent out, and every crop then creeps along the
-# row until the last ones straddle two tiles. These are the constrained path's answers, which is what
-# the slicer uses, and each agrees with (length - offset) / count to within a percent — so they are
-# checkable against the geometry rather than being a snapshot of whatever the code printed.
+# The pitch is recorded alongside, because the count on its own is weak too: a grid can return the right
+# number of tiles on a pitch that is a few percent out, and every crop then creeps along the row until
+# the last ones straddle two tiles. These are the constrained path's answers on the exact boxes
+# slice_calibration.py hands it, and each agrees with (length - offset) / count to within a percent — so
+# they are checkable against the geometry rather than being a snapshot of whatever the code printed.
+#
 # `blind` is what the unconstrained fit should answer — the path a hand photo takes, where the count is
-# unknown. It is not always the truth: the 条 column of the green photo answers thirteen instead of
-# nine, because those tiles lie a quarter turn over and the bamboo runs along the axis being fitted.
-# Recording that keeps the limitation visible and still catches a change to it, which asserting only
-# the constrained path would not: the PITCH_QUANTUM regression that this check caught showed up as a
-# wrong *unconstrained* count, and narrowing the candidates to a known count hides exactly that.
+# unknown. It is not always the truth, and the four cases here that are wrong are worth having: a suit
+# whose own design repeats along the row, the rings of 饼 or the bars of 条, litters the profile with
+# spurious marks and pulls the blind fit up to twelve or thirteen. Recording that keeps the limitation
+# visible and still catches a change to it, which asserting only the constrained path would not — the
+# PITCH_QUANTUM regression this check once caught showed up as a wrong *unconstrained* count, and
+# narrowing the candidates to a known count hides exactly that.
 KNOWN = [
-    ("brown row 1 (萬)", "system_mahjong_calibration.jpg", (43, 37, 1018, 149), False, 9, 113.0, 9),
-    ("brown row 2 (饼)", "system_mahjong_calibration.jpg", (41, 186, 1030, 155), False, 9, 112.0, 9),
-    ("brown row 3 (条)", "system_mahjong_calibration.jpg", (32, 341, 1044, 158), False, 9, 113.5, 9),
-    ("brown row 4 (字)", "system_mahjong_calibration.jpg", (27, 499, 829, 156), False, 7, 118.2, 7),
-    ("green column 1", "system_mahjong_calibration_2.jpg", (99, 0, 271, 1924), True, 9, 204.5, 9),
-    ("green column 2", "system_mahjong_calibration_2.jpg", (370, 0, 271, 1924), True, 9, 207.0, 13),
-    ("green column 3", "system_mahjong_calibration_2.jpg", (641, 0, 271, 1924), True, 9, 207.0, 9),
-    ("green column 4", "system_mahjong_calibration_2.jpg", (912, 0, 271, 1924), True, 9, 204.5, 9),
+    ("brown row 1 (m)", "system_mahjong_calibration.jpg", (156, 86, 1376, 205), False, 9, 151.3, 13),
+    ("brown row 2 (p)", "system_mahjong_calibration.jpg", (159, 291, 1378, 205), False, 9, 151.5, 13),
+    ("brown row 3 (s)", "system_mahjong_calibration.jpg", (158, 496, 1377, 205), False, 9, 151.8, 9),
+    ("brown row 4 (z)", "system_mahjong_calibration.jpg", (159, 701, 1380, 205), False, 9, 151.8, 9),
+    ("green row 1 (m)", "system_mahjong_calibration_2.jpg", (139, 168, 1541, 232), False, 9, 168.7, 9),
+    ("green row 2 (p)", "system_mahjong_calibration_2.jpg", (139, 400, 1545, 232), False, 9, 169.0, 13),
+    ("green row 3 (s)", "system_mahjong_calibration_2.jpg", (141, 633, 1545, 232), False, 9, 169.2, 9),
+    ("green row 4 (z)", "system_mahjong_calibration_2.jpg", (144, 866, 1539, 232), False, 9, 169.5, 12),
 ]
 
 PITCH_TOLERANCE = 0.03  # of the expected pitch

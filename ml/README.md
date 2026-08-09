@@ -1,10 +1,9 @@
 # ml — local tile recognition
 
-Experiment to replace the Gemini photo-recognition call with a small local model.
+Experiment to replace the Gemini photo-recognition call with a small local model. Gemini takes 11–24s and
+can fail on quota, model overload or the gateway timeout; this reads a whole photo in **~490ms** locally.
 
-Recognition currently takes 11–24s through the API and can fail on quota, model overload, or the
-gateway timeout. The classifier here runs in **0.93ms per tile on CPU** — about 15ms for a whole
-hand — with none of those failure modes.
+Not deployed. The server still uses Gemini.
 
 ## Setup
 
@@ -13,143 +12,98 @@ uv venv --python 3.12
 uv pip install -r requirements.txt
 ```
 
-## Stages
-
-**0. Slice the calibration photo** — done
+## Run
 
 ```bash
-.venv/bin/python slice_calibration.py
+.venv/bin/python slice_calibration.py             # 6 photos -> 88 labelled crops + masks
+.venv/bin/python train_classifier.py              # ~30 min on an M2 Pro
+.venv/bin/python try_real_photo.py hand.jpg       # read a hand end to end
+.venv/bin/python try_real_photo.py --self-check   # the meld logic
+.venv/bin/python grid_fit.py                      # the grid fit, against known tile counts
+.venv/bin/python inspect_failures.py --hard        # look at what it gets wrong
 ```
 
-Writes 34 labelled tile faces to `data/faces/`, a cut-out mask for each to `data/masks/`, and
-`data/faces_contact_sheet.png` to eyeball the cut in one look. It also prints an edge audit, because
-every problem found in this routine was spotted by eye first.
+The classifier is 467k parameters, 64px input, 36 classes — the 34 faces, `back` for a face-down tile, and
+`none` for anything that is not one tile face. Exported to `runs/classifier.onnx`, 1.9MB. Trained purely on
+synthetic data augmented from the crops; no hand photos needed.
 
-Getting the boxes clean took several passes — see the script docstring. Worth the effort because
-there is only one source image per class, so any leftover neighbour or table is a *perfect* cue for
-that class and the classifier will use it instead of the tile pattern.
+`none` and `back` both earn their place. Without `none` the model is closed-set and reads felt or the
+table's plastic housing as some tile above 0.8 confidence. Without `back` a 暗杠 cannot be told from a
+明杠, which changes the score.
 
-**1. Face classifier (35 classes)** — done
+## What works, on real photos
 
-```bash
-.venv/bin/python synthesize.py          # sample sheets, to check the data by eye
-.venv/bin/python train_classifier.py    # ~11 min on an M2 Pro
-.venv/bin/python inspect_failures.py --hard
-```
+- **Reading a standing hand.** 13 of 13 correct on the one hand photo tried, fully automatic — no region,
+  count or pitch supplied. Same 13 labels at every input size from 640px to 1707px.
+- **Rejecting what is not the hand.** The discard pile is thrown out before the classifier is asked
+  anything, on the grounds that its tile spacing is 243% of the hand's.
+- **Cross-lighting and cross-layout.** Both calibration photos have been re-shot twice. A model trained on
+  the previous pair read all 68 faces of the new pair correctly, minimum confidence 0.91 — data it had
+  never seen.
+- **Tile backs.** All 20 back crops correct, 0.63–0.97.
 
-467k parameters, 64px input, exported to `runs/classifier.onnx` (1.9MB, single file). Trained purely
-on synthetic data augmented from the 34 crops; no real photos needed.
+That hand photo is one photo. 13 of 13 is encouraging, not a validated system.
 
-The 35th class is `none`, for everything that is not one tile face. Without it the classifier is
-closed-set: it has to answer with one of the 34, so felt, the plastic housing of the mahjong table and
-a misaligned crop all come back as some tile, often above 0.8 confidence. Reading a real photo failed
-on exactly that — the housing scored better than the hand — and in production it would have written
-invented tiles into the score sheet.
+## What does not
 
-**2. Reading a real photo** — works, and needed no trained detector
-
-```bash
-.venv/bin/python try_real_photo.py /tmp/hand.png
-```
-
-On the first real photo tried — a table the model had never seen, green felt instead of brown wood,
-every tile at 90 degrees — it finds the hand, works out that there are 13 tiles, and **names all 13
-correctly**. Fully automatic: no region, count or pitch supplied.
-
-The staged plan assumed this needed a trained detector and a few dozen labelled photos. It does not.
-A hand is a line of butted tiles, bright and nearly colourless against strongly coloured felt, so
-finding candidate lines is a thresholding problem; and the grid within a line is found by sweeping
-start and pitch and keeping whatever the classifier is most confident about. A misaligned crop is half
-of one tile and half of the next, which the classifier is not confident about, so its own confidence
-is the alignment signal.
-
-**3. Spatial logic** — concealed vs melds, meld grouping, 暗杠, winning tile. Gemini does this today
-via the prompt; a local model needs it written out.
+- **副露 and 暗杠 have never been run against a real photo**, because none has been taken. `--self-check`
+  covers every decision made once a meld is found, but nothing about whether one would be found.
+- **發 (6z)** reads *correctly* but at 0.41–0.63, under the review threshold. Confused both ways with 6s
+  and 7s — green ink against green bars. Ruled out as causes: class similarity (the probability goes to
+  `none`, not to them), blur (發 is the *most* blur-robust class — still 0.87 at 18px, where 北 is 0.25),
+  and crop framing. The measured difference is that its ink washes out to near-neutral grey in the photo
+  (L 109, a\* −3, b\* 0) against L 56–81, a\* −12, b\* +12 in training, which no augmentation covers.
+- **Spatial logic** — concealed vs melds, winning tile, self-draw — is not written for the local model at
+  all. Gemini does it today via the prompt.
+- **There is no real accuracy number.** The figures below are synthetic.
 
 ## Results
 
-Per tile, and the same figure raised to the 16th power, since a hand is about 16 tiles and every one
-has to be right:
-
-| split | per tile | per hand |
+| split | per tile | per 16-tile hand |
 | --- | --- | --- |
-| same distribution as training | 0.9996 | 0.994 |
-| every augmentation range widened | 0.9912 | 0.869 |
+| same distribution as training | 0.9993 | 0.988 |
+| every augmentation range widened | 0.9914 | 0.871 |
 
-**These are not estimates of accuracy on a real photo.** Every image, training and evaluation alike,
-derives from the same 34 crops of one calibration photograph. They measure invariance to the
-augmentations in `synthesize.py` and say nothing about the ways a real photo will differ that were
-not thought of. The widened split is the closest available proxy and is still a proxy. The real
-number comes from stage 2's photos.
+**Not estimates of accuracy on a real photo.** Every image, training and evaluation alike, derives from the
+same 88 crops of six photographs, so these measure invariance to the augmentations in `synthesize.py` and
+nothing about how a real photo will differ. The widened split is the closest proxy available.
 
-### Abstaining beats guessing
+Abstaining beats guessing, since a wrong tile silently changes the score while a flagged one costs a
+glance. On the widened split a 0.8 floor answers 91.7% of tiles at 0.9997 each.
 
-The deployable figure is not raw accuracy but how much the model can answer while being right nearly
-always. A wrong tile is written into the score sheet and quietly changes the result; a tile the model
-declines to name can be handed back to the user, or to Gemini.
+**But 0.8 has never rejected a real error.** On the one real photo it flagged 3–4 *correct* tiles and caught
+none — the photo reads 13 of 13 with no threshold at all. Its benefit is synthetic, its cost is real, and 13
+tiles cannot calibrate it. For the standing hand it is only a label; nothing is dropped. The number should
+come from the collected samples measured against Gemini's answers, which is the offline evaluation still to
+be written.
 
-On the widened split:
+## Things learned the hard way
 
-| confidence ≥ | answered | per tile | per hand |
-| --- | --- | --- | --- |
-| 0.0 | 100% | 0.9912 | 0.869 |
-| 0.5 | 98.2% | 0.9960 | 0.938 |
-| **0.8** | **92.2%** | **0.9989** | **0.982** |
-| 0.9 | 80.5% | 0.9995 | 0.993 |
+Each of these cost real time. The detail is in the code, where it applies.
 
-So a threshold of 0.8 answers seven tiles in eight and is essentially never wrong on those.
-(Confidence saturates near 0.95 because of the label smoothing, so thresholds above that are not
-meaningful.)
+- **Read the layout off the photo; never assume it.** The honours run 東西南北白發中, not the canonical
+  東南西北, and the two sets disagreed before being re-shot. Guessing mislabels four classes silently. Every
+  layout is verified by having a model trained *before* the photos changed name all 36 cells and checking
+  the answer is a legal permutation of the set. See `slice_calibration.py`.
+- **Colour does not survive a change of light; texture does.** The same brown carpet measures chroma 37 in
+  one photo and 11 in another, where the *tile* is the more coloured of the two. Tile backs are found by
+  brightness plus smoothness instead — glossy plastic against fabric. That rule must not be used on faces:
+  engraving is exactly what it measures. See `slice_calibration.py`.
+- **"The model is wrong about its own training data" means look at the input pipeline.** `back` failed on
+  the very crops it was trained on. Not data volume (16 more photos did not fix it) and not resolution
+  (well measured, still wrong) — training pasted tiles with a margin of background while the reader cuts
+  inside the cell, so the model had learnt to expect a border. Twelve of 20 backs read `none` tight; all 20
+  read `back` at 0.94+ with a margin added. See `synthesize.py`.
+- **Validate every candidate before choosing one.** A three-tile 碰 also fits four cells at ¾ of the true
+  pitch, and can score higher. Choosing on score and validating afterwards discards the correct reading.
+  See `choose_meld` in `try_real_photo.py`.
+- **Synthetic scores and real photos move in opposite directions.** Widening the synthetic table-colour
+  range covered a genuine gap, improved every synthetic figure, and halved 發's confidence on the real
+  photo. Sampling near measured colours instead recovered it.
 
-### The synthetic numbers and the real photo moved in opposite directions
+## Next
 
-Worth recording, because it is the clearest evidence that the table above is not a deployment
-criterion. Giving each epoch its own augmentation seeds — the training set had been re-drawing the
-same 14k images every epoch — lifted the widened split from 0.9858 to 0.9912 per tile, and per hand
-from 0.796 to 0.869.
-
-On the one real photo, the same change left the reading correct at 13 of 13 and **lowered the
-confidences**: tiles at or above 0.8 went from 6 of 13 to 4 of 13. More augmentation variety makes the
-model less sure of itself, which is better calibration on synthetic data and, here, worse coverage on
-the only real data there is. Nine tiles handed back instead of seven is worse to use.
-
-Neither figure is wrong. They measure different things, and only the second one is about photographs.
-
-### What the failures turned out to be
-
-Two findings from looking at them rather than tuning against the number:
-
-- **Resolution is not the bottleneck.** 96px scored the same as 64px to within noise, so the 萬 suit
-  is not being lost to downsampling.
-- **Most early failures had unrecoverable labels.** Cropping a few percent into a tile removes the
-  numeral on a 萬 face, which sits at the very top edge, and 1m 2m 3m become the same image. That was
-  label noise, not hard examples. Tightening the crop and occlusion ranges moved the widened split
-  from 0.9799 to 0.9882 per tile, and per hand from 0.723 to 0.828.
-
-What remains is genuinely the 萬 suit — `2m->1m`, `3m->2m` — where the difference is a stroke count.
-Those failures come with low confidence, which is why the threshold above works.
-
-## The two tile sets
-
-There are two mahjong tables and a set of tiles for each, and
-`system_mahjong_calibration_2.jpg` is the second — on green felt, laid out as four columns rather
-than four rows, and including one tile back of each colour.
-
-Whether a classifier trained on the first set reads the second was checked directly, by having it
-predict all 36 tiles of the second photo. It agreed on 32. All four disagreements were low confidence
-and came from bad crops rather than wrong labels: three were the tile at the top of a column, where
-the crop caught a swathe of felt and the model correctly answered `none`. Both tile backs also came
-back `none`, which is what they should be.
-
-Set 2 also settles a smaller question. Its 3m is placed upside down, and the model read it at 0.95
-anyway — orientation is trained out, since all four quarter turns of a face are one class. That is
-also why a photo whose every tile lies at 90 degrees reads correctly.
-
-Still to do: fold set 2's crops into training, so every class has two appearances rather than one and
-the model is pushed toward the pattern rather than the finish of one particular set.
-
-## Known weak spot
-
-發 (6z) reads at 0.34-0.53 on the real photo — correct, but under any sensible threshold it would be
-handed back. Green ink on an off-white tile under green felt is the least well covered part of the
-synthetic distribution. Adding felt-coloured backgrounds helped the rest and not this.
+1. **Photograph a hand with a 副露 and one with a 暗杠.** The only way to validate that path.
+2. **Use the recognition a few times** so `/app/samples` accumulates real photos with Gemini's answers.
+   Comparing the two is the only route to a real accuracy number and to a defensible threshold.
+3. Then 發.

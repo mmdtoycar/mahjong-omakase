@@ -1,15 +1,15 @@
-"""Turns the 34 calibration crops into an endless supply of labelled training images.
+"""Turns the calibration crops into an endless supply of labelled training images.
 
-There is exactly one photograph of each tile face, so the classifier's whole notion of "what a 5s
-looks like" comes from this file. Everything here exists to stop it learning something narrower than
-that — anything constant across the 34 crops is a shortcut it will take, and every shortcut is a way
-for it to score well here and fail on a real photo.
+There are only two photographs of each tile face, so the classifier's whole notion of "what a 5s looks
+like" comes from this file. Everything here exists to stop it learning something narrower than that —
+anything constant across the crops is a shortcut it will take, and every shortcut is a way for it to
+score well here and fail on a real photo.
 
 Two decisions carry most of the weight:
 
 Tiles are pasted onto backgrounds, using the masks, rather than augmented in place. A crop's border
-still holds traces of the calibration photo — the shadow between 9p and 9s, a highlight on 5m the
-crop could not remove without cutting into the 萬 — and pasting replaces all of it.
+still holds traces of the calibration photo — the shadow between two tiles, a highlight the crop could
+not remove without cutting into the 萬 — and pasting replaces all of it.
 
 The backgrounds include other tiles. In a real hand a tile's neighbours are tiles, so a detector's
 box will hold slivers of them; training only against tables or flat colour would leave the
@@ -44,6 +44,20 @@ BACK = "back"
 # A tile is not always upright in a photo, and the classifier is asked to name the face, not the
 # orientation, so all four quarter turns are the same class.
 QUARTER_TURNS = (0, 1, 2, 3)
+
+# Every surface a tile has been photographed on, as BGR medians measured off those photos: the brown wall
+# behind one calibration grid, the same brown carpet under warm and under dull light, and green felt four
+# times over — two calibration photos, a back photo, and the hand photo. See _background for why these
+# are sampled individually rather than folded into one range per colour.
+TABLES = (
+    (56, 82, 128),
+    (51, 95, 145),
+    (84, 99, 113),
+    (37, 46, 22),
+    (34, 82, 74),
+    (50, 56, 30),
+    (96, 126, 81),
+)
 
 
 def load_tiles() -> tuple[list[str], list[list[np.ndarray]], list[list[np.ndarray]]]:
@@ -80,6 +94,7 @@ class Synthesiser:
         seed: int,
         hard: bool,
         size: int = SIZE,
+        labels: list[str] | None = None,
     ):
         self.faces = faces
         self.masks = masks
@@ -88,6 +103,9 @@ class Synthesiser:
         # The harder settings are for evaluation only: pushing every range past what training saw is
         # the closest thing available to an unseen photo, given every image traces to one source.
         self.hard = hard
+        # Which index is the face-down tile, if the caller said. It is the one class that may be cropped
+        # into — see the note on `slack` in sample().
+        self.back = labels.index(BACK) if labels and BACK in labels else None
 
     # ── helpers ────────────────────────────────────────────────────────────
 
@@ -129,18 +147,23 @@ class Synthesiser:
             tiled = cv2.GaussianBlur(tiled, (0, 0), max(self._uniform(1.0, 3.0), 0.1))
             return np.clip(tiled * self._uniform(0.75, 1.0), 0, 255).astype(np.uint8)
         if choice < 8:
-            # A table. Two of them exist, and they are nothing alike: the calibration photo was taken
-            # on brown wood, the real hand photos come off green felt. Guessing only brown left the
-            # classifier reading 發 on green felt at 0.4 confidence when it was in fact correct.
-            if self.rng.random() < 0.5:
-                base = np.array(  # brown, BGR
-                    [self._uniform(40, 90), self._uniform(55, 110), self._uniform(70, 140)]
-                )
-            else:
-                base = np.array(  # green felt, BGR
-                    [self._uniform(50, 105), self._uniform(85, 150), self._uniform(35, 85)]
-                )
-            field = np.full((height, width, 3), base, np.float32)
+            # A table, drawn as one of the surfaces actually photographed plus a jitter.
+            #
+            # This used to be two independent per-channel ranges, one "brown" and one "green", and both
+            # were guessed. The green one was simply wrong: it ran B 50-105, G 85-150, R 35-85, and the
+            # green backgrounds actually measured are (37,46,22), (34,82,74), (50,56,30) and (96,126,81).
+            # Only the last is inside it, so the model had barely been shown a dark green table at all —
+            # the commonest thing behind a real hand.
+            #
+            # Widening the ranges to cover them was the first fix and it made things worse: a box that
+            # holds both (37,46,22) and (96,126,81) also holds a lot of colours no table has, and on the
+            # one real photo it halved the confidence on 發, whose whole problem is green ink against a
+            # green surround. Sampling near a measured colour keeps the coverage and drops the invented
+            # part. The spread within one surface is still represented, because the same brown carpet
+            # appears twice, warm and dull, and the same felt three times.
+            base = np.array(TABLES[int(self.rng.integers(0, len(TABLES)))], np.float32)
+            base = base * self._uniform(0.75, 1.25) + self.rng.uniform(-12, 12, 3)
+            field = np.full((height, width, 3), np.clip(base, 0, 255), np.float32)
             field += self.rng.normal(0, 12, (height, width, 1))
             return np.clip(field, 0, 255).astype(np.uint8)
         flat = np.full((height, width, 3), self._uniform(20, 230), np.float32)
@@ -269,11 +292,20 @@ class Synthesiser:
         ).astype(np.uint8)
 
         # Crop back to roughly the tile, as loosely as a detector would. Slack stays almost entirely
-        # positive: a tight box is realistic, but cropping several percent into the face removes the
-        # numeral on a 萬 tile, which sits right at the top edge, and 1m 2m 3m become the same image.
-        # Inspecting the failures showed most of them were exactly that — samples whose label no
-        # longer follows from the image, which is label noise rather than a hard example.
-        slack = self._uniform(-0.02, 0.18)
+        # positive for a face: a tight box is realistic, but cropping several percent into the face
+        # removes the numeral on a 萬 tile, which sits right at the top edge, and 1m 2m 3m become the
+        # same image. Inspecting the failures showed most of them were exactly that — samples whose
+        # label no longer follows from the image, which is label noise rather than a hard example.
+        #
+        # The face-down tile is the exception, and getting this wrong made the class unusable. A back has
+        # no numeral to lose: cropped into, it is still unmistakably a back. Meanwhile the reader cuts
+        # *inside* each fitted cell, so a real crop of a back shows no background at all — and with slack
+        # almost always positive, nearly every training sample did. The model learnt to expect that
+        # border. Measured on the twenty back crops: presented tight, as the reader presents them, twelve
+        # came back `none`; the same crops with a margin of felt pasted around them scored 0.94 to 0.97
+        # as `back` with `none` at 0.00. The class was fine and the framing was not.
+        low = -0.12 if index == self.back else -0.02
+        slack = self._uniform(low, 0.18)
         cy, cx = top + height / 2, left + width / 2
         half_h, half_w = height / 2 * (1 + slack), width / 2 * (1 + slack)
         y0, y1 = int(max(cy - half_h, 0)), int(min(cy + half_h, canvas_h))
@@ -289,8 +321,8 @@ class Synthesiser:
 
 def contact_sheet(path: Path, labels: list[str], per_label: int = 8, hard: bool = False) -> None:
     """A grid of samples per class, because the only way to trust this is to look at it."""
-    _, faces, masks = load_tiles()
-    synth = Synthesiser(faces, masks, seed=0, hard=hard)
+    names, faces, masks = load_tiles()
+    synth = Synthesiser(faces, masks, seed=0, hard=hard, labels=names)
     cell = SIZE + 4
     sheet = np.full((len(labels) * cell, per_label * cell + 34, 3), 255, np.uint8)
     for row, label in enumerate(labels):

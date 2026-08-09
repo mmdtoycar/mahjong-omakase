@@ -49,11 +49,16 @@ public class TileRecognitionService {
       You will be given TWO images, in order.
 
       IMAGE 1 is a master reference calibration photo of ALL 34 tile faces of this
-      physical mahjong set:
+      physical mahjong set, plus its tile backs. The tiles are upright, in FOUR ROWS
+      of nine. Read each row from LEFT to RIGHT:
         Row 1: 1m to 9m (1万 to 9万)
         Row 2: 1p to 9p (1饼/筒 to 9饼/筒)
         Row 3: 1s to 9s (1条/索 to 9条/索)
-        Row 4: 1z to 7z (东,南,西,北,中,发,白)
+        Row 4: 东,西,南,北,白,发,中 (1z,3z,2z,4z,7z,6z,5z), then 2 face-DOWN tile backs
+
+      NOTE: Row 4 is NOT in the canonical 东南西北 order. It runs 东,西,南,北.
+      The last two cells of Row 4 show what a face-DOWN tile looks like in this set,
+      which is what the two covered tiles of an An-Gang (暗杠) look like.
 
       Use IMAGE 1 ONLY as a visual legend for what each face looks like in this set, in
       any orientation (0° upright, 90° sideways, 180° inverted).

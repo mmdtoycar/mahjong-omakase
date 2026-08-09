@@ -61,7 +61,9 @@ class TileDataset(Dataset):
         target = index % len(self.labels)  # every class equally often
         span = self.seed_high - self.seed_low
         seed = self.seed_low + (index * 2_654_435_761 + self.epoch * 40_960_001) % span
-        synth = Synthesiser(self.faces, self.masks, seed=seed, hard=self.hard, size=self.size)
+        synth = Synthesiser(
+            self.faces, self.masks, seed=seed, hard=self.hard, size=self.size, labels=self.labels
+        )
         image = synth.sample_negative() if target == len(self.faces) else synth.sample(target)
         # BGR uint8 HWC to RGB float CHW, centred on zero.
         rgb = image[:, :, ::-1].astype(np.float32) / 255.0

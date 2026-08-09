@@ -1,36 +1,49 @@
-"""Cuts the 34-face calibration photo into one labelled crop per tile.
+"""Cuts the calibration photos into one labelled crop per tile.
 
-Everything downstream needs these crops: they are the only images of *this* tile set that come with
+Everything downstream needs these crops: they are the only images of *these* tile sets that come with
 certain labels, so they seed the synthetic training data for the face classifier.
 
-Finding the rows takes one non-obvious observation. The tiles are butted together with no gap, so
-there is no dark seam to look for — between two rows the photo is actually *brighter* than a tile
-face, because the lower tile's bevelled top edge catches the light. Those bevels show up as four
-sharp spikes in the vertical lightness profile, one per row, and that is what the rows are found by.
+Six photos, for two sets of tiles on two tables. Two of them are the full sets, each laid out as a 4x9
+grid of upright tiles — the three suits in the first three rows, the seven honours and two tile backs in
+the last. The other four are tile backs only, four butted tiles per file, one file per back colour per
+set, because the backs needed far more examples than the grids gave; see the note in the README.
 
-Within a row the tiles are butted too, so the row is divided by its known tile count and each
-nominal box is then trimmed down to the largest rectangle containing no table. That trimming is not
-cosmetic. The rows tilt by about a degree and the last row is shorter than the rest, so a single
-rectangle per row leaves bare table inside the boxes at the ends of a row: 9s came out with its
-bottom row of bamboo cut off, which would have taught the classifier that a 9s looks like a 6s.
+One routine reads all six. A photo is described by its rows of labels, optionally a quarter turn to get
+those rows the right way round, and which of the two mask rules applies.
 
-Leftover table matters more than the small amount of it suggests, because there is exactly one
-source image per class — so any artefact that survives is a *perfect* cue for that class, and one
-the classifier will happily learn instead of the tile pattern. It would then collapse on real
-photos, which have no such artefact.
+**The layout is read off the photo, not assumed.** Both grid photos have been re-shot twice, and the
+arrangement changed each time — four rows, then four columns with the tiles a quarter turn over, then
+four rows again — so the layout lives in a table here rather than in the shape of the code. The honours
+order is the part worth spelling out: it runs 東西南北白發中, *not* the canonical 東南西北, and one of
+the two sets used a different order before it was re-shot. Guessing it mislabels four classes silently.
 
-A mask is written alongside each crop. Trimming needs it, and so does the synthetic data: pasting a
-cut-out tile onto random backgrounds is what stops the classifier depending on this one table.
+Each layout was read back by having the classifier name all 36 cells and checking the answer is a legal
+permutation of the set — each of the 34 faces exactly once, plus the backs. Using a model trained before
+the photos were replaced makes that an independent check rather than a circular one, and it is how the
+next re-shoot should be settled too.
 
-One thing the audit still reports and should: 9s keeps a dark strip along its top edge. It is not
-table but the shadow where 9p meets it, which the chroma settles — the table runs to a* +13, that
-strip to a* -5. Shadow between touching tiles is in every real photo of a hand, so it stays. Telling
-the two apart by colour was tried and does not work in general anyway: the red 中 of 5z sits at
-a* +12, b* +14, which is the table's colour almost exactly.
+Within a grid, the four rows come from dividing the block evenly, and the nine cells of each row from a
+periodic fit — see grid_fit.py. That split is not arbitrary. Nine tiles give a row eight interior
+boundaries to fit, which is plenty; four tiles give a column three, and fitting the vertical axis that
+way is visibly unstable — across the nine column strips of one photo it answered pitches from 190 to
+215 and twice claimed three tiles instead of four. Dividing evenly instead leans on the block's extent,
+which is the strongest thing known about the vertical axis: four butted rows *are* the block's height.
+
+Leftover background matters more than the small amount of it suggests, because a class has only a
+handful of source images — so any artefact that survives is a near-perfect cue for that class, and one
+the classifier will happily learn instead of the tile pattern. It would then collapse on real photos,
+which have no such artefact. Hence the trim and the edge audit this prints. The contact sheet is still
+the arbiter, though: every problem found in the cut so far was spotted by eye before any check caught
+it, and each check written afterwards caught only the one kind it was written for.
+
+A mask is written alongside each crop, because pasting a cut-out tile onto random backgrounds is what
+stops the classifier depending on these particular tables.
 """
 
+import shutil
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
 import cv2
 import numpy as np
@@ -39,114 +52,93 @@ from grid_fit import fit_grid
 from synthesize import BACK
 
 ROOT = Path(__file__).resolve().parents[1]
-CALIBRATION = ROOT / "server/src/main/resources/calibration/system_mahjong_calibration.jpg"
-CALIBRATION_2 = ROOT / "server/src/main/resources/calibration/system_mahjong_calibration_2.jpg"
+CALIBRATION = ROOT / "server/src/main/resources/calibration"
 OUT = Path(__file__).resolve().parent / "data"
 
-# Row layout of the photo, in the order the tiles appear.
-ROWS = [
+
+class Photo(NamedTuple):
+    """One calibration photo: its rows top to bottom, each labelled left to right."""
+
+    name: str
+    source: str
+    rows: list[list[str]]
+    # Applied before anything else, so `rows` can always describe the photo as rows. The tile-back
+    # photos are single files of four tiles stacked vertically, which is one row once turned. Rotating
+    # costs nothing and loses nothing: all four quarter turns of a face are the same class anyway.
+    quarter_turns: int = 0
+    # Whether the photo shows tile backs rather than faces. It picks which of the two mask rules below
+    # applies, and the two are not interchangeable — see back_mask.
+    blank: bool = False
+    # Only for a photo whose grid contains a tile back too dark for the face rule. On the green table
+    # that back measures L 118 at a chroma of 52, further from grey than the felt around it, so the face
+    # rule keeps none of it — and a cell with an empty mask is worse than no cell at all, because the
+    # synthesiser composites through the mask and would paste pure background under that label.
+    back_lightness: int | None = None
+
+
+# Both calibration photos currently agree on this. Kept as one table because they do, and named per
+# photo because they have not always: whichever is re-shot next has to be re-read, not assumed to match.
+LAYOUT = [
     [f"{n}m" for n in range(1, 10)],  # 一萬 to 九萬
-    [f"{n}p" for n in range(1, 10)],  # 1饼 to 9饼
-    [f"{n}s" for n in range(1, 10)],  # 1条 to 9条
-    [f"{n}z" for n in range(1, 8)],  # 东南西北中發白
+    [f"{n}p" for n in range(1, 10)],  # 1饼/筒 to 9饼/筒
+    [f"{n}s" for n in range(1, 10)],  # 1条/索 to 9条/索
+    ["1z", "3z", "2z", "4z", "7z", "6z", "5z", BACK, BACK],  # 東西南北白發中, then the two backs
 ]
 
-BEVEL_LIGHTNESS = 175  # a lit edge; tile faces sit near 150-190, the table near 100
-MIN_ROW_PITCH = 100  # rows are ~150px apart, so this only ever merges one bevel's own width
-FACE_LIGHTNESS = 130  # a tile face is comfortably above this, bare table well below
+# Four tiles butted in a line, all of them the same back. Two back colours per set, one file each.
+BACK_RUN = [[BACK] * 4]
 
-MASK_LIGHTNESS = 140
+PHOTOS = [
+    Photo("system_mahjong_calibration.jpg", "brown", LAYOUT),
+    Photo("system_mahjong_calibration_2.jpg", "green", LAYOUT, back_lightness=105),
+    Photo("system_mahjong_calibration_back_1.jpg", "brown_cream", BACK_RUN, 1, blank=True),
+    Photo("system_mahjong_calibration_back_2.jpg", "brown_blue", BACK_RUN, 1, blank=True),
+    Photo("system_mahjong_calibration_2_back_1.jpg", "green_blue", BACK_RUN, 1, blank=True),
+    Photo("system_mahjong_calibration_2_back_2.jpg", "green_cream", BACK_RUN, 1, blank=True),
+]
 
-MIN_COVERAGE = 0.9  # a row or column of a crop must be this much tile to be kept
+# A tile face is near-white: bright, and far less coloured than green felt or a brown table.
+TILE_LIGHTNESS = 150
+TILE_CHROMA = 30
 
-
-# The shadow line where one tile meets the next: dark across nearly the whole width, and unbroken.
-# Unbroken is the part that matters. The three circles along the bottom of 9p cover 83% of the width
-# — as much as a seam — but they come in separate pieces, and cutting there would have removed a
-# whole row of circles and left something a classifier would read as 6p.
-SEAM_LIGHTNESS = 170
-SEAM_WIDTH_FRACTION = 0.8
-# Absolute, not a fraction of the height. A neighbour can only reach ~12px in, and searching deeper
-# finds tile markings instead: the bottom bar of 7z's frame sits 18px up and is dark right across,
-# so a wider search cut the frame off, and the bottom row of circles on 9p is 23px up.
-SEAM_SEARCH_PX = 12
-
-# The lit top edge of the tile below, when a slice of it lands at the bottom of a crop. It is
-# brighter than any part of a face — the whitest margin on these tiles averages 205, a bevel 230 —
-# which is the only reason it is separable, since a check for dark intrusion never sees it at all.
-NEIGHBOUR_BEVEL_MEAN = 215
-
-# Two tiles do not meet at a line but across a band of roughly 8-14px: the left tile's lit side, the
-# shadow between them, then the right tile's lit side. Dividing a row evenly puts the cut inside that
-# band, which leaves a strip of the left-hand neighbour along every crop's left edge — visible on the
-# whole 萬 row and on most of the circles. Trimming cannot find it: on the 萬 row the neighbour's lit
-# side is *brighter* than the face beside it and there is no shadow between them at all.
+# For the tile-back photos, brightness plus *smoothness* — glossy plastic against felt or carpet, which
+# are fabric and show their weave. This is the one threshold decision here with real evidence behind it.
 #
-# So the edge is simply inset past the band, on the left and at the bottom, and only where there is a
-# neighbour to inset past: not the first tile of a row, and not the last row, which has table below
-# it that the mask already removed.
+# Colour was the obvious choice and it does not survive a change of light. The same brown carpet measures
+# a chroma of 37 in one back photo and 11 in another; in the second the *tile* is the more coloured of
+# the two, at 42, so "a tile is the less coloured thing" gets that photo exactly backwards. Lightness
+# alone is no better there: the carpet reaches L 147 and the tile starts at 149, a two-unit gap. Otsu
+# merges them outright, because the carpet is genuinely bright. Local variation separates all four with
+# room to spare — a back measures 2 to 6, felt and carpet 4 to 19 — and it is a property of the material
+# rather than of the light, which is why it holds across photos taken hours apart under different lamps.
+# It also admits the strongly coloured blue back with no special case.
 #
-# Not the right edge, though: a crop's right edge already lands on its own tile, and taking 8px off
-# there cuts into the design — the frame of 7z, the bamboo of 5s. Nor the top, where row_tops puts
-# the boundary on the row's own lit bevel and the 萬 characters leave little margin to spare.
+# It does *not* generalise to the faces, and that is not a threshold to be tuned: engraving is exactly
+# what local variation measures. Applied to the calibration grids it kept as little as 4% of a 条 face,
+# and the hole filling could not recover it, because the raised edges of the characters are high-variation
+# too and link the gaps into one region that reaches the border. Blank tiles and engraved tiles are
+# different problems and get different rules.
+BACK_VARIATION = 8
+VARIATION_WINDOW = 9
+
+# Closing joins the faces of a column into one block across the shadow seams between them. It also
+# rounds the block's corners outward by about its own width, which is why the extent below is taken
+# from where the mask covers the run rather than from the blob's bounding box: twenty pixels of drift
+# over four columns is enough to put the last crop on the table.
+CLOSE = 21
+COVERED = 0.5
+
+# Two tiles do not meet at a line but across a band of roughly 8-14px: one tile's lit side, the shadow
+# between them, then the next tile's lit side. A cell boundary lands inside that band, so every edge is
+# inset past it. Uniformly on all four sides — the fit puts the boundaries within a pixel or two, so
+# there is nothing here that needs edge-by-edge treatment.
 NEIGHBOUR_EDGE = 8
 
-
-def tile_mask(bgr: np.ndarray) -> np.ndarray:
-    """True where the photo shows a tile face rather than the table.
-
-    Thresholding lightness finds the white of a face but leaves the engraved characters as holes,
-    and those are not all small — the bird of 1s is wider than any closing kernel that would still
-    be safe to use here. What separates a character from the table is topology rather than size: a
-    character is enclosed by the face around it, while the table reaches the edge of the photo. So
-    every dark region the border cannot reach is filled back in.
-    """
-    light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0]
-    solid = light > MASK_LIGHTNESS
-    _, regions = cv2.connectedComponents((~solid).astype(np.uint8))
-    touching_border = np.unique(
-        np.concatenate([regions[0], regions[-1], regions[:, 0], regions[:, -1]])
-    )
-    return solid | ~np.isin(regions, touching_border)
+# For the trim below: a row or column of a cell has to be this much tile to be kept.
+MIN_COVERAGE = 0.9
 
 
-def row_tops(light: np.ndarray, expected: int) -> list[int]:
-    """The y of each row's lit top edge, as peaks in the vertical lightness profile."""
-    # Sample the left portion only: the shortest row leaves bare table on the right, which would
-    # drag its average down and flatten the peak being looked for.
-    profile = light[:, : int(light.shape[1] * 0.7)].mean(axis=1)
-    peaks: list[int] = []
-    for y in np.flatnonzero(profile > BEVEL_LIGHTNESS):
-        if not peaks or y - peaks[-1] > MIN_ROW_PITCH:
-            peaks.append(int(y))
-        elif profile[y] > profile[peaks[-1]]:
-            peaks[-1] = int(y)
-
-    # Brightness alone cannot tell a row's top edge from the bottom edge of the last row: both are
-    # lit bevels and here they differ by three units of lightness. What separates them is what
-    # follows — a top edge has a tile face under it, a bottom edge has bare table.
-    tops = [y for y in peaks if profile[y + 20 : y + 60].mean() > FACE_LIGHTNESS]
-    if len(tops) != expected:
-        sys.exit(f"expected {expected} row tops, found {len(tops)} in peaks {peaks}")
-    return tops
-
-
-def row_bottom(light: np.ndarray, top: int, next_top: int | None) -> int:
-    """A row ends where the next begins, or for the last row where the table goes dark."""
-    if next_top is not None:
-        return next_top
-    below = light[top + MIN_ROW_PITCH :, : int(light.shape[1] * 0.7)].mean(axis=1)
-    dark = np.flatnonzero(below < BEVEL_LIGHTNESS * 0.5)
-    return top + MIN_ROW_PITCH + int(dark[0]) if dark.size else light.shape[0]
-
-
-def row_extent(mask: np.ndarray, top: int, bottom: int) -> tuple[int, int]:
-    """Horizontal span of the tiles in one row, so a short row is not divided across bare table."""
-    on = np.flatnonzero(mask[top:bottom].mean(axis=0) > 0.5)
-    return int(on[0]), int(on[-1]) + 1
-
-
-def solid_run(coverage: np.ndarray, offset: int) -> tuple[int, int]:
+def solid_run(coverage: np.ndarray) -> slice:
     """The stretch of full-coverage lines around the middle, cut short at the first thin one."""
     middle = len(coverage) // 2
     thin = coverage < MIN_COVERAGE
@@ -154,61 +146,140 @@ def solid_run(coverage: np.ndarray, offset: int) -> tuple[int, int]:
     after = np.flatnonzero(thin[middle:])
     start = int(before[-1]) + 1 if before.size else 0
     end = middle + int(after[0]) if after.size else len(coverage)
-    return offset + start, offset + end
+    return slice(start, end)
 
 
-def runs(flags: np.ndarray) -> int:
-    """How many separate stretches of True there are."""
-    return int(flags[0]) + int((np.diff(flags.astype(int)) == 1).sum())
+def trim(mask: np.ndarray) -> tuple[slice, slice]:
+    """Shrinks a cell to the part the mask calls tile.
 
-
-def seam_top(light: np.ndarray) -> int | None:
-    """Where the tile below starts, if any of it got into this crop.
-
-    A row of tiles is butted against the next, so the bottom of a crop tends to carry a slice of the
-    neighbour: its lit top bevel, brighter than the face above it and therefore invisible to any
-    check for dark intrusion. The giveaway is the shadow line just before it.
-
-    Worth removing even though every tile in rows 1-3 has one, because the seven honours sit in the
-    last row and have no neighbour below. "Has a bright band at the bottom" would then be a cue for
-    "is not an honour" — free accuracy on synthetic data, and gone the moment a real photo arrives
-    with the honours butted against other tiles.
+    Only ever shrinks, and on all but a handful of cells it does nothing at all: the tiles are butted,
+    so an interior cell is surrounded by tile and the mask is solid across it. It earns its place around
+    the rim of the block, where the columns are divided evenly but the block sits a degree off square,
+    so the corner cells reach past the tiles onto the table. Left in, that strip is a *perfect* cue for
+    whichever class kept it — and the two it kept were the tile backs, which have the fewest appearances
+    of any class to dilute it.
     """
-    height = len(light)
-    dark = light < SEAM_LIGHTNESS
-    unbroken = np.array([row.mean() > SEAM_WIDTH_FRACTION and runs(row) == 1 for row in dark])
-    for y in range(height - 1, max(height - 1 - SEAM_SEARCH_PX, 0), -1):
-        if not unbroken[y]:
-            continue
-        top = y
-        while top > 0 and unbroken[top - 1]:
-            top -= 1
-        return top
-    return None
+    rows = solid_run(mask.mean(axis=1))
+    return rows, solid_run(mask[rows].mean(axis=0))
 
 
-def drop_neighbour_bevel(light: np.ndarray) -> int:
-    """Height with any trailing slice of the tile below removed."""
-    height = len(light)
-    means = light.mean(axis=1)
-    while height > 0 and means[height - 1] > NEIGHBOUR_BEVEL_MEAN:
-        height -= 1
-    return height
+def local_variation(lightness: np.ndarray) -> np.ndarray:
+    """Standard deviation of lightness in a small window around every pixel."""
+    values = lightness.astype(np.float32)
+    window = (VARIATION_WINDOW, VARIATION_WINDOW)
+    mean = cv2.boxFilter(values, -1, window)
+    mean_square = cv2.boxFilter(values * values, -1, window)
+    return np.sqrt(np.maximum(mean_square - mean * mean, 0))
 
 
-def trim(
-    light: np.ndarray, mask: np.ndarray, x0: int, x1: int, y0: int, y1: int
-) -> tuple[int, int, int, int]:
-    """Shrinks a nominal box to hold one tile and nothing else.
+def close(solid: np.ndarray) -> np.ndarray:
+    return cv2.morphologyEx(solid.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((CLOSE, CLOSE), np.uint8))
 
-    Only ever shrinks. Two butted rows have no dark seam between them, so a box allowed to grow
-    would run straight into the row above.
+
+def back_mask(bgr: np.ndarray) -> np.ndarray:
+    """True where the photo shows a tile back: bright and smooth. See BACK_VARIATION."""
+    lightness = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0]
+    bright = lightness.astype(np.int16) > TILE_LIGHTNESS
+    return close(bright & (local_variation(lightness) < BACK_VARIATION))
+
+
+def face_mask(bgr: np.ndarray, back_lightness: int | None) -> np.ndarray:
+    """True where the photo shows a tile face rather than the table.
+
+    Thresholding finds the white of a face but leaves the engraved characters as holes, and those are
+    not all small — the bird of 1s is wider than any closing kernel that would still be safe to use
+    here. What separates a character from the table is topology rather than size: a character is
+    enclosed by the face around it, while the table reaches the edge of the photo. So every dark region
+    the border cannot reach is filled back in. Holes matter beyond tidiness, because the mask is an
+    alpha channel when the crops are composited: left open, the background of a synthetic sample shows
+    through the strokes of the character that is the whole label.
     """
-    ty0, ty1 = solid_run(mask[y0:y1, x0:x1].mean(axis=1), y0)
-    tx0, tx1 = solid_run(mask[ty0:ty1, x0:x1].mean(axis=0), x0)
-    ty1 = ty0 + drop_neighbour_bevel(light[ty0:ty1, tx0:tx1])
-    seam = seam_top(light[ty0:ty1, tx0:tx1])
-    return tx0, tx1, ty0, ty1 if seam is None else ty0 + seam
+    lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
+    lightness = lab[:, :, 0].astype(np.int16)
+    chroma = np.hypot(lab[:, :, 1].astype(np.int16) - 128, lab[:, :, 2].astype(np.int16) - 128)
+    solid = (lightness > TILE_LIGHTNESS) & (chroma < TILE_CHROMA)
+    if back_lightness is not None:
+        solid |= lightness > back_lightness
+
+    _, regions = cv2.connectedComponents((~solid).astype(np.uint8))
+    touching_border = np.unique(
+        np.concatenate([regions[0], regions[-1], regions[:, 0], regions[:, -1]])
+    )
+    return close(solid | ~np.isin(regions, touching_border))
+
+
+def extent(mask: np.ndarray, axis: int) -> tuple[int, int]:
+    """Start and length of the stretch the mask actually covers, along one axis."""
+    on = np.flatnonzero((mask > 0).mean(axis=axis) > COVERED)
+    if on.size == 0:
+        sys.exit("the calibration photo has no run of tiles along one of its axes")
+    return int(on[0]), int(on[-1]) - int(on[0]) + 1
+
+
+def block(mask: np.ndarray) -> tuple[int, int, int, int]:
+    """The rectangle the grid of tiles occupies.
+
+    Not the largest blob's own bounding box: closing rounds the mask outward, and on one photo it also
+    reached past the last row down to the bottom of the frame. Both axes come from where the mask
+    actually covers the run instead.
+    """
+    count, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=4)
+    if count < 2:
+        sys.exit("no tiles found in the calibration photo")
+    largest = max(range(1, count), key=lambda i: stats[i][4])
+    _, y, _, h = (int(v) for v in stats[largest][:4])
+    left, width = extent(mask[y : y + h], 0)
+    top, height = extent(mask[:, left : left + width], 1)
+    return left, top, width, height
+
+
+def slice_photo(photo: Photo) -> list[tuple[str, np.ndarray, np.ndarray]]:
+    """Writes every cell of one photo, returning each crop with the name it was written under."""
+    bgr = cv2.imread(str(CALIBRATION / photo.name))
+    if bgr is None:
+        sys.exit(f"cannot read {CALIBRATION / photo.name}")
+    if photo.quarter_turns:
+        bgr = np.rot90(bgr, photo.quarter_turns).copy()
+    mask = back_mask(bgr) if photo.blank else face_mask(bgr, photo.back_lightness)
+    left, top, width, height = block(mask)
+
+    light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
+    band = height / len(photo.rows)
+    seen: dict[str, int] = {}
+    cells = []
+    for index, labels in enumerate(photo.rows):
+        y0 = top + int(index * band)
+        depth = int(band)
+        # The row's horizontal extent is taken from the row itself, so a row shorter than the others is
+        # not divided across bare table. Where the mask overshoots it, no grid of nine fits and the
+        # block's extent is the fallback; letting the fit decide is safe because `expect` pins the pitch
+        # to within ten percent of the box divided by nine, so a box a tile too long cannot answer nine.
+        for span in (extent(mask[y0 : y0 + depth], 0), (left, width)):
+            fit = fit_grid(light, (span[0], y0, span[1], depth), vertical=False, expect=len(labels))
+            if fit is not None and fit[2] == len(labels):
+                pitch, offset, x_start = fit[0], fit[1], span[0]
+                break
+        else:
+            sys.exit(f"{photo.name} row {index + 1}: no grid of {len(labels)} tiles fits it")
+        for column, label in enumerate(labels):
+            x0 = x_start + int(offset + column * pitch)
+            box = (
+                slice(y0 + NEIGHBOUR_EDGE, y0 + depth - NEIGHBOUR_EDGE),
+                slice(x0 + NEIGHBOUR_EDGE, x0 + int(pitch) - NEIGHBOUR_EDGE),
+            )
+            crop, piece = bgr[box], mask[box]
+            if crop.size == 0:
+                sys.exit(f"{photo.name} row {index + 1} column {column + 1}: empty crop")
+            rows, columns = trim(piece > 0)
+            crop, piece = crop[rows, columns], piece[rows, columns] > 0
+            seen[label] = seen.get(label, 0) + 1
+            # Numbered per label rather than per cell: the tile backs are the one label a photo holds
+            # twice, and naming them by position would make the filenames move if the layout changed.
+            source = f"{photo.source}{seen[label]}"
+            write_variant(label, source, crop, piece)
+            cells.append((f"{label}/{source}", crop, piece))
+        print(f"{photo.name} row {index + 1}: y {y0}, pitch {pitch:.1f}px, {len(labels)} tiles")
+    return cells
 
 
 def write_variant(label: str, source: str, crop: np.ndarray, mask: np.ndarray) -> None:
@@ -219,156 +290,54 @@ def write_variant(label: str, source: str, crop: np.ndarray, mask: np.ndarray) -
         cv2.imwrite(str(path / f"{source}.png"), image)
 
 
-# The second photo is the other set of tiles, on the other table. Laid out as four columns of nine
-# rather than four rows, rotated a quarter turn, and with a tile back of each colour above the honours.
-# Reading each column from the bottom gives the ascending order.
-COLUMNS = [
-    [f"{n}m" for n in range(1, 10)],
-    [f"{n}s" for n in range(1, 10)],
-    [f"{n}p" for n in range(1, 10)],
-    [f"{n}z" for n in range(1, 8)] + [BACK, BACK],
-]
-
-# The felt is far darker than the brown table was, so the threshold that separates tile from
-# background is different — and the blue tile back is strongly coloured, so it is admitted on
-# lightness alone rather than being required to be neutral.
-GREEN_FELT_LIGHTNESS = 70
-GREEN_FELT_CHROMA = 30
-BACK_LIGHTNESS = 110
-
-
-def slice_second_set() -> list[tuple[str, np.ndarray]]:
-    """Cuts the green-felt photo, adding a second appearance of every face plus the tile backs."""
-    bgr = cv2.imread(str(CALIBRATION_2))
-    if bgr is None:
-        print(f"no second calibration photo at {CALIBRATION_2}, skipping")
-        return []
-    lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
-    light = lab[:, :, 0].astype(np.int16)
-    chroma = np.hypot(lab[:, :, 1].astype(np.int16) - 128, lab[:, :, 2].astype(np.int16) - 128)
-    solid = (
-        (light > GREEN_FELT_LIGHTNESS)
-        & ((chroma < GREEN_FELT_CHROMA) | (light > BACK_LIGHTNESS))
-    ).astype(np.uint8)
-    solid = cv2.morphologyEx(solid, cv2.MORPH_CLOSE, np.ones((21, 21), np.uint8))
-
-    count, _, stats, _ = cv2.connectedComponentsWithStats(solid, connectivity=4)
-    if count < 2:
-        print("no tiles found in the second calibration photo, skipping")
-        return []
-    block = max(range(1, count), key=lambda i: stats[i][4])
-    _, by, _, bh = (int(v) for v in stats[block][:4])
-
-    # The horizontal span comes from where the mask actually covers the height, not from the blob's
-    # bounding box: closing the mask rounds its corners outward and the box ends up some twenty pixels
-    # wider than the tiles, which is enough drift over four columns to put the last crop on the felt.
-    covered = np.flatnonzero((solid[by : by + bh] > 0).mean(axis=0) > 0.5)
-    if covered.size == 0:
-        print("no columns found in the second calibration photo, skipping")
-        return []
-    bx, bw = int(covered[0]), int(covered[-1]) - int(covered[0]) + 1
-
-    # The columns are butted, so they are divided evenly — but the rows within a column are found by
-    # grid_fit, which is what stops the top tile of each column being cropped with a swathe of felt.
-    light_f = light.astype(float)
-    cells = []
-    for index, labels in enumerate(COLUMNS):
-        x0 = bx + index * bw // len(COLUMNS)
-        width = bw // len(COLUMNS)
-        fit = fit_grid(light_f, (x0, by, width, bh), vertical=True, expect=len(labels))
-        if fit is None or fit[2] != len(labels):
-            print(f"column {index + 1}: expected {len(labels)} tiles, fit gave {fit}")
-            continue
-        pitch, offset, _ = fit
-        # The low numbers sit at the bottom of the column, so label i belongs to the i-th cell up
-        # from the bottom. Reversing the labels *and* counting the rows down was two reversals that
-        # cancelled, which put 9m at the foot of the column and 1m at its head.
-        for index, label in enumerate(labels):
-            top = by + int(offset + (len(labels) - 1 - index) * pitch)
-            # A uniform inset on every side. The grid fit puts the boundaries within a pixel or two,
-            # so unlike the brown photo there is nothing here that needs edge-by-edge treatment.
-            box = (
-                slice(top + NEIGHBOUR_EDGE, top + int(pitch) - NEIGHBOUR_EDGE),
-                slice(x0 + NEIGHBOUR_EDGE, x0 + width - NEIGHBOUR_EDGE),
-            )
-            crop, piece = bgr[box], solid[box]
-            if crop.size == 0:
-                continue
-            source = f"green{index + 1}" if label == BACK else "green"
-            write_variant(label, source, crop, piece > 0)
-            cells.append((f"{label}/{source}", crop))
-    return cells
-
-
 def main() -> None:
-    bgr = cv2.imread(str(CALIBRATION))
-    if bgr is None:
-        sys.exit(f"cannot read {CALIBRATION}")
-    light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
-    mask = tile_mask(bgr)
-
     faces, masks = OUT / "faces", OUT / "masks"
+    # Cleared rather than written over. These directories are the classifier's entire training input,
+    # and a crop left behind from a photo that has since been re-shot goes on training it silently.
     for directory in (faces, masks):
+        shutil.rmtree(directory, ignore_errors=True)
         directory.mkdir(parents=True, exist_ok=True)
 
-    tops = row_tops(light, len(ROWS))
     cells = []
-    for i, (top, labels) in enumerate(zip(tops, ROWS)):
-        next_top = tops[i + 1] if i + 1 < len(tops) else None
-        bottom = row_bottom(light, top, next_top)
-        if next_top is not None:
-            bottom -= NEIGHBOUR_EDGE
-        left, right = row_extent(mask, top, bottom)
-        step = (right - left) / len(labels)
-        for j, label in enumerate(labels):
-            nominal_x0 = int(left + j * step) + (NEIGHBOUR_EDGE if j else 0)
-            x0, x1, y0, y1 = trim(
-                light, mask, nominal_x0, int(left + (j + 1) * step), top, bottom
-            )
-            crop = bgr[y0:y1, x0:x1]
-            write_variant(label, "brown", crop, mask[y0:y1, x0:x1])
-            cells.append((label, crop))
-        print(f"row {i + 1}: y {top}-{bottom}, x {left}-{right}, {len(labels)} tiles")
-
-    cells += slice_second_set()
-    print(f"wrote {len(cells)} crops to {faces} and masks to {masks}")
+    for photo in PHOTOS:
+        cells += slice_photo(photo)
+    print(f"\nwrote {len(cells)} crops to {faces} and masks to {masks}")
     audit(cells)
     contact_sheet(cells)
 
 
-def audit(cells: list[tuple[str, np.ndarray]]) -> None:
-    """Reports whatever is left along the edges of each crop.
+def audit(cells: list[tuple[str, np.ndarray, np.ndarray]]) -> None:
+    """Reports how much of each crop's edge is background rather than tile, and the sizes with it.
 
-    Every problem found in this routine so far was spotted by eye first, because each check written
-    only caught one kind: a test for dark intrusion is blind to a neighbour's lit edge, which is
-    brighter than the face it sits against. So both directions get reported, per edge, and the sizes
-    with them — a crop that comes out much shorter or narrower than its neighbours has been cut into.
+    Earlier versions measured this as dark or bright pixels along the edge and needed a threshold for
+    each, plus an exemption for the tile's own lit bevel. On a butted grid that was the wrong question:
+    every interior crop has a neighbouring tile on all four sides, so its edges are *supposed* to be
+    bright or dark, and a third of the crops flagged on their own ink. A sliver of neighbouring tile is
+    also the least harmful thing that can be left behind — the synthesiser deliberately pastes other
+    tiles around a face, because in a real hand that is what surrounds one.
+
+    What does matter is table or felt, which is a perfect cue for whichever class kept it, and the mask
+    already separates that from tile without a second threshold. Only the cells around the rim of the
+    block can show any, which is exactly where the fit is least certain.
     """
-    print("\n         size      dark% t/b/l/r      bright% t/b/l/r")
-    for label, crop in cells:
-        light = cv2.cvtColor(crop, cv2.COLOR_BGR2LAB)[:, :, 0]
-        edges = (light[:4, :], light[-4:, :], light[:, :4], light[:, -4:])
-        dark = [(edge < 120).mean() * 100 for edge in edges]
-        bright = [(edge > 240).mean() * 100 for edge in edges]
-        # The top is exempt from the brightness check. The light comes from above, so a tile's own
-        # top bevel is the brightest thing in the photo — 92% of 8m's top edge clears this bar, and
-        # 8m is in the first row with nothing above it but table. Real photos show that rim too.
-        flag = " <-- check" if max(dark) > 25 or max(bright[1:]) > 30 else ""
+    print("\n              size      background% t/b/l/r")
+    for label, crop, mask in cells:
+        edges = (mask[:4, :], mask[-4:, :], mask[:, :4], mask[:, -4:])
+        background = [(1 - edge.mean()) * 100 for edge in edges]
+        flag = " <-- check" if max(background) > 10 else ""
         print(
-            f"  {label:3s} {crop.shape[1]:3d}x{crop.shape[0]:<3d}  "
-            + " ".join(f"{v:4.0f}" for v in dark)
-            + "     "
-            + " ".join(f"{v:4.0f}" for v in bright)
+            f"  {label:11s} {crop.shape[1]:3d}x{crop.shape[0]:<3d}  "
+            + " ".join(f"{v:4.0f}" for v in background)
             + flag
         )
 
 
-def contact_sheet(cells: list[tuple[str, np.ndarray]], cell: int = 120) -> None:
+def contact_sheet(cells: list[tuple[str, np.ndarray, np.ndarray]], cell: int = 120) -> None:
     """One image with every crop labelled, so the cut can be checked in a single look."""
     per_row = 9
     rows = (len(cells) + per_row - 1) // per_row
     sheet = np.full((rows * (cell + 22), per_row * cell, 3), 255, np.uint8)
-    for i, (label, crop) in enumerate(cells):
+    for i, (label, crop, _) in enumerate(cells):
         r, c = divmod(i, per_row)
         h, w = crop.shape[:2]
         scale = min(cell / w, cell / h)
