@@ -176,7 +176,6 @@ main {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   margin-bottom: 24px;
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
   border: 1px solid var(--border);
 }
 
