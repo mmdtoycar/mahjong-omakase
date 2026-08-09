@@ -256,8 +256,8 @@ widened split. Those come with low confidence, which is why the threshold works.
 **The meld path has still never run against real data**, because no hand photo with a 副露 or a 暗杠 has
 been taken yet. `back` now works on every crop there is, but "works on the calibration crops" is not the
 same claim as "works on a 暗杠 in a photograph". `--self-check` covers the decisions made once a meld is
-found — twelve cases over judge_meld, carrying the worst tile-back confidences actually measured — and
-says nothing about whether one would be found.
+found — sixteen cases over judge_meld and choose_meld, carrying the worst tile-back confidences actually
+measured — and says nothing about whether one would be found.
 
 ## How the `back` class was fixed, and what it cost to find out
 

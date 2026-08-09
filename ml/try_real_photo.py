@@ -217,6 +217,14 @@ def classify(
     return confidence, predicted, probabilities[:, -1]
 
 
+def positive(raw: str) -> int:
+    """A pixel count has to be at least one; zero would make the resize scale invalid."""
+    value = int(raw)
+    if value <= 0:
+        raise argparse.ArgumentTypeError(f"must be greater than zero, got {value}")
+    return value
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("photo", type=Path)
@@ -232,7 +240,7 @@ def main() -> None:
     # the model would use, and going much larger only sharpens the crop's edges into features the
     # synthetic training data does not have. Every setting from 640 to 1707 read this photo correctly,
     # so the exact number is not delicate — 0.25 was simply far below the range.
-    parser.add_argument("--long-side", type=int, default=900)
+    parser.add_argument("--long-side", type=positive, default=900)
     parser.add_argument("--min-tiles", type=int, default=12)
     parser.add_argument("--max-tiles", type=int, default=15)
     # Under data/ rather than /tmp: that directory is this script's own and gitignored, so two runs on
@@ -381,6 +389,47 @@ def judge_meld(
     return Meld(kind, tiles, not backs)
 
 
+class Candidate(NamedTuple):
+    """One reading of a run: what the grid fit and the classifier made of it at some tile count."""
+
+    score: float  # mean classifier confidence, which is how two readings of the same run are ranked
+    pitch: float
+    tiles: list[str]
+    confidence: list[float]
+    nothing: list[float]
+
+
+def choose_meld(candidates: list[Candidate], hand_pitch: float) -> Meld | str:
+    """The best-scoring reading that is actually a meld, or why none of them was.
+
+    Every candidate is checked before any is chosen, which is not how this started. Picking the
+    highest-scoring reading first and validating it afterwards loses a valid meld whenever an invalid
+    reading happens to score higher — and one systematically does: a three-tile 碰 also fits four cells,
+    at three quarters of the true pitch, and a misaligned crop can still be confidently *something*. The
+    four-cell reading then wins on score, fails the pitch check, and the run is dropped although the
+    three-cell reading of it was correct. Same silent loss the rest of this change is about.
+    """
+    reasons = []
+    best = None
+    for candidate in candidates:
+        ratio = candidate.pitch / hand_pitch
+        if not MIN_PITCH_MATCH <= ratio <= MAX_PITCH_MATCH:
+            reasons.append(
+                f"{len(candidate.tiles)} tiles at pitch {candidate.pitch:.1f}px is {ratio:.0%}"
+                f" of the hand's {hand_pitch:.1f}px, not the same tiles"
+            )
+            continue
+        verdict = judge_meld(candidate.tiles, candidate.confidence, candidate.nothing)
+        if isinstance(verdict, str):
+            reasons.append(f"{candidate.tiles} — {verdict}")
+            continue
+        if best is None or candidate.score > best[0]:
+            best = (candidate.score, verdict)
+    if best is not None:
+        return best[1]
+    return "; ".join(reasons) if reasons else "no grid of three or four tiles fits it"
+
+
 def read_melds(
     model: torch.nn.Module,
     bgr: np.ndarray,
@@ -406,29 +455,29 @@ def read_melds(
     for _, box in melds:
         if box == hand_box:
             continue
-        # Each meld length asked for by name, keeping whichever the classifier is happiest with. See
-        # the note on `expect` in read_line for why the blind fit is not good enough on a run this short.
-        fit = None
+        # Each meld length asked for by name. See the note on `expect` in read_line for why the blind
+        # fit is not good enough on a run this short.
+        candidates = []
         for length in MELD_SIZES:
-            attempt = read_line(
+            fit = read_line(
                 model, bgr, light, box, size, refine=True, counts=(length,), expect=length
             )
-            if attempt is not None and (fit is None or attempt[0] > fit[0]):
-                fit = attempt
-        if fit is None:
-            continue
-        ratio = fit[2] / hand_pitch
-        if not MIN_PITCH_MATCH <= ratio <= MAX_PITCH_MATCH:
-            print(
-                f"  meld at {box}: pitch {fit[2]:.1f}px is {ratio:.0%} of the hand's"
-                f" {hand_pitch:.1f}px, not the same tiles"
+            if fit is None:
+                continue
+            score, _, pitch, _, confidence, predicted, nothing = fit
+            candidates.append(
+                Candidate(
+                    score,
+                    pitch,
+                    [labels[int(g)] for g in predicted],
+                    [float(c) for c in confidence],
+                    [float(n) for n in nothing],
+                )
             )
-            continue
-        _, _, _, _, confidence, predicted, nothing = fit
-        tiles = [labels[int(g)] for g in predicted]
-        verdict = judge_meld(tiles, [float(c) for c in confidence], [float(n) for n in nothing])
+        verdict = choose_meld(candidates, hand_pitch)
         if isinstance(verdict, str):
-            print(f"  meld at {box}: {tiles} — {verdict}, skipped")
+            if candidates:
+                print(f"  meld at {box}: {verdict}")
             continue
         print(f"  meld at {box}: {verdict.kind} {verdict.tiles} isOpen={verdict.is_open}")
         found.append(verdict)
@@ -515,7 +564,30 @@ def self_check() -> int:
         failures += not ok
         shown = got if not isinstance(got, str) else f"rejected: {got}"
         print(f"  {'ok  ' if ok else 'FAIL'} {name:26s} -> {shown}")
-    print(f"\n{len(cases) - failures}/{len(cases)} correct")
+
+    # And the choice between two readings of the same run. The pitch is what separates them: a three-tile
+    # 碰 also fits four cells, at three quarters of the true pitch, so only one of the two can match the
+    # hand. The four-cell reading is given the higher score on purpose — that is the case where choosing
+    # first and validating afterwards throws the correct reading away.
+    hand_pitch = 100.0
+    valid = Candidate(0.90, 100.0, ["2z"] * 3, [good] * 3, [0.01] * 3)
+    wrong_pitch = Candidate(0.97, 75.0, ["2z", "2z", "2z", "1m"], [good] * 4, [0.01] * 4)
+    not_a_meld = Candidate(0.99, 100.0, ["1m", "9p", "1z"], [good] * 3, [0.01] * 3)
+    choices = [
+        ("higher score, wrong pitch", [wrong_pitch, valid], Meld("ke", ["2z"] * 3, True)),
+        ("higher score, not a meld", [not_a_meld, valid], Meld("ke", ["2z"] * 3, True)),
+        ("both invalid", [wrong_pitch, not_a_meld], None),
+        ("nothing fitted at all", [], None),
+    ]
+    for name, candidates, expected in choices:
+        got = choose_meld(candidates, hand_pitch)
+        ok = got == expected if expected else isinstance(got, str)
+        failures += not ok
+        shown = got if not isinstance(got, str) else f"rejected: {got[:60]}"
+        print(f"  {'ok  ' if ok else 'FAIL'} {name:26s} -> {shown}")
+
+    total = len(cases) + len(choices)
+    print(f"\n{total - failures}/{total} correct")
     return failures
 
 

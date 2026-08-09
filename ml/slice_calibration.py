@@ -208,10 +208,6 @@ def face_mask(bgr: np.ndarray, back_lightness: int | None) -> np.ndarray:
     return close(solid | ~np.isin(regions, touching_border))
 
 
-def tile_mask(bgr: np.ndarray, photo: "Photo") -> np.ndarray:
-    return back_mask(bgr) if photo.blank else face_mask(bgr, photo.back_lightness)
-
-
 def extent(mask: np.ndarray, axis: int) -> tuple[int, int]:
     """Start and length of the stretch the mask actually covers, along one axis."""
     on = np.flatnonzero((mask > 0).mean(axis=axis) > COVERED)
@@ -244,7 +240,7 @@ def slice_photo(photo: Photo) -> list[tuple[str, np.ndarray, np.ndarray]]:
         sys.exit(f"cannot read {CALIBRATION / photo.name}")
     if photo.quarter_turns:
         bgr = np.rot90(bgr, photo.quarter_turns).copy()
-    mask = tile_mask(bgr, photo)
+    mask = back_mask(bgr) if photo.blank else face_mask(bgr, photo.back_lightness)
     left, top, width, height = block(mask)
 
     light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
