@@ -32,13 +32,13 @@ import onnxruntime as ort
 import pillow_heif
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from grid_fit import fit_grid
+from synthesize import BACK, DATA, SIZE
+
 # iPhones produce HEIC, and it reaches this code whenever the browser could not decode it: Safari can,
 # desktop Chrome cannot, and the upload path then sends the file untouched. OpenCV has no HEIC support
 # at all, so without this the reader refuses every photo taken on a phone and uploaded from a desktop.
 pillow_heif.register_heif_opener()
-
-from grid_fit import fit_grid
-from synthesize import BACK, DATA, SIZE
 
 # The exported model rather than the training checkpoint, and no torch anywhere below. Two reasons: the
 # sidecar that serves this has to install onnxruntime and not a 2GB deep-learning framework, and running
