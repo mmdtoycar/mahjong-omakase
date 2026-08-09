@@ -111,6 +111,15 @@ depend on having one.
   earn its place: add it only when the tap produces no immediately visible result, and only when a
   spinner or a disabled state is not the better answer.
 
+## 8. Comments in English
+
+**Every comment in the codebase is written in English** — CSS, TypeScript, Java, Python alike.
+
+- Keep a Chinese term when the term *is* the name of the thing: 放铳, 自摸, 和牌, 段位, 番种, and the
+  table tiers (大圣之间 …). Explain around it in English; translating the term itself loses precision.
+- User-facing UI text stays Chinese. That is product copy, not a comment.
+- Commit messages and PR descriptions are not comments; leave those as they are.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
