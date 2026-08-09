@@ -153,27 +153,22 @@ export default function NewSessionPage() {
         )}
       </div>
 
-      <div style={{ marginTop: 24 }}>
+      <div className="new-session-actions">
         {gameMode === '' && (
-          <div className="alert alert-error" role="alert" style={{ marginBottom: 16 }}>
+          <div className="alert alert-error" role="alert">
             <span className="alert-icon">⚠</span>
             <span className="alert-body">请先选择游戏模式。</span>
           </div>
         )}
         {selectedIds.length < MIN_PLAYERS && (
-          <div className="alert alert-error" role="alert" style={{ marginBottom: 16 }}>
+          <div className="alert alert-error" role="alert">
             <span className="alert-icon">⚠</span>
             <span className="alert-body">
               至少需要{MIN_PLAYERS}名玩家才能开始游戏。(还差 {MIN_PLAYERS - selectedIds.length} 人)
             </span>
           </div>
         )}
-        <button
-          className="btn btn-accent btn-large"
-          onClick={handleStart}
-          disabled={!canStart || creating}
-          style={{ justifyContent: 'center' }}
-        >
+        <button className="btn btn-accent btn-large" onClick={handleStart} disabled={!canStart || creating}>
           {creating ? '创建中...' : `开始游戏 (${selectedIds.length}人)`}
         </button>
       </div>

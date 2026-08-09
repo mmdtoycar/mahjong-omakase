@@ -918,6 +918,19 @@ table.auto-table {
   margin-bottom: 0;
 }
 
+/* 提示条和开始按钮之间的间距由容器给, 子元素自己不带 margin */
+.new-session-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+/* 提示条撑满整行(flex 默认), 按钮保持内容宽度 */
+.new-session-actions .btn {
+  align-self: flex-start;
+}
+
 .text-right {
   text-align: right;
 }
