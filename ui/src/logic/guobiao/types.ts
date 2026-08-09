@@ -1,10 +1,10 @@
 import { Tile } from './tiles'
-export { sortTiles, countTiles, tileCount, removeTilesOnce } from '../shared/tileUtils'
+export { sortTiles, countTiles, removeTilesOnce } from '../shared/tileUtils'
 
 /**
  * Meld (面子) Definitions
  */
-export type MeldType = 'shun' | 'ke' | 'gang' | 'dui' | 'single' | 'knitted' | 'zuhelong'
+type MeldType = 'shun' | 'ke' | 'gang' | 'dui' | 'single' | 'knitted' | 'zuhelong'
 
 export interface Meld {
   type: MeldType

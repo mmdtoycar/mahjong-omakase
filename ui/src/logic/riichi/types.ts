@@ -1,7 +1,7 @@
 import { Tile } from '../shared/tiles'
 export { sortTiles, countTiles, removeTilesOnce } from '../shared/tileUtils'
 
-export type MeldType = 'shunzi' | 'kezi' | 'gangzi' | 'duizi'
+type MeldType = 'shunzi' | 'kezi' | 'gangzi' | 'duizi'
 
 export interface Meld {
   type: MeldType
@@ -14,10 +14,6 @@ export interface HandCombination {
   melds: Meld[] // 4 melds + 1 duizi, or 7 pairs
   isChiitoitsu?: boolean
   isKokushi?: boolean
-}
-
-export interface WaitType {
-  type: 'liangmian' | 'duipeng' | 'kanzhang' | 'bianzhang' | 'danqi'
 }
 
 export interface GameOptions {

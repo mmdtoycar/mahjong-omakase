@@ -466,11 +466,3 @@ export const fanTableData: FanItem[] = [
     tags: ['不计起和分'],
   },
 ]
-
-export const groupedFanTable = fanTableData.reduce((acc, current) => {
-  if (!acc[current.fan]) {
-    acc[current.fan] = []
-  }
-  acc[current.fan].push(current)
-  return acc
-}, {} as Record<number, FanItem[]>)

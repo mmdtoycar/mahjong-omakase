@@ -13,10 +13,6 @@ export function countTiles(tiles: Tile[]): Map<string, number> {
   return counts
 }
 
-export function tileCount(tiles: Tile[], target: Tile): number {
-  return tiles.filter((t) => t.equals(target)).length
-}
-
 export function removeTilesOnce(all: Tile[], toRemove: Tile[]): Tile[] {
   const result = [...all]
   for (const r of toRemove) {

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Tile } from '../../logic/shared/tiles'
 
-export const getTileKey = (tile: Tile): string => {
+const getTileKey = (tile: Tile): string => {
   if (tile.suit === 'm') return `Man${tile.rank}`
   if (tile.suit === 'p') return `Pin${tile.rank}`
   if (tile.suit === 's') return `Sou${tile.rank}`
@@ -12,7 +12,7 @@ export const getTileKey = (tile: Tile): string => {
   return 'Back'
 }
 
-export const getTileName = (tile: Tile): string => {
+const getTileName = (tile: Tile): string => {
   if (tile.suit === 'm') return `${tile.rank}万`
   if (tile.suit === 'p') return `${tile.rank}饼`
   if (tile.suit === 's') return `${tile.rank}条`

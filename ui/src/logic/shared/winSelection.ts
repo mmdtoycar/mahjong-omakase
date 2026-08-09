@@ -1,5 +1,5 @@
 /** 和牌方式. `ron` = 点炮和, 需要一名点炮者; `tsumo` / `chombo` 不需要. */
-export type WinKind = 'ron' | 'tsumo' | 'chombo'
+type WinKind = 'ron' | 'tsumo' | 'chombo'
 
 export interface WinSelection {
   /** 和牌者(诈胡时为诈胡者); 空串表示未选. */

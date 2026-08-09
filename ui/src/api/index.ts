@@ -52,7 +52,7 @@ async function authFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
   return handleResponse<T>(res)
 }
 
-export type PendingAuthProfile = {
+type PendingAuthProfile = {
   email: string
   firstName: string
   lastName: string
@@ -90,23 +90,6 @@ export async function fetchCurrentUser(): Promise<Player> {
 
 export async function fetchPlayers(): Promise<Player[]> {
   return authFetch(`${API}/players`)
-}
-
-export async function createPlayer(userName: string, firstName: string, lastName: string): Promise<Player> {
-  const res = await fetch(`${API}/players`, {
-    method: 'POST',
-    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ userName, firstName, lastName }),
-  })
-  return handleResponse<Player>(res)
-}
-
-export async function checkUserName(userName: string): Promise<boolean> {
-  const res = await fetch(`${API}/players/check-username?userName=${encodeURIComponent(userName)}`, {
-    headers: getAuthHeaders(),
-  })
-  const data = await handleResponse<{ available: boolean }>(res)
-  return data.available
 }
 
 export async function fetchSessions(signal?: AbortSignal): Promise<GameSession[]> {
