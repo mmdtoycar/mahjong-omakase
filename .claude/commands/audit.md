@@ -38,11 +38,10 @@ The app has no mouse. Two things are therefore always findings:
 
 ```bash
 # :hover rules — none should exist
-grep -nE ':hover' ui/src/index.css
+grep -rnE ':hover' ui/src
 
-# cursor: pointer — in CSS and in JSX inline styles
-grep -rn "cursor: pointer" ui/src/index.css
-grep -rn "cursor: 'pointer'" ui/src
+# cursor: pointer — CSS declarations and JSX inline styles, whatever the spacing or quoting
+grep -rnE "cursor[[:space:]]*:[[:space:]]*['\"]?pointer" ui/src
 ```
 
 Report every hit. Two of them are worse than the rest and should be called out separately:

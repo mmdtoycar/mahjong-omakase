@@ -635,7 +635,8 @@ table.auto-table {
   margin: 0 auto;
 }
 
-.profile-page .empty-state .btn-signup {
+/* 未登录时那个分支直接返回 .empty-state, 不在 .profile-page 里面 */
+.empty-state .btn-signup {
   margin-top: 20px;
 }
 
