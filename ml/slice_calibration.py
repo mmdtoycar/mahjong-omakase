@@ -202,9 +202,7 @@ def face_mask(bgr: np.ndarray, back_lightness: int | None) -> np.ndarray:
         solid |= lightness > back_lightness
 
     _, regions = cv2.connectedComponents((~solid).astype(np.uint8))
-    touching_border = np.unique(
-        np.concatenate([regions[0], regions[-1], regions[:, 0], regions[:, -1]])
-    )
+    touching_border = np.unique(np.concatenate([regions[0], regions[-1], regions[:, 0], regions[:, -1]]))
     return close(solid | ~np.isin(regions, touching_border))
 
 

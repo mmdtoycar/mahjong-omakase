@@ -36,7 +36,11 @@ class TileRecognitionServiceTest {
     MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
     return new Fixture(
         new TileRecognitionService(
-            new ObjectMapper(), builder.build(), new RecognitionSampleStore(""), keys, models),
+            new ObjectMapper(),
+            builder.build(),
+            new RecognitionSampleStore(new ObjectMapper(), ""),
+            keys,
+            models),
         server);
   }
 
@@ -51,7 +55,7 @@ class TileRecognitionServiceTest {
         .expect(header("x-goog-api-key", "key-a"))
         .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
 
-    assertThat(f.service().recognize("BASE64", "image/jpeg")).contains("1m");
+    assertThat(f.service().recognize("BASE64", "image/jpeg").rawJson()).contains("1m");
     f.server().verify();
   }
 
@@ -65,7 +69,7 @@ class TileRecognitionServiceTest {
         .expect(header("x-goog-api-key", "key-b"))
         .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
 
-    assertThat(f.service().recognize("BASE64", "image/jpeg")).contains("1m");
+    assertThat(f.service().recognize("BASE64", "image/jpeg").rawJson()).contains("1m");
     f.server().verify();
   }
 
@@ -80,7 +84,7 @@ class TileRecognitionServiceTest {
         .expect(ExpectedCount.once(), header("x-goog-api-key", "key-a"))
         .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
 
-    assertThat(f.service().recognize("BASE64", "image/jpeg")).contains("1m");
+    assertThat(f.service().recognize("BASE64", "image/jpeg").rawJson()).contains("1m");
     f.server().verify();
   }
 
@@ -99,7 +103,7 @@ class TileRecognitionServiceTest {
         .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
 
     for (int i = 0; i < 3; i++) {
-      assertThat(f.service().recognize("BASE64", "image/jpeg")).contains("1m");
+      assertThat(f.service().recognize("BASE64", "image/jpeg").rawJson()).contains("1m");
     }
     f.server().verify();
   }
@@ -148,7 +152,7 @@ class TileRecognitionServiceTest {
         .expect(requestTo(org.hamcrest.Matchers.containsString("models/spare-model:")))
         .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
 
-    assertThat(f.service().recognize("BASE64", "image/jpeg")).contains("1m");
+    assertThat(f.service().recognize("BASE64", "image/jpeg").rawJson()).contains("1m");
     f.server().verify();
   }
 
@@ -166,7 +170,7 @@ class TileRecognitionServiceTest {
                         .createResponse(request)
                     : withSuccess(OK_BODY, MediaType.APPLICATION_JSON).createResponse(request));
 
-    assertThat(f.service().recognize("BASE64", "image/jpeg")).contains("1m");
+    assertThat(f.service().recognize("BASE64", "image/jpeg").rawJson()).contains("1m");
     f.server().verify();
   }
 
@@ -255,12 +259,16 @@ class TileRecognitionServiceTest {
     MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
     TileRecognitionService service =
         new TileRecognitionService(
-            new ObjectMapper(), builder.build(), new RecognitionSampleStore(""), "key-a", "  ");
+            new ObjectMapper(),
+            builder.build(),
+            new RecognitionSampleStore(new ObjectMapper(), ""),
+            "key-a",
+            "  ");
     server
         .expect(requestTo(org.hamcrest.Matchers.containsString("models/gemini-3.6-flash:")))
         .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
 
-    assertThat(service.recognize("BASE64", "image/jpeg")).contains("1m");
+    assertThat(service.recognize("BASE64", "image/jpeg").rawJson()).contains("1m");
     server.verify();
   }
 }

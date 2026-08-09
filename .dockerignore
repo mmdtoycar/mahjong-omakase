@@ -9,3 +9,12 @@ ui/dist
 server/src/main/resources/static
 *.iml
 .DS_Store
+
+# ml/ is in the build context because the reader image is built from ml/Dockerfile with the repository
+# root as its context. Only four .py files and the exported model are ever copied out of it, so
+# everything below would be uploaded to the daemon on every build and used by neither image. The venv
+# alone is 909MB — it has torch in it, which is exactly what the reader image exists not to install.
+ml/.venv
+ml/data
+ml/runs/*.pt
+ml/__pycache__

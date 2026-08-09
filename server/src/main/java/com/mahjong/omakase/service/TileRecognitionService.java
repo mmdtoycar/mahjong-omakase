@@ -191,6 +191,14 @@ public class TileRecognitionService {
   }
 
   /**
+   * What the model answered, and the sample the answer was filed under.
+   *
+   * @param rawJson the model's own JSON text, passed on untouched
+   * @param sampleId where the photo was kept, or null when samples are not being kept
+   */
+  public record Answer(String rawJson, String sampleId) {}
+
+  /**
    * Returns the model's raw JSON text for one hand photo.
    *
    * <p>Failures advance whichever dimension can actually help, which is why there are two cursors
@@ -201,7 +209,7 @@ public class TileRecognitionService {
    *
    * @throws IllegalStateException if no key is configured, or nothing left to fall back to
    */
-  public String recognize(String imageBase64, String mimeType) {
+  public Answer recognize(String imageBase64, String mimeType) {
     if (apiKeys.isEmpty()) {
       throw new IllegalStateException("服务端未配置 Gemini API Key，请联系管理员");
     }
@@ -245,8 +253,7 @@ public class TileRecognitionService {
             model,
             text.length());
         // After extractText, so a photo is only kept once there is an answer to pair it with.
-        sampleStore.save(imageBase64, mimeType, model, text);
-        return text;
+        return new Answer(text, sampleStore.save(imageBase64, mimeType, model, text));
       } catch (RestClientResponseException e) {
         int status = e.getStatusCode().value();
         String detail = errorMessage(e.getResponseBodyAsString());

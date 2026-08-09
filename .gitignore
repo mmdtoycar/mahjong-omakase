@@ -31,3 +31,9 @@ ui/dist/
 .DS_Store
 .gemini/
 bin/
+
+/samples/
+
+/node_modules/
+/package.json
+/package-lock.json

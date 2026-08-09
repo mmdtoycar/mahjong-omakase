@@ -20,7 +20,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from synthesize import NOT_A_TILE, SIZE, Synthesiser, load_tiles
@@ -239,30 +239,24 @@ def report(
     for name, measured in (("same distribution as training", same), ("widened ranges", wider)):
         per_tile = measured["accuracy"]
         # A hand is about 16 tiles and every one has to be right, so this is what a user experiences.
-        print(f"\n{name}: {per_tile:.4f} per tile  ->  {per_tile ** 16:.4f} per 16-tile hand")
+        print(f"\n{name}: {per_tile:.4f} per tile  ->  {per_tile**16:.4f} per 16-tile hand")
         worst = sorted(zip(measured["per_class"], labels))[:5]
         print("  weakest classes: " + ", ".join(f"{label} {score:.3f}" for score, label in worst))
         if measured["top_confusions"]:
             print(
                 "  most confused:   "
                 + ", ".join(
-                    f"{labels[a]}->{labels[b]} x{count}"
-                    for count, a, b in measured["top_confusions"][:5]
+                    f"{labels[a]}->{labels[b]} x{count}" for count, a, b in measured["top_confusions"][:5]
                 )
             )
         print("  confidence  threshold  answered   accuracy   16-tile hand")
         for threshold, answered, accuracy in coverage_table(measured["scores"]):
-            print(
-                f"              {threshold:9.3f}  {answered:8.1%}   {accuracy:8.4f}"
-                f"   {accuracy ** 16:8.4f}"
-            )
+            print(f"              {threshold:9.3f}  {answered:8.1%}   {accuracy:8.4f}   {accuracy**16:8.4f}")
 
     export(model, labels, parameters, same, wider, size)
 
 
-def export(
-    model: nn.Module, labels: list[str], parameters: int, same: dict, wider: dict, size: int
-) -> None:
+def export(model: nn.Module, labels: list[str], parameters: int, same: dict, wider: dict, size: int) -> None:
     """Saves an ONNX copy, which is what a browser or a sidecar would load."""
     model.eval().cpu()
     path = RUNS / "classifier.onnx"

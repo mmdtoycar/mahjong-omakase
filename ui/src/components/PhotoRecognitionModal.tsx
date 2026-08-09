@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Tile, TileSuit } from '../logic/shared/tiles'
 import { TileComponent } from './shared/TileComponent'
-import { recognizeHandPhoto } from '../api'
+import { confirmRecognizedHand, recognizeHandPhoto } from '../api'
 
 export interface RecognizedHand {
   concealed: Tile[]
@@ -112,64 +112,116 @@ export function isUsableImageDataUrl(dataUrl: string | null | undefined): dataUr
   return parseImageDataUrl(dataUrl) !== null
 }
 
-// Downscales an upload to at most 2048px and forces landscape (long edge on the X axis).
-// EXIF orientation is not decoded here — browsers already apply it when drawing an <img>
-// to a canvas (`image-orientation: from-image` is the default).
-// Portrait photos are rotated 90° clockwise, which is a guess: the ↺ button in the modal
-// is there for when the camera was held the other way.
-export function normalizeUploadedImage(file: File): Promise<string> {
+function readAsDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = (e) => {
-      const original = e.target?.result as string
-      const img = new Image()
-      img.crossOrigin = 'Anonymous'
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-
-        const w = img.width
-        const h = img.height
-
-        const isVertical = h > w
-
-        let targetW = isVertical ? h : w
-        let targetH = isVertical ? w : h
-
-        const maxDim = 2048
-        if (targetW > maxDim || targetH > maxDim) {
-          if (targetW > targetH) {
-            targetH = Math.round((targetH * maxDim) / targetW)
-            targetW = maxDim
-          } else {
-            targetW = Math.round((targetW * maxDim) / targetH)
-            targetH = maxDim
-          }
-        }
-
-        canvas.width = targetW
-        canvas.height = targetH
-
-        if (!ctx) return resolve(original)
-
-        if (isVertical) {
-          // Rotate 90° clockwise so portrait image becomes landscape with long edge left-to-right
-          ctx.translate(canvas.width / 2, canvas.height / 2)
-          ctx.rotate((90 * Math.PI) / 180)
-          ctx.drawImage(img, -targetH / 2, -targetW / 2, targetH, targetW)
-        } else {
-          ctx.drawImage(img, 0, 0, targetW, targetH)
-        }
-
-        const jpeg = canvas.toDataURL('image/jpeg', 0.88)
-        resolve(isUsableImageDataUrl(jpeg) ? jpeg : original)
-      }
-      img.onerror = () => resolve(original)
-      img.src = original
-    }
+    reader.onload = (e) => resolve(e.target?.result as string)
     reader.onerror = (err) => reject(err)
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(blob)
   })
+}
+
+// Downscales to at most 2048px and forces landscape (long edge on the X axis). Resolves null when the
+// browser could not decode the image at all, which is how HEIC behaves everywhere except Safari.
+//
+// EXIF orientation is not applied here because it does not need to be: browsers apply it when drawing an
+// <img> to a canvas (`image-orientation: from-image` is the default).
+//
+// Portrait photos are rotated 90° clockwise, which is a guess about which way the phone was held; the ↺
+// button in the modal is there for when it was the other way.
+function normalizeDataUrl(dataUrl: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'Anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+
+      const w = img.width
+      const h = img.height
+
+      const isVertical = h > w
+
+      let targetW = isVertical ? h : w
+      let targetH = isVertical ? w : h
+
+      const maxDim = 2048
+      if (targetW > maxDim || targetH > maxDim) {
+        if (targetW > targetH) {
+          targetH = Math.round((targetH * maxDim) / targetW)
+          targetW = maxDim
+        } else {
+          targetW = Math.round((targetW * maxDim) / targetH)
+          targetH = maxDim
+        }
+      }
+
+      canvas.width = targetW
+      canvas.height = targetH
+
+      // Decoded, but nothing can be done with it. Hand back what came in rather than null: null means
+      // "the browser cannot read this format", and that is not what happened.
+      if (!ctx) return resolve(dataUrl)
+
+      if (isVertical) {
+        // Rotate 90° clockwise so portrait image becomes landscape with long edge left-to-right
+        ctx.translate(canvas.width / 2, canvas.height / 2)
+        ctx.rotate((90 * Math.PI) / 180)
+        ctx.drawImage(img, -targetH / 2, -targetW / 2, targetH, targetW)
+      } else {
+        ctx.drawImage(img, 0, 0, targetW, targetH)
+      }
+
+      const jpeg = canvas.toDataURL('image/jpeg', 0.88)
+      resolve(isUsableImageDataUrl(jpeg) ? jpeg : dataUrl)
+    }
+    img.onerror = () => resolve(null)
+    img.src = dataUrl
+  })
+}
+
+// HEIC, which is what an iPhone camera produces. Safari decodes it natively; Chrome and Firefox do not,
+// so without this a photo taken on a phone and uploaded from a desktop reaches the server untouched —
+// meaning none of the normalisation above ran, and in particular the ↺ rotate button silently did
+// nothing, because that goes through a canvas too.
+//
+// Imported dynamically: it carries libheif compiled to WASM, well over a megabyte, and it is only ever
+// needed on the browsers that cannot do this themselves. Nobody pays for it by loading the page.
+async function heicToJpegDataUrl(file: Blob): Promise<string | null> {
+  try {
+    const { default: heic2any } = await import('heic2any')
+    const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 })
+    return await readAsDataUrl(Array.isArray(converted) ? converted[0] : converted)
+  } catch {
+    // A non-HEIC file the browser also could not decode, or a HEIC variant libheif rejects. The caller
+    // falls back to sending the original, which is what happened before this existed.
+    return null
+  }
+}
+
+/**
+ * The upload, normalised: at most 2048px, landscape, JPEG.
+ *
+ * Native decoding first, so Safari — which reads HEIC itself — never loads the WASM decoder, and every
+ * ordinary JPEG takes the same path it always did. Only when the browser cannot decode the file at all
+ * is heic2any pulled in.
+ *
+ * Sending the original untouched remains the last resort. It still works, because the server can decode
+ * HEIC too, but it is strictly worse: no downscale, no forced landscape, and the rotate button has
+ * nothing to act on.
+ */
+export async function normalizeUploadedImage(file: File): Promise<string> {
+  const original = await readAsDataUrl(file)
+
+  const normalized = await normalizeDataUrl(original)
+  if (normalized) return normalized
+
+  const asJpeg = await heicToJpegDataUrl(file)
+  if (asJpeg) {
+    const fromJpeg = await normalizeDataUrl(asJpeg)
+    if (fromJpeg) return fromJpeg
+  }
+  return original
 }
 
 export function parseTileString(s: string): Tile | null {
@@ -405,6 +457,28 @@ export function parseTileStringSequence(str: string): Tile[] {
  * `blocking` problems are ones no real hand can have, and the model does occasionally
  * produce them (e.g. echoing the whole 34-tile legend back as the hand).
  */
+/**
+ * The confirmed hand in the same notation the recognisers answer in.
+ *
+ * Tile is a class, so handing the result straight to JSON.stringify writes `{"suit":"z","rank":6}`
+ * where every answer in the sample says `"6z"` — the point of one sample file is that the answers
+ * and the label can be compared, which they cannot be in two notations. `notes` is dropped for the
+ * same reason: it is the model's own commentary, it is already kept with its answer, and inside a
+ * human-checked label it reads as if somebody had stood behind it.
+ */
+export function asLabel(hand: RecognizedHand) {
+  return {
+    concealed: hand.concealed.map(String),
+    melds: hand.melds.map((meld) => ({
+      type: meld.type,
+      isOpen: meld.isOpen,
+      tiles: meld.tiles.map(String),
+    })),
+    winningTile: hand.winningTile ? String(hand.winningTile) : null,
+    isSelfDraw: hand.isSelfDraw,
+  }
+}
+
 export function checkRecognizedHand(hand: RecognizedHand): { blocking: string[]; warnings: string[] } {
   const blocking: string[] = []
   const warnings: string[] = []
@@ -452,7 +526,13 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  // Separate from `error` because a fallback is not one: the hand came through, it just did not come
+  // from the recogniser that was asked. Shown in amber rather than red for the same reason.
+  const [warning, setWarning] = useState<string | null>(null)
   const [result, setResult] = useState<RecognizedHand | null>(null)
+  // Which kept sample this result belongs to, so the hand the user ends up accepting can be filed
+  // next to the photo as its one human-checked label. Null when the server is not keeping samples.
+  const [sampleId, setSampleId] = useState<string | null>(null)
 
   // Tile Selection Modal for editing misrecognized tiles
   const [editingTileIndex, setEditingTileIndex] = useState<number | null>(null)
@@ -470,7 +550,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       setRotation(0)
       setImagePreview(null)
       setError(null)
+      setWarning(null)
       setResult(null)
+      setSampleId(null)
       setEditingTileIndex(null)
       setPreviewFailed(false)
     }
@@ -493,7 +575,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
     e.target.value = ''
     if (file) {
       setError(null)
+      setWarning(null)
       setResult(null)
+      setSampleId(null)
       setRotation(0)
       setPreviewFailed(false)
       try {
@@ -532,7 +616,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
     }
   }
 
-  const handleRecognize = async () => {
+  const handleRecognize = async (engine: 'local' | 'gemini' = 'local') => {
     if (!imagePreview) {
       setError('请先选择或拍摄一张麻将手牌图片')
       return
@@ -540,7 +624,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
 
     setLoading(true)
     setError(null)
+    setWarning(null)
     setResult(null)
+    setSampleId(null)
 
     try {
       // The prompt, the 34-tile calibration legend and the API key all live on the server.
@@ -552,7 +638,13 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       if (base64.length > 8_000_000) {
         throw new Error('图片过大，请用较低分辨率重拍，或关闭 iPhone 的 ProRAW / 48MP')
       }
-      const responseText = await recognizeHandPhoto(base64, mimeType)
+      const {
+        rawJson: responseText,
+        warning: fallback,
+        sampleId: kept,
+      } = await recognizeHandPhoto(base64, mimeType, engine)
+      if (fallback) setWarning(fallback)
+      if (kept) setSampleId(kept)
 
       const jsonOutput = safeParseJSON(responseText)
 
@@ -632,6 +724,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
 
   const handleApply = () => {
     if (result && issues && issues.blocking.length === 0) {
+      // Applying is the moment the user accepts the tiles, corrections and all, which is the only
+      // point where a kept sample can be given a label somebody actually checked.
+      if (sampleId) void confirmRecognizedHand(sampleId, asLabel(result))
       onApplyHand(result)
       onClose()
     }
@@ -720,22 +815,35 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
           </div>
 
           {error && <div className="photo-rec-error">⚠️ {error}</div>}
+          {warning && <div className="photo-rec-warning">ℹ️ {warning}</div>}
 
-          {/* Action button */}
+          {/* Local first: free, about half a second, and it says which tiles it is unsure of.
+              Online is there for when it gets one wrong — and tapping it is itself the signal that
+              this photo was hard, which is why both answers are kept against the same image. */}
           {!result && (
-            <button
-              className="btn btn-accent photo-rec-submit-btn"
-              disabled={loading || !imagePreview}
-              onClick={handleRecognize}
-            >
-              {loading ? (
-                <span className="loading-spinner-wrap">
-                  <span className="spinner"></span> AI 正在识别中...
-                </span>
-              ) : (
-                '✨ 开始 AI 拍照识别'
-              )}
-            </button>
+            <>
+              <button
+                className="btn btn-accent photo-rec-submit-btn"
+                disabled={loading || !imagePreview}
+                onClick={() => handleRecognize('local')}
+              >
+                {loading ? (
+                  <span className="loading-spinner-wrap">
+                    <span className="spinner"></span> 正在识别中...
+                  </span>
+                ) : (
+                  '✨ 开始识别'
+                )}
+              </button>
+              <button
+                className="btn btn-secondary photo-rec-online-btn"
+                disabled={loading || !imagePreview}
+                onClick={() => handleRecognize('gemini')}
+                title="用在线的 Gemini 识别，较慢但更擅长难的照片"
+              >
+                ☁️ 在线识别
+              </button>
+            </>
           )}
 
           {/* Recognition Result Display */}
@@ -743,7 +851,16 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
             <div className="recognition-result-card">
               <div className="result-header-row">
                 <h4>🎯 识别结果 (点击修改)</h4>
-                <button className="btn-text-link" onClick={() => setResult(null)} title="重新识别/重新拍照">
+                <button
+                  className="btn-text-link"
+                  onClick={() => {
+                    setResult(null)
+                    setError(null)
+                    setWarning(null)
+                    setSampleId(null)
+                  }}
+                  title="重新识别/重新拍照"
+                >
                   📸
                 </button>
               </div>
