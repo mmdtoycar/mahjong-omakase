@@ -754,7 +754,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
           </button>
         </div>
 
-        <div className="modal-body photo-rec-body">
+        <div className="photo-rec-body">
           {/* Top Control Bar (Rotate & Reselect) - Shown ONLY before submission (!result) */}
           {imagePreview && !result && (
             <div className="photo-rec-controls-bar">
@@ -836,7 +836,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
                 )}
               </button>
               <button
-                className="btn btn-secondary photo-rec-online-btn"
+                className="btn photo-rec-online-btn"
                 disabled={loading || !imagePreview}
                 onClick={() => handleRecognize('gemini')}
                 title="用在线的 Gemini 识别，较慢但更擅长难的照片"

@@ -651,18 +651,6 @@ table.auto-table {
   font-weight: 500;
 }
 
-.profile-status-pill {
-  font-size: 13px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.profile-status-pill-warning {
-  color: var(--mj-gold);
-  background: rgb(181 137 0 / 8%);
-}
-
 .user-profile-capsule {
   display: flex;
   align-items: center;
@@ -995,24 +983,6 @@ table.auto-table {
   gap: 8px;
 }
 
-.type-btn {
-  flex: 1;
-  padding: 8px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  font-weight: 700;
-  color: var(--text-light);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.type-btn.active {
-  background: white;
-  color: var(--primary);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
-}
-
 .form-group.full-width {
   grid-column: 1 / -1;
 }
@@ -1218,7 +1188,7 @@ table.auto-table {
 }
 
 .rank-badge-throne .rank-badge-name {
-  background: linear-gradient(90deg, #d4a017, #ff9800, #d4a017);
+  background: linear-gradient(90deg, var(--mj-gold), #ff9800, var(--mj-gold));
   background-clip: text;
   color: transparent;
 }
@@ -1312,13 +1282,6 @@ table.auto-table {
   padding: 12px 0 16px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 16px;
-}
-
-.player-tier-rating {
-  font-size: 0.75rem;
-  color: var(--text-light);
-  font-variant-numeric: tabular-nums;
-  margin-left: 4px;
 }
 
 /* ===== TableStrengthTag / 桌力 ===== */
@@ -1733,9 +1696,6 @@ table.auto-table {
   }
 
   /* Signup */
-  .signup-container {
-    padding-top: 8px;
-  }
 
   .auth-actions {
     margin-left: 0;
@@ -3272,7 +3232,7 @@ table.auto-table {
 }
 
 .game-fs-detail-link {
-  background: var(--accent, #d4a017);
+  background: var(--accent, var(--mj-gold));
   color: #fff;
   border: none;
   padding: 10px 22px;
@@ -3532,39 +3492,6 @@ table.auto-table {
   gap: 16px;
 }
 
-/* API Key Bar */
-.api-key-bar {
-  background: #fdfaf3;
-  border: 1px dashed var(--sol-yellow);
-  border-radius: 10px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.api-key-input-row {
-  display: flex;
-  gap: 8px;
-}
-
-.key-input {
-  flex: 1;
-  font-size: 0.85rem;
-}
-
-.api-key-saved-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-}
-
-.key-status-tag {
-  color: var(--sol-green);
-  font-weight: 600;
-}
-
 .btn-text-link {
   background: none;
   border: none;
@@ -3572,26 +3499,6 @@ table.auto-table {
   cursor: pointer;
   font-size: 0.8rem;
   text-decoration: underline;
-}
-
-.model-selector-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-}
-
-.model-label {
-  font-weight: 600;
-  color: var(--text);
-}
-
-.model-select {
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  font-size: 0.85rem;
-  background: #fff;
 }
 
 /* Upload Container */
@@ -3657,16 +3564,6 @@ table.auto-table {
   border-radius: 8px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-}
-
-.btn-reselect {
-  font-size: 0.85rem;
-  color: var(--sol-blue);
-  cursor: pointer;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 6px;
-  background: var(--sol-base2);
 }
 
 .photo-rec-error {
@@ -3804,14 +3701,6 @@ table.auto-table {
   margin-right: 4px;
 }
 
-.result-notes {
-  font-size: 0.8rem;
-  color: var(--sol-base01);
-  background: rgb(181 137 0 / 10%);
-  padding: 6px 10px;
-  border-radius: 6px;
-}
-
 .result-actions {
   display: flex;
   justify-content: flex-end;
@@ -3838,21 +3727,6 @@ table.auto-table {
 /* ==========================================================================
    Few-Shot Calibration & Tile Editing Styles
    ========================================================================== */
-.calibration-panel {
-  background: #f4f8f6;
-  border: 1px dashed var(--mj-green);
-  border-radius: 10px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.calibration-panel h4 {
-  margin: 0;
-  font-size: 0.95rem;
-  color: #1b4d3e;
-}
 
 .photo-rec-controls-bar {
   display: flex;
@@ -3890,191 +3764,6 @@ table.auto-table {
   color: var(--mj-green);
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgb(0 0 0 / 12%);
-}
-
-.btn-text-link-sm {
-  background: none;
-  border: none;
-  color: #1b5e20;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: underline;
-  font-size: 0.75rem;
-}
-
-.server-calib-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #fff;
-  border: 1px solid #c2e2d8;
-  padding: 10px;
-  border-radius: 8px;
-}
-
-.server-calib-img {
-  width: 60px;
-  height: 44px;
-  object-fit: cover;
-  border-radius: 6px;
-}
-
-.server-calib-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.server-calib-badge {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--sol-green);
-}
-
-.server-calib-sub {
-  font-size: 0.7rem;
-  color: var(--text-light);
-}
-
-.full-34-box {
-  background: #fff;
-  border: 1px solid #c2e2d8;
-  border-radius: 10px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 2px 4px rgb(0 0 0 / 3%);
-}
-
-.full-34-guide {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.full-34-title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #1b4d3e;
-}
-
-.full-34-layout-hint {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 12px;
-  font-size: 0.75rem;
-  color: var(--sol-base01);
-  background: #f8faf9;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px dashed #d1e5de;
-}
-
-.calib-full-btn {
-  background: linear-gradient(135deg, #1b4d3e 0%, #2e7d67 100%);
-  color: white;
-  font-size: 0.85rem;
-  font-weight: 700;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: center;
-  border: none;
-  transition: all 0.2s;
-}
-
-.calib-full-btn:hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
-}
-
-.calib-custom-title {
-  font-size: 0.75rem;
-  color: var(--text-light);
-  margin-top: 4px;
-}
-
-.calib-desc {
-  font-size: 0.75rem;
-  color: var(--text-light);
-  margin: 0;
-  line-height: 1.4;
-}
-
-.calib-samples-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 140px;
-  overflow-y: auto;
-}
-
-.calib-sample-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #fff;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-
-.calib-sample-thumb {
-  width: 48px;
-  height: 36px;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-.calib-sample-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.calib-sample-hand {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--sol-base02);
-}
-
-.calib-sample-count {
-  font-size: 0.7rem;
-  color: var(--text-light);
-}
-
-.btn-remove-sm {
-  background: none;
-  border: none;
-  color: var(--danger);
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.calib-add-form {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.calib-upload-btn {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--sol-blue);
-  background: #fff;
-  border: 1px solid var(--border);
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.calib-text-input {
-  flex: 1;
-  font-size: 0.8rem;
-  min-width: 140px;
 }
 
 /* Tile Editor in Result Card */
@@ -4169,35 +3858,4 @@ table.auto-table {
   cursor: pointer;
   color: var(--text-light);
   font-size: 0.9rem;
-}
-
-.preview-toolbar {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  display: flex;
-  gap: 8px;
-  z-index: 5;
-}
-
-.btn-rotate-manual {
-  background: rgb(0 0 0 / 70%);
-  color: #fff;
-  border: 1px solid rgb(255 255 255 / 40%);
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.btn-rotate-manual:hover {
-  background: rgb(0 0 0 / 90%);
-  border-color: #fff;
-  transform: translateY(-1px);
 }
