@@ -301,21 +301,22 @@ def main() -> None:
     if direction.reverse:
         crops = crops[::-1]
         confidence, predicted = confidence.flip(0), predicted.flip(0)
-    print(
-        f"reading {'right to left' if direction.reverse else 'left to right'} along the run"
-        f" — {direction.why}\n"
-    )
+    # What the caller actually needs is whether the last tile below is the winning tile, so say that
+    # rather than which way the slicing ran. "Left to right" was also simply wrong for a hand lying up
+    # the frame, where the slice order is top to bottom.
+    if direction.known:
+        turned = "reversed, so that " if direction.reverse else ""
+        print(f"{turned}the winning tile is the last one below — {direction.why}\n")
+    else:
+        print(f"which end holds the winning tile is unknown — {direction.why}")
+        print("the order below is as sliced, and may be the reverse of the hand's\n")
 
     for i, (guess, sure) in enumerate(zip(predicted.tolist(), confidence.tolist()), 1):
         mark = "" if sure >= CONFIDENT else "   <- hand this one back"
         last = "   <- winning tile" if direction.known and i == count else ""
         print(f"  {i:2d}. {labels[guess]:4s} {sure:.2f}{mark}{last}")
     kept = sum(1 for c in confidence.tolist() if c >= CONFIDENT)
-    print(f"\n{kept}/{count} at confidence >= {CONFIDENT}")
-    if not direction.known:
-        print("which end is the winning tile could not be established — leave it for the user\n")
-    else:
-        print()
+    print(f"\n{kept}/{count} at confidence >= {CONFIDENT}\n")
 
     read_melds(model, bgr, light, melds, box, pitch, size, labels)
 
