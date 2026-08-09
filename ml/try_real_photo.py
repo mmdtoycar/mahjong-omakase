@@ -257,7 +257,11 @@ def decode(raw: bytes) -> np.ndarray | None:
         with Image.open(io.BytesIO(raw)) as opened:
             upright = ImageOps.exif_transpose(opened)
             return cv2.cvtColor(np.array(upright.convert("RGB")), cv2.COLOR_RGB2BGR)
-    except (UnidentifiedImageError, OSError, ValueError):
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+        # DecompressionBombError inherits straight from Exception, so it is not covered by the others.
+        # Pillow raises it past twice MAX_IMAGE_PIXELS (89M by default), which is the guard that matters
+        # here: the browser caps an upload at 2048px, but a HEIC that the browser could not decode
+        # arrives at whatever size the camera produced.
         return None
 
 

@@ -8,6 +8,10 @@ on:
 env:
   IMAGE: ghcr.io/${{ github.repository }}
   READER_IMAGE: ghcr.io/${{ github.repository }}-reader
+  # Deployed by commit rather than by :latest. Both images are built from the same commit and the JVM
+  # talks to the reader over a shared contract, so they have to be the same commit at runtime too —
+  # with :latest, another workflow finishing in between would silently pair mismatched halves.
+  SHA: ${{ github.sha }}
 
 jobs:
   build:
@@ -67,18 +71,22 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: IMAGE,READER_IMAGE
+          envs: IMAGE,READER_IMAGE,SHA
           script: |
             set -e
 
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
 
-            docker pull "$IMAGE:latest"
-            docker pull "$READER_IMAGE:latest"
+            docker pull "$IMAGE:$SHA"
+            docker pull "$READER_IMAGE:$SHA"
 
             # A private network so the JVM can reach the reader by name. The reader publishes no port:
             # it has no authentication of its own and has no business being reachable from outside.
-            docker network create mahjong-net 2>/dev/null || true
+            #
+            # Created only when absent, and a real failure to create it aborts here (set -e) rather than
+            # being swallowed: otherwise both containers would be removed first and `docker run
+            # --network` would fail afterwards, leaving nothing running at all.
+            docker network inspect mahjong-net >/dev/null 2>&1 || docker network create mahjong-net
 
             # `rm -f` rather than stop-then-rm: it is the same two steps, and having them as two
             # `|| true` lines only made it look like the removal was conditional on the stop working.
@@ -89,7 +97,7 @@ jobs:
               --restart always \
               --network mahjong-net \
               --memory 512m \
-              "$READER_IMAGE:latest"
+              "$READER_IMAGE:$SHA"
 
             docker rm -f mahjong 2>/dev/null || true
 
@@ -105,6 +113,6 @@ jobs:
               -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
               -e GEMINI_API_KEYS="${{ secrets.GEMINI_API_KEYS }}" \
               -e READER_URL="http://mahjong-reader:8000" \
-              "$IMAGE:latest"
+              "$IMAGE:$SHA"
 
             docker image prune -f

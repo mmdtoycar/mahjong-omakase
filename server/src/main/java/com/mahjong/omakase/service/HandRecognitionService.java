@@ -68,19 +68,25 @@ public class HandRecognitionService {
       sampleStore.save(imageBase64, mimeType, LOCAL, json);
       return new Recognition(json, null);
     } catch (ReaderUnavailableException e) {
-      return afterLocalFailure(imageBase64, mimeType, "本地识别服务连不上", e.getMessage());
+      // This message carries the reader's URL and the transport error. That belongs in the log and
+      // in
+      // the sample, not in a browser: it is internal topology and it tells the user nothing they
+      // can
+      // act on. The warning they get is the same either way — Gemini answered instead.
+      return afterLocalFailure(imageBase64, mimeType, e.getMessage(), "本地识别服务连不上，已自动改用在线识别");
     } catch (IllegalStateException e) {
-      // The reader looked at the photo and declined it — usually nothing in the frame resembles
-      // a row of tiles. Worth telling the user, because the fix next time is to reframe.
-      return afterLocalFailure(imageBase64, mimeType, "本地识别没读出手牌", e.getMessage());
+      // The reader looked at the photo and declined it — usually nothing in the frame resembles a
+      // row
+      // of tiles. That detail *is* worth showing, because the fix next time is to reframe.
+      return afterLocalFailure(
+          imageBase64, mimeType, e.getMessage(), "本地识别没读出手牌，已自动改用在线识别：" + e.getMessage());
     }
   }
 
   private Recognition afterLocalFailure(
-      String imageBase64, String mimeType, String summary, String detail) {
-    log.warn("Local recognition failed ({}), falling back to Gemini: {}", summary, detail);
+      String imageBase64, String mimeType, String detail, String warning) {
+    log.warn("Local recognition failed, falling back to Gemini: {}", detail);
     sampleStore.saveFailure(imageBase64, mimeType, LOCAL, detail);
-    String json = gemini.recognize(imageBase64, mimeType);
-    return new Recognition(json, summary + "，已自动改用在线识别：" + detail);
+    return new Recognition(gemini.recognize(imageBase64, mimeType), warning);
   }
 }

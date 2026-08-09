@@ -48,7 +48,13 @@ class HandRecognitionServiceTest {
     Recognition recognition = service.recognize("BASE64", "image/jpeg", "local");
 
     assertThat(recognition.rawJson()).isEqualTo(GEMINI_ANSWER);
-    assertThat(recognition.warning()).contains("连不上").contains("connection refused");
+    assertThat(recognition.warning()).contains("连不上");
+    // The transport error carries the reader's URL. It belongs in the log and in the sample, not in
+    // a
+    // browser, and it tells the user nothing they can act on.
+    assertThat(recognition.warning()).doesNotContain("connection refused");
+    verify(samples)
+        .saveFailure("BASE64", "image/jpeg", HandRecognitionService.LOCAL, "connection refused");
   }
 
   /**

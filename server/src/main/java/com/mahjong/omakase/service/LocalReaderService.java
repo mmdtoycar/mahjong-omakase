@@ -104,9 +104,18 @@ public class LocalReaderService {
       if (status >= 500) {
         throw new ReaderUnavailableException("the reader answered " + status, e);
       }
-      // 4xx: the reader looked and said no. 422 is "nothing in this photo looks like a hand", which
-      // is the one worth passing on verbatim.
       String detail = message(e.getResponseBodyAsString());
+      // Only 415 and 422 mean the reader looked at the photo and declined it: it could not decode
+      // the
+      // format, or nothing in the frame resembled a hand. Every other 4xx is this side's fault — a
+      // wrong path, a body it would not parse — and reporting those as a photo problem hides a
+      // wiring
+      // bug behind "没读出手牌" while showing the user something like "expected a JSON body".
+      if (status != 415 && status != 422) {
+        throw new ReaderUnavailableException(
+            "the reader answered " + status + " for a request it should have accepted: " + detail,
+            e);
+      }
       log.info("Local reader declined the photo ({}): {}", status, detail);
       throw new IllegalStateException(detail.isBlank() ? "本地识别没有在照片里找到手牌，请重拍或改用在线识别" : detail, e);
     }

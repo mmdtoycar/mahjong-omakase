@@ -51,6 +51,12 @@ class BadRequest(Exception):
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
+    # Without this the reads in _read_body block forever. HTTP/1.1 keeps connections open between
+    # requests and ThreadingHTTPServer gives each connection a thread, so a peer that connects and then
+    # stalls holds a thread until it disconnects — enough of them and the process is out of threads.
+    # Twenty seconds is far above a real request: the JVM's own read timeout is ten.
+    timeout = 20
+
     def log_message(self, fmt: str, *args) -> None:
         # The default writes to stderr in Apache format; one line per request in the same shape as the
         # rest of the container's output is easier to read alongside the JVM's.

@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 import com.mahjong.omakase.dto.TileRecognitionRequest;
 import com.mahjong.omakase.service.HandRecognitionService;
 import com.mahjong.omakase.service.HandRecognitionService.Recognition;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -63,6 +65,26 @@ class TileRecognitionControllerTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody())
         .hasToString("TileRecognitionResponse(rawJson={\"concealed\":[\"1m\"]}, warning=null)");
+  }
+
+  /**
+   * `engine` has a default, and a pattern on its own would let an explicit null through and wipe
+   * it. The values are the contract between the browser and the router that picks a recogniser.
+   */
+  @Test
+  void rejectsAnEngineThatIsNullOrUnknown() {
+    Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+    TileRecognitionRequest nulled = request();
+    nulled.setEngine(null);
+    assertThat(validator.validate(nulled)).hasSize(1);
+
+    TileRecognitionRequest unknown = request();
+    unknown.setEngine("claude");
+    assertThat(validator.validate(unknown)).hasSize(1);
+
+    assertThat(validator.validate(request())).isEmpty();
+    assertThat(new TileRecognitionRequest().getEngine()).isEqualTo("local");
   }
 
   /**
