@@ -22,4 +22,11 @@ public class TileRecognitionResponse {
    * otherwise, and the whole reason the local path is deployed early is to find out where it fails.
    */
   private String warning;
+
+  /**
+   * Identifies the kept sample, so the browser can hand back the hand the user confirmed.
+   *
+   * <p>Null when samples are not being kept, which is the normal state of a local run.
+   */
+  private String sampleId;
 }

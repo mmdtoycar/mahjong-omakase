@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.mahjong.omakase.service.HandRecognitionService.Recognition;
 import com.mahjong.omakase.service.LocalReaderService.ReaderUnavailableException;
+import com.mahjong.omakase.service.TileRecognitionService.Answer;
 import org.junit.jupiter.api.Test;
 
 class HandRecognitionServiceTest {
@@ -23,16 +24,21 @@ class HandRecognitionServiceTest {
 
   private static final String LOCAL_ANSWER = "{\"concealed\":[\"1m\"]}";
   private static final String GEMINI_ANSWER = "{\"concealed\":[\"9p\"]}";
+  private static final Answer FROM_GEMINI = new Answer(GEMINI_ANSWER, "2026-08-09/aabbccdd1122");
 
   @Test
   void readsLocallyByDefaultAndKeepsTheSample() {
     when(reader.isConfigured()).thenReturn(true);
     when(reader.recognize(anyString(), anyString())).thenReturn(LOCAL_ANSWER);
+    when(samples.save(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn("2026-08-09/aabbccdd1122");
 
     Recognition recognition = service.recognize("BASE64", "image/jpeg", "local");
 
     assertThat(recognition.rawJson()).isEqualTo(LOCAL_ANSWER);
     assertThat(recognition.warning()).isNull();
+    // Handed to the browser so the hand the user settles on can be filed against this photo.
+    assertThat(recognition.sampleId()).isEqualTo("2026-08-09/aabbccdd1122");
     verify(samples).save("BASE64", "image/jpeg", HandRecognitionService.LOCAL, LOCAL_ANSWER);
     verify(gemini, never()).recognize(anyString(), anyString());
   }
@@ -43,7 +49,7 @@ class HandRecognitionServiceTest {
     when(reader.isConfigured()).thenReturn(true);
     when(reader.recognize(anyString(), anyString()))
         .thenThrow(new ReaderUnavailableException("connection refused"));
-    when(gemini.recognize(anyString(), anyString())).thenReturn(GEMINI_ANSWER);
+    when(gemini.recognize(anyString(), anyString())).thenReturn(FROM_GEMINI);
 
     Recognition recognition = service.recognize("BASE64", "image/jpeg", "local");
 
@@ -53,6 +59,9 @@ class HandRecognitionServiceTest {
     // a
     // browser, and it tells the user nothing they can act on.
     assertThat(recognition.warning()).doesNotContain("connection refused");
+    // Gemini filed the sample this time, so its id is the one the browser must get back — the photo
+    // is the same photo, so the confirmed hand still lands next to both answers.
+    assertThat(recognition.sampleId()).isEqualTo("2026-08-09/aabbccdd1122");
     verify(samples)
         .saveFailure("BASE64", "image/jpeg", HandRecognitionService.LOCAL, "connection refused");
   }
@@ -67,7 +76,7 @@ class HandRecognitionServiceTest {
     when(reader.isConfigured()).thenReturn(true);
     when(reader.recognize(anyString(), anyString()))
         .thenThrow(new IllegalStateException("no line of tiles found"));
-    when(gemini.recognize(anyString(), anyString())).thenReturn(GEMINI_ANSWER);
+    when(gemini.recognize(anyString(), anyString())).thenReturn(FROM_GEMINI);
 
     Recognition recognition = service.recognize("BASE64", "image/jpeg", "local");
 
@@ -84,7 +93,7 @@ class HandRecognitionServiceTest {
     when(reader.isConfigured()).thenReturn(true);
     when(reader.recognize(anyString(), anyString()))
         .thenThrow(new IllegalStateException("no line of tiles found"));
-    when(gemini.recognize(anyString(), anyString())).thenReturn(GEMINI_ANSWER);
+    when(gemini.recognize(anyString(), anyString())).thenReturn(FROM_GEMINI);
 
     service.recognize("BASE64", "image/jpeg", "local");
 
@@ -96,7 +105,7 @@ class HandRecognitionServiceTest {
 
   @Test
   void asksGeminiWhenTheClientAsksForIt() {
-    when(gemini.recognize(anyString(), anyString())).thenReturn(GEMINI_ANSWER);
+    when(gemini.recognize(anyString(), anyString())).thenReturn(FROM_GEMINI);
 
     assertThat(service.recognize("BASE64", "image/jpeg", "gemini").rawJson())
         .isEqualTo(GEMINI_ANSWER);
@@ -111,7 +120,7 @@ class HandRecognitionServiceTest {
   @Test
   void usesGeminiWhenNoReaderIsConfigured() {
     when(reader.isConfigured()).thenReturn(false);
-    when(gemini.recognize(anyString(), anyString())).thenReturn(GEMINI_ANSWER);
+    when(gemini.recognize(anyString(), anyString())).thenReturn(FROM_GEMINI);
 
     assertThat(service.recognize("BASE64", "image/jpeg", "local").rawJson())
         .isEqualTo(GEMINI_ANSWER);

@@ -7,6 +7,7 @@ import {
   checkRecognizedHand,
   isUsableImageDataUrl,
   parseImageDataUrl,
+  asLabel,
   RecognizedHand,
 } from '../PhotoRecognitionModal'
 import { Tile } from '../../logic/shared/tiles'
@@ -262,5 +263,34 @@ describe('parseImageDataUrl', () => {
     expect(parseImageDataUrl('data:image/jpeg,notbase64')).toBeNull()
     expect(parseImageDataUrl('https://example.com/a.jpg')).toBeNull()
     expect(parseImageDataUrl(null)).toBeNull()
+  })
+})
+
+describe('asLabel', () => {
+  /**
+   * The sample file holds every recogniser's answer as "6z" strings; a label in a different notation
+   * would have to be converted before the two could be compared, which is the one thing keeping them
+   * in one file is for.
+   */
+  it('writes tiles the way the recognisers answer, and drops the model note', () => {
+    const hand: RecognizedHand = {
+      concealed: [new Tile('z', 6), new Tile('p', 1)],
+      melds: [{ type: 'PENG', tiles: [new Tile('s', 4), new Tile('s', 4), new Tile('s', 4)], isOpen: true }],
+      winningTile: new Tile('p', 3),
+      isSelfDraw: true,
+      notes: 'least certain about 6z',
+    }
+
+    expect(asLabel(hand)).toEqual({
+      concealed: ['6z', '1p'],
+      melds: [{ type: 'PENG', isOpen: true, tiles: ['4s', '4s', '4s'] }],
+      winningTile: '3p',
+      isSelfDraw: true,
+    })
+  })
+
+  it('keeps a missing winning tile missing rather than inventing one', () => {
+    const hand: RecognizedHand = { concealed: [], melds: [], winningTile: null, isSelfDraw: false }
+    expect(asLabel(hand).winningTile).toBeNull()
   })
 })

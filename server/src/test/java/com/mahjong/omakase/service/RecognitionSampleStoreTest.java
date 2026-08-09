@@ -2,6 +2,8 @@ package com.mahjong.omakase.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -14,7 +16,12 @@ import org.junit.jupiter.api.io.TempDir;
 
 class RecognitionSampleStoreTest {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final String JPEG = Base64.getEncoder().encodeToString(new byte[] {1, 2, 3, 4});
+
+  private static RecognitionSampleStore storeIn(String dir) {
+    return new RecognitionSampleStore(MAPPER, dir);
+  }
 
   private static List<Path> filesUnder(Path root) throws IOException {
     try (Stream<Path> walk = Files.walk(root)) {
@@ -22,10 +29,6 @@ class RecognitionSampleStoreTest {
     }
   }
 
-  /**
-   * Named by extension rather than by position: the two files no longer share a stem, so which of
-   * them sorts first depends on the digest and on '-' sorting before '.'.
-   */
   private static List<String> namesEnding(Path root, String suffix) throws IOException {
     return filesUnder(root).stream()
         .map(path -> path.getFileName().toString())
@@ -33,59 +36,72 @@ class RecognitionSampleStoreTest {
         .toList();
   }
 
+  /** The sample as JSON, whatever day directory it landed in. */
+  private static JsonNode sample(Path root) throws IOException {
+    Path sidecar =
+        filesUnder(root).stream()
+            .filter(path -> path.toString().endsWith(".json"))
+            .findFirst()
+            .orElseThrow();
+    return MAPPER.readTree(sidecar.toFile());
+  }
+
   @Test
-  void writesThePhotoAndASidecarNamedAfterIt(@TempDir Path dir) throws IOException {
-    new RecognitionSampleStore(dir.toString())
+  void writesThePhotoAndOneSampleNamedAfterIt(@TempDir Path dir) throws IOException {
+    storeIn(dir.toString())
         .save(JPEG, "image/jpeg", "gemini-3.6-flash", "{\"concealed\":[\"1m\"]}");
 
+    // Two files and no leftovers: the sample is moved into place from a .partial.
     assertThat(filesUnder(dir)).hasSize(2);
     String jpg = namesEnding(dir, ".jpg").get(0);
-    // Pairing a photo with its answers is the whole point, so the answer is named after the photo.
-    assertThat(namesEnding(dir, ".json"))
-        .containsExactly(jpg.replace(".jpg", "") + "-gemini-3.6-flash.json");
+    assertThat(namesEnding(dir, ".json")).containsExactly(jpg.replace(".jpg", "") + ".json");
+    assertThat(sample(dir).path("photo").asText()).isEqualTo(jpg);
+    assertThat(sample(dir).path("answers").path("gemini-3.6-flash").path("rawJson").asText())
+        .isEqualTo("{\"concealed\":[\"1m\"]}");
   }
 
   /**
-   * The reason the photo is named after a digest of its own bytes rather than after the clock.
+   * The reason the photo is named after a digest of its own bytes rather than after the clock, and
+   * the reason every answer goes in one file.
    *
-   * <p>Recognising the same photo locally and then online has to leave one image and two answers,
-   * so that a later comparison is a directory listing rather than a manual pairing exercise. The
-   * first scheme stamped the time into the name, which made the same photo sent twice into two
-   * unrelated samples — and comparing the two recognisers is the entire reason the samples are
-   * kept.
+   * <p>Recognising the same photo locally and then online has to leave one image and one sample
+   * holding both answers, so a later comparison is a single read rather than a pairing exercise.
    */
   @Test
-  void keepsOneImageAndAnAnswerPerRecogniserForTheSamePhoto(@TempDir Path dir) throws IOException {
-    RecognitionSampleStore store = new RecognitionSampleStore(dir.toString());
+  void keepsOneSampleWithAnAnswerPerRecogniserForTheSamePhoto(@TempDir Path dir)
+      throws IOException {
+    RecognitionSampleStore store = storeIn(dir.toString());
 
     store.save(JPEG, "image/jpeg", "local", "{\"concealed\":[\"1m\"]}");
     store.save(JPEG, "image/jpeg", "gemini-3.6-flash", "{\"concealed\":[\"9p\"]}");
 
     assertThat(namesEnding(dir, ".jpg")).hasSize(1);
-    String stem = namesEnding(dir, ".jpg").get(0).replace(".jpg", "");
-    assertThat(namesEnding(dir, ".json"))
-        .containsExactlyInAnyOrder(stem + "-local.json", stem + "-gemini-3.6-flash.json");
+    assertThat(namesEnding(dir, ".json")).hasSize(1);
+    JsonNode answers = sample(dir).path("answers");
+    assertThat(answers.path("local").path("rawJson").asText())
+        .isEqualTo("{\"concealed\":[\"1m\"]}");
+    assertThat(answers.path("gemini-3.6-flash").path("rawJson").asText())
+        .isEqualTo("{\"concealed\":[\"9p\"]}");
+    assertThat(answers.path("local").path("recognizedAt").asText()).isNotEmpty();
   }
 
-  /** A failure is a sample too, and lands beside whatever the fallback answered. */
+  /** A failure fills the same slot an answer would, so one sample tells the whole story. */
   @Test
-  void recordsAFailureAgainstTheSamePhoto(@TempDir Path dir) throws IOException {
-    RecognitionSampleStore store = new RecognitionSampleStore(dir.toString());
+  void recordsAFailureBesideWhatTheFallbackAnswered(@TempDir Path dir) throws IOException {
+    RecognitionSampleStore store = storeIn(dir.toString());
 
     store.saveFailure(JPEG, "image/jpeg", "local", "no line of tiles found");
     store.save(JPEG, "image/jpeg", "gemini-3.6-flash", "{\"concealed\":[\"9p\"]}");
 
-    String stem = namesEnding(dir, ".jpg").get(0).replace(".jpg", "");
-    Path failure = filesUnder(dir).get(0).getParent().resolve(stem + "-local.json");
-    assertThat(Files.readString(failure, StandardCharsets.UTF_8))
-        .contains("\"error\":\"no line of tiles found\"")
-        .doesNotContain("rawJson");
-    assertThat(namesEnding(dir, ".json")).hasSize(2);
+    JsonNode answers = sample(dir).path("answers");
+    assertThat(answers.path("local").path("error").asText()).isEqualTo("no line of tiles found");
+    assertThat(answers.path("local").has("rawJson")).isFalse();
+    assertThat(answers.path("gemini-3.6-flash").path("rawJson").asText()).contains("9p");
   }
 
   @Test
   void writesTheDecodedImageBytesNotTheBase64(@TempDir Path dir) throws IOException {
-    new RecognitionSampleStore(dir.toString()).save(JPEG, "image/jpeg", "m", "{}");
+    storeIn(dir.toString()).save(JPEG, "image/jpeg", "m", "{}");
 
     Path jpg =
         filesUnder(dir).stream()
@@ -97,41 +113,37 @@ class RecognitionSampleStoreTest {
 
   @Test
   void groupsSamplesIntoADirectoryPerDay(@TempDir Path dir) throws IOException {
-    new RecognitionSampleStore(dir.toString()).save(JPEG, "image/jpeg", "m", "{}");
+    storeIn(dir.toString()).save(JPEG, "image/jpeg", "m", "{}");
 
     Path day = filesUnder(dir).get(0).getParent();
     assertThat(day.getFileName().toString()).matches("\\d{4}-\\d{2}-\\d{2}");
     assertThat(day.getParent()).isEqualTo(dir);
   }
 
-  /** The model's own JSON must survive verbatim — reformatting it would defeat keeping it. */
+  /**
+   * The model's own text must come back out unchanged — reformatting it would defeat keeping it.
+   */
   @Test
-  void embedsTheModelAnswerWithoutReparsingIt(@TempDir Path dir) throws IOException {
+  void keepsTheModelAnswerVerbatim(@TempDir Path dir) throws IOException {
     String raw = "{\n  \"notes\": \"quote \\\" and \\\\ backslash\",\n  \"concealed\": []\n}";
-    new RecognitionSampleStore(dir.toString()).save(JPEG, "image/heic", "gemini-3.5-flash", raw);
+    storeIn(dir.toString()).save(JPEG, "image/heic", "gemini-3.5-flash", raw);
 
-    String sidecar =
-        Files.readString(
-            filesUnder(dir).stream()
-                .filter(p -> p.toString().endsWith(".json"))
-                .findFirst()
-                .orElseThrow(),
-            StandardCharsets.UTF_8);
-    assertThat(sidecar).contains("\"model\":\"gemini-3.5-flash\"", "\"mimeType\":\"image/heic\"");
-    // Escaped, so the sidecar stays parseable, and recoverable, so the original text is not lost.
-    assertThat(sidecar).contains("quote \\\\\\\" and \\\\\\\\ backslash");
+    JsonNode kept = sample(dir);
+    assertThat(kept.path("mimeType").asText()).isEqualTo("image/heic");
+    assertThat(kept.path("answers").path("gemini-3.5-flash").path("rawJson").asText())
+        .isEqualTo(raw);
   }
 
   @Test
   void namesTheFileAfterTheActualImageType(@TempDir Path dir) throws IOException {
-    new RecognitionSampleStore(dir.toString()).save(JPEG, "image/heic", "m", "{}");
+    storeIn(dir.toString()).save(JPEG, "image/heic", "m", "{}");
     assertThat(namesEnding(dir, ".heic")).hasSize(1);
   }
 
   @Test
   void keepsNothingWhenNoDirectoryIsConfigured(@TempDir Path dir) throws IOException {
-    new RecognitionSampleStore("").save(JPEG, "image/jpeg", "m", "{}");
-    new RecognitionSampleStore(null).save(JPEG, "image/jpeg", "m", "{}");
+    storeIn("").save(JPEG, "image/jpeg", "m", "{}");
+    storeIn(null).save(JPEG, "image/jpeg", "m", "{}");
     assertThat(filesUnder(dir)).isEmpty();
   }
 
@@ -142,7 +154,7 @@ class RecognitionSampleStoreTest {
   @Test
   void swallowsAnUndecodableImageRatherThanFailingTheRecognition(@TempDir Path dir)
       throws IOException {
-    new RecognitionSampleStore(dir.toString()).save("not base64!!", "image/jpeg", "m", "{}");
+    storeIn(dir.toString()).save("not base64!!", "image/jpeg", "m", "{}");
     assertThat(filesUnder(dir)).isEmpty();
   }
 
@@ -151,8 +163,77 @@ class RecognitionSampleStoreTest {
       throws IOException {
     // A path whose parent is a regular file can never be created.
     Path file = Files.createFile(dir.resolve("occupied"));
-    new RecognitionSampleStore(file.resolve("nested").toString())
-        .save(JPEG, "image/jpeg", "m", "{}");
+    storeIn(file.resolve("nested").toString()).save(JPEG, "image/jpeg", "m", "{}");
     assertThat(filesUnder(dir)).containsExactly(file);
+  }
+
+  /**
+   * A sample that cannot be read is started over rather than propagated. Its contents are lost
+   * either way, and refusing to write would throw away the answer in hand as well.
+   */
+  @Test
+  void startsOverRatherThanLosingTheAnswerInHand(@TempDir Path dir) throws IOException {
+    RecognitionSampleStore store = storeIn(dir.toString());
+    String id = store.save(JPEG, "image/jpeg", "local", "{\"concealed\":[\"1m\"]}");
+    Files.writeString(dir.resolve(id + ".json"), "not json at all", StandardCharsets.UTF_8);
+
+    store.save(JPEG, "image/jpeg", "gemini-3.6-flash", "{\"concealed\":[\"9p\"]}");
+
+    assertThat(sample(dir).path("answers").path("gemini-3.6-flash").path("rawJson").asText())
+        .contains("9p");
+  }
+
+  /** The id is what the browser gets back and hands to {@code saveConfirmed}. */
+  @Test
+  void handsBackAnIdThatLocatesTheSample(@TempDir Path dir) {
+    String id = storeIn(dir.toString()).save(JPEG, "image/jpeg", "local", "{}");
+
+    assertThat(id).matches("\\d{4}-\\d{2}-\\d{2}/[0-9a-f]{12}");
+    assertThat(dir.resolve(id + ".json")).exists();
+  }
+
+  @Test
+  void hasNoIdToHandBackWhenNothingIsKept(@TempDir Path dir) {
+    assertThat(storeIn("").save(JPEG, "image/jpeg", "local", "{}")).isNull();
+    assertThat(storeIn(dir.toString()).save("not base64!!", "image/jpeg", "m", "{}")).isNull();
+  }
+
+  /**
+   * The confirmed hand joins the answers rather than replacing them: the comparison the samples
+   * exist for is "what did each recogniser say, and what was it really".
+   */
+  @Test
+  void filesTheConfirmedHandInTheSameSample(@TempDir Path dir) throws IOException {
+    RecognitionSampleStore store = storeIn(dir.toString());
+    String id = store.save(JPEG, "image/jpeg", "local", "{\"concealed\":[\"1m\"]}");
+
+    store.saveConfirmed(id, MAPPER.readTree("{\"concealed\":[\"9p\"]}"));
+
+    assertThat(namesEnding(dir, ".json")).hasSize(1);
+    JsonNode kept = sample(dir);
+    assertThat(kept.path("answers").path("local").path("rawJson").asText()).contains("1m");
+    // Parsed, unlike a model's answer: this one came from our own UI, so it is known to be JSON.
+    assertThat(kept.path("confirmed").path("hand").path("concealed").get(0).asText())
+        .isEqualTo("9p");
+    assertThat(kept.path("confirmed").path("confirmedAt").asText()).isNotEmpty();
+  }
+
+  /**
+   * The id arrives from a browser and is resolved against the sample directory, which is the shape
+   * of a path traversal. Anything that is not a day and a digest has to be dropped.
+   */
+  @Test
+  void refusesToWriteAConfirmedHandOutsideTheSampleDirectory(@TempDir Path dir) throws IOException {
+    Path samples = Files.createDirectory(dir.resolve("samples"));
+    RecognitionSampleStore store = storeIn(samples.toString());
+    JsonNode hand = MAPPER.readTree("{}");
+
+    store.saveConfirmed("../escaped", hand);
+    store.saveConfirmed("2026-08-09/../../escaped", hand);
+    store.saveConfirmed("/etc/escaped", hand);
+    store.saveConfirmed("2026-08-09/NOTHEX123456", hand);
+    store.saveConfirmed(null, hand);
+
+    assertThat(filesUnder(dir)).isEmpty();
   }
 }

@@ -1,9 +1,12 @@
 package com.mahjong.omakase.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -12,17 +15,40 @@ import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Keeps a copy of every recognised photo next to what the model answered.
+ * Keeps a copy of every recognised photo, what each recogniser answered, and what the user
+ * confirmed.
  *
  * <p>Written for one purpose: a local tile detector needs training and evaluation data, and the
  * only source of realistically framed photos of this particular tile set is the app itself. Today
  * each photo is decoded, sent, and dropped, so every session that goes by is data lost for good.
- * The corrected hand is already kept as {@code Round.winHand}; this supplies the missing half.
+ *
+ * <p>One photo is one sample and one JSON file beside it, holding every answer it has ever had:
+ *
+ * <pre>
+ * 2026-08-09/a3f1c8e90b21.jpg
+ * 2026-08-09/a3f1c8e90b21.json
+ *   {"photo": "a3f1c8e90b21.jpg", "mimeType": "image/jpeg",
+ *    "answers": {"local":             {"recognizedAt": "...", "rawJson": "..."},
+ *                "gemini-3.6-flash":  {"recognizedAt": "...", "rawJson": "..."}},
+ *    "confirmed": {"confirmedAt": "...", "hand": {...}}}
+ * </pre>
+ *
+ * <p>The consumer is an offline script comparing the local reader against Gemini against what the
+ * user actually confirmed, and it wants all of that for one photo in one read. Splitting it per
+ * writer would only buy append-only writes, which at a few samples an evening nobody is paying for.
+ *
+ * <p>The name is a digest of the photo's own bytes, which is what makes the same photo recognised
+ * twice one sample rather than two. The first scheme stamped the time into the name, so re-reading
+ * a photo produced an unrelated sample and comparing the recognisers had to be done by eye. Grouped
+ * into a directory per UTC day so no directory grows unbounded and a date range is easy to pull.
  *
  * <p>Deliberately best-effort. A failure here is logged and swallowed, never propagated — losing a
  * training sample is a nuisance, failing a recognition the user is waiting on is not.
@@ -35,6 +61,9 @@ public class RecognitionSampleStore {
   private static final DateTimeFormatter DAY =
       DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneOffset.UTC);
 
+  /** What {@link #write} hands out and {@link #saveConfirmed} will accept back. */
+  private static final Pattern SAMPLE_ID = Pattern.compile("\\d{4}-\\d{2}-\\d{2}/[0-9a-f]{12}");
+
   private static final Map<String, String> EXTENSIONS =
       Map.of(
           "image/jpeg", "jpg",
@@ -43,9 +72,19 @@ public class RecognitionSampleStore {
           "image/heic", "heic",
           "image/heif", "heif");
 
+  /**
+   * Held while a sample is read back and written out. Two recognitions of the same photo at once
+   * would otherwise be a lost update, and the whole point of the digest naming is that the same
+   * photo lands in the same place.
+   */
+  private final Lock lock = new ReentrantLock();
+
+  private final ObjectMapper json;
   private final Optional<Path> root;
 
-  public RecognitionSampleStore(@Value("${recognition.sample-dir:}") String sampleDir) {
+  public RecognitionSampleStore(
+      ObjectMapper json, @Value("${recognition.sample-dir:}") String sampleDir) {
+    this.json = json;
     this.root =
         sampleDir == null || sampleDir.isBlank()
             ? Optional.empty()
@@ -56,63 +95,138 @@ public class RecognitionSampleStore {
   }
 
   /**
-   * Writes the photo and a sidecar JSON describing what the given recogniser made of it.
+   * Writes the photo, if it is not already there, and files what this recogniser made of it.
    *
-   * <p>The photo is named after a digest of its own bytes, and the answer after the photo plus the
-   * recogniser. That is what makes the two engines pair up: recognising the same photo locally and
-   * then online produces {@code <digest>.jpg}, {@code <digest>-local.json} and {@code
-   * <digest>-gemini-3.6-flash.json} — one image, two answers, joinable by a directory listing. The
-   * first scheme stamped the time into the name, so the same photo sent twice became two unrelated
-   * samples and the comparison had to be done by eye.
-   *
-   * <p>The image is written only once. When it is already there the bytes are identical by
-   * construction, so re-writing it would only burn disk on a small droplet.
-   *
-   * <p>Grouped into a directory per UTC day so no single directory grows unbounded and a date range
-   * is easy to pull. The wall-clock time of each recognition lives in the sidecar's {@code
-   * recognizedAt}, which is where it is actually useful.
+   * @return the sample's id, {@code <day>/<digest>}, or null when nothing was kept
    */
-  public void save(String imageBase64, String mimeType, String model, String rawJson) {
-    write(imageBase64, mimeType, model, "\"rawJson\":" + quote(rawJson));
+  public String save(String imageBase64, String mimeType, String model, String rawJson) {
+    return write(imageBase64, mimeType, model, "rawJson", rawJson);
   }
 
   /**
    * Records that a recogniser was asked and could not answer.
    *
    * <p>A failure is a sample too, and on this project it is the more interesting one: the photos
-   * the local reader cannot read are precisely the ones worth studying. Written under the same
-   * digest as the photo, so it sits next to whatever the fallback did answer — a directory listing
-   * then shows "local could not read this, and Gemini said that" without anyone pairing anything up
-   * by hand.
+   * the local reader cannot read are precisely the ones worth studying. Filed in the same slot as
+   * an answer would be, so one sample reads "local could not do this, and here is what Gemini
+   * said".
+   *
+   * @return the sample's id, {@code <day>/<digest>}, or null when nothing was kept
    */
-  public void saveFailure(String imageBase64, String mimeType, String model, String reason) {
-    write(imageBase64, mimeType, model, "\"error\":" + quote(reason == null ? "" : reason));
+  public String saveFailure(String imageBase64, String mimeType, String model, String reason) {
+    return write(imageBase64, mimeType, model, "error", reason == null ? "" : reason);
   }
 
-  private void write(String imageBase64, String mimeType, String model, String outcome) {
+  /**
+   * Records the hand the user confirmed, which is the only label in a sample a human has checked.
+   *
+   * <p>Everything else in it is what a model answered, and a model's answer is not a label —
+   * measuring the local reader against Gemini's opinion says where the two differ, not which one
+   * was right. This is what the user pressed apply on after fixing whatever the recognition got
+   * wrong, so it is the half that makes the collected photos trainable.
+   *
+   * <p>The id is validated rather than trusted. It arrives from the browser and is resolved against
+   * the sample directory, which is exactly the shape of a path traversal, so anything that is not a
+   * day and a digest is dropped on the floor.
+   */
+  public void saveConfirmed(String sampleId, JsonNode hand) {
     if (root.isEmpty()) {
       return;
     }
+    if (sampleId == null || !SAMPLE_ID.matcher(sampleId).matches()) {
+      log.warn("Ignoring a confirmed hand: {} is not a sample id", sampleId);
+      return;
+    }
+    lock.lock();
+    try {
+      Path sidecar = root.get().resolve(sampleId + ".json");
+      Files.createDirectories(sidecar.getParent());
+      ObjectNode sample = read(sidecar);
+      ObjectNode confirmed = sample.putObject("confirmed");
+      confirmed.put("confirmedAt", Instant.now().toString());
+      confirmed.set("hand", hand);
+      replace(sidecar, sample);
+      log.info("Kept the confirmed hand for sample {}", sampleId);
+    } catch (IOException | RuntimeException e) {
+      log.warn("Could not keep a confirmed hand: {}", e.toString());
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  private String write(
+      String imageBase64, String mimeType, String model, String field, String value) {
+    if (root.isEmpty()) {
+      return null;
+    }
+    lock.lock();
     try {
       Instant now = Instant.now();
-      Path dir = root.get().resolve(DAY.format(now));
+      String day = DAY.format(now);
+      Path dir = root.get().resolve(day);
       Files.createDirectories(dir);
 
       byte[] image = Base64.getDecoder().decode(imageBase64);
       String stem = digest(image);
-      Path photo = dir.resolve(stem + "." + extensionFor(mimeType));
+      String photoName = stem + "." + extensionFor(mimeType);
+      Path photo = dir.resolve(photoName);
+      // The bytes are identical by construction when it is already there, so re-writing it would
+      // only burn disk on a small droplet.
       if (!Files.exists(photo)) {
         Files.write(photo, image);
       }
-      Files.writeString(
-          dir.resolve(stem + "-" + model + ".json"),
-          sidecar(now, mimeType, model, outcome),
-          StandardCharsets.UTF_8);
+
+      Path sidecar = dir.resolve(stem + ".json");
+      ObjectNode sample = read(sidecar);
+      sample.put("photo", photoName);
+      sample.put("mimeType", mimeType);
+      ObjectNode answer = answers(sample).putObject(model);
+      answer.put("recognizedAt", now.toString());
+      // The model's own JSON text, kept as a string rather than parsed: what came back is the point
+      // of keeping it, and some of it is not valid JSON at all.
+      answer.put(field, value);
+      replace(sidecar, sample);
 
       log.info("Kept recognition sample {} from {} ({} KB)", stem, model, image.length / 1024);
+      return day + "/" + stem;
     } catch (IOException | RuntimeException e) {
       log.warn("Could not keep a recognition sample: {}", e.toString());
+      return null;
+    } finally {
+      lock.unlock();
     }
+  }
+
+  private static ObjectNode answers(ObjectNode sample) {
+    JsonNode existing = sample.get("answers");
+    return existing instanceof ObjectNode node ? node : sample.putObject("answers");
+  }
+
+  /**
+   * The sample as it stands, or a fresh one.
+   *
+   * <p>An unreadable file is started over rather than propagated: its contents are already lost,
+   * and refusing to write would throw away the answer in hand as well.
+   */
+  private ObjectNode read(Path sidecar) {
+    if (Files.exists(sidecar)) {
+      try {
+        if (json.readTree(sidecar.toFile()) instanceof ObjectNode existing) {
+          return existing;
+        }
+      } catch (IOException e) {
+        log.warn("Starting {} over, it could not be read: {}", sidecar, e.toString());
+      }
+    }
+    return json.createObjectNode();
+  }
+
+  /** Written aside and moved into place, so a crash cannot leave a sample half rewritten. */
+  private void replace(Path sidecar, ObjectNode sample) throws IOException {
+    Path partial = sidecar.resolveSibling(sidecar.getFileName() + ".partial");
+    json.writerWithDefaultPrettyPrinter().writeValue(partial.toFile(), sample);
+    Files.move(
+        partial, sidecar, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
   }
 
   /**
@@ -136,44 +250,5 @@ public class RecognitionSampleStore {
 
   private static String extensionFor(String mimeType) {
     return EXTENSIONS.getOrDefault(mimeType, "bin");
-  }
-
-  /**
-   * Hand-built rather than serialised through Jackson because {@code rawJson} is the model's own
-   * JSON text and must be embedded verbatim, not re-parsed and reformatted — the point of keeping
-   * it is to see exactly what came back.
-   */
-  private static String sidecar(Instant now, String mimeType, String model, String outcome) {
-    return "{\"recognizedAt\":\""
-        + now
-        + "\",\"model\":\""
-        + model
-        + "\",\"mimeType\":\""
-        + mimeType
-        + "\","
-        + outcome
-        + "}\n";
-  }
-
-  private static String quote(String value) {
-    StringBuilder out = new StringBuilder(value.length() + 2).append('"');
-    for (int i = 0; i < value.length(); i++) {
-      char c = value.charAt(i);
-      switch (c) {
-        case '"' -> out.append("\\\"");
-        case '\\' -> out.append("\\\\");
-        case '\n' -> out.append("\\n");
-        case '\r' -> out.append("\\r");
-        case '\t' -> out.append("\\t");
-        default -> {
-          if (c < 0x20) {
-            out.append(String.format("\\u%04x", (int) c));
-          } else {
-            out.append(c);
-          }
-        }
-      }
-    }
-    return out.append('"').toString();
   }
 }

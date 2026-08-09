@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Tile, TileSuit } from '../logic/shared/tiles'
 import { TileComponent } from './shared/TileComponent'
-import { recognizeHandPhoto } from '../api'
+import { confirmRecognizedHand, recognizeHandPhoto } from '../api'
 
 export interface RecognizedHand {
   concealed: Tile[]
@@ -457,6 +457,28 @@ export function parseTileStringSequence(str: string): Tile[] {
  * `blocking` problems are ones no real hand can have, and the model does occasionally
  * produce them (e.g. echoing the whole 34-tile legend back as the hand).
  */
+/**
+ * The confirmed hand in the same notation the recognisers answer in.
+ *
+ * Tile is a class, so handing the result straight to JSON.stringify writes `{"suit":"z","rank":6}`
+ * where every answer in the sample says `"6z"` — the point of one sample file is that the answers
+ * and the label can be compared, which they cannot be in two notations. `notes` is dropped for the
+ * same reason: it is the model's own commentary, it is already kept with its answer, and inside a
+ * human-checked label it reads as if somebody had stood behind it.
+ */
+export function asLabel(hand: RecognizedHand) {
+  return {
+    concealed: hand.concealed.map(String),
+    melds: hand.melds.map((meld) => ({
+      type: meld.type,
+      isOpen: meld.isOpen,
+      tiles: meld.tiles.map(String),
+    })),
+    winningTile: hand.winningTile ? String(hand.winningTile) : null,
+    isSelfDraw: hand.isSelfDraw,
+  }
+}
+
 export function checkRecognizedHand(hand: RecognizedHand): { blocking: string[]; warnings: string[] } {
   const blocking: string[] = []
   const warnings: string[] = []
@@ -508,6 +530,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
   // from the recogniser that was asked. Shown in amber rather than red for the same reason.
   const [warning, setWarning] = useState<string | null>(null)
   const [result, setResult] = useState<RecognizedHand | null>(null)
+  // Which kept sample this result belongs to, so the hand the user ends up accepting can be filed
+  // next to the photo as its one human-checked label. Null when the server is not keeping samples.
+  const [sampleId, setSampleId] = useState<string | null>(null)
 
   // Tile Selection Modal for editing misrecognized tiles
   const [editingTileIndex, setEditingTileIndex] = useState<number | null>(null)
@@ -527,6 +552,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       setError(null)
       setWarning(null)
       setResult(null)
+      setSampleId(null)
       setEditingTileIndex(null)
       setPreviewFailed(false)
     }
@@ -551,6 +577,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       setError(null)
       setWarning(null)
       setResult(null)
+      setSampleId(null)
       setRotation(0)
       setPreviewFailed(false)
       try {
@@ -599,6 +626,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
     setError(null)
     setWarning(null)
     setResult(null)
+    setSampleId(null)
 
     try {
       // The prompt, the 34-tile calibration legend and the API key all live on the server.
@@ -610,8 +638,13 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       if (base64.length > 8_000_000) {
         throw new Error('图片过大，请用较低分辨率重拍，或关闭 iPhone 的 ProRAW / 48MP')
       }
-      const { rawJson: responseText, warning: fallback } = await recognizeHandPhoto(base64, mimeType, engine)
+      const {
+        rawJson: responseText,
+        warning: fallback,
+        sampleId: kept,
+      } = await recognizeHandPhoto(base64, mimeType, engine)
       if (fallback) setWarning(fallback)
+      if (kept) setSampleId(kept)
 
       const jsonOutput = safeParseJSON(responseText)
 
@@ -691,6 +724,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
 
   const handleApply = () => {
     if (result && issues && issues.blocking.length === 0) {
+      // Applying is the moment the user accepts the tiles, corrections and all, which is the only
+      // point where a kept sample can be given a label somebody actually checked.
+      if (sampleId) void confirmRecognizedHand(sampleId, asLabel(result))
       onApplyHand(result)
       onClose()
     }
@@ -821,6 +857,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
                     setResult(null)
                     setError(null)
                     setWarning(null)
+                    setSampleId(null)
                   }}
                   title="重新识别/重新拍照"
                 >

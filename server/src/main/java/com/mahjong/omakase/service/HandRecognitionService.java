@@ -1,5 +1,6 @@
 package com.mahjong.omakase.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mahjong.omakase.service.LocalReaderService.ReaderUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,9 +17,9 @@ import org.springframework.stereotype.Service;
  * <p><strong>Any local failure falls back to Gemini, and says so.</strong> The user gets their hand
  * either way; what they also get is a warning rather than silence, because a silent fallback would
  * mean weeks of use with no idea whether the local reader is working. The warning is the visible
- * half and {@link RecognitionSampleStore#saveFailure} is the durable half — the reason is written
- * next to the photo under the same digest as Gemini's answer, so a directory listing later reads
- * "the reader could not do this one, and here is what Gemini said instead".
+ * half and {@link RecognitionSampleStore#saveFailure} is the durable half — the reason goes into
+ * the same sample as Gemini's answer, so one file reads "the reader could not do this one, and here
+ * is what Gemini said instead".
  *
  * <p>That pairing is the point of wiring the local path up before it is good enough to trust
  * unattended. Ordinary use produces the dataset, concentrated on exactly the photos worth studying,
@@ -36,8 +37,10 @@ public class HandRecognitionService {
    *
    * @param rawJson the recogniser's own JSON, passed to the browser untouched
    * @param warning null when all went to plan; otherwise why the answer came from the fallback
+   * @param sampleId what the browser hands back with the confirmed hand, or null when samples are
+   *     not being kept
    */
-  public record Recognition(String rawJson, String warning) {}
+  public record Recognition(String rawJson, String warning, String sampleId) {}
 
   private final LocalReaderService reader;
   private final TileRecognitionService gemini;
@@ -59,14 +62,15 @@ public class HandRecognitionService {
    */
   public Recognition recognize(String imageBase64, String mimeType, String engine) {
     if (GEMINI.equals(engine) || !reader.isConfigured()) {
-      return new Recognition(gemini.recognize(imageBase64, mimeType), null);
+      TileRecognitionService.Answer answer = gemini.recognize(imageBase64, mimeType);
+      return new Recognition(answer.rawJson(), null, answer.sampleId());
     }
     try {
       String json = reader.recognize(imageBase64, mimeType);
       // The Gemini path saves inside TileRecognitionService, once it has an answer to pair the
       // photo with; this is the same point in the local path.
-      sampleStore.save(imageBase64, mimeType, LOCAL, json);
-      return new Recognition(json, null);
+      String sampleId = sampleStore.save(imageBase64, mimeType, LOCAL, json);
+      return new Recognition(json, null, sampleId);
     } catch (ReaderUnavailableException e) {
       // This message carries the reader's URL and the transport error. That belongs in the log and
       // in
@@ -87,6 +91,15 @@ public class HandRecognitionService {
       String imageBase64, String mimeType, String detail, String warning) {
     log.warn("Local recognition failed, falling back to Gemini: {}", detail);
     sampleStore.saveFailure(imageBase64, mimeType, LOCAL, detail);
-    return new Recognition(gemini.recognize(imageBase64, mimeType), warning);
+    TileRecognitionService.Answer answer = gemini.recognize(imageBase64, mimeType);
+    return new Recognition(answer.rawJson(), warning, answer.sampleId());
+  }
+
+  /**
+   * Files the hand the user confirmed for a sample. Best-effort, like everything else about the
+   * collection: a lost label must never surface as a failed recognition.
+   */
+  public void confirm(String sampleId, JsonNode hand) {
+    sampleStore.saveConfirmed(sampleId, hand);
   }
 }

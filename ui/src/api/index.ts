@@ -256,16 +256,42 @@ export async function recognizeHandPhoto(
   imageBase64: string,
   mimeType: string,
   engine: 'local' | 'gemini' = 'local'
-): Promise<{ rawJson: string; warning?: string }> {
+): Promise<{ rawJson: string; warning?: string; sampleId?: string }> {
   const res = await fetch(`${API}/recognize`, {
     method: 'POST',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ imageBase64, mimeType, engine }),
   })
-  const data = await handleResponse<{ rawJson: string; warning?: string } | undefined>(res)
+  const data = await handleResponse<{ rawJson: string; warning?: string; sampleId?: string } | undefined>(res)
   // handleResponse yields undefined for an empty body; don't hand that to the parser.
   if (!data || typeof data.rawJson !== 'string' || !data.rawJson.trim()) {
     throw new Error('识别服务未返回内容，请重试')
   }
-  return { rawJson: data.rawJson, warning: data.warning || undefined }
+  return {
+    rawJson: data.rawJson,
+    warning: data.warning || undefined,
+    sampleId: data.sampleId || undefined,
+  }
+}
+
+/**
+ * Reports the hand the user settled on for a photo, which is the only label on a kept sample that
+ * a human has checked.
+ *
+ * <p>Fire-and-forget by design: it runs as the user closes the recognition dialog, and a failure to
+ * record training data must never be something they have to look at.
+ */
+export async function confirmRecognizedHand(sampleId: string, hand: unknown): Promise<void> {
+  try {
+    const res = await fetch(`${API}/recognize/confirm`, {
+      method: 'POST',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ sampleId, hand }),
+    })
+    // fetch does not throw on a 4xx, and this call is nobody's foreground concern, so without this
+    // line the labels could stop being recorded for weeks with nothing anywhere saying so.
+    if (!res.ok) console.warn(`Could not record the confirmed hand for ${sampleId}: ${res.status}`)
+  } catch (e) {
+    console.warn(`Could not record the confirmed hand for ${sampleId}:`, e)
+  }
 }
