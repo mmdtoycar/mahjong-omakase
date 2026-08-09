@@ -303,7 +303,7 @@ th {
   color: var(--text-light);
 }
 
-/* 计分板标题右边那组元信息 */
+/* The metadata group beside the scoreboard heading. */
 .scoreboard-meta {
   display: flex;
   align-items: center;
@@ -383,7 +383,8 @@ table.fixed-table .col-name {
   padding-left: 12px;
 }
 
-/* 局: 宽度仍由 SessionPage 的 ROUND_COL_PX 给, 因为同一个常量还参与那页的布局计算. */
+/* The round column. Its width stays inline: the same ROUND_COL_PX constant also feeds
+   SessionPage's own layout arithmetic, so CSS must not become a second source of truth. */
 table.fixed-table .col-round {
   white-space: nowrap;
   text-align: center;
@@ -601,7 +602,7 @@ table.auto-table {
   font-weight: 500;
 }
 
-/* 个人页从内联样式搬过来的, 值一个没改 */
+/* Moved off ProfilePage's inline styles, values unchanged. */
 .profile-page {
   display: flex;
   flex-direction: column;
@@ -612,7 +613,7 @@ table.auto-table {
   margin: 0 auto;
 }
 
-/* 未登录时那个分支直接返回 .empty-state, 不在 .profile-page 里面 */
+/* The signed-out branch returns .empty-state directly, outside .profile-page. */
 .empty-state .btn-signup {
   margin-top: 20px;
 }
@@ -932,7 +933,7 @@ table.auto-table {
   margin-bottom: 0;
 }
 
-/* 提示条和开始按钮之间的间距由容器给, 子元素自己不带 margin */
+/* The container owns the spacing between the alerts and the start button; children carry no margin. */
 .new-session-actions {
   display: flex;
   flex-direction: column;
@@ -940,7 +941,7 @@ table.auto-table {
   margin-top: 24px;
 }
 
-/* 提示条撑满整行(flex 默认), 按钮保持内容宽度 */
+/* Alerts span the row (the flex default); the button stays as wide as its content. */
 .new-session-actions .btn {
   align-self: flex-start;
 }
