@@ -361,15 +361,6 @@ tr:active td {
   border-color: var(--primary);
 }
 
-.chip .remove {
-  font-weight: bold;
-  opacity: 0.7;
-}
-
-.chip .remove:active {
-  opacity: 1;
-}
-
 .table-wrap {
   overflow-x: auto;
 }
@@ -1875,12 +1866,6 @@ table.auto-table {
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.fan-item-card:active {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgb(0 0 0 / 5%);
-  border-color: var(--primary);
-}
-
 .fan-item-header {
   display: flex;
   justify-content: space-between;
@@ -3088,12 +3073,6 @@ table.auto-table {
   justify-content: space-between;
   box-shadow: 0 4px 16px -2px rgb(15 23 42 / 6%);
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.game-fs-player-card:active {
-  transform: translateY(-2px);
-  border-color: #cbd5e1;
-  box-shadow: 0 8px 24px -4px rgb(15 23 42 / 10%);
 }
 
 .game-fs-player-card.is-dealer {
