@@ -666,7 +666,6 @@ export default function SessionPage() {
                               prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
                             )
                           }
-                          style={{ cursor: 'pointer' }}
                         >
                           {p.userName}
                           {bimenPlayerIds.includes(p.id) && ' ✓'}
@@ -693,7 +692,6 @@ export default function SessionPage() {
                               prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
                             )
                           }}
-                          style={{ cursor: 'pointer' }}
                         >
                           {p.userName}
                           {riichiPlayerIds.includes(p.id) && ' ✓'}

@@ -78,6 +78,17 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - If you catch yourself writing a second version of something that already exists, stop — that's the overdesign smell. Reuse instead.
 - Do the requested change and nothing more. No speculative variants, no adjacent "improvements."
 
+## 7. Touch First — No Hover, No Pointer Cursor
+
+**The app is used on iPhone and iPad. Neither has a mouse pointer.**
+
+- Do NOT write `:hover` styles, and do NOT write `cursor: pointer` (in CSS or in a `style={{}}`).
+- Anything that only appears or only becomes legible on hover is **invisible** on the primary devices.
+  A control revealed by `:hover` is a control that does not exist there.
+- Use `:active` for press feedback instead. That is the one state a touch device does have.
+- Native `<button>` and `<a>` already respond to a tap; a `<div>`/`<tr>` with `onClick` needs
+  `:active` if it needs feedback at all.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

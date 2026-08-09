@@ -315,11 +315,7 @@ export default function StatsPage() {
                   </thead>
                   <tbody>
                     {playedStats.map((s, i) => (
-                      <tr
-                        key={s.playerId}
-                        onClick={() => navigate(`/player/${s.playerId}?from=games`)}
-                        style={{ cursor: 'pointer' }}
-                      >
+                      <tr key={s.playerId} onClick={() => navigate(`/player/${s.playerId}?from=games`)}>
                         <td>{rankMedal(i + 1) ?? <>#{i + 1}</>}</td>
                         <td>
                           <span className="player-name-with-rank">
@@ -431,11 +427,7 @@ export default function StatsPage() {
                 </thead>
                 <tbody>
                   {playerRows.map((p, i) => (
-                    <tr
-                      key={p.id}
-                      onClick={() => navigate(`/player/${p.id}?from=players`)}
-                      style={{ cursor: 'pointer' }}
-                    >
+                    <tr key={p.id} onClick={() => navigate(`/player/${p.id}?from=players`)}>
                       <td>{rankMedal(i + 1) ?? <>#{i + 1}</>}</td>
                       <td>
                         <span className="player-name-with-rank">
