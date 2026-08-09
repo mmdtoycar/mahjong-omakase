@@ -139,11 +139,6 @@ body {
   transition: background 0.2s;
 }
 
-.app-header nav a:active {
-  background: rgb(255 255 255 / 15%);
-  color: white;
-}
-
 main {
   max-width: 960px;
   margin: 0 auto;
@@ -200,18 +195,9 @@ main {
   box-shadow: var(--shadow);
 }
 
-.btn:active {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
 .btn-primary {
   background: var(--primary);
   color: white;
-}
-
-.btn-primary:active {
-  background: var(--primary-light);
 }
 
 .btn-accent {
@@ -219,17 +205,9 @@ main {
   color: white;
 }
 
-.btn-accent:active {
-  background: #b8860b;
-}
-
 .btn-danger {
   background: var(--danger);
   color: white;
-}
-
-.btn-danger:active {
-  background: #a93226;
 }
 
 .btn-small {
@@ -241,11 +219,6 @@ main {
   background: transparent;
   border: 2px solid var(--primary);
   color: var(--primary);
-}
-
-.btn-outline:active {
-  background: var(--primary);
-  color: white;
 }
 
 input,
@@ -300,10 +273,6 @@ th {
   color: var(--text-light);
   font-size: 0.85rem;
   letter-spacing: 0.5px;
-}
-
-tr:active td {
-  background: rgb(0 0 0 / 2%);
 }
 
 .badge {
@@ -478,10 +447,6 @@ table.auto-table {
   font-weight: 600;
   color: var(--text-light);
   transition: all 0.2s;
-}
-
-.tab-btn:active {
-  color: var(--text);
 }
 
 .tab-active {
@@ -835,10 +800,6 @@ table.auto-table {
   transition: background 0.2s;
 }
 
-.btn-logout:active {
-  background: rgb(255 255 255 / 30%);
-}
-
 .claim-name-row {
   display: flex;
   gap: 12px;
@@ -1160,10 +1121,6 @@ table.auto-table {
   padding: 2px 6px;
 }
 
-.delete-btn:active {
-  opacity: 1;
-}
-
 .field-hint {
   display: block;
   margin-top: 4px;
@@ -1185,10 +1142,6 @@ table.auto-table {
   font-weight: 600;
   font-size: 0.9rem;
   text-decoration: none;
-}
-
-.btn-signup:active {
-  background: #b8860b !important;
 }
 
 .auth-actions {
@@ -2285,11 +2238,6 @@ table.auto-table {
   aspect-ratio: 3 / 4;
 }
 
-.hua-tile-btn:active:not(.disabled) {
-  border-color: #e8a0b4 !important;
-  box-shadow: 0 3px 6px rgb(232 134 166 / 25%) !important;
-}
-
 .hua-tile-char {
   font-size: 2rem;
   font-weight: 400;
@@ -2329,12 +2277,6 @@ table.auto-table {
   opacity: 0.3;
   filter: grayscale(1);
   pointer-events: none;
-}
-
-.calc-tile-container.selectable:active {
-  border-color: var(--primary);
-  transform: translateY(-2px);
-  box-shadow: 0 3px 6px rgb(0 0 0 / 15%);
 }
 
 .hand-display-area.compact {
@@ -2528,16 +2470,6 @@ table.auto-table {
   background: rgb(192 57 43 / 2%);
 }
 
-.ting-row-item:active {
-  transform: translateX(4px);
-  border-color: var(--accent);
-  box-shadow: 2px 2px 8px rgb(212 160 23 / 15%);
-}
-
-.ting-row-item.invalid:active {
-  border-color: var(--danger);
-}
-
 .ting-row-left {
   display: flex;
   align-items: center;
@@ -2686,12 +2618,6 @@ table.auto-table {
   min-height: 40px; /* Ensure enough height for centered badge */
 }
 
-.quick-player-btn:active:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--primary-light);
-}
-
 .quick-player-btn.winner {
   background-color: rgb(133 153 0 / 12%) !important;
   color: var(--sol-green) !important;
@@ -2720,10 +2646,6 @@ table.auto-table {
   border-color: var(--primary);
   color: var(--primary);
   background: rgb(7 54 66 / 6%);
-}
-
-.quick-player-btn.reset-btn:active {
-  background: rgb(7 54 66 / 14%);
 }
 
 .round-form .score-inline-group {
@@ -2818,10 +2740,6 @@ table.auto-table {
   gap: 16px;
   text-decoration: none;
   transition: transform 0.3s;
-}
-
-.hero-logo-link:active {
-  transform: translateY(-3px);
 }
 
 .hero-logo-ring {
@@ -3020,12 +2938,6 @@ table.auto-table {
   touch-action: manipulation;
 }
 
-.game-card:active {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgb(0 0 0 / 8%);
-  border-color: var(--mj-green);
-}
-
 .game-card:focus-visible {
   border-color: var(--mj-green);
   box-shadow: 0 0 0 3px rgb(33 140 116 / 20%);
@@ -3200,22 +3112,10 @@ table.auto-table {
   transition: all 0.2s ease;
 }
 
-.game-fs-btn:active {
-  background: #f1f5f9;
-  color: #0f172a;
-  border-color: #94a3b8;
-}
-
 .game-fs-close-btn {
   background: #fee2e2;
   border-color: #fca5a5;
   color: #dc2626;
-}
-
-.game-fs-close-btn:active {
-  background: #fecaca;
-  border-color: #f87171;
-  color: #b91c1c;
 }
 
 .game-fs-main {
@@ -3362,11 +3262,6 @@ table.auto-table {
   transition: background 0.2s ease, transform 0.15s ease;
 }
 
-.game-fs-detail-link:active {
-  background: #b88a10;
-  transform: translateY(-1px);
-}
-
 .game-fs-tip {
   font-size: 0.85rem;
   color: #64748b;
@@ -3446,12 +3341,6 @@ table.auto-table {
   box-shadow: var(--shadow);
 }
 
-.pagination-btn:active:not(:disabled) {
-  background: var(--sol-base2);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-lg);
-}
-
 .pagination-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -3494,12 +3383,6 @@ table.auto-table {
   font-weight: 700;
   box-shadow: 0 4px 12px rgb(27 77 62 / 25%);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-photo-rec:active {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgb(27 77 62 / 35%);
-  background: linear-gradient(135deg, #215c4b 0%, #358d75 100%);
 }
 
 .btn-photo-rec-icon {
@@ -3595,11 +3478,6 @@ table.auto-table {
   transition: background 0.2s;
 }
 
-.btn-close:active {
-  background: var(--bg-muted);
-  color: var(--danger);
-}
-
 .photo-rec-body {
   padding: 20px;
   overflow-y: auto;
@@ -3625,11 +3503,6 @@ table.auto-table {
   text-align: center;
   background: rgb(33 140 116 / 3%);
   transition: all 0.2s;
-}
-
-.upload-dropzone:active {
-  background: rgb(33 140 116 / 8%);
-  border-color: #1b4d3e;
 }
 
 .dropzone-content {
@@ -3719,11 +3592,6 @@ table.auto-table {
   border: none;
   transition: all 0.2s;
   width: 100%;
-}
-
-.photo-rec-submit-btn:active:not(:disabled) {
-  opacity: 0.95;
-  transform: translateY(-1px);
 }
 
 .photo-rec-submit-btn:disabled {
@@ -3832,10 +3700,6 @@ table.auto-table {
   transition: all 0.2s;
 }
 
-.btn-success:active {
-  filter: brightness(1.1);
-}
-
 /* ==========================================================================
    Few-Shot Calibration & Tile Editing Styles
    ========================================================================== */
@@ -3869,14 +3733,6 @@ table.auto-table {
   transition: all 0.2s ease;
 }
 
-.icon-control-btn:active {
-  background: #f4f6f5;
-  border-color: var(--mj-green);
-  color: var(--mj-green);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgb(0 0 0 / 12%);
-}
-
 /* Tile Editor in Result Card */
 .result-header-row {
   display: flex;
@@ -3902,11 +3758,6 @@ table.auto-table {
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-}
-
-.tile-add-btn:active {
-  background: rgb(33 140 116 / 15%);
-  transform: scale(1.05);
 }
 
 .tile-picker-box {
