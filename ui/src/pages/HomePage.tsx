@@ -68,7 +68,7 @@ export default function HomePage() {
       </div>
 
       <div className="card active-games-section">
-        <h2 style={{ marginBottom: 16 }}>正在进行的对局</h2>
+        <h2>正在进行的对局</h2>
         {loading ? (
           <div className="empty-state">
             <p>{MSG.LOADING}</p>
@@ -112,7 +112,7 @@ export default function HomePage() {
       </div>
 
       <div className="card">
-        <h2 style={{ marginBottom: 16 }}>本月荣誉殿堂</h2>
+        <h2>本月荣誉殿堂</h2>
         {loading ? (
           <div className="empty-state">
             <p>{MSG.LOADING}</p>

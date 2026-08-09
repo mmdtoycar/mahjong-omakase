@@ -457,7 +457,7 @@ export default function SessionPage() {
           <div className="round-form">
             <h3 className="round-form-title">添加 — {gameState.displayName}</h3>
             {isRiichi && (
-              <div className="form-group" style={{ marginBottom: 16 }}>
+              <div className="form-group">
                 <label className="checkbox-toggle">
                   <input
                     type="checkbox"
