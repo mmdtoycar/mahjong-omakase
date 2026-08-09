@@ -1,16 +1,5 @@
-# What the reader needs to *serve*. Training pulls in torch and onnx as well — see requirements.txt —
-# and the sidecar must not, because a 2GB deep-learning framework has no business on a droplet that is
-# also running the JVM. These come to roughly 160MB resident with the model loaded.
-#
-# Pinned to the versions the reader was measured against. serve.py has a self-check that exercises the
-# whole path against a real photo, so a bump is verifiable: `python serve.py --self-check`.
 numpy==2.5.1
 onnxruntime==1.28.0
 opencv-python-headless==5.0.0.93
-
-# For HEIC, which is what an iPhone produces. It reaches the server untouched whenever the browser could
-# not decode it — Safari can, desktop Chrome cannot — and OpenCV has no HEIC support at all, so without
-# these the reader refuses every phone photo uploaded from a desktop. pillow-heif's wheels bundle libheif
-# and its codecs, so no system package is needed.
 pillow==12.3.0
 pillow-heif==1.5.0

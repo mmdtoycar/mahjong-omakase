@@ -1,5 +1,8 @@
 package com.mahjong.omakase.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,10 +50,15 @@ public class LocalReaderService {
     }
   }
 
+  private final ObjectMapper objectMapper;
   private final RestClient restClient;
   private final String url;
 
-  public LocalReaderService(RestClient localReaderRestClient, @Value("${reader.url:}") String url) {
+  public LocalReaderService(
+      ObjectMapper objectMapper,
+      RestClient localReaderRestClient,
+      @Value("${reader.url:}") String url) {
+    this.objectMapper = objectMapper;
     this.restClient = localReaderRestClient;
     this.url = url == null ? "" : url.trim();
     if (this.url.isEmpty()) {
@@ -123,17 +131,21 @@ public class LocalReaderService {
 
   /**
    * Pulls {@code message} out of the reader's error body, which is always {@code {"message": …}}.
+   *
+   * <p>Parsed rather than scanned for quotes. Hand-rolled index arithmetic stopped at the first
+   * quote that looked closing, so a reason containing an escaped one came back truncated and a
+   * unicode escape came back raw. {@link TileRecognitionService} already reads Gemini's error
+   * bodies this way.
    */
-  private static String message(String responseBody) {
+  private String message(String responseBody) {
     if (responseBody == null || responseBody.isBlank()) {
       return "";
     }
-    int key = responseBody.indexOf("\"message\"");
-    if (key < 0) {
+    try {
+      JsonNode message = objectMapper.readTree(responseBody).path("message");
+      return message.isTextual() ? message.asText() : "";
+    } catch (IOException e) {
       return "";
     }
-    int open = responseBody.indexOf('"', responseBody.indexOf(':', key) + 1);
-    int close = open < 0 ? -1 : responseBody.indexOf('"', open + 1);
-    return open < 0 || close < 0 ? "" : responseBody.substring(open + 1, close);
   }
 }

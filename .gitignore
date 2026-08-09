@@ -32,13 +32,8 @@ ui/dist/
 .gemini/
 bin/
 
-# Recognition samples written by a local run (RECOGNITION_SAMPLE_DIR). Photos of one table, and the
-# production copy lives in a Docker volume — never something to commit.
-samples/
+/samples/
 
-# Nothing at the repository *root* is an npm package; the frontend is its own package under ui/. Here
-# because `npm i` run from the wrong directory creates all three, and node_modules is 100MB+. Anchored
-# with a leading slash: unanchored, `package.json` would match at every level, including ui/'s.
 /node_modules/
 /package.json
 /package-lock.json

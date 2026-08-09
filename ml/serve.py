@@ -188,6 +188,29 @@ def self_check() -> int:
     hand_file = Path(__file__).resolve().parent / "data/test_hand.jpg"
     photo = cv2.imencode(".jpg", cv2.imread(str(hand_file)))[1] if hand_file.exists() else None
 
+    def drive(raw: bytes):
+        """Push one raw request through the handler over a fake socket."""
+
+        class Driver(Handler):
+            def __init__(self):
+                self.rfile, self.wfile = io.BytesIO(raw), io.BytesIO()
+                self.client_address = ("127.0.0.1", 0)
+                self.requestline, self.request_version, self.command = "", "", ""
+                self.handle_one_request()
+
+            def setup(self):
+                pass
+
+            def finish(self):
+                pass
+
+            def log_message(self, fmt, *args):
+                pass
+
+        written = Driver().wfile.getvalue()
+        payload = written.split(b"\r\n\r\n", 1)[1]
+        return int(written.split(b" ", 2)[1]), json.loads(payload) if payload else {}
+
     def request(
         method: str,
         path: str,
@@ -205,54 +228,16 @@ def self_check() -> int:
             body = framed + b"0\r\n\r\n"
         elif body is not None:
             head += f"Content-Length: {length if length is not None else len(body)}\r\n"
-        raw = head.encode() + b"\r\n" + (body or b"")
-
-        class Driver(Handler):
-            def __init__(self):
-                self.rfile, self.wfile = io.BytesIO(raw), io.BytesIO()
-                self.client_address = ("127.0.0.1", 0)
-                self.requestline, self.request_version, self.command = "", "", ""
-                self.handle_one_request()
-
-            def setup(self):
-                pass
-
-            def finish(self):
-                pass
-
-            def log_message(self, fmt, *args):
-                pass
-
-        written = Driver().wfile.getvalue()
-        status = int(written.split(b" ", 2)[1])
-        payload = written.split(b"\r\n\r\n", 1)[1]
-        return status, json.loads(payload) if payload else {}
+        return drive(head.encode() + b"\r\n" + (body or b""))
 
     def encoded(buffer) -> bytes:
         return json.dumps({"imageBase64": base64.b64encode(buffer.tobytes()).decode()}).encode()
 
     def request_raw_chunked_garbage():
         """A chunked body whose first chunk header is not a hex number."""
-        raw = b"POST /recognize HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n\r\nnope\r\n"
-
-        class Driver(Handler):
-            def __init__(self):
-                self.rfile, self.wfile = io.BytesIO(raw), io.BytesIO()
-                self.client_address = ("127.0.0.1", 0)
-                self.requestline, self.request_version, self.command = "", "", ""
-                self.handle_one_request()
-
-            def setup(self):
-                pass
-
-            def finish(self):
-                pass
-
-            def log_message(self, fmt, *args):
-                pass
-
-        written = Driver().wfile.getvalue()
-        return int(written.split(b" ", 2)[1]), json.loads(written.split(b"\r\n\r\n", 1)[1])
+        return drive(
+            b"POST /recognize HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n\r\nnope\r\n"
+        )
 
     cases = [
         ("healthz", lambda: request("GET", "/healthz"), 200),

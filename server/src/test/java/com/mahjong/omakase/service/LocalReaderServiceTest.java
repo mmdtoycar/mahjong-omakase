@@ -6,6 +6,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mahjong.omakase.service.LocalReaderService.ReaderUnavailableException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -27,7 +28,7 @@ class LocalReaderServiceTest {
   private Fixture build() {
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-    return new Fixture(new LocalReaderService(builder.build(), READER), server);
+    return new Fixture(new LocalReaderService(new ObjectMapper(), builder.build(), READER), server);
   }
 
   private void answer(MockRestServiceServer server, HttpStatus status, String body) {
@@ -105,9 +106,17 @@ class LocalReaderServiceTest {
 
   @Test
   void isNotConfiguredWithoutAUrl() {
-    assertThat(new LocalReaderService(RestClient.builder().build(), "  ").isConfigured()).isFalse();
-    assertThat(new LocalReaderService(RestClient.builder().build(), null).isConfigured()).isFalse();
-    assertThat(new LocalReaderService(RestClient.builder().build(), READER).isConfigured())
+    assertThat(
+            new LocalReaderService(new ObjectMapper(), RestClient.builder().build(), "  ")
+                .isConfigured())
+        .isFalse();
+    assertThat(
+            new LocalReaderService(new ObjectMapper(), RestClient.builder().build(), null)
+                .isConfigured())
+        .isFalse();
+    assertThat(
+            new LocalReaderService(new ObjectMapper(), RestClient.builder().build(), READER)
+                .isConfigured())
         .isTrue();
   }
 }

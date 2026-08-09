@@ -8,9 +8,6 @@ on:
 env:
   IMAGE: ghcr.io/${{ github.repository }}
   READER_IMAGE: ghcr.io/${{ github.repository }}-reader
-  # Deployed by commit rather than by :latest. Both images are built from the same commit and the JVM
-  # talks to the reader over a shared contract, so they have to be the same commit at runtime too —
-  # with :latest, another workflow finishing in between would silently pair mismatched halves.
   SHA: ${{ github.sha }}
 
 jobs:
@@ -80,16 +77,8 @@ jobs:
             docker pull "$IMAGE:$SHA"
             docker pull "$READER_IMAGE:$SHA"
 
-            # A private network so the JVM can reach the reader by name. The reader publishes no port:
-            # it has no authentication of its own and has no business being reachable from outside.
-            #
-            # Created only when absent, and a real failure to create it aborts here (set -e) rather than
-            # being swallowed: otherwise both containers would be removed first and `docker run
-            # --network` would fail afterwards, leaving nothing running at all.
             docker network inspect mahjong-net >/dev/null 2>&1 || docker network create mahjong-net
 
-            # `rm -f` rather than stop-then-rm: it is the same two steps, and having them as two
-            # `|| true` lines only made it look like the removal was conditional on the stop working.
             docker rm -f mahjong-reader 2>/dev/null || true
 
             docker run -d \

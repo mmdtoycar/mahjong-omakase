@@ -1,20 +1,7 @@
-# Code quality for the Python side, the counterpart to spotless and PMD on the Java side.
-#
-# One tool for both jobs: `ruff format` is the formatter (spotless), `ruff check` is the linter (PMD).
-# That is deliberate — black, isort, flake8, pyupgrade and pydocstyle would be five installs and five
-# configs for what this does in one, and it runs fast enough that the pre-commit hook does not notice.
-#
-# The rule set is ruff's default plus import sorting. Not more: a wide selection on a codebase this size
-# mostly produces opinions to argue with, and the default set already caught the four unused unpacked
-# variables and one import-style slip that were actually here.
 line-length = 110
 
 [lint]
-# Import order, which is what spotless does for Java imports. Zero findings when it was switched on —
-# the imports were already in order — so it costs nothing and keeps them that way.
 extend-select = ["I"]
 
 [format]
-# Match the existing style rather than impose one: these files were written with double quotes and
-# trailing commas throughout, which is also what the formatter would choose by default.
 quote-style = "double"

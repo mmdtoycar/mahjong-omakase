@@ -11,9 +11,6 @@ cd "$ROOT"
 
 echo "▶ Running pre-commit checks..."
 
-# Python first: ruff is milliseconds, so a Python slip surfaces before the three gradle invocations and
-# the frontend build. Skipped when ml/.venv is absent, which is the normal state of a fresh clone that
-# has not set the ml side up — the Java and frontend checks below still have to pass.
 if [ -x ml/.venv/bin/python ]; then
   echo "  1/6 ruff (Python format + lint)"
   ml/.venv/bin/python -m ruff format ml --quiet

@@ -76,8 +76,7 @@ class RecognitionSampleStoreTest {
     store.save(JPEG, "image/jpeg", "gemini-3.6-flash", "{\"concealed\":[\"9p\"]}");
 
     String stem = namesEnding(dir, ".jpg").get(0).replace(".jpg", "");
-    Path failure =
-        dir.resolve(filesUnder(dir).get(0).getParent().getFileName()).resolve(stem + "-local.json");
+    Path failure = filesUnder(dir).get(0).getParent().resolve(stem + "-local.json");
     assertThat(Files.readString(failure, StandardCharsets.UTF_8))
         .contains("\"error\":\"no line of tiles found\"")
         .doesNotContain("rawJson");
