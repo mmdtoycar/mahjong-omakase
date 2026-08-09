@@ -41,7 +41,16 @@ MIN_RUN_ASPECT = 2.0  # below this a blob is a single tile, not a line of them
 # within a pixel of the brute-force answer, and every step here costs a forward pass per tile.
 PITCH_NUDGE = (0.99, 1.0, 1.01)
 OFFSET_NUDGE = (-0.04, 0.0, 0.04)
-COUNT_NUDGE = (-1, 0, 1)  # the run's box can clip a tile at either end
+# The count is *not* nudged, and that is a fix rather than an omission. Mean confidence cannot compare
+# grids of different lengths: fewer cells means the worst tile can be left out, so the score rises every
+# time one is dropped. On the one real photo, rotated to landscape the way the upload path sends it, the
+# scores ran 11 tiles 0.880, 12 tiles 0.866, 13 tiles 0.840 — monotonically rewarding truncation. The
+# refiner duly returned twelve tiles and quietly lost a 發; only the ±1 bound stopped it at twelve rather
+# than eleven. The portrait version happened to answer thirteen, which is why this sat unnoticed.
+#
+# The run's length is an unbiased estimate of the count and fit_grid already uses it — 13 cells spanned
+# 1.00 of the run against 0.92 for 12. So the geometry decides how many tiles there are and the
+# classifier only moves the grid by a fraction of a pitch, which is all it was ever good for.
 
 # What a run of this length is. Three or four tiles set aside is a meld; the long run is the standing
 # hand. Nothing else is part of the hand — a discard pile is neither.
@@ -137,12 +146,7 @@ def read_line(
         return None
 
     combinations = (
-        [
-            (pitch * p, offset + pitch * o, count + c)
-            for p in PITCH_NUDGE
-            for o in OFFSET_NUDGE
-            for c in COUNT_NUDGE
-        ]
+        [(pitch * p, offset + pitch * o, count) for p in PITCH_NUDGE for o in OFFSET_NUDGE]
         if refine
         else [(pitch, offset, count)]
     )
@@ -288,18 +292,34 @@ def main() -> None:
     if refined is None:
         raise SystemExit("no run could be read")
     score, count, pitch, start, confidence, predicted, _ = refined
-    print(f"\nchose {box}: {count} tiles, pitch {pitch:.1f}px, mean confidence {score:.3f}\n")
+    print(f"\nchose {box}: {count} tiles, pitch {pitch:.1f}px, mean confidence {score:.3f}")
+
+    x, y, w, h = box
+    vertical = h >= w
+    crops = slice_line(bgr, box, vertical, start, pitch, count, size)
+    direction = reading_order(box, [b for _, b in melds])
+    if direction.reverse:
+        crops = crops[::-1]
+        confidence, predicted = confidence.flip(0), predicted.flip(0)
+    # What the caller actually needs is whether the last tile below is the winning tile, so say that
+    # rather than which way the slicing ran. "Left to right" was also simply wrong for a hand lying up
+    # the frame, where the slice order is top to bottom.
+    if direction.known:
+        turned = "reversed, so that " if direction.reverse else ""
+        print(f"{turned}the winning tile is the last one below — {direction.why}\n")
+    else:
+        print(f"which end holds the winning tile is unknown — {direction.why}")
+        print("the order below is as sliced, and may be the reverse of the hand's\n")
+
     for i, (guess, sure) in enumerate(zip(predicted.tolist(), confidence.tolist()), 1):
         mark = "" if sure >= CONFIDENT else "   <- hand this one back"
-        print(f"  {i:2d}. {labels[guess]:4s} {sure:.2f}{mark}")
+        last = "   <- winning tile" if direction.known and i == count else ""
+        print(f"  {i:2d}. {labels[guess]:4s} {sure:.2f}{mark}{last}")
     kept = sum(1 for c in confidence.tolist() if c >= CONFIDENT)
     print(f"\n{kept}/{count} at confidence >= {CONFIDENT}\n")
 
     read_melds(model, bgr, light, melds, box, pitch, size, labels)
 
-    x, y, w, h = box
-    vertical = h >= w
-    crops = slice_line(bgr, box, vertical, start, pitch, count, size)
     out = args.output or DATA / f"{args.photo.stem}_read.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     sheet(crops, labels, predicted, confidence, out)
@@ -428,6 +448,58 @@ def choose_meld(candidates: list[Candidate], hand_pitch: float) -> Meld | str:
     if best is not None:
         return best[1]
     return "; ".join(reasons) if reasons else "no grid of three or four tiles fits it"
+
+
+class Direction(NamedTuple):
+    """Which way along the run the hand reads, and whether that was actually established."""
+
+    reverse: bool
+    known: bool
+    why: str
+
+
+def reading_order(
+    hand_box: tuple[int, int, int, int], meld_boxes: list[tuple[int, int, int, int]]
+) -> Direction:
+    """Whether the sliced tiles have to be reversed so the winning tile lands last.
+
+    The calculator takes the last element of the concealed array as the winning tile, and the
+    photographer's convention puts that tile at the right-hand end of the standing hand with the melds
+    beyond it. So the run has to be handed over finishing at whichever end is physically the right one.
+
+    Two independent ways to tell, because either alone has a hole:
+
+    The melds settle it whatever way the phone was held — they sit past the right end of the hand, so the
+    end they are nearer is the right end. Only the ones roughly in line with the hand count: in the one
+    real photo the discard pile is also a run of four, and it sits off to the side, so it would point the
+    wrong way if any blob were allowed to vote.
+
+    Failing that, the frame itself: a hand lying across the frame reads left to right, which is what
+    slicing along +x already gives. That needs the photo to be the right way up, and it is the weaker of
+    the two — a hand lying *up* the frame says nothing about which end is which, and rather than guess
+    there, this reports that it does not know. A wrong winning tile is a wrong score; an admitted unknown
+    is one tap in the review screen.
+    """
+    x, y, w, h = hand_box
+    vertical = h >= w
+    start, end = (y, y + h) if vertical else (x, x + w)
+    across_middle = (x + w / 2) if vertical else (y + h / 2)
+    across_span = w if vertical else h
+
+    in_line = []
+    for box_x, box_y, box_w, box_h in meld_boxes:
+        theirs_across = (box_x + box_w / 2) if vertical else (box_y + box_h / 2)
+        if abs(theirs_across - across_middle) <= across_span:
+            in_line.append((box_y + box_h / 2) if vertical else (box_x + box_w / 2))
+
+    if in_line:
+        melds_at = sum(in_line) / len(in_line)
+        at_start = abs(melds_at - start) < abs(melds_at - end)
+        upright = "" if vertical else f", and the frame {'disagrees' if at_start else 'agrees'}"
+        return Direction(at_start, True, f"{len(in_line)} meld(s) in line{upright}")
+    if not vertical:
+        return Direction(False, True, "no melds in line; the hand lies across the frame")
+    return Direction(False, False, "no melds in line and the hand lies up the frame")
 
 
 def read_melds(
@@ -586,7 +658,28 @@ def self_check() -> int:
         shown = got if not isinstance(got, str) else f"rejected: {got[:60]}"
         print(f"  {'ok  ' if ok else 'FAIL'} {name:26s} -> {shown}")
 
-    total = len(cases) + len(choices)
+    # And which way round the run reads. Boxes are (x, y, w, h). The hand is 700 long and 100 across.
+    across = (300, 100, 100, 700)   # lies up the frame
+    along = (100, 300, 700, 100)    # lies across the frame
+    orders = [
+        # A meld past the far end means the run already finishes at the right end.
+        ("melds past the end", across, [(300, 850, 100, 220)], (False, True)),
+        ("melds past the start", across, [(300, 30, 100, 220)], (True, True)),
+        # The discard pile in the real photo is also a run of four, sitting off to the side. Letting any
+        # blob vote would point the wrong way, so out-of-line boxes are ignored.
+        ("off to the side, ignored", across, [(900, 30, 100, 220)], (False, False)),
+        ("side blob plus a real meld", across, [(900, 30, 100, 220), (300, 850, 100, 220)], (False, True)),
+        # No melds: the frame decides, and only when the hand lies across it.
+        ("no melds, hand across frame", along, [], (False, True)),
+        ("no melds, hand up frame", across, [], (False, False)),
+    ]
+    for name, hand, meld_boxes, expected in orders:
+        got = reading_order(hand, meld_boxes)
+        ok = (got.reverse, got.known) == expected
+        failures += not ok
+        print(f"  {'ok  ' if ok else 'FAIL'} {name:26s} -> reverse={got.reverse} known={got.known}")
+
+    total = len(cases) + len(choices) + len(orders)
     print(f"\n{total - failures}/{total} correct")
     return failures
 
