@@ -1,13 +1,9 @@
-# Regenerable from the calibration photos — never worth committing.
+# Regenerable from the calibration photos — never worth committing. That includes the hand photo used to
+# check the end-to-end read: it is an input rather than an output, but it is a 200KB binary of one table,
+# so it stays local. Point try_real_photo.py at any photo of a hand.
 .venv/
+data/
 runs/
 *.pt
 *.onnx
 __pycache__/
-
-# data/ holds the generated crops, masks and contact sheets. Contents rather than the directory itself,
-# so the one thing in there that is an *input* can be kept: test_hand.jpg is the only real photograph
-# the end-to-end read is checked against, and it cannot be regenerated. The previous one lived in /tmp,
-# was lost when that was cleared, and took the only real-data result in the README with it.
-data/*
-!data/test_hand.jpg
