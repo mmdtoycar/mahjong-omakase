@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class CreatePlayerRequest {
   @NotBlank(message = "Username is required")
-  @Size(min = 2, max = 16, message = "Username must be 2-16 characters")
+  @Size(min = 2, max = 12, message = "Username must be 2-12 characters")
   @Pattern(
       regexp = "^[a-zA-Z0-9_\\u4e00-\\u9fa5]+$",
       message = "Username can only contain letters, numbers, underscores, and Chinese characters")

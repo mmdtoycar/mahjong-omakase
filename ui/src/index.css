@@ -1004,7 +1004,7 @@ table.auto-table {
 
 .player-name {
   /* Never truncated: however long the name, it is shown in full and wraps if it has to.
-     WalkingAFK is the longest one to design against. */
+     Registration caps a user name at 12 characters, which is what these widths are sized against. */
   max-width: 100%;
   overflow-wrap: anywhere;
   font-weight: 500;
@@ -1203,7 +1203,7 @@ table.auto-table {
 }
 
 .player-select-card div {
-  /* Player names are never truncated (WalkingAFK is the benchmark): they wrap instead. */
+  /* Player names are never truncated (12 characters is the registered maximum): they wrap instead. */
   overflow-wrap: anywhere;
 }
 

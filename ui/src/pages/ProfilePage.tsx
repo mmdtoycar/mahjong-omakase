@@ -253,10 +253,11 @@ export default function ProfilePage() {
 
           <form onSubmit={handleSetupSubmit} className="profile-claim-form">
             <div>
-              <label className="profile-field-label">用户名</label>
+              <label className="profile-field-label">用户名 (最长 12 字)</label>
               <input
                 type="text"
                 className="profile-field-input"
+                maxLength={12}
                 value={setupForm.userName}
                 onChange={(e) => setSetupForm({ ...setupForm, userName: e.target.value })}
               />
