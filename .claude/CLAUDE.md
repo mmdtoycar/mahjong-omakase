@@ -100,14 +100,16 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Verify against a narrow viewport before calling something done, not after.
 - Desktop-only affordances are not features. They are weight.
 
-**Concretely: no `:hover`, no `cursor: pointer`.** Neither device has a mouse pointer.
+**Concretely: no `:hover`, no `cursor: pointer`.** Touch is the input that is always there. An iPad
+can have a trackpad attached, so a pointer is possible — but never assume one, and never let anything
+depend on having one.
 
 - Do NOT write `:hover` styles, and do NOT write `cursor: pointer` (in CSS or in a `style={{}}`).
-- Anything that only appears or only becomes legible on hover is **invisible** on the primary devices.
-  A control revealed by `:hover` is a control that does not exist there.
-- Do NOT replace a removed `:hover` with an `:active` — that adds an effect the primary devices never
-  had. Press feedback earns its place only when the tap produces no immediately visible result, and a
-  spinner or a disabled state is usually the better answer there.
+- Anything that only appears or only becomes legible on hover is **invisible** to a finger. A control
+  revealed by `:hover` is a control that does not exist for most of this app's use.
+- Do NOT convert a removed `:hover` into an `:active` just to keep the effect. Press feedback has to
+  earn its place: add it only when the tap produces no immediately visible result, and only when a
+  spinner or a disabled state is not the better answer.
 
 ---
 

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.mahjong.omakase.dto.PlayerDetailResponse;
 import com.mahjong.omakase.dto.PlayerDetailResponse.ModeStats;
+import com.mahjong.omakase.dto.PlayerStatsResponse;
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.model.GameSession;
 import com.mahjong.omakase.model.Player;
@@ -252,6 +253,53 @@ class GameServiceStatsTest {
                 row(GUOBIAO_SESSION, 100L, OPPONENT, 3L, 3L, -8000)));
 
     assertThat(byMode).isEmpty();
+  }
+
+  /**
+   * The same tallies are also mapped onto the leaderboard response, by a second call site that
+   * reads them per player rather than for one. Both must agree — the whole point of the shared
+   * accumulator is that 和牌率 on the stats page and on the player page cannot drift apart.
+   */
+  @Test
+  void mapsTheSameTalliesOntoTheLeaderboard() {
+    Player me = new Player();
+    me.setId(ME);
+    me.setUserName("me");
+    Player opponent = new Player();
+    opponent.setId(OPPONENT);
+    opponent.setUserName("opponent");
+    when(playerRepo.findAll()).thenReturn(List.of(me, opponent));
+
+    GameSession completed = session(GUOBIAO_SESSION, GameMode.GUOBIAO, SessionStatus.COMPLETED);
+    when(sessionRepo.findAll()).thenReturn(List.of(completed));
+    // [sessionId, playerId, total] — what drives gamesPlayed and the per-session ranking.
+    when(roundScoreRepo.getTotalScoresBySessions(anyList()))
+        .thenReturn(
+            List.of(
+                new Object[] {GUOBIAO_SESSION, ME, 12000},
+                new Object[] {GUOBIAO_SESSION, OPPONENT, -12000}));
+    when(roundScoreRepo.getRoundDetailsBySessions(anyList()))
+        .thenReturn(
+            concat(
+                List.of(
+                    round(GUOBIAO_SESSION, 100L, ME, OPPONENT, 8000),
+                    round(GUOBIAO_SESSION, 101L, ME, OPPONENT, 4000),
+                    round(GUOBIAO_SESSION, 102L, OPPONENT, ME, 6000))));
+
+    PlayerStatsResponse mine =
+        service.getPlayerStats(null, null, null).stream()
+            .filter(s -> ME == s.getPlayerId())
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(mine.getRoundsPlayed()).isEqualTo(3);
+    assertThat(mine.getHandWins()).isEqualTo(2);
+    assertThat(mine.getTsumoWins()).isZero();
+    assertThat(mine.getDealIns()).isEqualTo(1);
+    assertThat(mine.getAvgWinPoints()).isEqualTo(6000.0);
+    assertThat(mine.getAvgDealInPoints()).isEqualTo(6000.0);
+    assertThat(mine.getGamesPlayed()).isEqualTo(1);
+    assertThat(mine.getTotalScore()).isEqualTo(12000);
   }
 
   @Test
