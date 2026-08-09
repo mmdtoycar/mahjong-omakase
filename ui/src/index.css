@@ -136,7 +136,6 @@ body {
   font-weight: 500;
   padding: 6px 12px;
   border-radius: 6px;
-  transition: background 0.2s;
 }
 
 main {
@@ -190,7 +189,6 @@ main {
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
   box-shadow: var(--shadow);
 }
@@ -797,7 +795,6 @@ table.auto-table {
   color: var(--text-on-accent);
   margin-left: 4px;
   font-weight: 600;
-  transition: background 0.2s;
 }
 
 .claim-name-row {
@@ -1989,7 +1986,6 @@ table.auto-table {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 12px;
-  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .fan-item-header {
@@ -2739,7 +2735,6 @@ table.auto-table {
   align-items: center;
   gap: 16px;
   text-decoration: none;
-  transition: transform 0.3s;
 }
 
 .hero-logo-ring {
@@ -3109,7 +3104,6 @@ table.auto-table {
   color: #334155;
   font-size: 0.9rem;
   font-weight: 600;
-  transition: all 0.2s ease;
 }
 
 .game-fs-close-btn {
@@ -3259,7 +3253,6 @@ table.auto-table {
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.95rem;
-  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 .game-fs-tip {
@@ -3382,7 +3375,6 @@ table.auto-table {
   font-size: 0.9rem;
   font-weight: 700;
   box-shadow: 0 4px 12px rgb(27 77 62 / 25%);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-photo-rec-icon {
@@ -3475,7 +3467,6 @@ table.auto-table {
   color: var(--text-light);
   padding: 4px 8px;
   border-radius: 6px;
-  transition: background 0.2s;
 }
 
 .photo-rec-body {
@@ -3502,7 +3493,6 @@ table.auto-table {
   padding: 24px 16px;
   text-align: center;
   background: rgb(33 140 116 / 3%);
-  transition: all 0.2s;
 }
 
 .dropzone-content {
@@ -3697,7 +3687,6 @@ table.auto-table {
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.95rem;
-  transition: all 0.2s;
 }
 
 /* ==========================================================================
@@ -3730,7 +3719,6 @@ table.auto-table {
   font-size: 1.1rem;
   font-weight: 700;
   box-shadow: 0 2px 5px rgb(0 0 0 / 8%);
-  transition: all 0.2s ease;
 }
 
 /* Tile Editor in Result Card */
@@ -3757,7 +3745,6 @@ table.auto-table {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
 }
 
 .tile-picker-box {
