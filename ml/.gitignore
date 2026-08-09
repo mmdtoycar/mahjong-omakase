@@ -3,7 +3,10 @@
 # so it stays local. Point try_real_photo.py at any photo of a hand.
 .venv/
 data/
-runs/
-*.pt
-*.onnx
 __pycache__/
+*.pt
+
+runs/*
+*.onnx
+!runs/classifier.onnx
+!runs/classifier.json

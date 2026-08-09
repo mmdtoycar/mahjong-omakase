@@ -46,14 +46,8 @@ def main() -> None:
         for target in range(len(labels)):
             for n in range(args.per_class):
                 seed = low + (target * args.per_class + n) % (high - low)
-                synth = Synthesiser(
-                    faces, masks, seed=seed, hard=args.hard, size=size, labels=face_labels
-                )
-                image = (
-                    synth.sample_negative()
-                    if labels[target] == NOT_A_TILE
-                    else synth.sample(target)
-                )
+                synth = Synthesiser(faces, masks, seed=seed, hard=args.hard, size=size, labels=face_labels)
+                image = synth.sample_negative() if labels[target] == NOT_A_TILE else synth.sample(target)
                 rgb = image[:, :, ::-1].astype(np.float32) / 255.0
                 batch = torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1)) - 0.5)[None]
                 logits = model(batch)[0]
@@ -71,7 +65,9 @@ def main() -> None:
     counts: dict[tuple[str, str], int] = {}
     for actual, guess, _, _ in failures:
         counts[(actual, guess)] = counts.get((actual, guess), 0) + 1
-    print("  " + ", ".join(f"{a}->{g} x{n}" for (a, g), n in sorted(counts.items(), key=lambda kv: -kv[1])[:12]))
+    print(
+        "  " + ", ".join(f"{a}->{g} x{n}" for (a, g), n in sorted(counts.items(), key=lambda kv: -kv[1])[:12])
+    )
 
     grid(failures[:96], DATA / f"failures_{'hard' if args.hard else 'val'}.png", size)
 
@@ -86,9 +82,7 @@ def grid(failures: list, path: Path, size: int) -> None:
     for i, (actual, guess, confidence, image) in enumerate(failures):
         r, c = divmod(i, columns)
         y, x = r * (cell + 22), c * cell
-        sheet[y : y + cell, x : x + cell] = cv2.resize(
-            image, (cell, cell), interpolation=cv2.INTER_NEAREST
-        )
+        sheet[y : y + cell, x : x + cell] = cv2.resize(image, (cell, cell), interpolation=cv2.INTER_NEAREST)
         cv2.putText(
             sheet,
             f"{actual} -> {guess} {confidence:.2f}",

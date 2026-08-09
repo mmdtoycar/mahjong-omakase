@@ -59,3 +59,11 @@ gemini:
 # Set to an empty value to stop keeping them.
 recognition:
   sample-dir: ${RECOGNITION_SAMPLE_DIR:/app/samples}
+
+# The local tile reader — the Python sidecar built from ml/Dockerfile. Unset means "there is no
+# reader", and every recognition goes to Gemini as it always did, so leaving this out is a safe way to
+# turn the local path off. In production it is a container name on a shared Docker network, never a
+# published port: nothing in the reader authenticates, and the JVM in front of it is what checks the
+# session token.
+reader:
+  url: ${READER_URL:}

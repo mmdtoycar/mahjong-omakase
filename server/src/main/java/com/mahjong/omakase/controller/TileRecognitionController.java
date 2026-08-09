@@ -2,7 +2,7 @@ package com.mahjong.omakase.controller;
 
 import com.mahjong.omakase.dto.TileRecognitionRequest;
 import com.mahjong.omakase.dto.TileRecognitionResponse;
-import com.mahjong.omakase.service.TileRecognitionService;
+import com.mahjong.omakase.service.HandRecognitionService;
 import jakarta.validation.Valid;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -19,17 +19,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/recognize")
 public class TileRecognitionController {
 
-  private final TileRecognitionService service;
+  private final HandRecognitionService service;
 
-  public TileRecognitionController(TileRecognitionService service) {
+  public TileRecognitionController(HandRecognitionService service) {
     this.service = service;
   }
 
   @PostMapping
   public ResponseEntity<Object> recognize(@Valid @RequestBody TileRecognitionRequest request) {
     try {
-      String rawJson = service.recognize(request.getImageBase64(), request.getMimeType());
-      return ResponseEntity.ok(new TileRecognitionResponse(rawJson));
+      HandRecognitionService.Recognition recognition =
+          service.recognize(request.getImageBase64(), request.getMimeType(), request.getEngine());
+      return ResponseEntity.ok(
+          new TileRecognitionResponse(recognition.rawJson(), recognition.warning()));
     } catch (IllegalStateException e) {
       log.warn("Photo recognition unavailable: {}", e.getMessage());
       return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

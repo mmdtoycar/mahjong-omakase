@@ -22,26 +22,77 @@ class RecognitionSampleStoreTest {
     }
   }
 
+  /**
+   * Named by extension rather than by position: the two files no longer share a stem, so which of
+   * them sorts first depends on the digest and on '-' sorting before '.'.
+   */
+  private static List<String> namesEnding(Path root, String suffix) throws IOException {
+    return filesUnder(root).stream()
+        .map(path -> path.getFileName().toString())
+        .filter(name -> name.endsWith(suffix))
+        .toList();
+  }
+
   @Test
-  void writesThePhotoAndASidecarSharingOneStem(@TempDir Path dir) throws IOException {
+  void writesThePhotoAndASidecarNamedAfterIt(@TempDir Path dir) throws IOException {
     new RecognitionSampleStore(dir.toString())
         .save(JPEG, "image/jpeg", "gemini-3.6-flash", "{\"concealed\":[\"1m\"]}");
 
-    List<Path> files = filesUnder(dir);
-    assertThat(files).hasSize(2);
-    String jpg = files.get(0).getFileName().toString();
-    String json = files.get(1).getFileName().toString();
-    assertThat(jpg).endsWith("-gemini-3.6-flash.jpg");
-    assertThat(json).endsWith("-gemini-3.6-flash.json");
-    // Pairing a photo with its answer is the whole point, so the stems have to match exactly.
-    assertThat(jpg.replace(".jpg", "")).isEqualTo(json.replace(".json", ""));
+    assertThat(filesUnder(dir)).hasSize(2);
+    String jpg = namesEnding(dir, ".jpg").get(0);
+    // Pairing a photo with its answers is the whole point, so the answer is named after the photo.
+    assertThat(namesEnding(dir, ".json"))
+        .containsExactly(jpg.replace(".jpg", "") + "-gemini-3.6-flash.json");
+  }
+
+  /**
+   * The reason the photo is named after a digest of its own bytes rather than after the clock.
+   *
+   * <p>Recognising the same photo locally and then online has to leave one image and two answers,
+   * so that a later comparison is a directory listing rather than a manual pairing exercise. The
+   * first scheme stamped the time into the name, which made the same photo sent twice into two
+   * unrelated samples — and comparing the two recognisers is the entire reason the samples are
+   * kept.
+   */
+  @Test
+  void keepsOneImageAndAnAnswerPerRecogniserForTheSamePhoto(@TempDir Path dir) throws IOException {
+    RecognitionSampleStore store = new RecognitionSampleStore(dir.toString());
+
+    store.save(JPEG, "image/jpeg", "local", "{\"concealed\":[\"1m\"]}");
+    store.save(JPEG, "image/jpeg", "gemini-3.6-flash", "{\"concealed\":[\"9p\"]}");
+
+    assertThat(namesEnding(dir, ".jpg")).hasSize(1);
+    String stem = namesEnding(dir, ".jpg").get(0).replace(".jpg", "");
+    assertThat(namesEnding(dir, ".json"))
+        .containsExactlyInAnyOrder(stem + "-local.json", stem + "-gemini-3.6-flash.json");
+  }
+
+  /** A failure is a sample too, and lands beside whatever the fallback answered. */
+  @Test
+  void recordsAFailureAgainstTheSamePhoto(@TempDir Path dir) throws IOException {
+    RecognitionSampleStore store = new RecognitionSampleStore(dir.toString());
+
+    store.saveFailure(JPEG, "image/jpeg", "local", "no line of tiles found");
+    store.save(JPEG, "image/jpeg", "gemini-3.6-flash", "{\"concealed\":[\"9p\"]}");
+
+    String stem = namesEnding(dir, ".jpg").get(0).replace(".jpg", "");
+    Path failure =
+        dir.resolve(filesUnder(dir).get(0).getParent().getFileName()).resolve(stem + "-local.json");
+    assertThat(Files.readString(failure, StandardCharsets.UTF_8))
+        .contains("\"error\":\"no line of tiles found\"")
+        .doesNotContain("rawJson");
+    assertThat(namesEnding(dir, ".json")).hasSize(2);
   }
 
   @Test
   void writesTheDecodedImageBytesNotTheBase64(@TempDir Path dir) throws IOException {
     new RecognitionSampleStore(dir.toString()).save(JPEG, "image/jpeg", "m", "{}");
 
-    Path jpg = filesUnder(dir).get(0);
+    Path jpg =
+        filesUnder(dir).stream()
+            .filter(p -> p.toString().endsWith(".jpg"))
+            .findFirst()
+            .orElseThrow();
     assertThat(Files.readAllBytes(jpg)).containsExactly(1, 2, 3, 4);
   }
 
@@ -75,7 +126,7 @@ class RecognitionSampleStoreTest {
   @Test
   void namesTheFileAfterTheActualImageType(@TempDir Path dir) throws IOException {
     new RecognitionSampleStore(dir.toString()).save(JPEG, "image/heic", "m", "{}");
-    assertThat(filesUnder(dir).get(0).toString()).endsWith(".heic");
+    assertThat(namesEnding(dir, ".heic")).hasSize(1);
   }
 
   @Test

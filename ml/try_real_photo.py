@@ -20,16 +20,33 @@ calibration photo, this reads 13 of 13 tiles correctly, ten of them above 0.85.
 """
 
 import argparse
+import io
+import json
+import pathlib
 from pathlib import Path
 from typing import NamedTuple
 
 import cv2
 import numpy as np
-import torch
+import onnxruntime as ort
+import pillow_heif
+from PIL import Image, ImageOps, UnidentifiedImageError
+
+# iPhones produce HEIC, and it reaches this code whenever the browser could not decode it: Safari can,
+# desktop Chrome cannot, and the upload path then sends the file untouched. OpenCV has no HEIC support
+# at all, so without this the reader refuses every photo taken on a phone and uploaded from a desktop.
+pillow_heif.register_heif_opener()
 
 from grid_fit import fit_grid
 from synthesize import BACK, DATA, SIZE
-from train_classifier import RUNS, TileNet
+
+# The exported model rather than the training checkpoint, and no torch anywhere below. Two reasons: the
+# sidecar that serves this has to install onnxruntime and not a 2GB deep-learning framework, and running
+# the *same* inference path in development as in production removes a whole class of "it worked with the
+# .pt" surprise. train_classifier writes both files from the same weights.
+RUNS = pathlib.Path(__file__).resolve().parent / "runs"
+MODEL = RUNS / "classifier.onnx"
+METADATA = RUNS / "classifier.json"
 
 # A tile face is near-white: bright, and far less coloured than green felt or a brown table.
 MIN_LIGHTNESS = 150
@@ -114,7 +131,7 @@ def candidate_runs(bgr: np.ndarray) -> list[tuple[int, int, int, int]]:
 
 
 def read_line(
-    model: torch.nn.Module,
+    model: ort.InferenceSession,
     bgr: np.ndarray,
     light: np.ndarray,
     box: tuple[int, int, int, int],
@@ -122,7 +139,7 @@ def read_line(
     refine: bool,
     counts,
     expect: int | None = None,
-) -> tuple[float, int, float, float, torch.Tensor, torch.Tensor, torch.Tensor] | None:
+) -> tuple[float, int, float, float, np.ndarray, np.ndarray, np.ndarray] | None:
     """Reads one run, starting from its geometric fit.
 
     With `refine` false this costs a single forward pass, which is all that is needed to tell a row of
@@ -155,9 +172,7 @@ def read_line(
     for candidate_pitch, candidate_offset, candidate_count in combinations:
         if candidate_count not in counts:
             continue
-        crops = slice_line(
-            bgr, box, vertical, candidate_offset, candidate_pitch, candidate_count, size
-        )
+        crops = slice_line(bgr, box, vertical, candidate_offset, candidate_pitch, candidate_count, size)
         if crops is None:
             continue
         confidence, predicted, nothing = classify(model, crops)
@@ -192,18 +207,23 @@ def slice_line(
         a, b = int(origin + i * pitch) + inset, int(origin + (i + 1) * pitch) - inset
         if b <= a:
             return None
-        crop = (
-            bgr[a:b, x + inset : x + w - inset] if vertical else bgr[y + inset : y + h - inset, a:b]
-        )
+        crop = bgr[a:b, x + inset : x + w - inset] if vertical else bgr[y + inset : y + h - inset, a:b]
         if crop.size == 0 or crop.shape[0] < 8 or crop.shape[1] < 8:
             return None
         crops.append(cv2.resize(crop, (size, size), interpolation=cv2.INTER_AREA))
     return np.stack(crops)
 
 
-def classify(
-    model: torch.nn.Module, crops: np.ndarray
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def load_model() -> tuple[ort.InferenceSession, list[str], int]:
+    """The exported classifier with its labels and input size."""
+    if not MODEL.exists():
+        raise SystemExit(f"no model at {MODEL} — run train_classifier.py first")
+    session = ort.InferenceSession(str(MODEL), providers=["CPUExecutionProvider"])
+    labels = json.loads(METADATA.read_text())["labels"]
+    return session, labels, SIZE
+
+
+def classify(model: ort.InferenceSession, crops: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Best tile class per crop with its probability, and separately the probability of `none`.
 
     Kept apart because the two are wanted for different things. Ranking candidate runs by plain top-1
@@ -213,12 +233,41 @@ def classify(
     `none` is simply excluded it becomes unreachable — the check for it downstream was dead code.
     """
     rgb = (crops[:, :, :, ::-1].astype(np.float32) / 255.0) - 0.5
-    with torch.no_grad():
-        probabilities = torch.softmax(
-            model(torch.from_numpy(np.ascontiguousarray(rgb.transpose(0, 3, 1, 2)))), 1
-        )
-    confidence, predicted = probabilities[:, :-1].max(1)
-    return confidence, predicted, probabilities[:, -1]
+    batch = np.ascontiguousarray(rgb.transpose(0, 3, 1, 2))
+    logits = model.run(None, {model.get_inputs()[0].name: batch})[0]
+    logits = logits - logits.max(axis=1, keepdims=True)
+    exponentiated = np.exp(logits)
+    probabilities = exponentiated / exponentiated.sum(axis=1, keepdims=True)
+    faces = probabilities[:, :-1]
+    return faces.max(axis=1), faces.argmax(axis=1), probabilities[:, -1]
+
+
+def decode(raw: bytes) -> np.ndarray | None:
+    """The photo as BGR, whatever container it arrived in.
+
+    OpenCV first because it is the fast path for the JPEG the browser normally sends. Pillow is the
+    fallback, which is what handles HEIC — and it has to apply the EXIF orientation itself. Nothing
+    else will have: a HEIC only reaches the server because the browser could not draw it to a canvas,
+    and drawing to a canvas is exactly what would have applied the orientation.
+    """
+    bgr = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
+    if bgr is not None:
+        return bgr
+    try:
+        with Image.open(io.BytesIO(raw)) as opened:
+            upright = ImageOps.exif_transpose(opened)
+            return cv2.cvtColor(np.array(upright.convert("RGB")), cv2.COLOR_RGB2BGR)
+    except (UnidentifiedImageError, OSError, ValueError):
+        return None
+
+
+LONG_SIDE = 900
+
+
+def shrink(bgr: np.ndarray, long_side: int = LONG_SIDE) -> np.ndarray:
+    """Down to the size the reader expects. Only ever down — enlarging invents no detail."""
+    scale = min(1.0, long_side / max(bgr.shape[:2]))
+    return bgr if scale == 1.0 else cv2.resize(bgr, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
 
 def positive(raw: str) -> int:
@@ -229,6 +278,99 @@ def positive(raw: str) -> int:
     return value
 
 
+class Reading(NamedTuple):
+    """Everything one photo yielded. `tiles` is in hand order when `direction.known`."""
+
+    tiles: list[str]
+    confidence: list[float]
+    # Quoted because Meld and Direction are defined further down; NamedTuple evaluates its annotations
+    # when the class is created.
+    melds: list["Meld"]
+    winning: str | None
+    direction: "Direction"
+    box: tuple[int, int, int, int]
+    pitch: float
+    crops: np.ndarray
+    notes: list[str]
+
+
+def read_hand(
+    model: ort.InferenceSession,
+    labels: list[str],
+    size: int,
+    bgr: np.ndarray,
+    counts: range = range(12, 16),
+) -> Reading | str:
+    """Reads one photo, or returns the reason it could not be read.
+
+    Separated from main so the service and the command line share it rather than growing two readings of
+    the same photo. Nothing here prints: a note goes in `notes` instead, because the caller may be
+    answering an HTTP request.
+    """
+    light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
+    try:
+        runs = candidate_runs(bgr)
+    except SystemExit as reason:
+        return str(reason)
+
+    # The standing hand and the melds are separate runs — the melds are set aside on the right with a
+    # gap, so the mask gives them their own blobs. Read every run that could be either.
+    hand_candidates, meld_boxes = [], []
+    for box in runs:
+        for sizes, bucket in ((counts, hand_candidates), (MELD_SIZES, meld_boxes)):
+            fit = read_line(model, bgr, light, box, size, refine=False, counts=sizes)
+            if fit is None:
+                continue
+            bucket.append((fit[0], box))
+            break
+    if not hand_candidates:
+        return "no run long enough to be a hand"
+    box = max(hand_candidates)[1]
+
+    refined = read_line(model, bgr, light, box, size, refine=True, counts=counts)
+    if refined is None:
+        return "the run that looked like a hand could not be read"
+    _, count, pitch, start, confidence, predicted, _ = refined
+
+    _, _, w, h = box
+    vertical = h >= w
+    crops = slice_line(bgr, box, vertical, start, pitch, count, size)
+    direction = reading_order(box, [b for _, b in meld_boxes])
+    if direction.reverse:
+        crops = crops[::-1]
+        confidence, predicted = confidence[::-1], predicted[::-1]
+
+    tiles = [labels[int(g)] for g in predicted]
+    sure = [float(c) for c in confidence]
+    melds, notes = read_melds(model, bgr, light, meld_boxes, box, pitch, size, labels)
+
+    # The winning tile only when which end it sits at was actually established. The calculator moves it
+    # to the end of the array itself, so an honest null costs one tap and a guess costs a wrong score.
+    winning = tiles[-1] if direction.known and tiles else None
+    if not direction.known:
+        notes.append(f"which end holds the winning tile is unknown ({direction.why})")
+    unsure = [t for t, c in zip(tiles, sure) if c < CONFIDENT]
+    if unsure:
+        notes.append(f"least certain about {', '.join(unsure)} — worth a look")
+    return Reading(tiles, sure, melds, winning, direction, box, pitch, crops, notes)
+
+
+def as_json(reading: Reading) -> dict:
+    """The reading in the shape the UI already parses, which is the shape Gemini answers in.
+
+    `isSelfDraw` is always false because a photograph cannot say — the win condition is chosen by hand in
+    the calculator either way. `notes` is where the local reader can say something Gemini cannot: which
+    tiles it is least sure of.
+    """
+    return {
+        "concealed": reading.tiles,
+        "melds": [{"type": m.kind, "tiles": m.tiles, "isOpen": m.is_open} for m in reading.melds],
+        "winningTile": reading.winning,
+        "isSelfDraw": False,
+        "notes": "; ".join(reading.notes),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("photo", type=Path)
@@ -237,92 +379,58 @@ def main() -> None:
     # photo it was written against and silently miscounted a 1280px one — 12 tiles instead of 13, at
     # 0.55 mean confidence, because each tile came out 31px wide.
     #
-    # 900 puts a tile at roughly 55px. Both hand photos tried frame the hand about the same way, so the
-    # pitch comes to 6.1% of the long side in both, and this is the one setting that read every tile
-    # correctly with the most of them above the confidence floor. It is close to the classifier's own
-    # 64px input, which is the sense in which it is not arbitrary: shrinking further throws away detail
-    # the model would use, and going much larger only sharpens the crop's edges into features the
-    # synthetic training data does not have. Every setting from 640 to 1707 read this photo correctly,
-    # so the exact number is not delicate — 0.25 was simply far below the range.
-    parser.add_argument("--long-side", type=positive, default=900)
+    # 900 puts a tile at roughly 55px, close to the classifier's own 64px input, which is the sense in
+    # which it is not arbitrary: shrinking further throws away detail the model would use, and going much
+    # larger only sharpens the crop's edges into features the synthetic data does not have. Every setting
+    # from 640 to 1707 read the one real photo correctly, so the exact number is not delicate.
+    parser.add_argument("--long-side", type=positive, default=LONG_SIDE)
     parser.add_argument("--min-tiles", type=int, default=12)
     parser.add_argument("--max-tiles", type=int, default=15)
+    parser.add_argument("--json", action="store_true", help="print what the service would return")
     # Under data/ rather than /tmp: that directory is this script's own and gitignored, so two runs on
     # photos with the same stem cannot collide with each other or with anything else on the machine.
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
 
-    bgr = cv2.imread(str(args.photo))
+    bgr = decode(args.photo.read_bytes()) if args.photo.exists() else None
     if bgr is None:
         raise SystemExit(f"cannot read {args.photo}")
-    # Only ever down. Enlarging a photo that is already smaller than this invents no detail and would
-    # push the tiles past the size the model was trained to see.
-    scale = min(1.0, args.long_side / max(bgr.shape[:2]))
-    if scale < 1.0:
-        bgr = cv2.resize(bgr, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    bgr = shrink(bgr, args.long_side)
 
-    checkpoint = torch.load(RUNS / "classifier.pt")
-    labels = checkpoint["labels"]
-    size = checkpoint.get("size", SIZE)
-    model = TileNet(len(labels))
-    model.load_state_dict(checkpoint["state"])
-    model.eval()
+    model, labels, size = load_model()
+    reading = read_hand(model, labels, size, bgr, range(args.min_tiles, args.max_tiles + 1))
+    if isinstance(reading, str):
+        raise SystemExit(reading)
 
-    light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
-    counts = range(args.min_tiles, args.max_tiles + 1)
-    runs = candidate_runs(bgr)
-    print(f"{args.photo.name} at {bgr.shape[1]}x{bgr.shape[0]}, {len(runs)} candidate runs")
+    if args.json:
+        print(json.dumps(as_json(reading), ensure_ascii=False, indent=2))
+        return
 
-    # The standing hand and the melds are separate runs — the melds are set aside on the right with a
-    # gap, so the mask gives them their own blobs. Read every run that could be either.
-    hand_candidates, melds = [], []
-    for box in runs:
-        for sizes, bucket in ((counts, hand_candidates), (MELD_SIZES, melds)):
-            fit = read_line(model, bgr, light, box, size, refine=False, counts=sizes)
-            if fit is None:
-                continue
-            print(f"  {box}: {fit[1]} tiles at pitch {fit[2]:.1f}px, confidence {fit[0]:.3f}")
-            bucket.append((fit[0], box))
-            break
-    if not hand_candidates:
-        raise SystemExit("no run long enough to be a hand")
-    box = max(hand_candidates)[1]
-
-    refined = read_line(model, bgr, light, box, size, refine=True, counts=counts)
-    if refined is None:
-        raise SystemExit("no run could be read")
-    score, count, pitch, start, confidence, predicted, _ = refined
-    print(f"\nchose {box}: {count} tiles, pitch {pitch:.1f}px, mean confidence {score:.3f}")
-
-    x, y, w, h = box
-    vertical = h >= w
-    crops = slice_line(bgr, box, vertical, start, pitch, count, size)
-    direction = reading_order(box, [b for _, b in melds])
-    if direction.reverse:
-        crops = crops[::-1]
-        confidence, predicted = confidence.flip(0), predicted.flip(0)
-    # What the caller actually needs is whether the last tile below is the winning tile, so say that
-    # rather than which way the slicing ran. "Left to right" was also simply wrong for a hand lying up
-    # the frame, where the slice order is top to bottom.
-    if direction.known:
-        turned = "reversed, so that " if direction.reverse else ""
-        print(f"{turned}the winning tile is the last one below — {direction.why}\n")
+    count = len(reading.tiles)
+    print(f"{args.photo.name} at {bgr.shape[1]}x{bgr.shape[0]}")
+    print(f"chose {reading.box}: {count} tiles, pitch {reading.pitch:.1f}px")
+    if reading.direction.known:
+        turned = "reversed, so that " if reading.direction.reverse else ""
+        print(f"{turned}the winning tile is the last one below — {reading.direction.why}\n")
     else:
-        print(f"which end holds the winning tile is unknown — {direction.why}")
+        print(f"which end holds the winning tile is unknown — {reading.direction.why}")
         print("the order below is as sliced, and may be the reverse of the hand's\n")
 
-    for i, (guess, sure) in enumerate(zip(predicted.tolist(), confidence.tolist()), 1):
-        mark = "" if sure >= CONFIDENT else "   <- hand this one back"
-        last = "   <- winning tile" if direction.known and i == count else ""
-        print(f"  {i:2d}. {labels[guess]:4s} {sure:.2f}{mark}{last}")
-    kept = sum(1 for c in confidence.tolist() if c >= CONFIDENT)
+    for i, (guess, certainty) in enumerate(zip(reading.tiles, reading.confidence), 1):
+        mark = "" if certainty >= CONFIDENT else "   <- hand this one back"
+        last = "   <- winning tile" if reading.winning is not None and i == count else ""
+        print(f"  {i:2d}. {guess:4s} {certainty:.2f}{mark}{last}")
+    kept = sum(1 for c in reading.confidence if c >= CONFIDENT)
     print(f"\n{kept}/{count} at confidence >= {CONFIDENT}\n")
 
-    read_melds(model, bgr, light, melds, box, pitch, size, labels)
+    for meld in reading.melds:
+        print(f"  meld: {meld.kind} {meld.tiles} isOpen={meld.is_open}")
+    for note in reading.notes:
+        print(f"  note: {note}")
 
     out = args.output or DATA / f"{args.photo.stem}_read.png"
     out.parent.mkdir(parents=True, exist_ok=True)
-    sheet(crops, labels, predicted, confidence, out)
+    sheet(reading.crops, reading.confidence, reading.tiles, out)
 
 
 NUMBERED_SUITS = ("m", "p", "s")
@@ -353,9 +461,7 @@ class Meld(NamedTuple):
     is_open: bool
 
 
-def judge_meld(
-    tiles: list[str], confidence: list[float], nothing: list[float]
-) -> Meld | str:
+def judge_meld(tiles: list[str], confidence: list[float], nothing: list[float]) -> Meld | str:
     """What a run of three or four crops is, or the reason it is not a meld.
 
     Kept free of images so it can be checked against numbers rather than against a composed photograph —
@@ -503,15 +609,15 @@ def reading_order(
 
 
 def read_melds(
-    model: torch.nn.Module,
+    model: ort.InferenceSession,
     bgr: np.ndarray,
     light: np.ndarray,
-    melds: list[tuple[float, tuple[int, int, int, int]]],
+    meld_boxes: list[tuple[float, tuple[int, int, int, int]]],
     hand_box: tuple[int, int, int, int],
     hand_pitch: float,
     size: int,
     labels: list[str],
-) -> list[Meld]:
+) -> tuple[list[Meld], list[str]]:
     """Reads the runs of three or four set aside beside the hand, as (kind, tiles, isOpen).
 
     Two distinctions here decide the score rather than just the display:
@@ -523,17 +629,15 @@ def read_melds(
     The two turned-over tiles of a 暗杠 cannot be read, and do not need to be: a gang is four of one
     tile, so the pair that is face up names all four.
     """
-    found = []
-    for _, box in melds:
+    found, notes = [], []
+    for _, box in meld_boxes:
         if box == hand_box:
             continue
         # Each meld length asked for by name. See the note on `expect` in read_line for why the blind
         # fit is not good enough on a run this short.
         candidates = []
         for length in MELD_SIZES:
-            fit = read_line(
-                model, bgr, light, box, size, refine=True, counts=(length,), expect=length
-            )
+            fit = read_line(model, bgr, light, box, size, refine=True, counts=(length,), expect=length)
             if fit is None:
                 continue
             score, _, pitch, _, confidence, predicted, nothing = fit
@@ -549,30 +653,23 @@ def read_melds(
         verdict = choose_meld(candidates, hand_pitch)
         if isinstance(verdict, str):
             if candidates:
-                print(f"  meld at {box}: {verdict}")
+                notes.append(f"a run at {box} was not read as a meld: {verdict}")
             continue
-        print(f"  meld at {box}: {verdict.kind} {verdict.tiles} isOpen={verdict.is_open}")
         found.append(verdict)
-    return found
+    return found, notes
 
 
-def sheet(
-    crops: np.ndarray,
-    labels: list[str],
-    predicted: torch.Tensor,
-    confidence: torch.Tensor,
-    path: Path,
-) -> None:
+def sheet(crops: np.ndarray, confidence: list[float], tiles: list[str], path: Path) -> None:
     cell = 110
     out = np.full((len(crops) * (cell + 18), cell + 230, 3), 255, np.uint8)
     for i, crop in enumerate(crops):
         y = i * (cell + 18)
         out[y : y + cell, :cell] = cv2.resize(crop, (cell, cell))
-        sure = float(confidence[i])
+        sure = confidence[i]
         colour = (0, 140, 0) if sure >= CONFIDENT else (0, 0, 190)
         cv2.putText(
             out,
-            f"{i + 1}. {labels[predicted[i]]} {sure:.2f}",
+            f"{i + 1}. {tiles[i]} {sure:.2f}",
             (cell + 8, y + cell // 2),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
@@ -622,7 +719,13 @@ def self_check() -> int:
         ("backs, faces disagree", ["5p", "6p", BACK, BACK], [good, good, 0.9, 0.9], [0.01] * 4, None),
         ("face-up too uncertain", ["5p", "5p", BACK, BACK], [good, bad, 0.9, 0.9], [0.01] * 4, None),
         # A back has to beat `none`, and this one does not — a patch of felt rather than a tile.
-        ("back is likelier nothing", ["5p", "5p", BACK, BACK], [good, good, 0.2, 0.9], [0.01, 0.01, 0.7, 0.01], None),
+        (
+            "back is likelier nothing",
+            ["5p", "5p", BACK, BACK],
+            [good, good, 0.2, 0.9],
+            [0.01, 0.01, 0.7, 0.01],
+            None,
+        ),
         ("face-up is nothing", ["1p"] * 3, [good] * 3, [0.5, 0.01, 0.01], None),
         ("three tiles, no meld", ["1m", "9p", "1z"], [good] * 3, [0.01] * 3, None),
         # 吃 needs one suit and three consecutive ranks; neither of these is a meld.
@@ -659,8 +762,8 @@ def self_check() -> int:
         print(f"  {'ok  ' if ok else 'FAIL'} {name:26s} -> {shown}")
 
     # And which way round the run reads. Boxes are (x, y, w, h). The hand is 700 long and 100 across.
-    across = (300, 100, 100, 700)   # lies up the frame
-    along = (100, 300, 700, 100)    # lies across the frame
+    across = (300, 100, 100, 700)  # lies up the frame
+    along = (100, 300, 700, 100)  # lies across the frame
     orders = [
         # A meld past the far end means the run already finishes at the right end.
         ("melds past the end", across, [(300, 850, 100, 220)], (False, True)),

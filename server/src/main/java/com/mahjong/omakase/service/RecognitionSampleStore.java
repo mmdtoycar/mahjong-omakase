@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -33,9 +35,6 @@ public class RecognitionSampleStore {
   private static final DateTimeFormatter DAY =
       DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneOffset.UTC);
 
-  private static final DateTimeFormatter STAMP =
-      DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmssSSS'Z'").withZone(ZoneOffset.UTC);
-
   private static final Map<String, String> EXTENSIONS =
       Map.of(
           "image/jpeg", "jpg",
@@ -57,13 +56,40 @@ public class RecognitionSampleStore {
   }
 
   /**
-   * Writes the photo and a sidecar JSON describing what the model made of it.
+   * Writes the photo and a sidecar JSON describing what the given recogniser made of it.
    *
-   * <p>Both files share a stem so a later training script can pair them by name, and they are
-   * grouped into a directory per UTC day so no single directory grows unbounded and a date range is
-   * easy to pull.
+   * <p>The photo is named after a digest of its own bytes, and the answer after the photo plus the
+   * recogniser. That is what makes the two engines pair up: recognising the same photo locally and
+   * then online produces {@code <digest>.jpg}, {@code <digest>-local.json} and {@code
+   * <digest>-gemini-3.6-flash.json} — one image, two answers, joinable by a directory listing. The
+   * first scheme stamped the time into the name, so the same photo sent twice became two unrelated
+   * samples and the comparison had to be done by eye.
+   *
+   * <p>The image is written only once. When it is already there the bytes are identical by
+   * construction, so re-writing it would only burn disk on a small droplet.
+   *
+   * <p>Grouped into a directory per UTC day so no single directory grows unbounded and a date range
+   * is easy to pull. The wall-clock time of each recognition lives in the sidecar's {@code
+   * recognizedAt}, which is where it is actually useful.
    */
   public void save(String imageBase64, String mimeType, String model, String rawJson) {
+    write(imageBase64, mimeType, model, "\"rawJson\":" + quote(rawJson));
+  }
+
+  /**
+   * Records that a recogniser was asked and could not answer.
+   *
+   * <p>A failure is a sample too, and on this project it is the more interesting one: the photos
+   * the local reader cannot read are precisely the ones worth studying. Written under the same
+   * digest as the photo, so it sits next to whatever the fallback did answer — a directory listing
+   * then shows "local could not read this, and Gemini said that" without anyone pairing anything up
+   * by hand.
+   */
+  public void saveFailure(String imageBase64, String mimeType, String model, String reason) {
+    write(imageBase64, mimeType, model, "\"error\":" + quote(reason == null ? "" : reason));
+  }
+
+  private void write(String imageBase64, String mimeType, String model, String outcome) {
     if (root.isEmpty()) {
       return;
     }
@@ -72,17 +98,39 @@ public class RecognitionSampleStore {
       Path dir = root.get().resolve(DAY.format(now));
       Files.createDirectories(dir);
 
-      String stem = STAMP.format(now) + "-" + model;
       byte[] image = Base64.getDecoder().decode(imageBase64);
-      Files.write(dir.resolve(stem + "." + extensionFor(mimeType)), image);
+      String stem = digest(image);
+      Path photo = dir.resolve(stem + "." + extensionFor(mimeType));
+      if (!Files.exists(photo)) {
+        Files.write(photo, image);
+      }
       Files.writeString(
-          dir.resolve(stem + ".json"),
-          sidecar(now, mimeType, model, rawJson),
+          dir.resolve(stem + "-" + model + ".json"),
+          sidecar(now, mimeType, model, outcome),
           StandardCharsets.UTF_8);
 
-      log.info("Kept recognition sample {} ({} KB)", stem, image.length / 1024);
+      log.info("Kept recognition sample {} from {} ({} KB)", stem, model, image.length / 1024);
     } catch (IOException | RuntimeException e) {
       log.warn("Could not keep a recognition sample: {}", e.toString());
+    }
+  }
+
+  /**
+   * First 12 hex characters of the photo's SHA-256 — enough that a collision across one day's
+   * photos is not a thing to think about, and short enough to read in a directory listing.
+   */
+  private static String digest(byte[] image) {
+    try {
+      byte[] hash = MessageDigest.getInstance("SHA-256").digest(image);
+      StringBuilder out = new StringBuilder(12);
+      for (int i = 0; i < 6; i++) {
+        out.append(String.format("%02x", hash[i]));
+      }
+      return out.toString();
+    } catch (NoSuchAlgorithmException e) {
+      // SHA-256 is required of every JVM, so this cannot happen; it is checked, so it must be
+      // caught.
+      throw new IllegalStateException("SHA-256 is unavailable", e);
     }
   }
 
@@ -95,15 +143,15 @@ public class RecognitionSampleStore {
    * JSON text and must be embedded verbatim, not re-parsed and reformatted — the point of keeping
    * it is to see exactly what came back.
    */
-  private static String sidecar(Instant now, String mimeType, String model, String rawJson) {
+  private static String sidecar(Instant now, String mimeType, String model, String outcome) {
     return "{\"recognizedAt\":\""
         + now
         + "\",\"model\":\""
         + model
         + "\",\"mimeType\":\""
         + mimeType
-        + "\",\"rawJson\":"
-        + quote(rawJson)
+        + "\","
+        + outcome
         + "}\n";
   }
 

@@ -3678,6 +3678,26 @@ table.auto-table {
   font-size: 0.85rem;
 }
 
+/* A fallback is not an error — the hand came through, it just did not come from the recogniser that
+   was asked. Amber so it reads as "worth knowing" rather than "something went wrong". */
+.photo-rec-warning {
+  background: #fff8e1;
+  border-left: 4px solid #d98a00;
+  color: #8a5a00;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+/* The online recogniser is the second choice, so it stays visually quieter than the primary. */
+.photo-rec-online-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
 .photo-rec-submit-btn {
   background: linear-gradient(135deg, var(--mj-green) 0%, #1b4d3e 100%);
   color: white;

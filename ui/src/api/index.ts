@@ -251,16 +251,21 @@ export async function lookupClaimablePlayer(userName: string, firstName: string,
  * The Gemini key, the prompt and the calibration legend all live server-side, so the
  * browser only ever ships the photo.
  */
-export async function recognizeHandPhoto(imageBase64: string, mimeType: string): Promise<string> {
+/** `engine` picks the recogniser: the local reader by default, Gemini when the user asks for it. */
+export async function recognizeHandPhoto(
+  imageBase64: string,
+  mimeType: string,
+  engine: 'local' | 'gemini' = 'local'
+): Promise<{ rawJson: string; warning?: string }> {
   const res = await fetch(`${API}/recognize`, {
     method: 'POST',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ imageBase64, mimeType }),
+    body: JSON.stringify({ imageBase64, mimeType, engine }),
   })
-  const data = await handleResponse<{ rawJson: string } | undefined>(res)
+  const data = await handleResponse<{ rawJson: string; warning?: string } | undefined>(res)
   // handleResponse yields undefined for an empty body; don't hand that to the parser.
   if (!data || typeof data.rawJson !== 'string' || !data.rawJson.trim()) {
     throw new Error('识别服务未返回内容，请重试')
   }
-  return data.rawJson
+  return { rawJson: data.rawJson, warning: data.warning || undefined }
 }

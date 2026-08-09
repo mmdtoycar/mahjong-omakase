@@ -73,11 +73,7 @@ def _extrema(profile: np.ndarray, separation: int) -> list[int]:
             if not found or i - found[-1] > separation:
                 found.append(i)
             else:
-                better = (
-                    smoothed[i] < smoothed[found[-1]]
-                    if want_min
-                    else smoothed[i] > smoothed[found[-1]]
-                )
+                better = smoothed[i] < smoothed[found[-1]] if want_min else smoothed[i] > smoothed[found[-1]]
                 if better:
                     found[-1] = i
         marks.update(found)
@@ -109,7 +105,7 @@ def fit_grid(
     the bars of 条 or the rings of 饼, litters the profile with marks, and two of the eight calibration
     columns come back with eleven and thirteen tiles when the count is not supplied.
     """
-    x, y, w, h = box
+    _, _, w, h = box
     length, across = (h, w) if vertical else (w, h)
     low, high = across * MIN_PITCH_RATIO, across * MAX_PITCH_RATIO
     if expect:

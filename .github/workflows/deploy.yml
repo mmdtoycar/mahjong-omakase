@@ -7,6 +7,7 @@ on:
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}
+  READER_IMAGE: ghcr.io/${{ github.repository }}-reader
 
 jobs:
   build:
@@ -41,6 +42,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build & Push the local reader
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ml/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.READER_IMAGE }}:latest
+            ${{ env.READER_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
     name: Deploy to Server
     needs: build
@@ -53,20 +67,36 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: IMAGE
+          envs: IMAGE,READER_IMAGE
           script: |
             set -e
 
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
 
             docker pull "$IMAGE:latest"
+            docker pull "$READER_IMAGE:latest"
 
-            docker stop mahjong 2>/dev/null || true
-            docker rm mahjong 2>/dev/null || true
+            # A private network so the JVM can reach the reader by name. The reader publishes no port:
+            # it has no authentication of its own and has no business being reachable from outside.
+            docker network create mahjong-net 2>/dev/null || true
+
+            # `rm -f` rather than stop-then-rm: it is the same two steps, and having them as two
+            # `|| true` lines only made it look like the removal was conditional on the stop working.
+            docker rm -f mahjong-reader 2>/dev/null || true
+
+            docker run -d \
+              --name mahjong-reader \
+              --restart always \
+              --network mahjong-net \
+              --memory 512m \
+              "$READER_IMAGE:latest"
+
+            docker rm -f mahjong 2>/dev/null || true
 
             docker run -d \
               --name mahjong \
               --restart always \
+              --network mahjong-net \
               -p 127.0.0.1:8080:8080 \
               -p '[::1]:8080:8080' \
               -v mahjong-data:/app/data \
@@ -74,6 +104,7 @@ jobs:
               -e ADMIN_EMAILS="${{ secrets.ADMIN_EMAILS }}" \
               -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
               -e GEMINI_API_KEYS="${{ secrets.GEMINI_API_KEYS }}" \
+              -e READER_URL="http://mahjong-reader:8000" \
               "$IMAGE:latest"
 
             docker image prune -f

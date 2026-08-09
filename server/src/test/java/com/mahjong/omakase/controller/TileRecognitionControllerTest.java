@@ -6,7 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.mahjong.omakase.dto.TileRecognitionRequest;
-import com.mahjong.omakase.service.TileRecognitionService;
+import com.mahjong.omakase.service.HandRecognitionService;
+import com.mahjong.omakase.service.HandRecognitionService.Recognition;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -14,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 
 class TileRecognitionControllerTest {
 
-  private final TileRecognitionService service = mock(TileRecognitionService.class);
+  private final HandRecognitionService service = mock(HandRecognitionService.class);
   private final TileRecognitionController controller = new TileRecognitionController(service);
 
   private static TileRecognitionRequest request() {
@@ -31,7 +32,7 @@ class TileRecognitionControllerTest {
    */
   @Test
   void answers503SoTheProxyDoesNotReplaceOurMessage() {
-    when(service.recognize(anyString(), anyString()))
+    when(service.recognize(anyString(), anyString(), anyString()))
         .thenThrow(new IllegalStateException("This model is currently experiencing high demand."));
 
     ResponseEntity<Object> response = controller.recognize(request());
@@ -45,7 +46,7 @@ class TileRecognitionControllerTest {
   /** A missing key is a server-side configuration gap, so it belongs on the same branch. */
   @Test
   void answers503WhenNoKeyIsConfigured() {
-    when(service.recognize(anyString(), anyString()))
+    when(service.recognize(anyString(), anyString(), anyString()))
         .thenThrow(new IllegalStateException("服务端未配置 Gemini API Key，请联系管理员"));
 
     assertThat(controller.recognize(request()).getStatusCode())
@@ -54,12 +55,28 @@ class TileRecognitionControllerTest {
 
   @Test
   void returnsTheModelJsonOnSuccess() {
-    when(service.recognize(anyString(), anyString())).thenReturn("{\"concealed\":[\"1m\"]}");
+    when(service.recognize(anyString(), anyString(), anyString()))
+        .thenReturn(new Recognition("{\"concealed\":[\"1m\"]}", null));
 
     ResponseEntity<Object> response = controller.recognize(request());
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody())
-        .hasToString("TileRecognitionResponse(rawJson={\"concealed\":[\"1m\"]})");
+        .hasToString("TileRecognitionResponse(rawJson={\"concealed\":[\"1m\"]}, warning=null)");
+  }
+
+  /**
+   * A fallback is a success with a note attached, not an error: the hand is usable, and the note is
+   * the only thing standing between "the local reader is broken" and nobody noticing for weeks.
+   */
+  @Test
+  void carriesTheFallbackWarningAlongsideTheHand() {
+    when(service.recognize(anyString(), anyString(), anyString()))
+        .thenReturn(new Recognition("{\"concealed\":[\"1m\"]}", "本地识别服务连不上，已自动改用在线识别"));
+
+    ResponseEntity<Object> response = controller.recognize(request());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody().toString()).contains("已自动改用在线识别");
   }
 }

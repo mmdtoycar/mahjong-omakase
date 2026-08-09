@@ -11,21 +11,33 @@ cd "$ROOT"
 
 echo "▶ Running pre-commit checks..."
 
-echo "  1/5 spotless"
+# Python first: ruff is milliseconds, so a Python slip surfaces before the three gradle invocations and
+# the frontend build. Skipped when ml/.venv is absent, which is the normal state of a fresh clone that
+# has not set the ml side up — the Java and frontend checks below still have to pass.
+if [ -x ml/.venv/bin/python ]; then
+  echo "  1/6 ruff (Python format + lint)"
+  ml/.venv/bin/python -m ruff format ml --quiet
+  git diff --name-only --diff-filter=ACM | grep -E '\.py$' | xargs -r git add
+  ml/.venv/bin/python -m ruff check ml
+else
+  echo "  1/6 ruff — skipped, no ml/.venv"
+fi
+
+echo "  2/6 spotless"
 ./gradlew spotlessApply --quiet
 # Re-stage anything spotless reformatted, so the commit captures the formatted version
 git diff --name-only --diff-filter=ACM | grep -E '\.(java|css|ts|tsx)$' | xargs -r git add
 
-echo "  2/5 tsc (frontend type check)"
+echo "  3/6 tsc (frontend type check)"
 (cd ui && npx tsc --noEmit)
 
-echo "  3/5 stylelint (CSS static analysis)"
+echo "  4/6 stylelint (CSS static analysis)"
 (cd ui && npm run lint:css --silent)
 
-echo "  4/5 javac"
+echo "  5/6 javac"
 ./gradlew compileJava --quiet
 
-echo "  5/5 pmd (Java static analysis)"
+echo "  6/6 pmd (Java static analysis)"
 ./gradlew pmdMain --quiet
 
 echo "✓ pre-commit checks passed"
