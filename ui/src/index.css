@@ -2041,10 +2041,6 @@ table.auto-table {
   box-shadow: 0 2px 6px rgb(129 216 208 / 40%);
 }
 
-.mahjong-tile:active {
-  transform: translateY(-3px);
-}
-
 /* Guobiao Inline Calculator Styles */
 .inline-calculator {
   background: #fff;
