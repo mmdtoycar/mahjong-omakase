@@ -18,22 +18,19 @@ import org.springframework.web.client.RestClientResponseException;
  * <p>The reader answers in the same shape Gemini does, so the response travels on to the browser
  * untouched, exactly as the Gemini text does.
  *
- * <p>The distinction this class exists to draw is between the two ways it can fail, because they
- * deserve opposite responses:
+ * <p>The distinction this class exists to draw is between the two ways it can fail. Both fall back
+ * to Gemini — {@link HandRecognitionService} sees to that, so the user gets their hand either way —
+ * but they are not the same thing to tell them:
  *
  * <ul>
  *   <li><strong>The reader is not there</strong> — container down, wrong URL, timeout. Nothing
- *       about the request or the photo is wrong, so making the user do something about it is
- *       unreasonable. {@link ReaderUnavailableException} says "fall back to Gemini and carry on".
- *   <li><strong>The reader read the photo and could not find a hand in it.</strong> That is
- *       information, and it belongs in front of the user: reframe and try again, or use the online
- *       button. An {@link IllegalStateException} carries it, which is what the controller already
- *       maps to a 503 with a message.
+ *       about the request or the photo is wrong, and the message carries the reader's URL and a
+ *       transport error, which is internal topology and nothing the user can act on. {@link
+ *       ReaderUnavailableException} is what keeps it in the log and out of the browser.
+ *   <li><strong>The reader read the photo and could not find a hand in it.</strong> That the user
+ *       can act on: reframe and try again. An {@link IllegalStateException} carries the reader's
+ *       own words so they can be shown with the fallback warning.
  * </ul>
- *
- * <p>Falling back automatically only in the first case is deliberate. Doing it in both would spend
- * Gemini quota silently on every photo the local reader cannot handle, and — worse for this project
- * — would hide exactly the cases worth collecting.
  */
 @Slf4j
 @Service
@@ -60,7 +57,10 @@ public class LocalReaderService {
       @Value("${reader.url:}") String url) {
     this.objectMapper = objectMapper;
     this.restClient = localReaderRestClient;
-    this.url = url == null ? "" : url.trim();
+    // Trailing slash stripped, because the endpoint below appends one. A reader.url ending in "/"
+    // would otherwise produce ".../recognize" with a double slash, which the reader answers 404 —
+    // indistinguishable from the container being down, and so a silent fallback to Gemini forever.
+    this.url = url == null ? "" : url.trim().replaceAll("/+$", "");
     if (this.url.isEmpty()) {
       log.info(
           "Local tile reader is not configured (reader.url is unset); recognition uses Gemini");

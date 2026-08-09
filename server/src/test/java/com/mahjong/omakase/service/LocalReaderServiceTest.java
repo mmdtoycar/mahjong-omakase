@@ -104,6 +104,26 @@ class LocalReaderServiceTest {
         .isInstanceOf(ReaderUnavailableException.class);
   }
 
+  /**
+   * A reader.url with a trailing slash would build ".../recognize" with a double slash, which the
+   * reader answers 404 — and a 404 is reported as the reader being unusable, so the whole local
+   * path would fall back to Gemini forever over one character of configuration.
+   */
+  @Test
+  void toleratesATrailingSlashInTheConfiguredUrl() {
+    RestClient.Builder builder = RestClient.builder();
+    MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+    LocalReaderService service =
+        new LocalReaderService(new ObjectMapper(), builder.build(), READER + "/");
+    server
+        .expect(requestTo(READER + "/recognize"))
+        .andRespond(withSuccess("{\"concealed\":[\"1m\"]}", MediaType.APPLICATION_JSON));
+
+    service.recognize("BASE64", "image/jpeg");
+
+    server.verify();
+  }
+
   @Test
   void isNotConfiguredWithoutAUrl() {
     assertThat(

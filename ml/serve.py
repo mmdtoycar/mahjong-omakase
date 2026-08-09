@@ -138,7 +138,9 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             raw = base64.b64decode(encoded, validate=True)
-        except (binascii.Error, ValueError):
+        except (binascii.Error, ValueError, TypeError):
+            # TypeError is a number or an object where the string should be: valid JSON, so it gets
+            # past the parse above, and b64decode refuses it rather than the base64 check doing so.
             self._send(400, {"message": "imageBase64 is not valid base64"})
             return
 
@@ -249,6 +251,11 @@ def self_check() -> int:
         (
             "imageBase64 is not base64",
             lambda: request("POST", "/recognize", b'{"imageBase64":"!!!!"}'),
+            400,
+        ),
+        (
+            "imageBase64 is not a string",
+            lambda: request("POST", "/recognize", b'{"imageBase64":123}'),
             400,
         ),
         (
