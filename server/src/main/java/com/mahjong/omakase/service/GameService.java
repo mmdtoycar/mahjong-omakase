@@ -808,12 +808,7 @@ public class GameService {
     Map<Long, Integer> wins = new HashMap<>();
     Map<Long, Integer> totalRanks = new HashMap<>();
     Map<Long, Integer> fourthPlaces = new HashMap<>();
-    Map<Long, Integer> roundsPlayed = new HashMap<>();
-    Map<Long, Integer> handWins = new HashMap<>();
-    Map<Long, Integer> tsumoWins = new HashMap<>();
-    Map<Long, Integer> dealIns = new HashMap<>();
-    Map<Long, Integer> winPointsSum = new HashMap<>();
-    Map<Long, Integer> dealInPointsSum = new HashMap<>();
+    RoundTotals totals = new RoundTotals();
     List<GameSession> completedSessions =
         sessionRepo.findAll().stream()
             .filter(s -> s.getStatus() == SessionStatus.COMPLETED)
@@ -890,9 +885,7 @@ public class GameService {
         }
 
         // Round-level metrics (和牌率/放铳率/自摸率/平均打点/平均铳点) collected for all modes.
-        List<Object[]> rows = roundsBySessionId.getOrDefault(session.getId(), List.of());
-        accumulateRoundStats(
-            rows, roundsPlayed, handWins, tsumoWins, dealIns, winPointsSum, dealInPointsSum);
+        totals.add(roundsBySessionId.getOrDefault(session.getId(), List.of()));
       }
     }
 
@@ -912,17 +905,12 @@ public class GameService {
               stat.setAvgRank(
                   games > 0 ? (double) totalRanks.getOrDefault(p.getId(), 0) / games : 0);
 
-              int rounds = roundsPlayed.getOrDefault(p.getId(), 0);
-              int hw = handWins.getOrDefault(p.getId(), 0);
-              int di = dealIns.getOrDefault(p.getId(), 0);
-              stat.setRoundsPlayed(rounds);
-              stat.setHandWins(hw);
-              stat.setTsumoWins(tsumoWins.getOrDefault(p.getId(), 0));
-              stat.setDealIns(di);
-              stat.setAvgWinPoints(
-                  hw > 0 ? (double) winPointsSum.getOrDefault(p.getId(), 0) / hw : 0);
-              stat.setAvgDealInPoints(
-                  di > 0 ? (double) dealInPointsSum.getOrDefault(p.getId(), 0) / di : 0);
+              stat.setRoundsPlayed(totals.rounds(p.getId()));
+              stat.setHandWins(totals.wins(p.getId()));
+              stat.setTsumoWins(totals.selfDraws(p.getId()));
+              stat.setDealIns(totals.dealtIn(p.getId()));
+              stat.setAvgWinPoints(totals.avgWinPoints(p.getId()));
+              stat.setAvgDealInPoints(totals.avgDealInPoints(p.getId()));
 
               // Tier in the queried mode. A null gameMode spans all modes, so there's no single
               // rating to report.
@@ -960,43 +948,89 @@ public class GameService {
    * round.winnerId; dealIns/avgDealInPoints land on the round.dealInPlayerId (self-draws are
    * dealInPlayerId == null, so no deal-in is recorded for those rounds).
    */
-  private void accumulateRoundStats(
-      List<Object[]> rows,
-      Map<Long, Integer> roundsPlayed,
-      Map<Long, Integer> handWins,
-      Map<Long, Integer> tsumoWins,
-      Map<Long, Integer> dealIns,
-      Map<Long, Integer> winPointsSum,
-      Map<Long, Integer> dealInPointsSum) {
-    Set<Long> seenRounds = new HashSet<>();
-    for (Object[] row : rows) {
-      Long roundId = (Long) row[0];
-      Long winnerId = (Long) row[1];
-      Long dealInPlayerId = (Long) row[2];
-      Long playerId = (Long) row[3];
-      int score = ((Number) row[4]).intValue();
+  /**
+   * The round-level tallies (和牌/自摸/放铳 and the points behind them), for however many sessions are
+   * folded in.
+   *
+   * <p>Exists because the six maps were previously six out-parameters, so both callers had to
+   * declare all six before they could ask for anything — and both then repeated the same guarded
+   * division to turn a sum into an average. Both of those now live here once.
+   */
+  private static final class RoundTotals {
+    private final Map<Long, Integer> roundsPlayed = new HashMap<>();
+    private final Map<Long, Integer> handWins = new HashMap<>();
+    private final Map<Long, Integer> tsumoWins = new HashMap<>();
+    private final Map<Long, Integer> dealIns = new HashMap<>();
+    private final Map<Long, Integer> winPointsSum = new HashMap<>();
+    private final Map<Long, Integer> dealInPointsSum = new HashMap<>();
 
-      roundsPlayed.merge(playerId, 1, Integer::sum);
+    /**
+     * Folds in one batch of {@code [roundId, winnerId, dealInPlayerId, playerId, score]} rows, and
+     * may be called repeatedly to accumulate across sessions.
+     *
+     * <p>The query returns one row per player per round, with the round-level columns repeated on
+     * all four, so the per-round tallies are guarded by the ids already seen. Without that guard
+     * every win and every deal-in would be multiplied by the number of players at the table.
+     */
+    void add(List<Object[]> rows) {
+      Set<Long> seenRounds = new HashSet<>();
+      for (Object[] row : rows) {
+        Long roundId = (Long) row[0];
+        Long winnerId = (Long) row[1];
+        Long dealInPlayerId = (Long) row[2];
+        Long playerId = (Long) row[3];
+        int score = ((Number) row[4]).intValue();
 
-      if (seenRounds.add(roundId)) {
-        if (winnerId != null) {
-          handWins.merge(winnerId, 1, Integer::sum);
-          // 自摸 (self-draw): win with no deal-in player. 荣和 = handWins - tsumoWins.
-          if (dealInPlayerId == null) {
-            tsumoWins.merge(winnerId, 1, Integer::sum);
+        roundsPlayed.merge(playerId, 1, Integer::sum);
+
+        if (seenRounds.add(roundId)) {
+          if (winnerId != null) {
+            handWins.merge(winnerId, 1, Integer::sum);
+            // 自摸 (self-draw): win with no deal-in player. 荣和 = handWins - tsumoWins.
+            if (dealInPlayerId == null) {
+              tsumoWins.merge(winnerId, 1, Integer::sum);
+            }
+          }
+          if (dealInPlayerId != null) {
+            dealIns.merge(dealInPlayerId, 1, Integer::sum);
           }
         }
-        if (dealInPlayerId != null) {
-          dealIns.merge(dealInPlayerId, 1, Integer::sum);
+
+        if (playerId.equals(winnerId) && score > 0) {
+          winPointsSum.merge(playerId, score, Integer::sum);
+        }
+        if (playerId.equals(dealInPlayerId) && score < 0) {
+          dealInPointsSum.merge(playerId, -score, Integer::sum);
         }
       }
+    }
 
-      if (playerId.equals(winnerId) && score > 0) {
-        winPointsSum.merge(playerId, score, Integer::sum);
-      }
-      if (playerId.equals(dealInPlayerId) && score < 0) {
-        dealInPointsSum.merge(playerId, -score, Integer::sum);
-      }
+    int rounds(Long playerId) {
+      return roundsPlayed.getOrDefault(playerId, 0);
+    }
+
+    int wins(Long playerId) {
+      return handWins.getOrDefault(playerId, 0);
+    }
+
+    int selfDraws(Long playerId) {
+      return tsumoWins.getOrDefault(playerId, 0);
+    }
+
+    int dealtIn(Long playerId) {
+      return dealIns.getOrDefault(playerId, 0);
+    }
+
+    /** 平均打点: over the wins, not over the rounds played, and 0 rather than a division by zero. */
+    double avgWinPoints(Long playerId) {
+      int wins = wins(playerId);
+      return wins > 0 ? (double) winPointsSum.getOrDefault(playerId, 0) / wins : 0;
+    }
+
+    /** 平均铳点, as a positive magnitude. */
+    double avgDealInPoints(Long playerId) {
+      int dealtIn = dealtIn(playerId);
+      return dealtIn > 0 ? (double) dealInPointsSum.getOrDefault(playerId, 0) / dealtIn : 0;
     }
   }
 
@@ -1073,33 +1107,17 @@ public class GameService {
 
     Map<String, PlayerDetailResponse.ModeStats> statsByMode = new HashMap<>();
     for (var entry : rowsByMode.entrySet()) {
-      Map<Long, Integer> roundsPlayed = new HashMap<>();
-      Map<Long, Integer> handWins = new HashMap<>();
-      Map<Long, Integer> tsumoWins = new HashMap<>();
-      Map<Long, Integer> dealIns = new HashMap<>();
-      Map<Long, Integer> winPointsSum = new HashMap<>();
-      Map<Long, Integer> dealInPointsSum = new HashMap<>();
-      accumulateRoundStats(
-          entry.getValue(),
-          roundsPlayed,
-          handWins,
-          tsumoWins,
-          dealIns,
-          winPointsSum,
-          dealInPointsSum);
-
-      int rounds = roundsPlayed.getOrDefault(playerId, 0);
-      if (rounds == 0) continue;
-      int hw = handWins.getOrDefault(playerId, 0);
-      int di = dealIns.getOrDefault(playerId, 0);
+      RoundTotals totals = new RoundTotals();
+      totals.add(entry.getValue());
+      if (totals.rounds(playerId) == 0) continue;
 
       PlayerDetailResponse.ModeStats ms = new PlayerDetailResponse.ModeStats();
-      ms.setRoundsPlayed(rounds);
-      ms.setHandWins(hw);
-      ms.setTsumoWins(tsumoWins.getOrDefault(playerId, 0));
-      ms.setDealIns(di);
-      ms.setAvgWinPoints(hw > 0 ? (double) winPointsSum.getOrDefault(playerId, 0) / hw : 0);
-      ms.setAvgDealInPoints(di > 0 ? (double) dealInPointsSum.getOrDefault(playerId, 0) / di : 0);
+      ms.setRoundsPlayed(totals.rounds(playerId));
+      ms.setHandWins(totals.wins(playerId));
+      ms.setTsumoWins(totals.selfDraws(playerId));
+      ms.setDealIns(totals.dealtIn(playerId));
+      ms.setAvgWinPoints(totals.avgWinPoints(playerId));
+      ms.setAvgDealInPoints(totals.avgDealInPoints(playerId));
       statsByMode.put(entry.getKey().name(), ms);
     }
     return statsByMode;
