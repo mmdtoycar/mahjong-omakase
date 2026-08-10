@@ -25,9 +25,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-  /** Table layouts on the stats and scoreboard pages are designed against this. */
-  private static final int MAX_USERNAME_LENGTH = 12;
-
   private final PlayerRepository playerRepo;
 
   @Value("${google.client-id:123456-dummy.apps.googleusercontent.com}")
@@ -258,9 +255,9 @@ public class AuthController {
     String trimmedUserName = userName.trim();
     String trimmedFirstName = firstName.trim();
     String trimmedLastName = lastName.trim();
-    if (trimmedUserName.length() > MAX_USERNAME_LENGTH) {
+    if (trimmedUserName.length() > Player.MAX_USERNAME_LENGTH) {
       return ResponseEntity.badRequest()
-          .body(Map.of("error", "用户名最长 " + MAX_USERNAME_LENGTH + " 个字符"));
+          .body(Map.of("error", "用户名最长 " + Player.MAX_USERNAME_LENGTH + " 个字符"));
     }
 
     Player match =

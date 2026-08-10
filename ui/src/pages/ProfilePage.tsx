@@ -4,9 +4,6 @@ import { fetchStats, fetchFanDiscoveries, fetchPlayerTier, setupProfile, lookupC
 import { GAME_MODES, GameModeKey, PlayerStats, PlayerTierResponse } from '../types'
 import { RankBadge } from '../components/RankBadge'
 
-/** Kept in step with AuthController.MAX_USERNAME_LENGTH — the table layouts depend on it. */
-const MAX_USERNAME_LENGTH = 12
-
 export default function ProfilePage() {
   const navigate = useNavigate()
   const [me, setMe] = useState<any>(() => {
@@ -95,11 +92,6 @@ export default function ProfilePage() {
 
     if (!userName || !firstName || !lastName) {
       setSetupError('请填写所有必填字段')
-      return
-    }
-    // The server enforces this too; checking here saves a round trip and says which field is wrong.
-    if (userName.length > MAX_USERNAME_LENGTH) {
-      setSetupError(`用户名最长 ${MAX_USERNAME_LENGTH} 个字符`)
       return
     }
 

@@ -1,5 +1,6 @@
 package com.mahjong.omakase.dto;
 
+import com.mahjong.omakase.model.Player;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -8,7 +9,10 @@ import lombok.Data;
 @Data
 public class CreatePlayerRequest {
   @NotBlank(message = "Username is required")
-  @Size(min = 2, max = 12, message = "Username must be 2-12 characters")
+  @Size(
+      min = 2,
+      max = Player.MAX_USERNAME_LENGTH,
+      message = "Username must be {min}-{max} characters")
   @Pattern(
       regexp = "^[a-zA-Z0-9_\\u4e00-\\u9fa5]+$",
       message = "Username can only contain letters, numbers, underscores, and Chinese characters")
