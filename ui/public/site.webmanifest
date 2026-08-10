@@ -1,0 +1,16 @@
+{
+  "name": "Mahjong Omakase - 日麻与国标记分管理",
+  "short_name": "麻将记录",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212"
+}
