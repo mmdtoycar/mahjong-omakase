@@ -7,8 +7,20 @@ interface FontSizeTier {
   mobile: string
 }
 
-/** CJK and other fullwidth characters take a whole em; a latin letter takes about half of one. */
-const FULLWIDTH = /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/
+/**
+ * Fullwidth characters take a whole em; a latin letter takes about half of one.
+ *
+ * Written as escapes rather than literal characters: the ranges are the point here and the literal
+ * form is unreadable. Block by block —
+ *   1100-115F  Hangul Jamo                  2E80-303E  CJK radicals, Kangxi, CJK punctuation
+ *   3041-33FF  Kana, Bopomofo, CJK compatibility
+ *   3400-4DBF  CJK Extension A              4E00-9FFF  CJK Unified Ideographs
+ *   A000-A4CF  Yi                           AC00-D7A3  Hangul syllables
+ *   F900-FAFF  CJK compatibility ideographs FE30-FE4F  CJK compatibility forms
+ *   FF00-FF60  Fullwidth ASCII              FFE0-FFE6  Fullwidth currency and signs
+ */
+const FULLWIDTH =
+  /[\u1100-\u115F\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA000-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6]/
 
 /**
  * How wide the text actually draws, in half-character units: fullwidth counts 2, a capital 1.4,
