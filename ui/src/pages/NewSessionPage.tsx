@@ -5,11 +5,13 @@ import { Player, GameModeKey, GAME_MODES } from '../types'
 import { cardFontSize } from '../utils/fontSize'
 import { MSG } from '../constants'
 import { abbrName, parseError } from '../utils/format'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const MIN_PLAYERS = 3
 const MAX_PLAYERS = 4
 
 export default function NewSessionPage() {
+  const isMobile = useIsMobile()
   const navigate = useNavigate()
   const [players, setPlayers] = useState<Player[]>([])
   const [selectedIds, setSelectedIds] = useState<number[]>([])
@@ -127,7 +129,7 @@ export default function NewSessionPage() {
                   onClick={() => !isDisabled && togglePlayer(p.id)}
                   className={`player-select-card${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}`}
                 >
-                  <div style={{ fontWeight: 600, fontSize: cardFontSize(p.userName), marginBottom: 4 }}>
+                  <div style={{ fontWeight: 600, fontSize: cardFontSize(p.userName, isMobile), marginBottom: 4 }}>
                     {p.userName}
                   </div>
                   <div style={{ fontSize: '0.85rem', opacity: isSelected ? 0.9 : 0.6 }}>

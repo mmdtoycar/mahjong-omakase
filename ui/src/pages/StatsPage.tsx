@@ -217,7 +217,7 @@ export default function StatsPage() {
 
   const awardCard = (name: string, sub: string, winner: PlayerStats | null, rate?: number) => (
     <div className="stat-card">
-      <div className="stat-value" style={{ fontSize: statFontSize(winner?.userName || '-') }}>
+      <div className="stat-value" style={{ fontSize: statFontSize(winner?.userName || '-', isMobile) }}>
         {winner?.userName || '-'}
       </div>
       <div className="stat-label">{name}</div>

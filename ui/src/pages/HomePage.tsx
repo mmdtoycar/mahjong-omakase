@@ -9,8 +9,10 @@ import { rankByScore } from '../logic/ranking'
 import { nameFontSize } from '../utils/fontSize'
 import { rankMedal, skillRatingText } from '../utils/format'
 import { MSG } from '../constants'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 export default function HomePage() {
+  const isMobile = useIsMobile()
   const [activeSessions, setActiveSessions] = useState<SessionDetail[]>([])
   const [rankings, setRankings] = useState<Record<string, { top: PlayerStats[]; best: BestRound | null }>>({})
   const [loading, setLoading] = useState(true)
@@ -141,7 +143,10 @@ export default function HomePage() {
                                 gamesNeeded={undefined}
                                 userName={player.userName}
                               />
-                              <span className="player-name" style={{ fontSize: nameFontSize(player.userName) }}>
+                              <span
+                                className="player-name"
+                                style={{ fontSize: nameFontSize(player.userName, isMobile) }}
+                              >
                                 {player.userName}
                               </span>
                             </span>

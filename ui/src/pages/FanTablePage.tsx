@@ -7,6 +7,7 @@ import { FanDiscovery, getCurrentSeason, GAME_MODES, GameModeKey } from '../type
 import { MahjongHand } from '../components/MahjongHand'
 import { nameFontSize } from '../utils/fontSize'
 import { useActiveSeasons } from '../hooks/useActiveSeasons'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const TAB_DATA_MAP: Record<GameModeKey, { data: () => FanItem[] }> = {
   GUOBIAO: { data: () => fanTableData },
@@ -30,6 +31,7 @@ function keyDiscoveriesByEarliest(discoveries: FanDiscovery[]): Record<string, F
 }
 
 const FanTablePage: React.FC = () => {
+  const isMobile = useIsMobile()
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<GameModeKey>('GUOBIAO')
   // Current season discoveries (for the selected season key)
@@ -222,7 +224,7 @@ const FanTablePage: React.FC = () => {
                         {hasCurrent && (
                           <span
                             className="badge badge-discovery badge-sm"
-                            style={{ fontSize: nameFontSize(currentDiscovery.playerName) }}
+                            style={{ fontSize: nameFontSize(currentDiscovery.playerName, isMobile) }}
                             title={`首位达成者: ${currentDiscovery.playerName}`}
                           >
                             本月冠名: {currentDiscovery.playerName}
@@ -231,7 +233,7 @@ const FanTablePage: React.FC = () => {
                         {hasPrev && (
                           <span
                             className="badge badge-discovery-prev badge-sm"
-                            style={{ fontSize: nameFontSize(prevDiscovery.playerName) }}
+                            style={{ fontSize: nameFontSize(prevDiscovery.playerName, isMobile) }}
                             title={`历史冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
                           >
                             历史冠名: {prevDiscovery.playerName}
