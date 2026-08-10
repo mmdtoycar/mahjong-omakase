@@ -457,7 +457,7 @@ export default function SessionPage() {
           <div className="round-form">
             <h3 className="round-form-title">添加 — {gameState.displayName}</h3>
             {isRiichi && (
-              <div className="form-group" style={{ marginBottom: 16 }}>
+              <div className="form-group">
                 <label className="checkbox-toggle">
                   <input
                     type="checkbox"
@@ -721,9 +721,9 @@ export default function SessionPage() {
 
       <div className="card">
         <div className="flex-between" style={{ marginBottom: 16 }}>
-          <h2 style={{ marginBottom: 0 }}>计分板</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span className="session-meta" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <h2>计分板</h2>
+          <div className="scoreboard-meta">
+            <span className="session-meta">
               {session.gameModeDisplayName} &middot;{' '}
               {new Date(session.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}
               &nbsp;
@@ -743,7 +743,9 @@ export default function SessionPage() {
           <table className="fixed-table session-rounds-table">
             <thead>
               <tr>
-                <th style={{ textAlign: 'center', verticalAlign: 'top', width: `${ROUND_COL_PX}px` }}>局</th>
+                <th className="col-round" style={{ verticalAlign: 'top', width: `${ROUND_COL_PX}px` }}>
+                  局
+                </th>
                 {session.players.map((p) => (
                   <th key={p.id} style={playerColStyle}>
                     <div className="player-header-cell">
@@ -766,17 +768,9 @@ export default function SessionPage() {
                 return (
                   <React.Fragment key={round.roundNumber}>
                     <tr>
-                      <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+                      <td className="col-round">
                         <div className="round-info-cell">
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              gap: '2px',
-                              width: '100%',
-                            }}
-                          >
+                          <div className="round-info-stack">
                             <span className="round-wind-tag">{getRoundLabel(round)}</span>
                             {isChombo && <span className="chombo-badge">诈胡</span>}
                           </div>
@@ -799,7 +793,7 @@ export default function SessionPage() {
                         }
 
                         return (
-                          <td key={p.id} className={cellClass} style={{ textAlign: 'center' }}>
+                          <td key={p.id} className={`${cellClass} text-center`}>
                             {val > 0 ? `+${val}` : val}
                           </td>
                         )
@@ -830,7 +824,7 @@ export default function SessionPage() {
                 )
               })}
               <tr className="total-row">
-                <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>
+                <td className="col-round">
                   <strong>合计</strong>
                 </td>
                 {session.players.map((p) => {
@@ -841,8 +835,9 @@ export default function SessionPage() {
                   return (
                     <td
                       key={p.id}
-                      className={`score-cell${delta > 0 ? ' score-positive' : delta < 0 ? ' score-negative' : ''}`}
-                      style={{ textAlign: 'center' }}
+                      className={`score-cell text-center${
+                        delta > 0 ? ' score-positive' : delta < 0 ? ' score-negative' : ''
+                      }`}
                     >
                       <div className="total-score-box">
                         <div className="total-val">{displayVal}</div>

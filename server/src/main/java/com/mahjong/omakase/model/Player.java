@@ -12,6 +12,13 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class Player {
+
+  /**
+   * The one place this bound is written down. Every table on the site sizes its name column against
+   * it — a longer name wraps and pushes the statistic columns out of their cells on a phone.
+   */
+  public static final int MAX_USERNAME_LENGTH = 12;
+
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;

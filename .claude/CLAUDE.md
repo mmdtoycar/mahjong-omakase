@@ -41,6 +41,19 @@ When your changes create orphans:
 - Remove imports/variables/functions that YOUR changes made unused.
 - Don't remove pre-existing dead code unless asked.
 
+Before adding a rule, class, or helper — check whether one already exists:
+- Grep for it. Half the "duplication" in this codebase turns out to be an inline style that
+  restates a CSS rule already applying to that element. The fix is to delete the inline, not to
+  author a class.
+- Then check the blast radius of any *shared* rule you are about to add: list every element the
+  selector would hit and confirm they all want it. `.card > .flex-between` looked right for two
+  header rows and would have added 16px to four others.
+- Follow the convention already in the file over one you would introduce. If the codebase has
+  `.col-num` / `.text-right`, add `.text-center`; do not invent a parallel utility scheme.
+- And check what the existing convention deliberately omits. Table column classes here carry no
+  width on purpose — `table-layout: fixed` shares the remainder — so "move this width into the
+  col-\* class" would break the layout it was written to protect.
+
 The test: Every changed line should trace directly to the user's request.
 
 ## 4. Goal-Driven Execution
@@ -78,16 +91,34 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - If you catch yourself writing a second version of something that already exists, stop — that's the overdesign smell. Reuse instead.
 - Do the requested change and nothing more. No speculative variants, no adjacent "improvements."
 
-## 7. Touch First — No Hover, No Pointer Cursor
+## 7. Mobile First — iPhone and iPad Are the Product
 
-**The app is used on iPhone and iPad. Neither has a mouse pointer.**
+**This app is used on iPhone and iPad. Optimise for those; desktop is incidental.**
+
+- When a tradeoff has to be made, mobile wins: touch target size, one-column layouts, narrow-screen
+  legibility, payload size over a phone connection.
+- Verify against a narrow viewport before calling something done, not after.
+- Desktop-only affordances are not features. They are weight.
+
+**Concretely: no `:hover`, no `cursor: pointer`.** Touch is the input that is always there. An iPad
+can have a trackpad attached, so a pointer is possible — but never assume one, and never let anything
+depend on having one.
 
 - Do NOT write `:hover` styles, and do NOT write `cursor: pointer` (in CSS or in a `style={{}}`).
-- Anything that only appears or only becomes legible on hover is **invisible** on the primary devices.
-  A control revealed by `:hover` is a control that does not exist there.
-- Use `:active` for press feedback instead. That is the one state a touch device does have.
-- Native `<button>` and `<a>` already respond to a tap; a `<div>`/`<tr>` with `onClick` needs
-  `:active` if it needs feedback at all.
+- Anything that only appears or only becomes legible on hover is **invisible** to a finger. A control
+  revealed by `:hover` is a control that does not exist for most of this app's use.
+- Do NOT convert a removed `:hover` into an `:active` just to keep the effect. Press feedback has to
+  earn its place: add it only when the tap produces no immediately visible result, and only when a
+  spinner or a disabled state is not the better answer.
+
+## 8. Comments in English
+
+**Every comment in the codebase is written in English** — CSS, TypeScript, Java, Python alike.
+
+- Keep a Chinese term when the term *is* the name of the thing: 放铳, 自摸, 和牌, 段位, 番种, and the
+  table tiers (大圣之间 …). Explain around it in English; translating the term itself loses precision.
+- User-facing UI text stays Chinese. That is product copy, not a comment.
+- Commit messages and PR descriptions are not comments; leave those as they are.
 
 ---
 

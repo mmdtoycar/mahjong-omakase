@@ -127,7 +127,7 @@ const TUI_BU_DAO_TILES = new Set([
   '7z', // 白
 ])
 
-export function scoreCombination(
+function scoreCombination(
   combo: HandCombination,
   _concealedTiles: Tile[],
   options: GameOptions,

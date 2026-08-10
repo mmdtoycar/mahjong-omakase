@@ -255,6 +255,10 @@ public class AuthController {
     String trimmedUserName = userName.trim();
     String trimmedFirstName = firstName.trim();
     String trimmedLastName = lastName.trim();
+    if (trimmedUserName.length() > Player.MAX_USERNAME_LENGTH) {
+      return ResponseEntity.badRequest()
+          .body(Map.of("error", "用户名最长 " + Player.MAX_USERNAME_LENGTH + " 个字符"));
+    }
 
     Player match =
         playerRepo.findByExactName(trimmedUserName, trimmedFirstName, trimmedLastName).orElse(null);

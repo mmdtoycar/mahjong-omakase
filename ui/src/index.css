@@ -136,7 +136,6 @@ body {
   font-weight: 500;
   padding: 6px 12px;
   border-radius: 6px;
-  transition: background 0.2s;
 }
 
 main {
@@ -190,7 +189,6 @@ main {
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
   box-shadow: var(--shadow);
 }
@@ -305,6 +303,14 @@ th {
   color: var(--text-light);
 }
 
+/* The metadata group beside the scoreboard heading. */
+.scoreboard-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .player-chips {
   display: flex;
   flex-wrap: wrap;
@@ -359,22 +365,31 @@ table.fixed-table .col-rank {
   width: 44px;
 }
 
-/* 统计列一律不写宽度: table-layout: fixed 会把剩余宽度在它们之间平均分,
-   所以一张表是 2 列还是 3 列统计都自动等宽适应, 不用逐列调像素. */
+/* Statistic columns deliberately carry no width: table-layout: fixed shares the remainder between
+   them, so a table with two of them and a table with three both come out even, with no per-column
+   pixel tuning. */
 table.fixed-table .col-num,
 table.fixed-table .col-num-wide,
 table.fixed-table .col-rating {
   text-align: right;
 }
 
-/* 玩家列 = 段位徽章 + ID, 形状也固定. 桌面用百分比: 名字拿走一半宽度, 统计列平分另一半;
-   窗口从 960px 缩到 640px 的过程里也跟着等比缩, 不会突然把统计列挤爆. 手机端换成固定 112px. */
+/* The player column is a 段位 badge plus an id, so its shape is fixed too. A percentage on desktop:
+   the name takes half the width and the statistic columns split the rest, which keeps scaling as the
+   window goes from 960px down to 640px instead of suddenly crushing them. Phones get a fixed 112px. */
 table.stats-table .col-name {
   width: 50%;
 }
 
 table.fixed-table .col-name {
   padding-left: 12px;
+}
+
+/* The round column. Its width stays inline: the same ROUND_COL_PX constant also feeds
+   SessionPage's own layout arithmetic, so CSS must not become a second source of truth. */
+table.fixed-table .col-round {
+  white-space: nowrap;
+  text-align: center;
 }
 
 table.auto-table {
@@ -589,7 +604,7 @@ table.auto-table {
   font-weight: 500;
 }
 
-/* 个人页从内联样式搬过来的, 值一个没改 */
+/* Moved off ProfilePage's inline styles, values unchanged. */
 .profile-page {
   display: flex;
   flex-direction: column;
@@ -600,7 +615,7 @@ table.auto-table {
   margin: 0 auto;
 }
 
-/* 未登录时那个分支直接返回 .empty-state, 不在 .profile-page 里面 */
+/* The signed-out branch returns .empty-state directly, outside .profile-page. */
 .empty-state .btn-signup {
   margin-top: 20px;
 }
@@ -768,7 +783,6 @@ table.auto-table {
   padding: 5px 12px;
   border-radius: 6px;
   box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
-  transition: background-color 0.2s;
 }
 
 .user-profile-capsule a {
@@ -797,7 +811,6 @@ table.auto-table {
   color: var(--text-on-accent);
   margin-left: 4px;
   font-weight: 600;
-  transition: background 0.2s;
 }
 
 .claim-name-row {
@@ -922,8 +935,25 @@ table.auto-table {
   margin-bottom: 0;
 }
 
+/* The container owns the spacing between the alerts and the start button; children carry no margin. */
+.new-session-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+/* Alerts span the row (the flex default); the button stays as wide as its content. */
+.new-session-actions .btn {
+  align-self: flex-start;
+}
+
 .text-right {
   text-align: right;
+}
+
+.text-center {
+  text-align: center;
 }
 
 .num-cell {
@@ -938,21 +968,22 @@ table.auto-table {
   color: var(--primary);
 }
 
-/* 段位分变化 — 颜色由 scoreClass (score-positive/score-negative) 提供. */
+/* Change in 段位分 — the colour comes from scoreClass (score-positive / score-negative). */
 .num-cell-rank-delta {
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: bold;
 }
 
-/* 统计表的数字列: 固定列宽下绝不换行, 字号比正文小一号才装得下 "1464(?)" / "12.3%". */
+/* Number columns of the stats table: never wrap inside a fixed column width, and one size down from
+   the body text so that "1464(?)" and "12.3%" fit. */
 .stats-table .num-cell,
 .stats-table .num-cell-rank {
   white-space: nowrap;
   font-size: 0.9rem;
 }
 
-/* 百分号/单位比数字小一号. */
+/* The percent sign and units sit one size below the number. */
 .stat-unit {
   font-size: 0.75em;
   margin-left: 1px;
@@ -972,7 +1003,8 @@ table.auto-table {
 }
 
 .player-name {
-  /* 永不截断: 名字再长也要完整显示, 装不下就折行 (最长基准 WalkingAFK). */
+  /* Never truncated: however long the name, it is shown in full and wraps if it has to.
+     Registration caps a user name at 12 characters, which is what these widths are sized against. */
   max-width: 100%;
   overflow-wrap: anywhere;
   font-weight: 500;
@@ -991,10 +1023,11 @@ table.auto-table {
   margin-top: 2px;
 }
 
-/* 对局记分表在手机上的收紧 —— 与统计表同一套思路.
-   393px 视口的宽度预算: 393 −32(main) −32(card) = 329px 表宽,
-   局列 68 + 删除列 32 + 4×玩家列 57 = 328px. 单元格 padding 收到 4px、
-   分数缩到 0.8rem 才腾得出这个空间, 否则六位数分数和 局 标签都会挤出格子. */
+/* The scoreboard tightened for phones, on the same reasoning as the stats table.
+   The width budget at a 393px viewport: 393 − 32 (main) − 32 (card) = 329px of table, against
+   68 (局 column) + 32 (delete column) + 4 × 57 (player columns) = 328px. That only fits once cell
+   padding comes down to 4px and the scores to 0.8rem; otherwise a six-figure score and the 局 label
+   push out of their cells. */
 @media (width <= 640px) {
   table.session-rounds-table th,
   table.session-rounds-table td {
@@ -1170,7 +1203,7 @@ table.auto-table {
 }
 
 .player-select-card div {
-  /* 玩家名永不截断 (基准 WalkingAFK): 装不下就折行. */
+  /* Player names are never truncated (12 characters is the registered maximum): they wrap instead. */
   overflow-wrap: anywhere;
 }
 
@@ -1204,7 +1237,7 @@ table.auto-table {
   cursor: not-allowed;
 }
 
-/* ===== RankBadge / 段位徽章 ===== */
+/* ===== RankBadge — 段位 badge ===== */
 .rank-badge {
   display: inline-flex;
   align-items: center;
@@ -1381,7 +1414,7 @@ table.auto-table {
   margin-bottom: 16px;
 }
 
-/* ===== TableStrengthTag / 桌力 ===== */
+/* ===== TableStrengthTag — 桌力 ===== */
 .table-strength {
   display: inline-flex;
   align-items: center;
@@ -1403,7 +1436,7 @@ table.auto-table {
   font-size: 1.1em;
 }
 
-/* 大圣之间 — 顶配, 烈焰红金 + 动态火焰外圈 */
+/* 大圣之间 — the top tier: flame red and gold, with an animated fire ring. */
 @keyframes dasheng-flame {
   0%,
   100% {
@@ -1424,7 +1457,7 @@ table.auto-table {
   animation: dasheng-flame 1.8s ease-in-out infinite;
 }
 
-/* 贪之间 — 墨青底 + 金字金边, 矜贵不张扬 */
+/* 贪之间 — ink teal with gold text and border: expensive-looking without shouting. */
 .table-strength-tan {
   background: linear-gradient(135deg, #1a3a3a 0%, #0d2828 100%);
   color: #f4d03f;
@@ -1436,7 +1469,7 @@ table.auto-table {
   filter: drop-shadow(0 0 3px rgb(244 208 63 / 70%));
 }
 
-/* 狠之间 — 玉石青绿, 阴阳渐变 */
+/* 狠之间 — jade green, with a yin-yang gradient. */
 .table-strength-hen {
   background: linear-gradient(135deg, #4a9b94 0%, #2c5f5b 100%);
   color: #fff;
@@ -1448,14 +1481,14 @@ table.auto-table {
   filter: drop-shadow(0 0 2px rgb(255 255 255 / 50%));
 }
 
-/* 狱之间 — 风云紫蓝 */
+/* 狱之间 — stormy violet-blue. */
 .table-strength-yu {
   background: linear-gradient(135deg, #4f3eb3 0%, #6c5ce7 100%);
   color: #fff;
   box-shadow: 0 2px 6px rgb(76 60 179 / 30%), inset 0 0 0 2px rgb(40 28 110 / 55%), inset 0 1px 0 rgb(255 255 255 / 20%);
 }
 
-/* 铳之间 — 朴素米绿 */
+/* 铳之间 — plain beige-green. */
 .table-strength-chong {
   background: linear-gradient(135deg, #e8ecdf 0%, #c4cfa8 100%);
   color: #4a5a30;
@@ -1554,7 +1587,8 @@ table.auto-table {
     gap: 16px;
   }
 
-  /* 三个模式的段位徽章必须挤在一行: 徽章竖排(图在上, 段位名+分数在下) 并缩到 76px. */
+  /* All three modes' 段位 badges have to fit on one row, so each badge stacks (art on top, tier name
+     and rating underneath) and shrinks to 76px. */
   .player-detail-tiers {
     justify-content: space-around;
     flex-wrap: nowrap;
@@ -1582,8 +1616,9 @@ table.auto-table {
     font-size: 0.75rem;
   }
 
-  /* 统计表在手机上收紧: 表头/数字/徽章各缩一号, 固定列(排名/玩家/段位分)给更小的宽度,
-     数字列继续由 table-layout: fixed 平分剩余空间. */
+  /* The stats table tightened for phones: headers, numbers and badges each go one size down, the fixed
+     columns (rank, player, 段位分) get smaller widths, and the number columns keep splitting whatever
+     table-layout: fixed leaves them. */
   .stats-table th {
     font-size: 0.62rem;
     letter-spacing: 0;
@@ -1599,7 +1634,8 @@ table.auto-table {
     width: 36px;
   }
 
-  /* 118px 是上限: 再宽的话平分给统计列的宽度就装不下 "1464(?)" 了. */
+  /* 118px is the ceiling: any wider and the share left to each statistic column no longer fits
+     "1464(?)". */
   table.stats-table .col-name {
     width: 118px;
     padding-left: 6px;
@@ -1610,7 +1646,7 @@ table.auto-table {
     font-size: 0.78rem;
   }
 
-  /* 只缩统计表里的行内段位徽章, 把省下的宽度让给玩家名. */
+  /* Shrink only the inline 段位 badges inside the stats table, and give the width back to the name. */
   .stats-table .rank-badge-sm .rank-badge-img,
   .stats-table .rank-badge-sm .rank-badge-fallback,
   .stats-table .rank-badge-unranked-sm {
@@ -1618,12 +1654,13 @@ table.auto-table {
     height: 38px;
   }
 
-  /* :not(bot) — BOT 那个 🤖 要保持自己的大字号, 别被缩成小点. */
+  /* :not(bot) — the BOT 🤖 keeps its own larger size rather than being shrunk to a dot. */
   .stats-table .rank-badge-unranked-sm:not(.rank-badge-bot) {
     font-size: 0.8rem;
   }
 
-  /* 名字列: 让 flex 子项可以收缩到省略号, 否则徽章会把名字挤出单元格. */
+  /* The name column: flex children have to be allowed to shrink to an ellipsis, or the badge pushes
+     the name out of the cell. */
   .stats-table .player-name-with-rank {
     gap: 4px;
     min-width: 0;
@@ -1917,7 +1954,7 @@ table.auto-table {
     height: 140px;
   }
 
-  /* "新" / BOT 🤖 字号跟着圆圈一起缩, 不然字撑不满或溢出. */
+  /* The "新" and BOT 🤖 glyphs scale with the circle, or they either under-fill it or spill out. */
   .rank-badge-new {
     font-size: 1.1rem;
   }
@@ -1989,7 +2026,6 @@ table.auto-table {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 12px;
-  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .fan-item-header {
@@ -2211,6 +2247,14 @@ table.auto-table {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.round-info-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
 }
 
 .tile-grid-compact {
@@ -2739,7 +2783,6 @@ table.auto-table {
   align-items: center;
   gap: 16px;
   text-decoration: none;
-  transition: transform 0.3s;
 }
 
 .hero-logo-ring {
@@ -2891,7 +2934,7 @@ table.auto-table {
   margin-top: 4px;
   color: var(--sol-base01);
 
-  /* 番种列表可以很长, 折行显示完整内容而不是截断. */
+  /* A 番种 list can run long, so it wraps and shows everything rather than truncating. */
   overflow-wrap: anywhere;
 }
 
@@ -3022,7 +3065,7 @@ table.auto-table {
   font-weight: 800;
 }
 
-/* 影院/全屏看盘 — 覆盖全屏 Overlay (白色极简全屏 Mode) */
+/* Cinema / fullscreen scoreboard — a full-screen overlay in a plain white treatment. */
 .game-fs-overlay {
   position: fixed;
   inset: 0;
@@ -3058,7 +3101,7 @@ table.auto-table {
   align-items: center;
   justify-content: center;
   padding-bottom: 18px;
-  padding-left: 64px; /* 避开 iPadOS/iOS 元素全屏左上角系统自带的 X 按钮 */
+  padding-left: 64px; /* Clears the system close button iPadOS/iOS puts at the top left of element fullscreen. */
   padding-right: 64px;
   border-bottom: 1px solid #e2e8f0;
   min-height: 44px;
@@ -3109,7 +3152,6 @@ table.auto-table {
   color: #334155;
   font-size: 0.9rem;
   font-weight: 600;
-  transition: all 0.2s ease;
 }
 
 .game-fs-close-btn {
@@ -3259,7 +3301,6 @@ table.auto-table {
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.95rem;
-  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 .game-fs-tip {
@@ -3382,7 +3423,6 @@ table.auto-table {
   font-size: 0.9rem;
   font-weight: 700;
   box-shadow: 0 4px 12px rgb(27 77 62 / 25%);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-photo-rec-icon {
@@ -3475,7 +3515,6 @@ table.auto-table {
   color: var(--text-light);
   padding: 4px 8px;
   border-radius: 6px;
-  transition: background 0.2s;
 }
 
 .photo-rec-body {
@@ -3502,7 +3541,6 @@ table.auto-table {
   padding: 24px 16px;
   text-align: center;
   background: rgb(33 140 116 / 3%);
-  transition: all 0.2s;
 }
 
 .dropzone-content {
@@ -3697,7 +3735,6 @@ table.auto-table {
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.95rem;
-  transition: all 0.2s;
 }
 
 /* ==========================================================================
@@ -3730,7 +3767,6 @@ table.auto-table {
   font-size: 1.1rem;
   font-weight: 700;
   box-shadow: 0 2px 5px rgb(0 0 0 / 8%);
-  transition: all 0.2s ease;
 }
 
 /* Tile Editor in Result Card */
@@ -3757,7 +3793,6 @@ table.auto-table {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
 }
 
 .tile-picker-box {

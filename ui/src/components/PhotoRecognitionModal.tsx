@@ -19,7 +19,7 @@ interface PhotoRecognitionModalProps {
 }
 
 // Rotates a base64 image on an HTML5 Canvas by 0/90/180/270 degrees.
-export function rotateImageBase64(base64: string, degrees: number): Promise<string> {
+function rotateImageBase64(base64: string, degrees: number): Promise<string> {
   if (degrees === 0) return Promise.resolve(base64)
   return new Promise((resolve) => {
     const img = new Image()
@@ -210,7 +210,7 @@ async function heicToJpegDataUrl(file: Blob): Promise<string | null> {
  * HEIC too, but it is strictly worse: no downscale, no forced landscape, and the rotate button has
  * nothing to act on.
  */
-export async function normalizeUploadedImage(file: File): Promise<string> {
+async function normalizeUploadedImage(file: File): Promise<string> {
   const original = await readAsDataUrl(file)
 
   const normalized = await normalizeDataUrl(original)
