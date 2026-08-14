@@ -17,8 +17,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
@@ -284,9 +284,10 @@ public class TileRecognitionService {
           }
           log.info("Falling back to model {}", models.get(modelIndex));
         }
-      } catch (ResourceAccessException e) {
-        // A timeout says nothing about which model or key is at fault, so treat it like the key
-        // being unusable and move on rather than hammering the same one.
+      } catch (RestClientException e) {
+        // Covers connection failures and read timeouts alike (RestClientResponseException, an HTTP
+        // error status, is caught above and never reaches here) — a timeout says nothing about
+        // which key or model is at fault, so treat it like the key being unusable and move on.
         log.warn("Gemini request failed on key #{} with {}: {}", keyIndex, model, e.getMessage());
         // Coalesced because a null would reach Map.of("message", ...) in the controller and NPE
         // into a 500, hiding the timeout behind "An unexpected error occurred".

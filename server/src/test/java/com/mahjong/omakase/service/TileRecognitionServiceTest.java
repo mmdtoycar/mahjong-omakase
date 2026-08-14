@@ -8,6 +8,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -65,6 +66,30 @@ class TileRecognitionServiceTest {
     f.server()
         .expect(header("x-goog-api-key", "key-a"))
         .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).body(quotaBody()));
+    f.server()
+        .expect(header("x-goog-api-key", "key-b"))
+        .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
+
+    assertThat(f.service().recognize("BASE64", "image/jpeg").rawJson()).contains("1m");
+    f.server().verify();
+  }
+
+  /**
+   * A connection-level failure must rotate to the next key like a quota error does. Guards against
+   * the catch clause being narrowed back to {@code ResourceAccessException} — the production
+   * incident (a read timeout surfacing as the plainer {@code RestClientException}) isn't
+   * reproducible here since {@code MockRestServiceServer} wraps any thrown IOException as {@code
+   * ResourceAccessException} regardless of which step raised it.
+   */
+  @Test
+  void rotatesToNextKeyOnATransportFailure() {
+    Fixture f = build("key-a,key-b");
+    f.server()
+        .expect(header("x-goog-api-key", "key-a"))
+        .andRespond(
+            request -> {
+              throw new IOException("Read timed out");
+            });
     f.server()
         .expect(header("x-goog-api-key", "key-b"))
         .andRespond(withSuccess(OK_BODY, MediaType.APPLICATION_JSON));
