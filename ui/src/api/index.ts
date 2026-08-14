@@ -240,20 +240,29 @@ export async function recognizeHandPhoto(
   mimeType: string,
   engine: 'local' | 'gemini' = 'local'
 ): Promise<{ rawJson: string; warning?: string; sampleId?: string }> {
-  const res = await fetch(`${API}/recognize`, {
-    method: 'POST',
-    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ imageBase64, mimeType, engine }),
-  })
-  const data = await handleResponse<{ rawJson: string; warning?: string; sampleId?: string } | undefined>(res)
-  // handleResponse yields undefined for an empty body; don't hand that to the parser.
-  if (!data || typeof data.rawJson !== 'string' || !data.rawJson.trim()) {
-    throw new Error('识别服务未返回内容，请重试')
-  }
-  return {
-    rawJson: data.rawJson,
-    warning: data.warning || undefined,
-    sampleId: data.sampleId || undefined,
+  try {
+    const res = await fetch(`${API}/recognize`, {
+      method: 'POST',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ imageBase64, mimeType, engine }),
+      // Gemini retries can take upward of a minute; without this, a stalled connection leaves the
+      // recognize button disabled forever instead of surfacing an error.
+      signal: AbortSignal.timeout(90_000),
+    })
+    const data = await handleResponse<{ rawJson: string; warning?: string; sampleId?: string } | undefined>(res)
+    if (!data || typeof data.rawJson !== 'string' || !data.rawJson.trim()) {
+      throw new Error('识别服务未返回内容，请重试')
+    }
+    return {
+      rawJson: data.rawJson,
+      warning: data.warning || undefined,
+      sampleId: data.sampleId || undefined,
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'TimeoutError') {
+      throw new Error('识别超时，请重试')
+    }
+    throw err
   }
 }
 
