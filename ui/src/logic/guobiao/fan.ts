@@ -813,7 +813,7 @@ function scoreCombination(
       addFan('缺一门', 1)
     }
 
-        // 无字 (1)
+    // 无字 (1)
     if (
       !hasHonors &&
       !hasFan('平和') &&

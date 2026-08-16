@@ -874,11 +874,7 @@ describe('WMO Official Mahjong Competition Rules (Attachment 1) Hand Examples', 
 
   describe('43. 无番和 (8分)', () => {
     it('牌例: (花牌) (吃 123p) (碰 555s) (碰 888m) 北北 24条 听 25条双头 (点和 2条)', () => {
-      const melds: Meld[] = [
-        makeMeld('shun', '123p', true),
-        makeMeld('ke', '555s', true),
-        makeMeld('ke', '888m', true),
-      ]
+      const melds: Meld[] = [makeMeld('shun', '123p', true), makeMeld('ke', '555s', true), makeMeld('ke', '888m', true)]
       const hand = parseTiles('44z234s')
       const res = calculateBestScore(hand, melds, defaultOpts({ huaCount: 2 }), new Tile('s', 2))
       expect(res).not.toBeNull()
@@ -920,12 +916,7 @@ describe('WMO Official Mahjong Competition Rules (Attachment 1) Hand Examples', 
         makeMeld('shun', '234m', true),
       ]
       const hand = parseTiles('55z')
-      const res = calculateBestScore(
-        hand,
-        melds,
-        defaultOpts({ lastTile: true, isSelfDraw: true }),
-        new Tile('z', 5)
-      )
+      const res = calculateBestScore(hand, melds, defaultOpts({ lastTile: true, isSelfDraw: true }), new Tile('z', 5))
       expect(res).not.toBeNull()
       const fanNames = res!.fans.map((f) => f.name)
       expect(fanNames).toContain('妙手回春')
@@ -940,12 +931,7 @@ describe('WMO Official Mahjong Competition Rules (Attachment 1) Hand Examples', 
         makeMeld('shun', '234m', true),
       ]
       const hand = parseTiles('55z')
-      const res = calculateBestScore(
-        hand,
-        melds,
-        defaultOpts({ gangShang: true, isSelfDraw: true }),
-        new Tile('z', 5)
-      )
+      const res = calculateBestScore(hand, melds, defaultOpts({ gangShang: true, isSelfDraw: true }), new Tile('z', 5))
       expect(res).not.toBeNull()
       const fanNames = res!.fans.map((f) => f.name)
       expect(fanNames).toContain('杠上开花')
