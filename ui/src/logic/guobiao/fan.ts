@@ -876,66 +876,45 @@ function scoreCombination(
   }
   if (options.isSelfDraw && options.lastTile) addFan('妙手回春', 8)
   if (!options.isSelfDraw && options.lastTile) addFan('海底捞月', 8)
-  if (options.juezhang) addFan('和绝张', 4)
+  if (options.juezhang && !hasFan('抢杠和')) addFan('和绝张', 4)
 
   // Zimo / Menqianqing / Buqiuren logic
-  const isJiulian = hasFan('九莲宝灯')
-  const isSianke = hasFan('四暗刻')
-  const isLianqidui = hasFan('连七对')
-  const isShisanyao = hasFan('十三幺')
-  const isQidui = hasFan('七对')
+  const isExcludedSelfDraw = hasFan('妙手回春') || hasFan('杠上开花')
 
   if (options.isSelfDraw) {
-    const buqiuren = (allClosed || isSpecial) && !isJiulian && !isSianke && !isShisanyao && !isLianqidui
-    if (buqiuren) {
-      addFan('不求人', 4)
-    } else {
-      addFan('自摸', 1)
+    if (!isExcludedSelfDraw) {
+      if (allClosed || isSpecial) {
+        addFan('不求人', 4)
+      } else {
+        addFan('自摸', 1)
+      }
     }
   } else if (allClosed && !isSpecial) {
-    if (!isJiulian && !isSianke && !isLianqidui && !isQidui) {
-      addFan('门前清', 2)
-    }
+    addFan('门前清', 2)
   }
 
   if (options.huaCount > 0) addFan('花牌', 1, options.huaCount)
 
-  if (isSpecial) {
-  }
-
   // =====================================================================
   // EXCLUSIONS (不计)
-  if (hasFan('十三幺')) {
-    removeFan('五门齐')
-    removeFan('不求人')
-    removeFan('单钓将')
-    removeFan('门前清')
-    removeFan('混幺九')
-  }
   // =====================================================================
+
+  // 88 番
   if (hasFan('大四喜')) {
     removeFan('三风刻')
     removeFan('圈风刻')
     removeFan('门风刻')
     removeFan('碰碰和')
-  }
-  if (hasFan('小四喜')) {
-    removeFan('三风刻')
-  }
-  if (hasFan('三风刻')) {
-    removeFan('圈风刻')
-    removeFan('门风刻')
+    removeFan('幺九刻')
   }
   if (hasFan('大三元')) {
     removeFan('双箭刻')
     removeFan('箭刻')
   }
-  if (hasFan('小三元')) {
-    removeFan('箭刻')
-  }
   if (hasFan('九莲宝灯')) {
     removeFan('清一色')
     removeFan('门前清')
+    removeFan('幺九刻')
     removeFan('无字')
   }
   if (hasFan('四杠')) {
@@ -952,13 +931,42 @@ function scoreCombination(
     removeFan('七对')
     removeFan('清一色')
     removeFan('门前清')
-    removeFan('不求人')
     removeFan('单钓将')
     removeFan('无字')
   }
-  if (hasFan('七对')) {
+  if (hasFan('十三幺')) {
+    removeFan('五门齐')
     removeFan('门前清')
     removeFan('单钓将')
+    removeFan('混幺九')
+    removeFan('全带幺')
+    removeFan('幺九刻')
+  }
+
+  // 64 番
+  if (hasFan('清幺九')) {
+    removeFan('碰碰和')
+    removeFan('全带幺')
+    removeFan('幺九刻')
+    removeFan('无字')
+  }
+  if (hasFan('小四喜')) {
+    removeFan('三风刻')
+  }
+  if (hasFan('小三元')) {
+    removeFan('双箭刻')
+    removeFan('箭刻')
+  }
+  if (hasFan('字一色')) {
+    removeFan('碰碰和')
+    removeFan('全带幺')
+    removeFan('幺九刻')
+  }
+  if (hasFan('四暗刻')) {
+    removeFan('三暗刻')
+    removeFan('双暗刻')
+    removeFan('门前清')
+    removeFan('碰碰和')
   }
   if (hasFan('一色双龙会')) {
     removeFan('清一色')
@@ -968,6 +976,8 @@ function scoreCombination(
     removeFan('老少副', 2)
     removeFan('无字')
   }
+
+  // 48 番
   if (hasFan('一色四同顺')) {
     removeFan('一色三同顺')
     removeFan('一般高', 6)
@@ -979,44 +989,12 @@ function scoreCombination(
     removeFan('一色三节高')
     removeFan('碰碰和')
   }
-  if (hasFan('一色三同顺')) {
-    removeFan('一色三节高')
-    removeFan('一般高', 3)
-  }
-  if (hasFan('清一色')) {
-    removeFan('无字')
-  }
-  if (hasFan('混一色')) {
-    removeFan('无字')
-  }
-  if (hasFan('全双刻')) {
-    removeFan('碰碰和')
-    removeFan('断幺')
-    removeFan('无字')
-  }
-  if (hasFan('五门齐')) {
-    /* no implicit */
-  }
-  if (hasFan('字一色')) {
-    removeFan('碰碰和')
-    removeFan('全带幺')
-  }
-  if (hasFan('碰碰和')) {
-    removeFan('无番和')
-  }
-  if (hasFan('四暗刻')) {
-    removeFan('三暗刻')
-    removeFan('双暗刻')
-    removeFan('不求人')
-    removeFan('门前清')
-    removeFan('碰碰和')
-  }
-  if (hasFan('三暗刻')) {
-    removeFan('双暗刻')
-  }
-  if (hasFan('双暗杠')) {
-    removeFan('暗杠', 2)
-    removeFan('双暗刻')
+
+  // 32 番
+  if (hasFan('一色四步高')) {
+    removeFan('一色三步高')
+    removeFan('连六')
+    removeFan('老少副')
   }
   if (hasFan('三杠')) {
     removeFan('双明杠')
@@ -1025,45 +1003,73 @@ function scoreCombination(
     removeFan('暗杠')
     removeFan('明杠')
   }
-  if (hasFan('清幺九')) {
+  if (hasFan('混幺九')) {
     removeFan('碰碰和')
-    removeFan('同刻')
-    removeFan('无字')
     removeFan('全带幺')
+    removeFan('幺九刻')
   }
-  if (hasFan('清龙')) {
-    removeFan('连六', 2)
-    removeFan('老少副')
+
+  // 24 番
+  if (hasFan('七对')) {
+    removeFan('门前清')
+    removeFan('单钓将')
   }
-  if (hasFan('花龙')) {
-    removeFan('喜相逢')
-    removeFan('老少副')
+  if (hasFan('七星不靠')) {
+    removeFan('五门齐')
+    removeFan('门前清')
+    removeFan('单钓将')
+    removeFan('全不靠')
   }
-  if (hasFan('三色三同顺')) {
-    removeFan('喜相逢')
-  }
-  if (hasFan('推不倒')) {
-    removeFan('缺一门')
-  }
-  if (hasFan('平和')) {
+  if (hasFan('全双刻')) {
+    removeFan('碰碰和')
+    removeFan('断幺')
     removeFan('无字')
   }
-  if (hasFan('断幺')) {
+  if (hasFan('清一色')) {
+    removeFan('无字')
+  }
+  if (hasFan('一色三同顺')) {
+    removeFan('一色三节高')
+    removeFan('一般高', 3)
+  }
+  if (hasFan('一色三节高')) {
+    removeFan('一色三同顺')
+  }
+  if (hasFan('全大')) {
+    removeFan('大于五')
     removeFan('无字')
   }
   if (hasFan('全中')) {
     removeFan('断幺')
     removeFan('无字')
   }
+  if (hasFan('全小')) {
+    removeFan('小于五')
+    removeFan('无字')
+  }
+
+  // 16 番
+  if (hasFan('清龙')) {
+    removeFan('连六', 2)
+    removeFan('老少副')
+  }
+  if (hasFan('三色双龙会')) {
+    removeFan('平和')
+    removeFan('无字')
+    removeFan('喜相逢', 2)
+    removeFan('老少副', 2)
+  }
   if (hasFan('全带五')) {
     removeFan('断幺')
     removeFan('无字')
   }
-  // 不求人 and 门前清 are already handled by logic above to avoid over-exclusion.
+  if (hasFan('三暗刻')) {
+    removeFan('双暗刻')
+  }
 
-  if (combo.isBuKao) {
+  // 12 番
+  if (hasFan('全不靠')) {
     removeFan('五门齐')
-    removeFan('不求人')
     removeFan('门前清')
     removeFan('单钓将')
     removeFan('混幺九')
@@ -1073,11 +1079,57 @@ function scoreCombination(
     removeFan('无字')
     removeFan('缺一门')
   }
+  if (hasFan('大于五')) {
+    removeFan('无字')
+  }
+  if (hasFan('小于五')) {
+    removeFan('无字')
+  }
+  if (hasFan('三风刻')) {
+    removeFan('圈风刻')
+    removeFan('门风刻')
+  }
 
-  if (combo.isZuHeLong) {
-    // ZuHeLong can be part of BuKao or standard
-    // If it's part of BuKao, it's already counted? No, they can combine.
-    // Fixed: in GB, if you have both, they both count.
+  // 8 番
+  if (hasFan('推不倒')) {
+    removeFan('缺一门')
+  }
+  if (hasFan('三色三同顺')) {
+    removeFan('喜相逢')
+  }
+  if (hasFan('双暗杠')) {
+    removeFan('暗杠', 2)
+    removeFan('双暗刻')
+  }
+  if (hasFan('妙手回春')) {
+    removeFan('自摸')
+    removeFan('不求人')
+  }
+  if (hasFan('杠上开花')) {
+    removeFan('自摸')
+    removeFan('不求人')
+  }
+  if (hasFan('抢杠和')) {
+    removeFan('和绝张')
+  }
+
+  // 6 番
+  if (hasFan('混一色')) {
+    removeFan('无字')
+  }
+  if (hasFan('全求人')) {
+    removeFan('单钓将')
+  }
+  if (hasFan('双箭刻')) {
+    removeFan('箭刻')
+  }
+
+  // 2 番 & 1 番
+  if (hasFan('平和')) {
+    removeFan('无字')
+  }
+  if (hasFan('断幺')) {
+    removeFan('无字')
   }
 
   // =====================================================================
