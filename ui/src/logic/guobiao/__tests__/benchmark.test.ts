@@ -470,7 +470,7 @@ describe('Guobiao Benchmarks - Special Scoring Rules', () => {
   })
 
   test('Rule 28', () => {
-    expectFans('s1 s9 m1 m9 p1 p9 z1 z2 z3 z4 z5 z6 z7 z1', ['十三幺', '自摸'], { isSelfDraw: true })
+    expectFans('s1 s9 m1 m9 p1 p9 z1 z2 z3 z4 z5 z6 z7 z1', ['十三幺', '不求人'], { isSelfDraw: true })
   })
 
   test('Rule 29', () => {

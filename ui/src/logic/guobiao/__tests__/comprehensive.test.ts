@@ -117,12 +117,12 @@ describe('Guobiao Logic External Engine Compliance', () => {
   })
 
   test('Case 8: Thirteen Orphans Zimo', () => {
-    expectFans('s19m19p19z1234567 s1', ['十三幺', '自摸'], { isSelfDraw: true })
+    expectFans('s19m19p19z1234567 s1', ['十三幺', '不求人'], { isSelfDraw: true })
   })
 
   test('Case 9: Little Four Winds', () => {
     // 3 wind kes, 1 wind pair, 1 other ke
-    expectFans('z11122233344 s111', ['小四喜', '碰碰和', '三暗刻', '混幺九'])
+    expectFans('z11122233344 s111', ['小四喜', '三暗刻', '混幺九'])
   })
 
   test('Case 10: Little Three Dragons', () => {
