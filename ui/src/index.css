@@ -3354,10 +3354,11 @@ table.auto-table {
   .fan-item-example-real {
     padding: 12px 6px 6px;
   }
+}
 
-  .admin-swipe-shell .col-action {
-    padding-left: 60px;
-  }
+.col-action .btn {
+  padding: 4px 8px;
+  font-size: 0.78rem;
 }
 
 .pagination-container {

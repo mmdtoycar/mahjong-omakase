@@ -160,26 +160,24 @@ export default function PlayerDetailPage() {
           </div>
         ) : (
           <div className="table-wrap">
-            <table className="fixed-table">
+            <table className="auto-table">
               <thead>
                 <tr>
                   <th>游戏</th>
-                  <th style={{ width: '56px' }}>模式</th>
-                  <th style={{ width: '80px' }}>日期</th>
-                  <th style={{ width: '60px' }}>状态</th>
-                  <th className="text-right" style={{ width: '68px' }}>
-                    分数
-                  </th>
+                  <th style={{ whiteSpace: 'nowrap' }}>模式</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>日期</th>
+                  <th>状态</th>
+                  <th className="text-right">分数</th>
                 </tr>
               </thead>
               <tbody>
                 {player.games.map((g) => (
                   <tr key={g.sessionId} onClick={() => navigate(`/session/${g.sessionId}`)}>
-                    <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {g.sessionName || `Game #${g.sessionId}`}
+                    <td>#{g.sessionId}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{g.gameModeDisplayName}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {new Date(g.createdAt).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' })}
                     </td>
-                    <td>{g.gameModeDisplayName}</td>
-                    <td>{new Date(g.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
                     <td>
                       <span className={`badge ${g.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
                         {g.status === 'IN_PROGRESS' ? '进行中' : '已结束'}

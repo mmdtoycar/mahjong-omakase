@@ -225,7 +225,9 @@ export default function ProfilePage() {
                             <div className="profile-achievement-name">🏅 {fd.fanName}</div>
                             <div className="profile-achievement-date">
                               发现日期:{' '}
-                              {new Date(fd.discoveredAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}
+                              {new Date(fd.discoveredAt).toLocaleDateString('en-US', {
+                                timeZone: 'America/Los_Angeles',
+                              })}
                             </div>
                           </div>
                         </div>

@@ -60,8 +60,11 @@ export default function NewSessionPage() {
     setError('')
     try {
       const now = new Date()
-      const dateStr = now.toLocaleDateString([], { timeZone: 'America/Los_Angeles' })
-      const timeStr = now.toLocaleTimeString([], {
+      // 'en-US' pins the output format (M/D/YYYY, 24h HH:mm) — an empty locale array instead
+      // resolves to the phone's own language/region, so the same code produced "8/16/2026" on an
+      // English-region phone and "2026/8/16" on a Chinese-region one.
+      const dateStr = now.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' })
+      const timeStr = now.toLocaleTimeString('en-US', {
         timeZone: 'America/Los_Angeles',
         hour: '2-digit',
         minute: '2-digit',
