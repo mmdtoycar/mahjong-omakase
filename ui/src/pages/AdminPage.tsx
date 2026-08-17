@@ -133,7 +133,6 @@ export default function AdminPage() {
                 <th>ID</th>
                 <th>Username</th>
                 <th>Name</th>
-                <th>Joined</th>
                 <th className="col-action"></th>
               </tr>
             </thead>
@@ -181,7 +180,6 @@ export default function AdminPage() {
                         </>
                       )}
                     </td>
-                    <td>{new Date(p.createdAt).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' })}</td>
                     <td className="col-action">
                       {editingId === p.id ? (
                         <div style={{ display: 'flex', gap: 4 }}>
