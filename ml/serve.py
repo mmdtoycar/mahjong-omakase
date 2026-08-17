@@ -42,7 +42,6 @@ SIZE = 0
 
 _REQUEST_IDS = itertools.count(1)  # so a "received" line and its outcome line can be matched up
 
-
 class BadRequest(Exception):
     """A request this server will not read, with the status to answer and why."""
 
