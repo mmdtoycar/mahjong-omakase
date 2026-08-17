@@ -179,7 +179,7 @@ export default function PlayerDetailPage() {
                       {g.sessionName || `Game #${g.sessionId}`}
                     </td>
                     <td>{g.gameModeDisplayName}</td>
-                    <td>{new Date(g.createdAt).toLocaleDateString([], { timeZone: 'America/Los_Angeles' })}</td>
+                    <td>{new Date(g.createdAt).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })}</td>
                     <td>
                       <span className={`badge ${g.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
                         {g.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
