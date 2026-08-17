@@ -3354,10 +3354,13 @@ table.auto-table {
   .fan-item-example-real {
     padding: 12px 6px 6px;
   }
+}
 
-  .admin-swipe-shell .col-action {
-    padding-left: 60px;
-  }
+/* Admin's Edit/Delete/Save/Cancel — narrower than .btn-small so two of them fit in one table cell
+   without the row needing to scroll. */
+.col-action .btn {
+  padding: 4px 8px;
+  font-size: 0.78rem;
 }
 
 .pagination-container {
