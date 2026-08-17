@@ -124,7 +124,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _reply(self, status: int, payload: dict, note: str) -> None:
         """Sends `payload` as `status`, and logs the same status so the two can never drift apart."""
-        print(f"reader: {note} ({status})", flush=True)
+        print(f"reader: [{status}] {note}", flush=True)
         self._send(status, payload)
 
     def do_POST(self) -> None:
