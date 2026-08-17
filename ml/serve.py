@@ -131,7 +131,6 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, {"message": "not found"})
             return
         request_id = next(_REQUEST_IDS)
-        print(f"reader: received recognize request #{request_id}", flush=True)
 
         try:
             body = self._read_body()
@@ -151,6 +150,7 @@ class Handler(BaseHTTPRequestHandler):
         # request against — the session id, when the caller has one to give.
         session_id = request.get("sessionId")
         tag = f"#{request_id}" if session_id is None else f"#{request_id} (session {session_id})"
+        print(f"reader: received recognize request {tag}", flush=True)
 
         try:
             raw = base64.b64decode(encoded, validate=True)
