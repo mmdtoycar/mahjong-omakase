@@ -149,9 +149,12 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
         # A round does not exist yet at recognition time, so this is the most this log can place a
-        # request against — the session id, when the caller has one to give.
+        # request against — the session id, when the caller has one to give. Anything but a plain
+        # int is discarded rather than logged: this value reaches a print() untouched, and a string
+        # is how a log line gets forged.
         session_id = request.get("sessionId")
-        tag = "" if session_id is None else f" (session {session_id})"
+        valid_session = isinstance(session_id, int) and not isinstance(session_id, bool)
+        tag = f" (session {session_id})" if valid_session else ""
         print(f"reader: received recognize request{tag}", flush=True)
 
         try:

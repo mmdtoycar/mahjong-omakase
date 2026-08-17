@@ -357,17 +357,20 @@ def read_hand(
     angle = _line_angle(tile_mask(bgr))
     if abs(angle) < DESKEW_MIN_ANGLE:
         return upright
-    candidates = [
-        candidate
-        for candidate in (
-            _read_hand_upright(model, labels, size, _rotate(bgr, angle + nudge), counts)
-            for nudge in DESKEW_SEARCH
-        )
-        if isinstance(candidate, Reading)
-    ]
-    if not candidates:
-        return upright
-    return max(candidates, key=lambda reading: sum(reading.confidence) / len(reading.confidence))
+    # Stops at the first candidate that is confident enough rather than always trying all of
+    # DESKEW_SEARCH — a photo that needed deskewing already cost one extra read; there is no reason
+    # to pay for the rest of the nudges once one of them reads the hand cleanly.
+    best = None
+    for nudge in DESKEW_SEARCH:
+        candidate = _read_hand_upright(model, labels, size, _rotate(bgr, angle + nudge), counts)
+        if not isinstance(candidate, Reading):
+            continue
+        score = sum(candidate.confidence) / len(candidate.confidence)
+        if best is None or score > best[0]:
+            best = (score, candidate)
+        if score >= CONFIDENT:
+            break
+    return best[1] if best else upright
 
 
 def _read_hand_upright(

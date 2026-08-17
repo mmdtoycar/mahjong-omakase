@@ -140,12 +140,18 @@ public class RecognitionSampleStore {
         confirmed.put("confirmedAt", Instant.now().toString());
         confirmed.set("hand", hand);
 
+        // Named after the full sample id, day included: two different days can save the same photo
+        // bytes under the same digest, and dropping the day would let one overwrite the other here.
+        String destStem = sampleId.replace('/', '-');
         String photoName = sample.path("photo").asText("");
         Path oldPhoto = oldSidecar.resolveSibling(photoName);
         if (!photoName.isBlank() && Files.exists(oldPhoto)) {
-          Files.move(oldPhoto, dir.resolve(photoName), StandardCopyOption.REPLACE_EXISTING);
+          int dot = photoName.lastIndexOf('.');
+          String newPhotoName = dot < 0 ? destStem : destStem + photoName.substring(dot);
+          Files.move(oldPhoto, dir.resolve(newPhotoName), StandardCopyOption.REPLACE_EXISTING);
+          sample.put("photo", newPhotoName);
         }
-        replace(dir.resolve(oldSidecar.getFileName()), sample);
+        replace(dir.resolve(destStem + ".json"), sample);
         Files.deleteIfExists(oldSidecar);
         moved++;
       }

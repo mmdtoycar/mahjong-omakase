@@ -3629,6 +3629,16 @@ table.auto-table {
   }
 }
 
+/* Hides an input visually while keeping it focusable/tabbable, unlike display: none. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .photo-rec-controls-bar {
   display: flex;
   justify-content: center;

@@ -220,6 +220,30 @@ class RecognitionSampleStoreTest {
   }
 
   /**
+   * Two different days can save the same photo bytes under the same digest — the destination name
+   * has to keep the day, or moving the second one into a round folder would overwrite the first.
+   */
+  @Test
+  void keepsBothCopiesWhenTheSamePhotoWasSavedOnTwoDays(@TempDir Path dir) throws IOException {
+    RecognitionSampleStore store = storeIn(dir.toString());
+    String today = store.save(JPEG, "image/jpeg", "local", "{\"concealed\":[\"1m\"]}");
+    String digest = today.substring(today.indexOf('/') + 1);
+
+    // A second day's copy of the exact same photo, written by hand since `save` always uses today.
+    Path otherDay = Files.createDirectories(dir.resolve("2020-01-01"));
+    Files.write(otherDay.resolve(digest + ".jpg"), Base64.getDecoder().decode(JPEG));
+    Files.writeString(
+        otherDay.resolve(digest + ".json"),
+        "{\"photo\":\"" + digest + ".jpg\",\"mimeType\":\"image/jpeg\",\"answers\":{}}");
+
+    store.confirmForRound(List.of(today, "2020-01-01/" + digest), 228, 3, MAPPER.readTree("{}"));
+
+    Path round = dir.resolve("228-3");
+    assertThat(namesEnding(round, ".json")).hasSize(2);
+    assertThat(namesEnding(round, ".jpg")).hasSize(2);
+  }
+
+  /**
    * Every photo from a retaken round lands beside each other, each with the same confirmed hand.
    */
   @Test
