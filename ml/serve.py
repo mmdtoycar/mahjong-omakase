@@ -18,6 +18,7 @@ import io
 import json
 import os
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -149,12 +150,28 @@ class Handler(BaseHTTPRequestHandler):
             self._send(415, {"message": "could not decode the image"})
             return
 
+        started = time.perf_counter()
         reading = read_hand(MODEL, LABELS, SIZE, shrink(bgr))
+        elapsed_ms = (time.perf_counter() - started) * 1000
         if isinstance(reading, str):
             # Nothing in the photo looked like a hand. A 422 rather than a 500: the request was fine,
             # the picture was not, and the caller should offer the online path instead.
+            print(f"reader: declined — {reading} ({elapsed_ms:.0f}ms)", flush=True)
             self._send(422, {"message": reading})
             return
+        if reading.confidence:
+            min_index = min(range(len(reading.confidence)), key=reading.confidence.__getitem__)
+            mean_conf = sum(reading.confidence) / len(reading.confidence)
+            min_conf = f"{reading.confidence[min_index]:.2f} (tile #{min_index + 1})"
+        else:
+            mean_conf = 0.0
+            min_conf = "n/a"
+        print(
+            f"reader: recognized {len(reading.tiles)} tiles, mean_conf={mean_conf:.2f}, "
+            f"min_conf={min_conf}, melds={len(reading.melds)}, winning={reading.winning} "
+            f"({elapsed_ms:.0f}ms)",
+            flush=True,
+        )
         self._send(200, as_json(reading))
 
 

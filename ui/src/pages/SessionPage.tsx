@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
+import { fetchSessionDetail, addRound, deleteRound, completeSession, confirmRecognizedHand } from '../api'
 import { SessionDetail, PlayerInfo, RoundInfo } from '../types'
 import { rankByScore } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
@@ -13,7 +13,7 @@ import { scoreClass, parseError, seatRankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
 import { TableStrengthTag } from '../components/TableStrengthTag'
-import { PhotoRecognitionModal, RecognizedHand } from '../components/PhotoRecognitionModal'
+import { PhotoRecognitionModal, RecognizedHand, winHandToLabel } from '../components/PhotoRecognitionModal'
 import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
 import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
@@ -48,6 +48,10 @@ export default function SessionPage() {
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false)
   const [gbImportedHand, setGbImportedHand] = useState<ImportedHand<GuobiaoMeld> | null>(null)
   const [riichiImportedHand, setRiichiImportedHand] = useState<ImportedHand<RiichiMeld> | null>(null)
+  // The sample this round's photo was recognised against, if any. Confirmed against whatever the
+  // calculator ends up with at submission time — not when the recognition result was applied — so
+  // corrections made after applying still end up as the training label.
+  const [photoSampleId, setPhotoSampleId] = useState<string | null>(null)
 
   const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
     if (s !== null) {
@@ -132,6 +136,7 @@ export default function SessionPage() {
     setCalcResetCount((prev) => prev + 1)
     setGbImportedHand(null)
     setRiichiImportedHand(null)
+    setPhotoSampleId(null)
   }
 
   /**
@@ -228,6 +233,17 @@ export default function SessionPage() {
           prevalentWind: gameState.prevalentWind,
           chombo: isChomboManual || undefined,
         })
+      }
+
+      // Confirmed here, not when the recognition result was applied: this is what the calculator
+      // actually ended up with, corrections included, which is the whole point of moving this off
+      // the old apply-button click. winHand is empty for 东北 (no calculator involved), which also
+      // covers rounds that were never recognised at all (photoSampleId stays null either way).
+      // isChomboManual is excluded on its own: winHand can still hold a stale hand from before the
+      // 诈胡 toggle, and a chombo penalty round is not a hand — confirming it would mislabel the
+      // photo with tiles that have nothing to do with what was actually recorded.
+      if (photoSampleId && winHand && !isChomboManual) {
+        void confirmRecognizedHand(photoSampleId, { ...winHandToLabel(winHand), isSelfDraw })
       }
 
       resetForm()
@@ -432,7 +448,7 @@ export default function SessionPage() {
 
   const statusMessage = getStatusMessage()
 
-  const handleApplyRecognizedHand = (hand: RecognizedHand) => {
+  const handleApplyRecognizedHand = (hand: RecognizedHand, sampleId: string | null) => {
     if (isGuobiao) {
       setIsSelfDraw(hand.isSelfDraw)
       setGbImportedHand((prev) => ({
@@ -448,6 +464,7 @@ export default function SessionPage() {
         trigger: (prev?.trigger ?? 0) + 1,
       }))
     }
+    setPhotoSampleId(sampleId)
   }
 
   return (
@@ -903,7 +920,6 @@ export default function SessionPage() {
           isOpen={isPhotoModalOpen}
           onClose={() => setIsPhotoModalOpen(false)}
           onApplyHand={handleApplyRecognizedHand}
-          gameMode={isGuobiao ? 'GUOBIAO' : 'RIICHI'}
         />
       )}
     </>

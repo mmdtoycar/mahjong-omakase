@@ -43,57 +43,58 @@ class HandRecognitionServiceTest {
     verify(gemini, never()).recognize(anyString(), anyString());
   }
 
-  /** The reader being down is nobody's fault and nothing the user can act on. */
+  /**
+   * The reader being unreachable is nobody's fault and nothing the user can act on — it does not
+   * fall back to Gemini any more, it just says so and hands back an empty hand to fill in by hand.
+   */
   @Test
-  void fallsBackToGeminiWhenTheReaderCannotBeReached() {
+  void returnsAnEmptyHandWhenTheReaderCannotBeReached() {
     when(reader.isConfigured()).thenReturn(true);
     when(reader.recognize(anyString(), anyString()))
         .thenThrow(new ReaderUnavailableException("connection refused"));
-    when(gemini.recognize(anyString(), anyString())).thenReturn(FROM_GEMINI);
+    when(samples.saveFailure(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn("2026-08-09/aabbccdd1122");
 
     Recognition recognition = service.recognize("BASE64", "image/jpeg", "local");
 
-    assertThat(recognition.rawJson()).isEqualTo(GEMINI_ANSWER);
+    assertThat(recognition.rawJson()).contains("\"concealed\":[]");
     assertThat(recognition.warning()).contains("连不上");
     // The transport error carries the reader's URL. It belongs in the log and in the sample, not in
-    // a
-    // browser, and it tells the user nothing they can act on.
+    // a browser: it tells the user nothing they can act on.
     assertThat(recognition.warning()).doesNotContain("connection refused");
-    // Gemini filed the sample this time, so its id is the one the browser must get back — the photo
-    // is the same photo, so the confirmed hand still lands next to both answers.
     assertThat(recognition.sampleId()).isEqualTo("2026-08-09/aabbccdd1122");
     verify(samples)
         .saveFailure("BASE64", "image/jpeg", HandRecognitionService.LOCAL, "connection refused");
+    verify(gemini, never()).recognize(anyString(), anyString());
   }
 
   /**
-   * The reader looked at the photo and declined it. That also falls back — the user should never be
-   * left without a hand because the local model had a bad day — but it must not do so silently, or
-   * weeks pass with nobody knowing whether the local path works.
+   * The reader looked at the photo and declined it. That detail is worth showing, because the fix
+   * next time is to reframe — but it no longer falls back to Gemini either; an empty hand goes back
+   * and the user fills it in (here or in the calculator directly).
    */
   @Test
-  void fallsBackWithAWarningWhenTheReaderDeclinedThePhoto() {
+  void returnsAnEmptyHandWithAWarningWhenTheReaderDeclinedThePhoto() {
     when(reader.isConfigured()).thenReturn(true);
     when(reader.recognize(anyString(), anyString()))
         .thenThrow(new IllegalStateException("no line of tiles found"));
-    when(gemini.recognize(anyString(), anyString())).thenReturn(FROM_GEMINI);
 
     Recognition recognition = service.recognize("BASE64", "image/jpeg", "local");
 
-    assertThat(recognition.rawJson()).isEqualTo(GEMINI_ANSWER);
+    assertThat(recognition.rawJson()).contains("\"concealed\":[]");
     assertThat(recognition.warning()).contains("没读出手牌").contains("no line of tiles found");
+    verify(gemini, never()).recognize(anyString(), anyString());
   }
 
   /**
-   * A failure is a sample too, and the more interesting one: it lands under the same digest as
-   * Gemini's answer, so the pair says "the reader could not do this, and here is what Gemini said".
+   * A failure is a sample too, and on this project the more interesting one: the photos the local
+   * reader cannot read are precisely the ones worth studying come retraining time.
    */
   @Test
-  void recordsWhyTheLocalReadFailedNextToThePhoto() {
+  void recordsWhyTheLocalReadFailedEvenThoughNothingIsFilledIn() {
     when(reader.isConfigured()).thenReturn(true);
     when(reader.recognize(anyString(), anyString()))
         .thenThrow(new IllegalStateException("no line of tiles found"));
-    when(gemini.recognize(anyString(), anyString())).thenReturn(FROM_GEMINI);
 
     service.recognize("BASE64", "image/jpeg", "local");
 
@@ -111,8 +112,7 @@ class HandRecognitionServiceTest {
         .isEqualTo(GEMINI_ANSWER);
     verify(reader, never()).recognize(anyString(), anyString());
     // TileRecognitionService keeps its own sample once it has an answer, so this path must not add
-    // a
-    // second one under the wrong name.
+    // a second one under the wrong name.
     verify(samples, never())
         .save(anyString(), anyString(), eq(HandRecognitionService.LOCAL), any());
   }

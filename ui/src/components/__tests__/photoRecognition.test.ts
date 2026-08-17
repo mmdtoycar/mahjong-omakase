@@ -4,11 +4,9 @@ import {
   parseTileStringSequence,
   parseTileList,
   safeParseJSON,
-  checkRecognizedHand,
   isUsableImageDataUrl,
   parseImageDataUrl,
-  asLabel,
-  RecognizedHand,
+  winHandToLabel,
 } from '../PhotoRecognitionModal'
 import { Tile } from '../../logic/shared/tiles'
 import { toGuobiaoMelds, toRiichiMelds } from '../../logic/shared/importedHand'
@@ -118,74 +116,6 @@ describe('safeParseJSON', () => {
   })
 })
 
-describe('checkRecognizedHand', () => {
-  const hand = (concealed: string, melds: RecognizedHand['melds'] = []): RecognizedHand => ({
-    concealed: parseTileStringSequence(concealed),
-    melds,
-    winningTile: null,
-    isSelfDraw: false,
-  })
-
-  it('accepts a 13-tile hand', () => {
-    const r = checkRecognizedHand(hand('1234567899m 111p'))
-    expect(r.blocking).toEqual([])
-    expect(r.warnings).toEqual([])
-  })
-
-  it('accepts a 14-tile hand', () => {
-    const r = checkRecognizedHand(hand('1234567899m 1112p'))
-    expect(r.blocking).toEqual([])
-  })
-
-  // A gang shows 4 tiles but fills 3 slots, so 11 + gang(4) is a legal 14.
-  it('counts a gang as three slots', () => {
-    const gang = { type: 'gang', tiles: parseTileStringSequence('8888s'), isOpen: false }
-    const r = checkRecognizedHand(hand('12345678999m', [gang]))
-    expect(r.blocking).toEqual([])
-  })
-
-  it('blocks a hand with more than 14 slots', () => {
-    const r = checkRecognizedHand(hand('123456789m 123456789p'))
-    expect(r.blocking.some((m) => m.includes('超过一手牌上限'))).toBe(true)
-  })
-
-  // The model has been seen echoing the whole 34-tile legend back as the hand.
-  it('blocks the full 34-tile legend', () => {
-    const r = checkRecognizedHand(hand('123456789m 123456789p 123456789s 1234567z'))
-    expect(r.blocking.length).toBeGreaterThan(0)
-  })
-
-  it('blocks a fifth copy of a tile', () => {
-    const r = checkRecognizedHand(hand('11111m 22334455p'))
-    expect(r.blocking.some((m) => m.includes('1m'))).toBe(true)
-  })
-
-  it('counts meld tiles toward the four-copy limit', () => {
-    const ke = { type: 'ke', tiles: parseTileStringSequence('555z'), isOpen: true }
-    const r = checkRecognizedHand(hand('123456789m 55z', [ke]))
-    expect(r.blocking.some((m) => m.includes('5z'))).toBe(true)
-  })
-
-  it('warns but does not block an incomplete hand', () => {
-    const r = checkRecognizedHand(hand('123m'))
-    expect(r.blocking).toEqual([])
-    expect(r.warnings.some((m) => m.includes('可能有遗漏'))).toBe(true)
-  })
-
-  it('blocks an empty result instead of only warning', () => {
-    const r = checkRecognizedHand(hand(''))
-    expect(r.blocking.some((m) => m.includes('没有识别出任何牌'))).toBe(true)
-  })
-
-  // Both calculators score every meld as exactly 3 slots.
-  it('blocks a meld that is not 3 or 4 tiles', () => {
-    const short = { type: 'ke', tiles: parseTileStringSequence('55z'), isOpen: true }
-    const long = { type: 'shun', tiles: parseTileStringSequence('12345m'), isOpen: true }
-    expect(checkRecognizedHand(hand('1234567899m', [short])).blocking.some((m) => m.includes('副露张数'))).toBe(true)
-    expect(checkRecognizedHand(hand('123456789m', [long])).blocking.some((m) => m.includes('副露张数'))).toBe(true)
-  })
-})
-
 describe('meld kind inference', () => {
   const meld = (type: string, tiles: string) => ({ type, tiles: parseTileStringSequence(tiles), isOpen: true })
 
@@ -266,31 +196,50 @@ describe('parseImageDataUrl', () => {
   })
 })
 
-describe('asLabel', () => {
+describe('winHandToLabel', () => {
   /**
-   * The sample file holds every recogniser's answer as "6z" strings; a label in a different notation
-   * would have to be converted before the two could be compared, which is the one thing keeping them
-   * in one file is for.
+   * The grammar this parses is exactly what MahjongHand.tsx already walks to render the same string
+   * as tile images: sorted concealed tiles, then `^` and the winning tile, then zero or more melds
+   * in `[...]` (open) or `(...)` (closed) — no separators, since every tile is exactly 2 characters.
    */
-  it('writes tiles the way the recognisers answer, and drops the model note', () => {
-    const hand: RecognizedHand = {
-      concealed: [new Tile('z', 6), new Tile('p', 1)],
-      melds: [{ type: 'PENG', tiles: [new Tile('s', 4), new Tile('s', 4), new Tile('s', 4)], isOpen: true }],
-      winningTile: new Tile('p', 3),
-      isSelfDraw: true,
-      notes: 'least certain about 6z',
-    }
-
-    expect(asLabel(hand)).toEqual({
-      concealed: ['6z', '1p'],
-      melds: [{ type: 'PENG', isOpen: true, tiles: ['4s', '4s', '4s'] }],
-      winningTile: '3p',
-      isSelfDraw: true,
+  it('parses a concealed-only hand', () => {
+    expect(winHandToLabel('1m2m3m^4m')).toEqual({
+      concealed: ['1m', '2m', '3m', '4m'],
+      melds: [],
+      winningTile: '4m',
     })
   })
 
-  it('keeps a missing winning tile missing rather than inventing one', () => {
-    const hand: RecognizedHand = { concealed: [], melds: [], winningTile: null, isSelfDraw: false }
-    expect(asLabel(hand).winningTile).toBeNull()
+  it('includes the winning tile as the last concealed tile too, matching a recogniser’s own answer', () => {
+    const label = winHandToLabel('1m2m3m^4m')
+    expect(label.concealed.at(-1)).toBe(label.winningTile)
+  })
+
+  it('parses an open meld', () => {
+    expect(winHandToLabel('1m2m3m^4m[5p5p5p]')).toEqual({
+      concealed: ['1m', '2m', '3m', '4m'],
+      melds: [{ isOpen: true, tiles: ['5p', '5p', '5p'] }],
+      winningTile: '4m',
+    })
+  })
+
+  it('parses a closed meld (an 暗杠)', () => {
+    expect(winHandToLabel('1m2m3m^4m(6s6s6s6s)')).toEqual({
+      concealed: ['1m', '2m', '3m', '4m'],
+      melds: [{ isOpen: false, tiles: ['6s', '6s', '6s', '6s'] }],
+      winningTile: '4m',
+    })
+  })
+
+  it('parses multiple melds of mixed openness', () => {
+    const label = winHandToLabel('1m2m3m^4m[5p5p5p](6s6s6s6s)')
+    expect(label.melds).toEqual([
+      { isOpen: true, tiles: ['5p', '5p', '5p'] },
+      { isOpen: false, tiles: ['6s', '6s', '6s', '6s'] },
+    ])
+  })
+
+  it('returns an empty label for an empty string, rather than throwing', () => {
+    expect(winHandToLabel('')).toEqual({ concealed: [], melds: [], winningTile: null })
   })
 })

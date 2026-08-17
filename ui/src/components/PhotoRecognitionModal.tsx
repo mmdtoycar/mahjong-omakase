@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Tile, TileSuit } from '../logic/shared/tiles'
-import { TileComponent } from './shared/TileComponent'
-import { confirmRecognizedHand, recognizeHandPhoto } from '../api'
+import { recognizeHandPhoto } from '../api'
 
 export interface RecognizedHand {
   concealed: Tile[]
@@ -14,8 +13,8 @@ export interface RecognizedHand {
 interface PhotoRecognitionModalProps {
   isOpen: boolean
   onClose: () => void
-  onApplyHand: (hand: RecognizedHand) => void
-  gameMode: 'GUOBIAO' | 'RIICHI'
+  /** Fires the instant recognition returns something to fill in — there is no review step to wait for. */
+  onApplyHand: (hand: RecognizedHand, sampleId: string | null) => void
 }
 
 // Rotates a base64 image on an HTML5 Canvas by 0/90/180/270 degrees.
@@ -451,97 +450,71 @@ export function parseTileStringSequence(str: string): Tile[] {
 }
 
 /**
- * Sanity-checks a recognized hand before it can be pushed into a calculator.
+ * Parses the `winHand` string the two calculators emit — concealed tiles (sorted, each exactly 2
+ * characters), then `^` and the winning tile, then zero or more melds in `[...]` (open) or `(...)`
+ * (closed) — into the tile-array shape the recognisers themselves answer in.
  *
- * A gang shows 4 physical tiles but occupies 3 slots, so hand size is counted that way.
- * `blocking` problems are ones no real hand can have, and the model does occasionally
- * produce them (e.g. echoing the whole 34-tile legend back as the hand).
+ * This is what actually gets confirmed as training data now: applying a recognition result is no
+ * longer the last word on what a hand turns out to be, submitting the round is, and `winHand` is
+ * what the calculator has settled on by then, corrections included. The grammar is exactly what
+ * {@link ../components/MahjongHand.tsx} already walks to render the same string as tile images.
  */
-/**
- * The confirmed hand in the same notation the recognisers answer in.
- *
- * Tile is a class, so handing the result straight to JSON.stringify writes `{"suit":"z","rank":6}`
- * where every answer in the sample says `"6z"` — the point of one sample file is that the answers
- * and the label can be compared, which they cannot be in two notations. `notes` is dropped for the
- * same reason: it is the model's own commentary, it is already kept with its answer, and inside a
- * human-checked label it reads as if somebody had stood behind it.
- */
-export function asLabel(hand: RecognizedHand) {
-  return {
-    concealed: hand.concealed.map(String),
-    melds: hand.melds.map((meld) => ({
-      type: meld.type,
-      isOpen: meld.isOpen,
-      tiles: meld.tiles.map(String),
-    })),
-    winningTile: hand.winningTile ? String(hand.winningTile) : null,
-    isSelfDraw: hand.isSelfDraw,
+export function winHandToLabel(hand: string): {
+  concealed: string[]
+  melds: { isOpen: boolean; tiles: string[] }[]
+  winningTile: string | null
+} {
+  const concealed: string[] = []
+  const melds: { isOpen: boolean; tiles: string[] }[] = []
+  let winningTile: string | null = null
+  let group: string[] = []
+  let isOpen = true
+  let inMeld = false
+
+  let i = 0
+  while (i < hand.length) {
+    const ch = hand[i]
+    if (ch === '[' || ch === '(') {
+      isOpen = ch === '['
+      inMeld = true
+      group = []
+      i++
+    } else if (ch === ']' || ch === ')') {
+      melds.push({ isOpen, tiles: group })
+      inMeld = false
+      i++
+    } else if (ch === '^') {
+      winningTile = hand.substring(i + 1, i + 3)
+      // The recognisers' own answers carry the winning tile as the last concealed tile too (see
+      // handleRecognize below) — matched here so a label reads the same shape as a model's answer.
+      concealed.push(winningTile)
+      i += 3
+    } else {
+      const tile = hand.substring(i, i + 2)
+      if (inMeld) group.push(tile)
+      else concealed.push(tile)
+      i += 2
+    }
   }
+  return { concealed, melds, winningTile }
 }
 
-export function checkRecognizedHand(hand: RecognizedHand): { blocking: string[]; warnings: string[] } {
-  const blocking: string[] = []
-  const warnings: string[] = []
-
-  const meldSlots = hand.melds.reduce((sum, m) => sum + (m.tiles.length === 4 ? 3 : m.tiles.length), 0)
-  const size = hand.concealed.length + meldSlots
-
-  // Both calculators score a meld as exactly 3 slots, so a 2- or 5-tile meld silently
-  // shifts the hand size and produces a set no rule set can form.
-  const badMelds = hand.melds.filter((m) => m.tiles.length !== 3 && m.tiles.length !== 4)
-  if (badMelds.length > 0) {
-    blocking.push(`有 ${badMelds.length} 组副露张数不是 3 或 4 张，请修正后再填入`)
-  }
-
-  const counts = new Map<string, number>()
-  for (const t of [...hand.concealed, ...hand.melds.flatMap((m) => m.tiles)]) {
-    const key = `${t.rank}${t.suit}`
-    counts.set(key, (counts.get(key) || 0) + 1)
-  }
-  const over = [...counts.entries()].filter(([, n]) => n > 4).map(([key]) => key)
-  if (over.length > 0) {
-    blocking.push(`${over.join('、')} 出现超过 4 张，请修正后再填入`)
-  }
-
-  if (size === 0) {
-    blocking.push('没有识别出任何牌，请换一张更清晰的照片重试')
-  } else if (size > 14) {
-    blocking.push(`共识别出 ${size} 张牌（含副露），超过一手牌上限，请删掉多余的牌`)
-  } else if (size < 13) {
-    warnings.push(`只识别出 ${size} 张牌，可能有遗漏，建议补齐后再填入`)
-  }
-
-  return { blocking, warnings }
-}
-
-export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
-  isOpen,
-  onClose,
-  onApplyHand,
-  gameMode,
-}) => {
+export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({ isOpen, onClose, onApplyHand }) => {
   // The normalized upload, kept pristine so rotation never compounds JPEG loss.
   const [sourceImage, setSourceImage] = useState<string | null>(null)
   const [rotation, setRotation] = useState(0)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
-  // Separate from `error` because a fallback is not one: the hand came through, it just did not come
-  // from the recogniser that was asked. Shown in amber rather than red for the same reason.
+  // A local miss with a message to show, not a caught exception — the hand comes back empty and
+  // there is nothing to apply, but the user still needs to know why before they type it by hand.
   const [warning, setWarning] = useState<string | null>(null)
-  const [result, setResult] = useState<RecognizedHand | null>(null)
-  // Which kept sample this result belongs to, so the hand the user ends up accepting can be filed
-  // next to the photo as its one human-checked label. Null when the server is not keeping samples.
-  const [sampleId, setSampleId] = useState<string | null>(null)
-
-  // Tile Selection Modal for editing misrecognized tiles
-  const [editingTileIndex, setEditingTileIndex] = useState<number | null>(null)
   // HEIC decodes on iOS but not in desktop Chrome, and the fallback keeps the original file
   // so recognition still works — show that rather than a broken-image icon.
   const [previewFailed, setPreviewFailed] = useState(false)
 
   // Both callers keep this mounted and only toggle isOpen, so without this a reopen would
-  // still show the previous photo and result.
+  // still show the previous photo.
   const [wasOpen, setWasOpen] = useState(isOpen)
   if (wasOpen !== isOpen) {
     setWasOpen(isOpen)
@@ -551,9 +524,6 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       setImagePreview(null)
       setError(null)
       setWarning(null)
-      setResult(null)
-      setSampleId(null)
-      setEditingTileIndex(null)
       setPreviewFailed(false)
     }
   }
@@ -576,8 +546,6 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
     if (file) {
       setError(null)
       setWarning(null)
-      setResult(null)
-      setSampleId(null)
       setRotation(0)
       setPreviewFailed(false)
       try {
@@ -616,7 +584,14 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
     }
   }
 
-  const handleRecognize = async (engine: 'local' | 'gemini' = 'local') => {
+  /**
+   * Local only — there is no button for Gemini any more. Whatever comes back, right or wrong, is
+   * applied straight into the calculator with no review step: this project's priority right now is
+   * bringing the local model up, and every recognised photo is training signal either way. Getting
+   * it wrong costs a correction in the calculator, which was always the fallback anyway; a modal
+   * the user has to read, edit and then click through cost more and answered to nobody.
+   */
+  const handleRecognize = async () => {
     if (!imagePreview) {
       setError('请先选择或拍摄一张麻将手牌图片')
       return
@@ -625,8 +600,6 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
     setLoading(true)
     setError(null)
     setWarning(null)
-    setResult(null)
-    setSampleId(null)
 
     try {
       // The prompt, the 34-tile calibration legend and the API key all live on the server.
@@ -638,13 +611,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       if (base64.length > 8_000_000) {
         throw new Error('图片过大，请用较低分辨率重拍，或关闭 iPhone 的 ProRAW / 48MP')
       }
-      const {
-        rawJson: responseText,
-        warning: fallback,
-        sampleId: kept,
-      } = await recognizeHandPhoto(base64, mimeType, engine)
-      if (fallback) setWarning(fallback)
-      if (kept) setSampleId(kept)
+      const { rawJson: responseText, warning: miss, sampleId } = await recognizeHandPhoto(base64, mimeType, 'local')
 
       const jsonOutput = safeParseJSON(responseText)
 
@@ -683,45 +650,29 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
         concealedTiles.push(winTile)
       }
 
-      setResult({
-        concealed: concealedTiles,
-        melds,
-        winningTile: winTile,
-        isSelfDraw: Boolean(jsonOutput.isSelfDraw),
-        notes: jsonOutput.notes,
-      })
+      // A miss comes back as a well-formed but empty hand (see HandRecognitionService) — nothing to
+      // apply, so surface the reason instead and leave the calculator to be filled in by hand.
+      if (miss) {
+        setWarning(miss)
+        return
+      }
+
+      onApplyHand(
+        {
+          concealed: concealedTiles,
+          melds,
+          winningTile: winTile,
+          isSelfDraw: Boolean(jsonOutput.isSelfDraw),
+          notes: jsonOutput.notes,
+        },
+        sampleId ?? null
+      )
+      onClose()
     } catch (err: any) {
       console.error('Photo recognition error:', err)
       setError(err.message || '识别失败，请重试')
     } finally {
       setLoading(false)
-    }
-  }
-
-  // Quick Tile Modification in Result
-  const handleReplaceTile = (index: number, newTile: Tile) => {
-    if (!result) return
-    const updatedConcealed = [...result.concealed]
-    updatedConcealed[index] = newTile
-    setResult({ ...result, concealed: updatedConcealed })
-    setEditingTileIndex(null)
-  }
-
-  const handleAddTile = (newTile: Tile) => {
-    if (!result) return
-    setResult({ ...result, concealed: [...result.concealed, newTile] })
-    setEditingTileIndex(null)
-  }
-
-  const issues = result ? checkRecognizedHand(result) : null
-
-  const handleApply = () => {
-    if (result && issues && issues.blocking.length === 0) {
-      // Applying is the moment the user accepts the tiles, corrections and all, which is the only
-      // point where a kept sample can be given a label somebody actually checked.
-      if (sampleId) void confirmRecognizedHand(sampleId, asLabel(result))
-      onApplyHand(result)
-      onClose()
     }
   }
 
@@ -739,7 +690,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
             <span className="photo-rec-icon">📷</span>
             <div>
               <h3>拍照识别</h3>
-              <p className="photo-rec-subtitle">高精度 AI 自动识别手牌与副露</p>
+              <p className="photo-rec-subtitle">识别完成后直接填入算番器，错了就在算番器里改</p>
             </div>
           </div>
           <button className="btn-close" onClick={onClose}>
@@ -748,25 +699,30 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
         </div>
 
         <div className="photo-rec-body">
-          {/* Top Control Bar (Rotate & Reselect) - Shown ONLY before submission (!result) */}
-          {imagePreview && !result && (
+          {imagePreview && (
             <div className="photo-rec-controls-bar">
               <button
                 type="button"
                 className="icon-control-btn"
                 onClick={handleRotateCounterClockwise}
                 title="逆时针旋转 90°"
+                disabled={loading}
               >
                 ↺
               </button>
               <label className="icon-control-btn" title="重新选择图片">
-                <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                  disabled={loading}
+                />
                 🔄
               </label>
             </div>
           )}
 
-          {/* Main Upload Area */}
           <div>
             {!imagePreview ? (
               <>
@@ -810,136 +766,19 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
           {error && <div className="photo-rec-error">⚠️ {error}</div>}
           {warning && <div className="photo-rec-warning">ℹ️ {warning}</div>}
 
-          {/* Local first: free, about half a second, and it says which tiles it is unsure of.
-              Online is there for when it gets one wrong — and tapping it is itself the signal that
-              this photo was hard, which is why both answers are kept against the same image. */}
-          {!result && (
-            <>
-              <button
-                className="btn btn-accent photo-rec-submit-btn"
-                disabled={loading || !imagePreview}
-                onClick={() => handleRecognize('local')}
-              >
-                {loading ? (
-                  <span className="loading-spinner-wrap">
-                    <span className="spinner"></span> 正在识别中...
-                  </span>
-                ) : (
-                  '✨ 开始识别'
-                )}
-              </button>
-              <button
-                className="btn photo-rec-online-btn"
-                disabled={loading || !imagePreview}
-                onClick={() => handleRecognize('gemini')}
-                title="用在线的 Gemini 识别，较慢但更擅长难的照片"
-              >
-                ☁️ 在线识别
-              </button>
-            </>
-          )}
-
-          {/* Recognition Result Display */}
-          {result && (
-            <div className="recognition-result-card">
-              <div className="result-header-row">
-                <h4>🎯 识别结果 (点击修改)</h4>
-                <button
-                  className="btn-text-link"
-                  onClick={() => {
-                    setResult(null)
-                    setError(null)
-                    setWarning(null)
-                    setSampleId(null)
-                  }}
-                  title="重新识别/重新拍照"
-                >
-                  📸
-                </button>
-              </div>
-
-              <div className="result-section">
-                <span className="result-label">立牌/手牌 ({result.concealed.length}张):</span>
-                <div className="result-tiles-row">
-                  {result.concealed.map((t, idx) => (
-                    <div key={idx} className="tile-edit-wrapper" onClick={() => setEditingTileIndex(idx)}>
-                      <TileComponent
-                        tile={t}
-                        size="small"
-                        isWinning={idx === result.concealed.length - 1 && result.concealed.length % 3 === 2}
-                      />
-                    </div>
-                  ))}
-                  <button className="tile-add-btn" title="补一张牌" onClick={() => setEditingTileIndex(-1)}>
-                    +
-                  </button>
-                </div>
-              </div>
-
-              {/* Tile Selector Drawer for direct editing */}
-              {editingTileIndex !== null && (
-                <div className="tile-picker-box">
-                  <div className="tile-picker-header">
-                    <span>{editingTileIndex >= 0 ? `修正第 ${editingTileIndex + 1} 张牌:` : '添加牌:'}</span>
-                    <button className="btn-close-sm" onClick={() => setEditingTileIndex(null)}>
-                      ✕
-                    </button>
-                  </div>
-                  <div className="tile-picker-grid">
-                    {Tile.all.map((t, i) => (
-                      <TileComponent
-                        key={i}
-                        tile={t}
-                        size="small"
-                        onClick={() =>
-                          editingTileIndex >= 0 ? handleReplaceTile(editingTileIndex, t) : handleAddTile(t)
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {result.melds.length > 0 && (
-                <div className="result-section">
-                  <span className="result-label">吃碰杠/副露 ({result.melds.length}组):</span>
-                  <div className="result-melds-row">
-                    {result.melds.map((m, mIdx) => (
-                      <div key={mIdx} className="result-meld-group">
-                        <span className="meld-type-tag">
-                          {m.type === 'shun' || m.type === 'shunzi'
-                            ? '顺'
-                            : m.type === 'ke' || m.type === 'kezi'
-                            ? '刻'
-                            : '杠'}
-                        </span>
-                        {m.tiles.map((t, tIdx) => (
-                          <TileComponent key={tIdx} tile={t} size="small" />
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {issues &&
-                [...issues.blocking, ...issues.warnings].map((msg, i) => (
-                  <div key={i} className="photo-rec-error">
-                    ⚠️ {msg}
-                  </div>
-                ))}
-
-              <div className="result-actions">
-                <button
-                  className="btn btn-success"
-                  disabled={!issues || issues.blocking.length > 0}
-                  onClick={handleApply}
-                >
-                  ✅ 一键填入{gameMode === 'GUOBIAO' ? '国标' : '立直'}算番器
-                </button>
-              </div>
-            </div>
-          )}
+          <button
+            className="btn btn-accent photo-rec-submit-btn"
+            disabled={loading || !imagePreview}
+            onClick={handleRecognize}
+          >
+            {loading ? (
+              <span className="loading-spinner-wrap">
+                <span className="spinner"></span> 正在识别中...
+              </span>
+            ) : (
+              '✨ 开始识别'
+            )}
+          </button>
         </div>
       </div>
     </div>
