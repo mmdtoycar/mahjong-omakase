@@ -13,7 +13,7 @@ import { scoreClass, parseError, seatRankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
 import { TableStrengthTag } from '../components/TableStrengthTag'
-import { PhotoRecognitionModal, RecognizedHand } from '../components/PhotoRecognitionModal'
+import { PhotoRecognitionModal, RecognizedHand, winHandToLabel } from '../components/PhotoRecognitionModal'
 import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
 import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
@@ -48,6 +48,10 @@ export default function SessionPage() {
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false)
   const [gbImportedHand, setGbImportedHand] = useState<ImportedHand<GuobiaoMeld> | null>(null)
   const [riichiImportedHand, setRiichiImportedHand] = useState<ImportedHand<RiichiMeld> | null>(null)
+  // Every sample recognised while composing this round, success or miss — a retaken photo included.
+  // Confirmed against whatever the calculator ends up with at submission time, not when a result was
+  // applied, so corrections made afterward still end up as the training label.
+  const [photoSampleIds, setPhotoSampleIds] = useState<string[]>([])
 
   const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
     if (s !== null) {
@@ -132,6 +136,7 @@ export default function SessionPage() {
     setCalcResetCount((prev) => prev + 1)
     setGbImportedHand(null)
     setRiichiImportedHand(null)
+    setPhotoSampleIds([])
   }
 
   /**
@@ -194,6 +199,11 @@ export default function SessionPage() {
         return
       }
       if (!canSubmit) return
+      // Confirmed against what the calculator actually ended up with, corrections included — not
+      // against whatever recognition first applied. isChomboManual is excluded on its own: winHand
+      // can still hold a stale hand from before the 诈胡 toggle, and a chombo round is not a hand.
+      const confirmedHand = winHand && !isChomboManual ? { ...winHandToLabel(winHand), isSelfDraw } : undefined
+      const sampleIds = photoSampleIds.length > 0 ? photoSampleIds : undefined
       if (isRiichi) {
         const scoreVal = parseInt(score)
         await addRound(session.id, {
@@ -207,6 +217,8 @@ export default function SessionPage() {
           winHand,
           fanDetails,
           riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
+          photoSampleIds: sampleIds,
+          confirmedHand,
         })
       } else if (isDongbei) {
         await addRound(session.id, {
@@ -227,6 +239,8 @@ export default function SessionPage() {
           fanCount: isChomboManual ? 0 : fanCount || parseInt(score),
           prevalentWind: gameState.prevalentWind,
           chombo: isChomboManual || undefined,
+          photoSampleIds: sampleIds,
+          confirmedHand,
         })
       }
 
@@ -448,6 +462,10 @@ export default function SessionPage() {
         trigger: (prev?.trigger ?? 0) + 1,
       }))
     }
+  }
+
+  const handlePhotoSample = (sampleId: string | null) => {
+    if (sampleId) setPhotoSampleIds((prev) => [...prev, sampleId])
   }
 
   return (
@@ -903,7 +921,8 @@ export default function SessionPage() {
           isOpen={isPhotoModalOpen}
           onClose={() => setIsPhotoModalOpen(false)}
           onApplyHand={handleApplyRecognizedHand}
-          gameMode={isGuobiao ? 'GUOBIAO' : 'RIICHI'}
+          onSample={handlePhotoSample}
+          sessionId={session.id}
         />
       )}
     </>

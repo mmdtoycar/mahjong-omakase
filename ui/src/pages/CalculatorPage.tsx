@@ -2,37 +2,29 @@ import React, { useState, useCallback } from 'react'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { RiichiCalculator } from '../components/RiichiCalculator'
 import { WindSelectorRow } from '../components/WindSelectorRow'
-import { PhotoRecognitionModal, RecognizedHand } from '../components/PhotoRecognitionModal'
-import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
-import { Meld as RiichiMeld } from '../logic/riichi/types'
-import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
 
 type GameMode = 'GUOBIAO' | 'RIICHI'
 
 const CalculatorPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<GameMode>('GUOBIAO')
-  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false)
 
   // Standalone state for Guobiao
   const [gbIsSelfDraw, setGbIsSelfDraw] = useState(false)
   const [gbQuanfeng, setGbQuanfeng] = useState(1)
   const [gbMenfeng, setGbMenfeng] = useState(1)
   const [gbResetTrigger, setGbResetTrigger] = useState(0)
-  const [gbImportedHand, setGbImportedHand] = useState<ImportedHand<GuobiaoMeld> | null>(null)
 
   // Standalone state for Riichi
   const [riichiIsSelfDraw, setRiichiIsSelfDraw] = useState(false)
   const [riichiChangfeng, setRiichiChangfeng] = useState(1)
   const [riichiZifeng, setRiichiZifeng] = useState(1)
   const [riichiResetTrigger, setRiichiResetTrigger] = useState(0)
-  const [riichiImportedHand, setRiichiImportedHand] = useState<ImportedHand<RiichiMeld> | null>(null)
 
   const handleGbReset = useCallback(() => {
     setGbIsSelfDraw(false)
     setGbQuanfeng(1)
     setGbMenfeng(1)
     setGbResetTrigger((p) => p + 1)
-    setGbImportedHand(null)
   }, [])
 
   const handleRiichiReset = useCallback(() => {
@@ -40,27 +32,7 @@ const CalculatorPage: React.FC = () => {
     setRiichiChangfeng(1)
     setRiichiZifeng(1)
     setRiichiResetTrigger((p) => p + 1)
-    setRiichiImportedHand(null)
   }, [])
-
-  // Handle applying hand from Photo Recognition modal
-  const handleApplyRecognizedHand = (hand: RecognizedHand) => {
-    if (activeTab === 'GUOBIAO') {
-      setGbIsSelfDraw(hand.isSelfDraw)
-      setGbImportedHand((prev) => ({
-        concealed: hand.concealed,
-        melds: toGuobiaoMelds(hand.melds),
-        trigger: (prev?.trigger ?? 0) + 1,
-      }))
-    } else {
-      setRiichiIsSelfDraw(hand.isSelfDraw)
-      setRiichiImportedHand((prev) => ({
-        concealed: hand.concealed,
-        melds: toRiichiMelds(hand.melds),
-        trigger: (prev?.trigger ?? 0) + 1,
-      }))
-    }
-  }
 
   // Dummy callback since direct output is rendered internally by the components
   const handleSelectScore = () => {}
@@ -79,14 +51,6 @@ const CalculatorPage: React.FC = () => {
           onClick={() => setActiveTab('RIICHI')}
         >
           立直算番器
-        </button>
-      </div>
-
-      <div className="calc-photo-rec-row">
-        <button className="btn-photo-rec" onClick={() => setIsPhotoModalOpen(true)}>
-          <span className="btn-photo-rec-icon">📷</span>
-          <span>拍照识别</span>
-          <span className="btn-photo-rec-badge">AI 识别</span>
         </button>
       </div>
 
@@ -126,7 +90,7 @@ const CalculatorPage: React.FC = () => {
               resetTrigger={gbResetTrigger}
               isSelfDraw={gbIsSelfDraw}
               onIsSelfDrawChange={setGbIsSelfDraw}
-              importedHand={gbImportedHand}
+              importedHand={null}
             />
           </div>
         ) : (
@@ -165,19 +129,11 @@ const CalculatorPage: React.FC = () => {
               isSelfDraw={riichiIsSelfDraw}
               onIsSelfDrawChange={setRiichiIsSelfDraw}
               playerCount={4}
-              importedHand={riichiImportedHand}
+              importedHand={null}
             />
           </div>
         )}
       </div>
-
-      {/* Photo Recognition Modal */}
-      <PhotoRecognitionModal
-        isOpen={isPhotoModalOpen}
-        onClose={() => setIsPhotoModalOpen(false)}
-        onApplyHand={handleApplyRecognizedHand}
-        gameMode={activeTab}
-      />
     </div>
   )
 }

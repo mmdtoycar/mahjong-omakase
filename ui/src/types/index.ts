@@ -131,6 +131,13 @@ export interface SessionDetail {
   tableStrength?: string | null
 }
 
+export interface ConfirmedHand {
+  concealed: string[]
+  melds: { isOpen: boolean; tiles: string[] }[]
+  winningTile: string | null
+  isSelfDraw: boolean
+}
+
 export interface AddRoundData {
   roundType?: 'WIN' | 'DRAWN_GAME' // default WIN
   winnerId?: number
@@ -149,6 +156,8 @@ export interface AddRoundData {
   fanCount?: number
   prevalentWind?: number
   chombo?: boolean
+  photoSampleIds?: string[] // recognition samples attempted while composing this round
+  confirmedHand?: ConfirmedHand // the hand the calculator ended up with, in the recognisers' label shape
 }
 
 export interface PlayerStats {

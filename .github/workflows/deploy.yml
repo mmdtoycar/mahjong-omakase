@@ -100,7 +100,6 @@ jobs:
               -v mahjong-samples:/app/samples \
               -e ADMIN_EMAILS="${{ secrets.ADMIN_EMAILS }}" \
               -e CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
-              -e GEMINI_API_KEYS="${{ secrets.GEMINI_API_KEYS }}" \
               -e READER_URL="http://mahjong-reader:8000" \
               "$IMAGE:$SHA"
 

@@ -5,9 +5,8 @@ behind the JVM, and a read takes half a second — so there is nothing here that
 injection or async. Skipping the framework keeps three more packages out of an image that has to share a
 small droplet with a JVM, and out of the list of things to keep patched.
 
-The reader itself comes from try_real_photo, which is the module the whole pipeline grew up in and is
-covered by its self-checks; a production service importing something called `try_real_photo` reads
-oddly, and renaming it is a tidy-up worth doing separately from this.
+The reader itself comes from reader.py, which is the module the whole pipeline grew up in and is
+covered by its own self-check.
 
 Run it with `python serve.py`, or see the Dockerfile beside it.
 """
@@ -18,6 +17,7 @@ import io
 import json
 import os
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -25,7 +25,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from try_real_photo import as_json, decode, load_model, read_hand, shrink
+from reader import as_json, decode, load_model, read_hand, shrink
 
 # The upload path already caps a photo at 2048px on the long edge, which is about 1.5MB of JPEG and 2MB
 # of base64. This leaves generous room above that and still refuses to buffer something absurd.
@@ -57,10 +57,13 @@ class Handler(BaseHTTPRequestHandler):
     # Twenty seconds is far above a real request: the JVM's own read timeout is ten.
     timeout = 20
 
-    def log_message(self, fmt: str, *args) -> None:
-        # The default writes to stderr in Apache format; one line per request in the same shape as the
-        # rest of the container's output is easier to read alongside the JVM's.
-        print(f"reader: {self.address_string()} {fmt % args}", flush=True)
+    def log_request(self, code="-", size="-") -> None:
+        # /healthz is polled every few seconds and drowned out everything else in this log.
+        # A POST to /recognize logs its own received/outcome lines below; anything else (a GET to
+        # that path, say) still gets this line, since nothing else would report it.
+        if self.path == "/healthz" or (self.path == "/recognize" and self.command == "POST"):
+            return
+        print(f"reader: {self.command} {self.path} -> {code}", flush=True)
 
     def _send(self, status: int, payload: dict) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode()
@@ -119,43 +122,81 @@ class Handler(BaseHTTPRequestHandler):
             raise BadRequest(413, f"body of {length} bytes is over the {MAX_BODY} limit")
         return self.rfile.read(length)
 
+    def _reply(self, status: int, payload: dict, note: str) -> None:
+        """Sends `payload` as `status`, and logs the same status so the two can never drift apart."""
+        print(f"reader: [{status}] {note}", flush=True)
+        self._send(status, payload)
+
     def do_POST(self) -> None:
         if self.path != "/recognize":
             self._send(404, {"message": "not found"})
             return
+
         try:
             body = self._read_body()
         except BadRequest as refusal:
-            self._send(refusal.status, {"message": refusal.message})
+            self._reply(refusal.status, {"message": refusal.message}, f"rejected — {refusal.message}")
             return
 
         try:
             request = json.loads(body)
             encoded = request["imageBase64"]
         except (json.JSONDecodeError, KeyError, TypeError, UnicodeDecodeError):
-            self._send(400, {"message": "expected a JSON body with an imageBase64 field"})
+            self._reply(
+                400,
+                {"message": "expected a JSON body with an imageBase64 field"},
+                "rejected — not a JSON body with imageBase64",
+            )
             return
+        # A round does not exist yet at recognition time, so this is the most this log can place a
+        # request against — the session id, when the caller has one to give. Anything but a plain
+        # int is discarded rather than logged: this value reaches a print() untouched, and a string
+        # is how a log line gets forged.
+        session_id = request.get("sessionId")
+        valid_session = isinstance(session_id, int) and not isinstance(session_id, bool)
+        tag = f" (session {session_id})" if valid_session else ""
+        print(f"reader: received recognize request{tag}", flush=True)
 
         try:
             raw = base64.b64decode(encoded, validate=True)
         except (binascii.Error, ValueError, TypeError):
             # TypeError is a number or an object where the string should be: valid JSON, so it gets
             # past the parse above, and b64decode refuses it rather than the base64 check doing so.
-            self._send(400, {"message": "imageBase64 is not valid base64"})
+            self._reply(
+                400,
+                {"message": "imageBase64 is not valid base64"},
+                f"rejected{tag} — imageBase64 is not valid base64",
+            )
             return
 
         bgr = decode(raw)
         if bgr is None:
-            self._send(415, {"message": "could not decode the image"})
+            self._reply(
+                415, {"message": "could not decode the image"}, f"rejected{tag} — could not decode the image"
+            )
             return
 
+        started = time.perf_counter()
         reading = read_hand(MODEL, LABELS, SIZE, shrink(bgr))
+        elapsed_ms = (time.perf_counter() - started) * 1000
         if isinstance(reading, str):
             # Nothing in the photo looked like a hand. A 422 rather than a 500: the request was fine,
             # the picture was not, and the caller should offer the online path instead.
-            self._send(422, {"message": reading})
+            self._reply(422, {"message": reading}, f"declined{tag} — {reading} ({elapsed_ms:.0f}ms)")
             return
-        self._send(200, as_json(reading))
+        if reading.confidence:
+            min_index = min(range(len(reading.confidence)), key=reading.confidence.__getitem__)
+            mean_conf = sum(reading.confidence) / len(reading.confidence)
+            min_conf = f"{reading.confidence[min_index]:.2f} (tile #{min_index + 1})"
+        else:
+            mean_conf = 0.0
+            min_conf = "n/a"
+        self._reply(
+            200,
+            as_json(reading),
+            f"recognized{tag} {len(reading.tiles)} tiles, mean_conf={mean_conf:.2f}, min_conf={min_conf}, "
+            f"melds={len(reading.melds)}, winning={reading.winning} ({elapsed_ms:.0f}ms)",
+        )
 
 
 def main() -> None:
@@ -206,7 +247,7 @@ def self_check() -> int:
             def finish(self):
                 pass
 
-            def log_message(self, fmt, *args):
+            def log_request(self, code="-", size="-"):
                 pass
 
         written = Driver().wfile.getvalue()

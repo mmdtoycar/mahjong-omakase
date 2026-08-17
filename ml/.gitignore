@@ -1,6 +1,6 @@
 # Regenerable from the calibration photos — never worth committing. That includes the hand photo used to
 # check the end-to-end read: it is an input rather than an output, but it is a 200KB binary of one table,
-# so it stays local. Point try_real_photo.py at any photo of a hand.
+# so it stays local. Point reader.py at any photo of a hand.
 .venv/
 data/
 __pycache__/

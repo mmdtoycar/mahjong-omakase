@@ -298,6 +298,45 @@ class Reading(NamedTuple):
     notes: list[str]
 
 
+DESKEW_MIN_ANGLE = 1.0  # degrees; below this, rotating only costs sharpness
+DESKEW_SEARCH = tuple(np.arange(-1.5, 1.6, 0.5))  # nudge either side of the estimated tilt
+
+
+def _line_angle(mask: np.ndarray) -> float:
+    """Tilt, in degrees off the nearest axis, of the most line-shaped blob in `mask`. 0 if none."""
+    count, labelled, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=4)
+    best_ratio, best_angle = 0.0, 0.0
+    for i in range(1, count):
+        x, y, w, h, area = stats[i]
+        if area <= 0.005 * mask.size:
+            continue
+        ys, xs = np.where(labelled[y : y + h, x : x + w] == i)
+        if len(xs) < 50:
+            continue
+        points = np.column_stack([xs, ys]).astype(np.float64)
+        centered = points - points.mean(axis=0)
+        eigenvalues, eigenvectors = np.linalg.eigh(np.cov(centered.T))
+        ratio = np.sqrt(max(eigenvalues) / max(min(eigenvalues), 1e-6))
+        if ratio <= best_ratio:
+            continue
+        major = eigenvectors[:, int(np.argmax(eigenvalues))]
+        angle = np.degrees(np.arctan2(major[1], major[0]))
+        best_ratio, best_angle = ratio, ((angle + 45) % 90) - 45  # wrap to nearest axis
+    return best_angle if best_ratio >= MIN_RUN_ASPECT else 0.0
+
+
+def _rotate(bgr: np.ndarray, angle: float) -> np.ndarray:
+    """`bgr` turned by `angle` degrees, on a canvas big enough not to clip corners."""
+    h, w = bgr.shape[:2]
+    matrix = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
+    cos, sin = abs(matrix[0, 0]), abs(matrix[0, 1])
+    new_w, new_h = int(h * sin + w * cos), int(h * cos + w * sin)
+    matrix[0, 2] += (new_w - w) / 2
+    matrix[1, 2] += (new_h - h) / 2
+    # Black, not white: tile_mask is a near-white test, and white padding welds every blob together.
+    return cv2.warpAffine(bgr, matrix, (new_w, new_h), flags=cv2.INTER_CUBIC, borderValue=(0, 0, 0))
+
+
 def read_hand(
     model: ort.InferenceSession,
     labels: list[str],
@@ -307,10 +346,41 @@ def read_hand(
 ) -> Reading | str:
     """Reads one photo, or returns the reason it could not be read.
 
-    Separated from main so the service and the command line share it rather than growing two readings of
-    the same photo. Nothing here prints: a note goes in `notes` instead, because the caller may be
-    answering an HTTP request.
+    Tried upright first, at no extra cost for the common case. Only on failure is the photo's tilt
+    estimated and a few corrections around it tried — a photo taken at an angle fails at the very
+    first step otherwise: `candidate_runs` filters by axis-aligned bounding box, and a tilted row's
+    box is far squarer than a straight one's.
     """
+    upright = _read_hand_upright(model, labels, size, bgr, counts)
+    if isinstance(upright, Reading):
+        return upright
+    angle = _line_angle(tile_mask(bgr))
+    if abs(angle) < DESKEW_MIN_ANGLE:
+        return upright
+    # Stops at the first candidate that is confident enough rather than always trying all of
+    # DESKEW_SEARCH — a photo that needed deskewing already cost one extra read; there is no reason
+    # to pay for the rest of the nudges once one of them reads the hand cleanly.
+    best = None
+    for nudge in DESKEW_SEARCH:
+        candidate = _read_hand_upright(model, labels, size, _rotate(bgr, angle + nudge), counts)
+        if not isinstance(candidate, Reading):
+            continue
+        score = sum(candidate.confidence) / len(candidate.confidence)
+        if best is None or score > best[0]:
+            best = (score, candidate)
+        if score >= CONFIDENT:
+            break
+    return best[1] if best else upright
+
+
+def _read_hand_upright(
+    model: ort.InferenceSession,
+    labels: list[str],
+    size: int,
+    bgr: np.ndarray,
+    counts: range,
+) -> Reading | str:
+    """`read_hand`, assuming the hand is already axis-aligned in `bgr`."""
     light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
     try:
         runs = candidate_runs(bgr)

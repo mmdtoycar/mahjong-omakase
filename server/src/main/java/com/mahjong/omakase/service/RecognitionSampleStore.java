@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;
@@ -26,32 +27,23 @@ import org.springframework.stereotype.Component;
  * Keeps a copy of every recognised photo, what each recogniser answered, and what the user
  * confirmed.
  *
- * <p>Written for one purpose: a local tile detector needs training and evaluation data, and the
- * only source of realistically framed photos of this particular tile set is the app itself. Today
- * each photo is decoded, sent, and dropped, so every session that goes by is data lost for good.
- *
- * <p>One photo is one sample and one JSON file beside it, holding every answer it has ever had:
+ * <p>One photo is one sample and one JSON file beside it:
  *
  * <pre>
  * 2026-08-09/a3f1c8e90b21.jpg
  * 2026-08-09/a3f1c8e90b21.json
  *   {"photo": "a3f1c8e90b21.jpg", "mimeType": "image/jpeg",
  *    "answers": {"local":             {"recognizedAt": "...", "rawJson": "..."},
- *                "gemini-3.6-flash":  {"recognizedAt": "...", "rawJson": "..."}},
- *    "confirmed": {"confirmedAt": "...", "hand": {...}}}
+ *                "gemini-3.6-flash":  {"recognizedAt": "...", "rawJson": "..."}}}
  * </pre>
  *
- * <p>The consumer is an offline script comparing the local reader against Gemini against what the
- * user actually confirmed, and it wants all of that for one photo in one read. Splitting it per
- * writer would only buy append-only writes, which at a few samples an evening nobody is paying for.
+ * <p>Named after a digest of the photo's bytes, so recognising the same photo twice is one sample,
+ * not two. Filed under a day folder at first, since at recognition time there is no round yet to
+ * file it under. Once a round is submitted, {@link #confirmForRound} moves every photo that led to
+ * it into one folder named {@code <sessionId>-<round>}, with the confirmed hand written into each —
+ * a failed retake included, since that pairing is exactly what retraining wants.
  *
- * <p>The name is a digest of the photo's own bytes, which is what makes the same photo recognised
- * twice one sample rather than two. The first scheme stamped the time into the name, so re-reading
- * a photo produced an unrelated sample and comparing the recognisers had to be done by eye. Grouped
- * into a directory per UTC day so no directory grows unbounded and a date range is easy to pull.
- *
- * <p>Deliberately best-effort. A failure here is logged and swallowed, never propagated — losing a
- * training sample is a nuisance, failing a recognition the user is waiting on is not.
+ * <p>Deliberately best-effort: a failure here is logged and swallowed, never propagated.
  */
 @Slf4j
 @Component
@@ -61,7 +53,7 @@ public class RecognitionSampleStore {
   private static final DateTimeFormatter DAY =
       DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneOffset.UTC);
 
-  /** What {@link #write} hands out and {@link #saveConfirmed} will accept back. */
+  /** What {@link #write} hands out and {@link #confirmForRound} will accept back. */
   private static final Pattern SAMPLE_ID = Pattern.compile("\\d{4}-\\d{2}-\\d{2}/[0-9a-f]{12}");
 
   private static final Map<String, String> EXTENSIONS =
@@ -118,37 +110,81 @@ public class RecognitionSampleStore {
   }
 
   /**
-   * Records the hand the user confirmed, which is the only label in a sample a human has checked.
+   * Moves every photo that led to one round into a folder named {@code <sessionId>-<round>}, and
+   * writes the confirmed hand into each — a failed retake included.
    *
-   * <p>Everything else in it is what a model answered, and a model's answer is not a label —
-   * measuring the local reader against Gemini's opinion says where the two differ, not which one
-   * was right. This is what the user pressed apply on after fixing whatever the recognition got
-   * wrong, so it is the half that makes the collected photos trainable.
-   *
-   * <p>The id is validated rather than trusted. It arrives from the browser and is resolved against
-   * the sample directory, which is exactly the shape of a path traversal, so anything that is not a
-   * day and a digest is dropped on the floor.
+   * <p>Sample ids are validated rather than trusted, same as before: not a day and a digest gets
+   * dropped, and the rest still proceed.
    */
-  public void saveConfirmed(String sampleId, JsonNode hand) {
-    if (root.isEmpty()) {
-      return;
-    }
-    if (sampleId == null || !SAMPLE_ID.matcher(sampleId).matches()) {
-      log.warn("Ignoring a confirmed hand: {} is not a sample id", sampleId);
+  public void confirmForRound(
+      List<String> sampleIds, long sessionId, int roundNumber, JsonNode hand) {
+    if (root.isEmpty() || sampleIds == null || sampleIds.isEmpty()) {
       return;
     }
     lock.lock();
     try {
-      Path sidecar = root.get().resolve(sampleId + ".json");
-      Files.createDirectories(sidecar.getParent());
-      ObjectNode sample = read(sidecar);
-      ObjectNode confirmed = sample.putObject("confirmed");
-      confirmed.put("confirmedAt", Instant.now().toString());
-      confirmed.set("hand", hand);
-      replace(sidecar, sample);
-      log.info("Kept the confirmed hand for sample {}", sampleId);
+      Path dir = root.get().resolve(sessionId + "-" + roundNumber);
+      Files.createDirectories(dir);
+      int moved = 0;
+      for (String sampleId : sampleIds) {
+        if (sampleId == null || !SAMPLE_ID.matcher(sampleId).matches()) {
+          log.warn("Ignoring a sample id outside a round: {}", sampleId);
+          continue;
+        }
+        Path oldSidecar = root.get().resolve(sampleId + ".json");
+        if (!Files.exists(oldSidecar)) {
+          continue;
+        }
+        ObjectNode sample = read(oldSidecar);
+        ObjectNode confirmed = sample.putObject("confirmed");
+        confirmed.put("confirmedAt", Instant.now().toString());
+        confirmed.set("hand", hand);
+
+        // Named after the full sample id, day included: two different days can save the same photo
+        // bytes under the same digest, and dropping the day would let one overwrite the other here.
+        String destStem = sampleId.replace('/', '-');
+        String photoName = sample.path("photo").asText("");
+        Path oldPhoto = oldSidecar.resolveSibling(photoName);
+        if (!photoName.isBlank() && Files.exists(oldPhoto)) {
+          int dot = photoName.lastIndexOf('.');
+          String newPhotoName = dot < 0 ? destStem : destStem + photoName.substring(dot);
+          Files.move(oldPhoto, dir.resolve(newPhotoName), StandardCopyOption.REPLACE_EXISTING);
+          sample.put("photo", newPhotoName);
+        }
+        replace(dir.resolve(destStem + ".json"), sample);
+        Files.deleteIfExists(oldSidecar);
+        moved++;
+      }
+      log.info("Grouped {} sample(s) into round folder {}", moved, dir);
     } catch (IOException | RuntimeException e) {
-      log.warn("Could not keep a confirmed hand: {}", e.toString());
+      log.warn("Could not group samples into a round folder: {}", e.toString());
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  /**
+   * Moves a deleted round's folder aside, so a later round renumbered into the same slot cannot
+   * land its photos in it. Not deleted: what was confirmed at the time is still real training data,
+   * just no longer attached to a round that exists.
+   */
+  public void forgetRound(long sessionId, int roundNumber) {
+    if (root.isEmpty()) {
+      return;
+    }
+    lock.lock();
+    try {
+      Path dir = root.get().resolve(sessionId + "-" + roundNumber);
+      if (!Files.isDirectory(dir)) {
+        return;
+      }
+      Path archived =
+          root.get()
+              .resolve(sessionId + "-" + roundNumber + "-deleted-" + Instant.now().toEpochMilli());
+      Files.move(dir, archived);
+      log.info("Archived {} to {} — its round was deleted", dir, archived);
+    } catch (IOException | RuntimeException e) {
+      log.warn("Could not archive a deleted round's samples: {}", e.toString());
     } finally {
       lock.unlock();
     }

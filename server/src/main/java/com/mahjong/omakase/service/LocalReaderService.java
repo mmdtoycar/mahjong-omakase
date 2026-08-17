@@ -3,6 +3,7 @@ package com.mahjong.omakase.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -79,29 +80,36 @@ public class LocalReaderService {
    * @throws ReaderUnavailableException if the reader could not be reached
    * @throws IllegalStateException if the reader answered but declined the photo
    */
-  public String recognize(String imageBase64, String mimeType) {
+  public String recognize(String imageBase64, String mimeType, Long sessionId) {
     if (!isConfigured()) {
       throw new ReaderUnavailableException("reader.url is not set");
     }
     long startedAtNanos = System.nanoTime();
+    Map<String, Object> body = new HashMap<>();
+    body.put("imageBase64", imageBase64);
+    body.put("mimeType", mimeType == null ? "" : mimeType);
+    // Purely for the reader's own log — it has no other way to say which session a request was
+    // for, since a round does not exist yet at recognition time to give it anything more precise.
+    if (sessionId != null) {
+      body.put("sessionId", sessionId);
+    }
     try {
-      String body =
+      String responseBody =
           restClient
               .post()
               .uri(url + "/recognize")
               .contentType(MediaType.APPLICATION_JSON)
-              .body(
-                  Map.of("imageBase64", imageBase64, "mimeType", mimeType == null ? "" : mimeType))
+              .body(body)
               .retrieve()
               .body(String.class);
-      if (body == null || body.isBlank()) {
+      if (responseBody == null || responseBody.isBlank()) {
         throw new ReaderUnavailableException("the reader returned an empty body");
       }
       log.info(
           "Local recognition succeeded in {} ms ({} chars returned)",
           (System.nanoTime() - startedAtNanos) / 1_000_000,
-          body.length());
-      return body;
+          responseBody.length());
+      return responseBody;
     } catch (ResourceAccessException e) {
       // Connect refused, DNS, or the read timing out. All infrastructure, none of it the user's
       // problem, so this is the case that falls through to Gemini.

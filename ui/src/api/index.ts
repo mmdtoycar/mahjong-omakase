@@ -238,13 +238,14 @@ export async function lookupClaimablePlayer(userName: string, firstName: string,
 export async function recognizeHandPhoto(
   imageBase64: string,
   mimeType: string,
-  engine: 'local' | 'gemini' = 'local'
+  engine: 'local' | 'gemini' = 'local',
+  sessionId?: number
 ): Promise<{ rawJson: string; warning?: string; sampleId?: string }> {
   try {
     const res = await fetch(`${API}/recognize`, {
       method: 'POST',
       headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ imageBase64, mimeType, engine }),
+      body: JSON.stringify({ imageBase64, mimeType, engine, sessionId }),
       // Gemini retries can take upward of a minute; without this, a stalled connection leaves the
       // recognize button disabled forever instead of surfacing an error.
       signal: AbortSignal.timeout(90_000),
@@ -263,27 +264,5 @@ export async function recognizeHandPhoto(
       throw new Error('识别超时，请重试')
     }
     throw err
-  }
-}
-
-/**
- * Reports the hand the user settled on for a photo, which is the only label on a kept sample that
- * a human has checked.
- *
- * <p>Fire-and-forget by design: it runs as the user closes the recognition dialog, and a failure to
- * record training data must never be something they have to look at.
- */
-export async function confirmRecognizedHand(sampleId: string, hand: unknown): Promise<void> {
-  try {
-    const res = await fetch(`${API}/recognize/confirm`, {
-      method: 'POST',
-      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ sampleId, hand }),
-    })
-    // fetch does not throw on a 4xx, and this call is nobody's foreground concern, so without this
-    // line the labels could stop being recorded for weeks with nothing anywhere saying so.
-    if (!res.ok) console.warn(`Could not record the confirmed hand for ${sampleId}: ${res.status}`)
-  } catch (e) {
-    console.warn(`Could not record the confirmed hand for ${sampleId}:`, e)
   }
 }

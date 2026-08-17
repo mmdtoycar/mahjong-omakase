@@ -23,9 +23,6 @@ function session(rounds: RoundInfo[]): SessionDetail {
     players: PLAYERS,
     rounds,
     totalScores: {},
-    rpFactor: 1,
-    rpOrigin: 0,
-    umaDist: [],
   }
 }
 

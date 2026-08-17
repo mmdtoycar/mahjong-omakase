@@ -17,8 +17,8 @@ uv pip install -r requirements.txt
 ```bash
 .venv/bin/python slice_calibration.py             # 6 photos -> 88 labelled crops + masks
 .venv/bin/python train_classifier.py              # ~30 min on an M2 Pro
-.venv/bin/python try_real_photo.py hand.jpg       # read a hand end to end
-.venv/bin/python try_real_photo.py --self-check   # the meld logic
+.venv/bin/python reader.py hand.jpg                # read a hand end to end
+.venv/bin/python reader.py --self-check            # the meld logic
 .venv/bin/python grid_fit.py                      # the grid fit, against known tile counts
 .venv/bin/python inspect_failures.py --hard        # look at what it gets wrong
 ```

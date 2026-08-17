@@ -1,13 +1,11 @@
 package com.mahjong.omakase.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mahjong.omakase.dto.RecognitionConfirmRequest;
 import com.mahjong.omakase.dto.TileRecognitionRequest;
 import com.mahjong.omakase.service.HandRecognitionService;
 import com.mahjong.omakase.service.HandRecognitionService.Recognition;
@@ -37,7 +35,7 @@ class TileRecognitionControllerTest {
    */
   @Test
   void answers503SoTheProxyDoesNotReplaceOurMessage() {
-    when(service.recognize(anyString(), anyString(), anyString()))
+    when(service.recognize(anyString(), anyString(), anyString(), any()))
         .thenThrow(new IllegalStateException("This model is currently experiencing high demand."));
 
     ResponseEntity<Object> response = controller.recognize(request());
@@ -51,7 +49,7 @@ class TileRecognitionControllerTest {
   /** A missing key is a server-side configuration gap, so it belongs on the same branch. */
   @Test
   void answers503WhenNoKeyIsConfigured() {
-    when(service.recognize(anyString(), anyString(), anyString()))
+    when(service.recognize(anyString(), anyString(), anyString(), any()))
         .thenThrow(new IllegalStateException("服务端未配置 Gemini API Key，请联系管理员"));
 
     assertThat(controller.recognize(request()).getStatusCode())
@@ -60,7 +58,7 @@ class TileRecognitionControllerTest {
 
   @Test
   void returnsTheModelJsonOnSuccess() {
-    when(service.recognize(anyString(), anyString(), anyString()))
+    when(service.recognize(anyString(), anyString(), anyString(), any()))
         .thenReturn(new Recognition("{\"concealed\":[\"1m\"]}", null, "2026-08-09/aabbccdd1122"));
 
     ResponseEntity<Object> response = controller.recognize(request());
@@ -98,47 +96,12 @@ class TileRecognitionControllerTest {
    */
   @Test
   void carriesTheFallbackWarningAlongsideTheHand() {
-    when(service.recognize(anyString(), anyString(), anyString()))
+    when(service.recognize(anyString(), anyString(), anyString(), any()))
         .thenReturn(new Recognition("{\"concealed\":[\"1m\"]}", "本地识别服务连不上，已自动改用在线识别", null));
 
     ResponseEntity<Object> response = controller.recognize(request());
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody().toString()).contains("已自动改用在线识别");
-  }
-
-  private static RecognitionConfirmRequest confirmation(String sampleId) throws Exception {
-    RecognitionConfirmRequest request = new RecognitionConfirmRequest();
-    request.setSampleId(sampleId);
-    request.setHand(new ObjectMapper().readTree("{\"concealed\":[\"1m\"]}"));
-    return request;
-  }
-
-  /**
-   * Passed through as it arrived: the shape of a hand is the UI's business, not this endpoint's.
-   */
-  @Test
-  void passesTheConfirmedHandThroughUntouched() throws Exception {
-    RecognitionConfirmRequest request = confirmation("2026-08-09/aabbccdd1122");
-
-    ResponseEntity<Void> response = controller.confirm(request);
-
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-    verify(service).confirm("2026-08-09/aabbccdd1122", request.getHand());
-  }
-
-  /**
-   * The id is resolved against the sample directory, so it is validated before it gets there. A 400
-   * rather than a silent drop, because a caller sending the wrong thing is a bug worth seeing.
-   */
-  @Test
-  void rejectsASampleIdThatIsNotADayAndADigest() throws Exception {
-    Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-
-    assertThat(validator.validate(confirmation("2026-08-09/aabbccdd1122"))).isEmpty();
-    assertThat(validator.validate(confirmation("../../etc/passwd"))).hasSize(1);
-    assertThat(validator.validate(confirmation("2026-08-09/NOTHEX123456"))).hasSize(1);
-    assertThat(validator.validate(confirmation("2026-08-09/aabbccdd1122/more"))).hasSize(1);
-    assertThat(validator.validate(confirmation(null))).hasSize(1);
   }
 }
