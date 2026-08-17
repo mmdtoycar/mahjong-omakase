@@ -725,7 +725,7 @@ export default function SessionPage() {
           <div className="scoreboard-meta">
             <span className="session-meta">
               {session.gameModeDisplayName} &middot;{' '}
-              {new Date(session.createdAt).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })}
+              {new Date(session.createdAt).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' })}
               &nbsp;
               <span className={`badge ${session.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
                 {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}

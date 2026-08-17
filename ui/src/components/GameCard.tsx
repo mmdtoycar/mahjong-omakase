@@ -167,7 +167,7 @@ export const GameCard: React.FC<Props> = ({
           </div>
           <div className="session-card-meta">
             <span className="session-card-date">
-              {new Date(createdAt).toLocaleString('en-CA', {
+              {new Date(createdAt).toLocaleString('en-US', {
                 timeZone: 'America/Los_Angeles',
                 month: '2-digit',
                 day: '2-digit',
@@ -209,7 +209,7 @@ export const GameCard: React.FC<Props> = ({
                 {roundLabel}
               </span>
               <span className="game-fs-date">
-                {new Date(createdAt).toLocaleString('en-CA', {
+                {new Date(createdAt).toLocaleString('en-US', {
                   timeZone: 'America/Los_Angeles',
                   year: 'numeric',
                   month: '2-digit',

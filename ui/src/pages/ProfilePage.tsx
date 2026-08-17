@@ -4,7 +4,7 @@ import { fetchStats, fetchFanDiscoveries, fetchPlayerTier, setupProfile, lookupC
 import { GAME_MODES, GameModeKey, PlayerStats, PlayerTierResponse } from '../types'
 import { RankBadge } from '../components/RankBadge'
 
-export default function P我xrofilePage() {
+export default function ProfilePage() {
   const navigate = useNavigate()
   const [me, setMe] = useState<any>(() => {
     const rawMe = sessionStorage.getItem('mahjong_me')
@@ -225,7 +225,7 @@ export default function P我xrofilePage() {
                             <div className="profile-achievement-name">🏅 {fd.fanName}</div>
                             <div className="profile-achievement-date">
                               发现日期:{' '}
-                              {new Date(fd.discoveredAt).toLocaleDateString('en-CA', {
+                              {new Date(fd.discoveredAt).toLocaleDateString('en-US', {
                                 timeZone: 'America/Los_Angeles',
                               })}
                             </div>

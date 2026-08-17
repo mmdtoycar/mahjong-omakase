@@ -163,10 +163,10 @@ export default function PlayerDetailPage() {
             <table className="fixed-table">
               <thead>
                 <tr>
-                  <th style={{ width: '44px' }}>游戏</th>
+                  <th style={{ width: '40px' }}>游戏</th>
                   <th style={{ width: '64px' }}>模式</th>
                   <th style={{ width: '96px' }}>日期</th>
-                  <th style={{ width: '60px' }}>状态</th>
+                  <th style={{ width: '64px' }}>状态</th>
                   <th className="text-right" style={{ width: '68px' }}>
                     分数
                   </th>
@@ -177,7 +177,7 @@ export default function PlayerDetailPage() {
                   <tr key={g.sessionId} onClick={() => navigate(`/session/${g.sessionId}`)}>
                     <td>#{g.sessionId}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{g.gameModeDisplayName}</td>
-                    <td>{new Date(g.createdAt).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })}</td>
+                    <td>{new Date(g.createdAt).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' })}</td>
                     <td>
                       <span className={`badge ${g.status === 'IN_PROGRESS' ? 'badge-progress' : 'badge-completed'}`}>
                         {g.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
