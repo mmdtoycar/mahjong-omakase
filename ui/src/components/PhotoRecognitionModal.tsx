@@ -727,7 +727,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
                   type="file"
                   accept="image/*"
                   onChange={handleFileChange}
-                  className="visually-hidden"
+                  style={{ display: 'none' }}
                   disabled={loading}
                 />
                 🔄
@@ -741,7 +741,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
                 <label className="upload-dropzone">
                   {/* No capture attribute: it would force the camera and hide the photo library,
                       contradicting the label below. */}
-                  <input type="file" accept="image/*" onChange={handleFileChange} className="visually-hidden" />
+                  <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
                   <div className="dropzone-content">
                     <div className="upload-icon">📸</div>
                     <p className="upload-main-text">点击选择照片 或 拍照</p>
