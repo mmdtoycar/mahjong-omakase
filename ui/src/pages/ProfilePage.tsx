@@ -4,7 +4,7 @@ import { fetchStats, fetchFanDiscoveries, fetchPlayerTier, setupProfile, lookupC
 import { GAME_MODES, GameModeKey, PlayerStats, PlayerTierResponse } from '../types'
 import { RankBadge } from '../components/RankBadge'
 
-export default function P我rofilePage() {
+export default function P我xrofilePage() {
   const navigate = useNavigate()
   const [me, setMe] = useState<any>(() => {
     const rawMe = sessionStorage.getItem('mahjong_me')

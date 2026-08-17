@@ -160,13 +160,12 @@ export default function PlayerDetailPage() {
           </div>
         ) : (
           <div className="table-wrap">
-            {/* 393px 预算 (393 -32 主内容 -32 .card = 329px 表宽): 44+80+80+60+68 = 332px. */}
             <table className="fixed-table">
               <thead>
                 <tr>
                   <th style={{ width: '44px' }}>游戏</th>
-                  <th style={{ width: '80px' }}>模式</th>
-                  <th style={{ width: '80px' }}>日期</th>
+                  <th style={{ width: '64px' }}>模式</th>
+                  <th style={{ width: '96px' }}>日期</th>
                   <th style={{ width: '60px' }}>状态</th>
                   <th className="text-right" style={{ width: '68px' }}>
                     分数
