@@ -15,6 +15,7 @@ Run it with `python serve.py`, or see the Dockerfile beside it.
 import base64
 import binascii
 import io
+import itertools
 import json
 import os
 import sys
@@ -38,6 +39,8 @@ MAX_CHUNK_LINE = 32
 MODEL = None
 LABELS: list[str] = []
 SIZE = 0
+
+_REQUEST_IDS = itertools.count(1)  # so a "received" line and its outcome line can be matched up
 
 
 class BadRequest(Exception):
@@ -125,9 +128,13 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/recognize":
             self._send(404, {"message": "not found"})
             return
+        request_id = next(_REQUEST_IDS)
+        print(f"reader: received recognize request #{request_id}", flush=True)
+
         try:
             body = self._read_body()
         except BadRequest as refusal:
+            print(f"reader: request #{request_id} rejected — {refusal.message}", flush=True)
             self._send(refusal.status, {"message": refusal.message})
             return
 
@@ -135,6 +142,7 @@ class Handler(BaseHTTPRequestHandler):
             request = json.loads(body)
             encoded = request["imageBase64"]
         except (json.JSONDecodeError, KeyError, TypeError, UnicodeDecodeError):
+            print(f"reader: request #{request_id} rejected — not a JSON body with imageBase64", flush=True)
             self._send(400, {"message": "expected a JSON body with an imageBase64 field"})
             return
 
@@ -143,11 +151,13 @@ class Handler(BaseHTTPRequestHandler):
         except (binascii.Error, ValueError, TypeError):
             # TypeError is a number or an object where the string should be: valid JSON, so it gets
             # past the parse above, and b64decode refuses it rather than the base64 check doing so.
+            print(f"reader: request #{request_id} rejected — imageBase64 is not valid base64", flush=True)
             self._send(400, {"message": "imageBase64 is not valid base64"})
             return
 
         bgr = decode(raw)
         if bgr is None:
+            print(f"reader: request #{request_id} rejected — could not decode the image", flush=True)
             self._send(415, {"message": "could not decode the image"})
             return
 
@@ -157,7 +167,7 @@ class Handler(BaseHTTPRequestHandler):
         if isinstance(reading, str):
             # Nothing in the photo looked like a hand. A 422 rather than a 500: the request was fine,
             # the picture was not, and the caller should offer the online path instead.
-            print(f"reader: declined — {reading} ({elapsed_ms:.0f}ms)", flush=True)
+            print(f"reader: request #{request_id} declined — {reading} ({elapsed_ms:.0f}ms)", flush=True)
             self._send(422, {"message": reading})
             return
         if reading.confidence:
@@ -168,9 +178,9 @@ class Handler(BaseHTTPRequestHandler):
             mean_conf = 0.0
             min_conf = "n/a"
         print(
-            f"reader: recognized {len(reading.tiles)} tiles, mean_conf={mean_conf:.2f}, "
-            f"min_conf={min_conf}, melds={len(reading.melds)}, winning={reading.winning} "
-            f"({elapsed_ms:.0f}ms)",
+            f"reader: request #{request_id} recognized {len(reading.tiles)} tiles, "
+            f"mean_conf={mean_conf:.2f}, min_conf={min_conf}, melds={len(reading.melds)}, "
+            f"winning={reading.winning} ({elapsed_ms:.0f}ms)",
             flush=True,
         )
         self._send(200, as_json(reading))
