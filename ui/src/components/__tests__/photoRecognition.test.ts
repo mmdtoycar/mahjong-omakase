@@ -197,11 +197,6 @@ describe('parseImageDataUrl', () => {
 })
 
 describe('winHandToLabel', () => {
-  /**
-   * The grammar this parses is exactly what MahjongHand.tsx already walks to render the same string
-   * as tile images: sorted concealed tiles, then `^` and the winning tile, then zero or more melds
-   * in `[...]` (open) or `(...)` (closed) — no separators, since every tile is exactly 2 characters.
-   */
   it('parses a concealed-only hand', () => {
     expect(winHandToLabel('1m2m3m^4m')).toEqual({
       concealed: ['1m', '2m', '3m', '4m'],

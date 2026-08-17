@@ -157,6 +157,33 @@ public class RecognitionSampleStore {
     }
   }
 
+  /**
+   * Moves a deleted round's folder aside, so a later round renumbered into the same slot cannot
+   * land its photos in it. Not deleted: what was confirmed at the time is still real training data,
+   * just no longer attached to a round that exists.
+   */
+  public void forgetRound(long sessionId, int roundNumber) {
+    if (root.isEmpty()) {
+      return;
+    }
+    lock.lock();
+    try {
+      Path dir = root.get().resolve(sessionId + "-" + roundNumber);
+      if (!Files.isDirectory(dir)) {
+        return;
+      }
+      Path archived =
+          root.get()
+              .resolve(sessionId + "-" + roundNumber + "-deleted-" + Instant.now().toEpochMilli());
+      Files.move(dir, archived);
+      log.info("Archived {} to {} — its round was deleted", dir, archived);
+    } catch (IOException | RuntimeException e) {
+      log.warn("Could not archive a deleted round's samples: {}", e.toString());
+    } finally {
+      lock.unlock();
+    }
+  }
+
   private String write(
       String imageBase64, String mimeType, String model, String field, String value) {
     if (root.isEmpty()) {

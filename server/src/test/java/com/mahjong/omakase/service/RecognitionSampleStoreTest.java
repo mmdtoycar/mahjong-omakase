@@ -238,8 +238,46 @@ class RecognitionSampleStoreTest {
     store.confirmForRound(List.of(failed, succeeded), 228, 3, hand);
 
     Path round = dir.resolve("228-3");
-    assertThat(namesEnding(round, ".json")).hasSize(2);
+    List<Path> jsons =
+        filesUnder(round).stream().filter(p -> p.toString().endsWith(".json")).toList();
+    assertThat(jsons).hasSize(2);
     assertThat(namesEnding(round, ".jpg")).hasSize(2);
+    for (Path json : jsons) {
+      assertThat(
+              MAPPER
+                  .readTree(json.toFile())
+                  .path("confirmed")
+                  .path("hand")
+                  .path("concealed")
+                  .get(0)
+                  .asText())
+          .isEqualTo("1m");
+    }
+  }
+
+  /**
+   * A deleted round's folder is archived aside, not left where a round later renumbered into the
+   * same slot would land its own photos on top of it.
+   */
+  @Test
+  void archivesADeletedRoundsFolderRatherThanLeavingItToBeReused(@TempDir Path dir)
+      throws IOException {
+    RecognitionSampleStore store = storeIn(dir.toString());
+    String id = store.save(JPEG, "image/jpeg", "local", "{\"concealed\":[\"1m\"]}");
+    store.confirmForRound(List.of(id), 228, 3, MAPPER.readTree("{}"));
+
+    store.forgetRound(228, 3);
+
+    assertThat(dir.resolve("228-3")).doesNotExist();
+    assertThat(filesUnder(dir))
+        .anyMatch(p -> p.toString().contains("228-3-deleted-") && p.toString().endsWith(".json"));
+  }
+
+  @Test
+  void forgettingARoundWithNoFolderIsANoOp(@TempDir Path dir) throws IOException {
+    storeIn(dir.toString()).forgetRound(228, 3);
+
+    assertThat(filesUnder(dir)).isEmpty();
   }
 
   /**

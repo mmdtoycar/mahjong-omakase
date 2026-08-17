@@ -566,6 +566,7 @@ public class GameService {
 
     session.getRounds().remove(round);
     roundRepo.delete(Objects.requireNonNull(round));
+    sampleStore.forgetRound(sessionId, roundNumber);
 
     int num = 1;
     for (Round r : session.getRounds()) {

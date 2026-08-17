@@ -3629,7 +3629,6 @@ table.auto-table {
   }
 }
 
-/* Photo rotate / reselect controls, shown above the preview while picking a photo. */
 .photo-rec-controls-bar {
   display: flex;
   justify-content: center;
