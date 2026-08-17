@@ -149,6 +149,8 @@ export interface AddRoundData {
   fanCount?: number
   prevalentWind?: number
   chombo?: boolean
+  photoSampleIds?: string[] // recognition samples attempted while composing this round
+  confirmedHand?: unknown // the hand the calculator ended up with, in the recognisers' label shape
 }
 
 export interface PlayerStats {

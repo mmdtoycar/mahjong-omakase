@@ -58,10 +58,11 @@ class Handler(BaseHTTPRequestHandler):
     # Twenty seconds is far above a real request: the JVM's own read timeout is ten.
     timeout = 20
 
-    def log_message(self, fmt: str, *args) -> None:
-        # The default writes to stderr in Apache format; one line per request in the same shape as the
-        # rest of the container's output is easier to read alongside the JVM's.
-        print(f"reader: {self.address_string()} {fmt % args}", flush=True)
+    def log_request(self, code="-", size="-") -> None:
+        # /healthz is polled every few seconds and drowned out everything else in this log.
+        if self.path == "/healthz":
+            return
+        print(f"reader: {self.command} {self.path} -> {code}", flush=True)
 
     def _send(self, status: int, payload: dict) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode()
@@ -223,7 +224,7 @@ def self_check() -> int:
             def finish(self):
                 pass
 
-            def log_message(self, fmt, *args):
+            def log_request(self, code="-", size="-"):
                 pass
 
         written = Driver().wfile.getvalue()

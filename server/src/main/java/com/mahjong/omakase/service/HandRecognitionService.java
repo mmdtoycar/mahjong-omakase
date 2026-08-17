@@ -1,6 +1,5 @@
 package com.mahjong.omakase.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.mahjong.omakase.service.LocalReaderService.ReaderUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -83,13 +82,5 @@ public class HandRecognitionService {
       String sampleId = sampleStore.saveFailure(imageBase64, mimeType, LOCAL, e.getMessage());
       return new Recognition(EMPTY_HAND_JSON, "本地识别没读出手牌：" + e.getMessage(), sampleId);
     }
-  }
-
-  /**
-   * Files the hand the user confirmed for a sample. Best-effort, like everything else about the
-   * collection: a lost label must never surface as a failed recognition.
-   */
-  public void confirm(String sampleId, JsonNode hand) {
-    sampleStore.saveConfirmed(sampleId, hand);
   }
 }

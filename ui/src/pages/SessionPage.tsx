@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchSessionDetail, addRound, deleteRound, completeSession, confirmRecognizedHand } from '../api'
+import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
 import { SessionDetail, PlayerInfo, RoundInfo } from '../types'
 import { rankByScore } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
@@ -48,10 +48,10 @@ export default function SessionPage() {
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false)
   const [gbImportedHand, setGbImportedHand] = useState<ImportedHand<GuobiaoMeld> | null>(null)
   const [riichiImportedHand, setRiichiImportedHand] = useState<ImportedHand<RiichiMeld> | null>(null)
-  // The sample this round's photo was recognised against, if any. Confirmed against whatever the
-  // calculator ends up with at submission time — not when the recognition result was applied — so
-  // corrections made after applying still end up as the training label.
-  const [photoSampleId, setPhotoSampleId] = useState<string | null>(null)
+  // Every sample recognised while composing this round, success or miss — a retaken photo included.
+  // Confirmed against whatever the calculator ends up with at submission time, not when a result was
+  // applied, so corrections made afterward still end up as the training label.
+  const [photoSampleIds, setPhotoSampleIds] = useState<string[]>([])
 
   const handleCalcScoreSelect = useCallback((s: number | null, hand?: string, details?: string, fCount?: number) => {
     if (s !== null) {
@@ -136,7 +136,7 @@ export default function SessionPage() {
     setCalcResetCount((prev) => prev + 1)
     setGbImportedHand(null)
     setRiichiImportedHand(null)
-    setPhotoSampleId(null)
+    setPhotoSampleIds([])
   }
 
   /**
@@ -199,6 +199,11 @@ export default function SessionPage() {
         return
       }
       if (!canSubmit) return
+      // Confirmed against what the calculator actually ended up with, corrections included — not
+      // against whatever recognition first applied. isChomboManual is excluded on its own: winHand
+      // can still hold a stale hand from before the 诈胡 toggle, and a chombo round is not a hand.
+      const confirmedHand = winHand && !isChomboManual ? { ...winHandToLabel(winHand), isSelfDraw } : undefined
+      const sampleIds = photoSampleIds.length > 0 ? photoSampleIds : undefined
       if (isRiichi) {
         const scoreVal = parseInt(score)
         await addRound(session.id, {
@@ -212,6 +217,8 @@ export default function SessionPage() {
           winHand,
           fanDetails,
           riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
+          photoSampleIds: sampleIds,
+          confirmedHand,
         })
       } else if (isDongbei) {
         await addRound(session.id, {
@@ -232,18 +239,9 @@ export default function SessionPage() {
           fanCount: isChomboManual ? 0 : fanCount || parseInt(score),
           prevalentWind: gameState.prevalentWind,
           chombo: isChomboManual || undefined,
+          photoSampleIds: sampleIds,
+          confirmedHand,
         })
-      }
-
-      // Confirmed here, not when the recognition result was applied: this is what the calculator
-      // actually ended up with, corrections included, which is the whole point of moving this off
-      // the old apply-button click. winHand is empty for 东北 (no calculator involved), which also
-      // covers rounds that were never recognised at all (photoSampleId stays null either way).
-      // isChomboManual is excluded on its own: winHand can still hold a stale hand from before the
-      // 诈胡 toggle, and a chombo penalty round is not a hand — confirming it would mislabel the
-      // photo with tiles that have nothing to do with what was actually recorded.
-      if (photoSampleId && winHand && !isChomboManual) {
-        void confirmRecognizedHand(photoSampleId, { ...winHandToLabel(winHand), isSelfDraw })
       }
 
       resetForm()
@@ -448,7 +446,7 @@ export default function SessionPage() {
 
   const statusMessage = getStatusMessage()
 
-  const handleApplyRecognizedHand = (hand: RecognizedHand, sampleId: string | null) => {
+  const handleApplyRecognizedHand = (hand: RecognizedHand) => {
     if (isGuobiao) {
       setIsSelfDraw(hand.isSelfDraw)
       setGbImportedHand((prev) => ({
@@ -464,7 +462,10 @@ export default function SessionPage() {
         trigger: (prev?.trigger ?? 0) + 1,
       }))
     }
-    setPhotoSampleId(sampleId)
+  }
+
+  const handlePhotoSample = (sampleId: string | null) => {
+    if (sampleId) setPhotoSampleIds((prev) => [...prev, sampleId])
   }
 
   return (
@@ -920,6 +921,7 @@ export default function SessionPage() {
           isOpen={isPhotoModalOpen}
           onClose={() => setIsPhotoModalOpen(false)}
           onApplyHand={handleApplyRecognizedHand}
+          onSample={handlePhotoSample}
         />
       )}
     </>

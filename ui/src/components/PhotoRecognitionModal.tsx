@@ -14,7 +14,9 @@ interface PhotoRecognitionModalProps {
   isOpen: boolean
   onClose: () => void
   /** Fires the instant recognition returns something to fill in — there is no review step to wait for. */
-  onApplyHand: (hand: RecognizedHand, sampleId: string | null) => void
+  onApplyHand: (hand: RecognizedHand) => void
+  /** Fires after every recognize attempt, success or miss, so a retaken photo's sample is tracked too. */
+  onSample?: (sampleId: string | null) => void
 }
 
 // Rotates a base64 image on an HTML5 Canvas by 0/90/180/270 degrees.
@@ -499,7 +501,12 @@ export function winHandToLabel(hand: string): {
   return { concealed, melds, winningTile }
 }
 
-export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({ isOpen, onClose, onApplyHand }) => {
+export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
+  isOpen,
+  onClose,
+  onApplyHand,
+  onSample,
+}) => {
   // The normalized upload, kept pristine so rotation never compounds JPEG loss.
   const [sourceImage, setSourceImage] = useState<string | null>(null)
   const [rotation, setRotation] = useState(0)
@@ -612,6 +619,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({ is
         throw new Error('图片过大，请用较低分辨率重拍，或关闭 iPhone 的 ProRAW / 48MP')
       }
       const { rawJson: responseText, warning: miss, sampleId } = await recognizeHandPhoto(base64, mimeType, 'local')
+      onSample?.(sampleId ?? null)
 
       const jsonOutput = safeParseJSON(responseText)
 
@@ -657,16 +665,13 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({ is
         return
       }
 
-      onApplyHand(
-        {
-          concealed: concealedTiles,
-          melds,
-          winningTile: winTile,
-          isSelfDraw: Boolean(jsonOutput.isSelfDraw),
-          notes: jsonOutput.notes,
-        },
-        sampleId ?? null
-      )
+      onApplyHand({
+        concealed: concealedTiles,
+        melds,
+        winningTile: winTile,
+        isSelfDraw: Boolean(jsonOutput.isSelfDraw),
+        notes: jsonOutput.notes,
+      })
       onClose()
     } catch (err: any) {
       console.error('Photo recognition error:', err)

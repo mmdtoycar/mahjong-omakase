@@ -42,6 +42,7 @@ public class GameService {
   private final TableStrengthService tableStrengthService;
   private final PlayerMonthlySkillRepository monthlySkillRepo;
   private final CacheManager cacheManager;
+  private final RecognitionSampleStore sampleStore;
   private final Map<GameMode, GameModeHandler> handlers;
 
   public GameService(
@@ -55,6 +56,7 @@ public class GameService {
       TableStrengthService tableStrengthService,
       PlayerMonthlySkillRepository monthlySkillRepo,
       CacheManager cacheManager,
+      RecognitionSampleStore sampleStore,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
@@ -66,6 +68,7 @@ public class GameService {
     this.tableStrengthService = tableStrengthService;
     this.monthlySkillRepo = monthlySkillRepo;
     this.cacheManager = cacheManager;
+    this.sampleStore = sampleStore;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
@@ -540,6 +543,11 @@ public class GameService {
         request.getPrevalentWind(),
         request.getRiichiPlayerIds(),
         request.getTenpaiPlayerIds());
+
+    if (request.getConfirmedHand() != null) {
+      sampleStore.confirmForRound(
+          request.getPhotoSampleIds(), sessionId, nextRoundNumber, request.getConfirmedHand());
+    }
     evictAllCaches();
   }
 

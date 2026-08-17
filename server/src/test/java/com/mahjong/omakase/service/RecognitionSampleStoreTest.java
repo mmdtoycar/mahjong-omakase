@@ -183,7 +183,7 @@ class RecognitionSampleStoreTest {
         .contains("9p");
   }
 
-  /** The id is what the browser gets back and hands to {@code saveConfirmed}. */
+  /** The id is what the browser gets back and hands to {@code confirmForRound}. */
   @Test
   void handsBackAnIdThatLocatesTheSample(@TempDir Path dir) {
     String id = storeIn(dir.toString()).save(JPEG, "image/jpeg", "local", "{}");
@@ -199,41 +199,65 @@ class RecognitionSampleStoreTest {
   }
 
   /**
-   * The confirmed hand joins the answers rather than replacing them: the comparison the samples
-   * exist for is "what did each recogniser say, and what was it really".
+   * The confirmed hand joins the answers rather than replacing them, and moves the sample out of
+   * its day folder into one named after the round.
    */
   @Test
-  void filesTheConfirmedHandInTheSameSample(@TempDir Path dir) throws IOException {
+  void filesTheConfirmedHandAndMovesTheSampleIntoARoundFolder(@TempDir Path dir)
+      throws IOException {
     RecognitionSampleStore store = storeIn(dir.toString());
     String id = store.save(JPEG, "image/jpeg", "local", "{\"concealed\":[\"1m\"]}");
 
-    store.saveConfirmed(id, MAPPER.readTree("{\"concealed\":[\"9p\"]}"));
+    store.confirmForRound(List.of(id), 228, 3, MAPPER.readTree("{\"concealed\":[\"9p\"]}"));
 
-    assertThat(namesEnding(dir, ".json")).hasSize(1);
+    assertThat(dir.resolve("228-3")).isDirectory();
+    assertThat(filesUnder(dir.resolve(id.split("/")[0]))).isEmpty();
     JsonNode kept = sample(dir);
     assertThat(kept.path("answers").path("local").path("rawJson").asText()).contains("1m");
-    // Parsed, unlike a model's answer: this one came from our own UI, so it is known to be JSON.
     assertThat(kept.path("confirmed").path("hand").path("concealed").get(0).asText())
         .isEqualTo("9p");
     assertThat(kept.path("confirmed").path("confirmedAt").asText()).isNotEmpty();
   }
 
   /**
-   * The id arrives from a browser and is resolved against the sample directory, which is the shape
-   * of a path traversal. Anything that is not a day and a digest has to be dropped.
+   * Every photo from a retaken round lands beside each other, each with the same confirmed hand.
    */
   @Test
-  void refusesToWriteAConfirmedHandOutsideTheSampleDirectory(@TempDir Path dir) throws IOException {
+  void groupsEveryPhotoOfARoundTogether(@TempDir Path dir) throws IOException {
+    RecognitionSampleStore store = storeIn(dir.toString());
+    String failed = store.saveFailure(JPEG, "image/jpeg", "local", "no line of tiles found");
+    byte[] secondPhoto = {5, 6, 7, 8};
+    String succeeded =
+        store.save(
+            Base64.getEncoder().encodeToString(secondPhoto),
+            "image/jpeg",
+            "local",
+            "{\"concealed\":[\"1m\"]}");
+    JsonNode hand = MAPPER.readTree("{\"concealed\":[\"1m\"]}");
+
+    store.confirmForRound(List.of(failed, succeeded), 228, 3, hand);
+
+    Path round = dir.resolve("228-3");
+    assertThat(namesEnding(round, ".json")).hasSize(2);
+    assertThat(namesEnding(round, ".jpg")).hasSize(2);
+  }
+
+  /**
+   * The id is resolved against the sample directory, which is the shape of a path traversal.
+   * Anything that is not a day and a digest has to be dropped.
+   */
+  @Test
+  void ignoresSampleIdsOutsideTheSampleDirectory(@TempDir Path dir) throws IOException {
     Path samples = Files.createDirectory(dir.resolve("samples"));
     RecognitionSampleStore store = storeIn(samples.toString());
     JsonNode hand = MAPPER.readTree("{}");
 
-    store.saveConfirmed("../escaped", hand);
-    store.saveConfirmed("2026-08-09/../../escaped", hand);
-    store.saveConfirmed("/etc/escaped", hand);
-    store.saveConfirmed("2026-08-09/NOTHEX123456", hand);
-    store.saveConfirmed(null, hand);
+    store.confirmForRound(List.of("../escaped"), 1, 1, hand);
+    store.confirmForRound(List.of("2026-08-09/../../escaped"), 1, 1, hand);
+    store.confirmForRound(List.of("/etc/escaped"), 1, 1, hand);
+    store.confirmForRound(List.of("2026-08-09/NOTHEX123456"), 1, 1, hand);
+    store.confirmForRound(null, 1, 1, hand);
 
-    assertThat(filesUnder(dir)).isEmpty();
+    assertThat(filesUnder(samples)).isEmpty();
   }
 }

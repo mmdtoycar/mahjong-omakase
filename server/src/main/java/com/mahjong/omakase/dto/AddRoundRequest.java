@@ -1,8 +1,10 @@
 package com.mahjong.omakase.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mahjong.omakase.model.RoundType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
 import lombok.Data;
@@ -50,6 +52,12 @@ public class AddRoundRequest {
   private Integer prevalentWind;
 
   private Boolean chombo;
+
+  /** Sample ids from photo recognition attempts made while composing this round, if any. */
+  private List<@Pattern(regexp = "\\d{4}-\\d{2}-\\d{2}/[0-9a-f]{12}") String> photoSampleIds;
+
+  /** The hand the calculator actually ended up with, in the recognisers' own label shape. */
+  private JsonNode confirmedHand;
 
   public RoundType getParsedRoundType() {
     return RoundType.fromString(roundType);
