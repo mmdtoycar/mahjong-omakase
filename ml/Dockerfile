@@ -10,7 +10,7 @@ COPY ml/requirements-serve.txt ./
 RUN pip install --no-cache-dir -r requirements-serve.txt
 
 COPY ml/runs/classifier.onnx ml/runs/classifier.json ./runs/
-COPY ml/grid_fit.py ml/synthesize.py ml/try_real_photo.py ml/serve.py ./
+COPY ml/grid_fit.py ml/synthesize.py ml/reader.py ml/serve.py ./
 
 ENV READER_HOST=0.0.0.0 READER_PORT=8000
 EXPOSE 8000

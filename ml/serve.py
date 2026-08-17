@@ -5,9 +5,8 @@ behind the JVM, and a read takes half a second — so there is nothing here that
 injection or async. Skipping the framework keeps three more packages out of an image that has to share a
 small droplet with a JVM, and out of the list of things to keep patched.
 
-The reader itself comes from try_real_photo, which is the module the whole pipeline grew up in and is
-covered by its self-checks; a production service importing something called `try_real_photo` reads
-oddly, and renaming it is a tidy-up worth doing separately from this.
+The reader itself comes from reader.py, which is the module the whole pipeline grew up in and is
+covered by its own self-check.
 
 Run it with `python serve.py`, or see the Dockerfile beside it.
 """
@@ -26,7 +25,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from try_real_photo import as_json, decode, load_model, read_hand, shrink
+from reader import as_json, decode, load_model, read_hand, shrink
 
 # The upload path already caps a photo at 2048px on the long edge, which is about 1.5MB of JPEG and 2MB
 # of base64. This leaves generous room above that and still refuses to buffer something absurd.
@@ -123,6 +122,11 @@ class Handler(BaseHTTPRequestHandler):
             raise BadRequest(413, f"body of {length} bytes is over the {MAX_BODY} limit")
         return self.rfile.read(length)
 
+    def _reply(self, status: int, payload: dict, note: str) -> None:
+        """Sends `payload` as `status`, and logs the same status so the two can never drift apart."""
+        print(f"reader: {note} ({status})", flush=True)
+        self._send(status, payload)
+
     def do_POST(self) -> None:
         if self.path != "/recognize":
             self._send(404, {"message": "not found"})
@@ -131,16 +135,18 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = self._read_body()
         except BadRequest as refusal:
-            print(f"reader: rejected — {refusal.message}", flush=True)
-            self._send(refusal.status, {"message": refusal.message})
+            self._reply(refusal.status, {"message": refusal.message}, f"rejected — {refusal.message}")
             return
 
         try:
             request = json.loads(body)
             encoded = request["imageBase64"]
         except (json.JSONDecodeError, KeyError, TypeError, UnicodeDecodeError):
-            print("reader: rejected — not a JSON body with imageBase64", flush=True)
-            self._send(400, {"message": "expected a JSON body with an imageBase64 field"})
+            self._reply(
+                400,
+                {"message": "expected a JSON body with an imageBase64 field"},
+                "rejected — not a JSON body with imageBase64",
+            )
             return
         # A round does not exist yet at recognition time, so this is the most this log can place a
         # request against — the session id, when the caller has one to give.
@@ -153,14 +159,18 @@ class Handler(BaseHTTPRequestHandler):
         except (binascii.Error, ValueError, TypeError):
             # TypeError is a number or an object where the string should be: valid JSON, so it gets
             # past the parse above, and b64decode refuses it rather than the base64 check doing so.
-            print(f"reader: rejected{tag} — imageBase64 is not valid base64", flush=True)
-            self._send(400, {"message": "imageBase64 is not valid base64"})
+            self._reply(
+                400,
+                {"message": "imageBase64 is not valid base64"},
+                f"rejected{tag} — imageBase64 is not valid base64",
+            )
             return
 
         bgr = decode(raw)
         if bgr is None:
-            print(f"reader: rejected{tag} — could not decode the image", flush=True)
-            self._send(415, {"message": "could not decode the image"})
+            self._reply(
+                415, {"message": "could not decode the image"}, f"rejected{tag} — could not decode the image"
+            )
             return
 
         started = time.perf_counter()
@@ -169,8 +179,7 @@ class Handler(BaseHTTPRequestHandler):
         if isinstance(reading, str):
             # Nothing in the photo looked like a hand. A 422 rather than a 500: the request was fine,
             # the picture was not, and the caller should offer the online path instead.
-            print(f"reader: declined{tag} — {reading} ({elapsed_ms:.0f}ms)", flush=True)
-            self._send(422, {"message": reading})
+            self._reply(422, {"message": reading}, f"declined{tag} — {reading} ({elapsed_ms:.0f}ms)")
             return
         if reading.confidence:
             min_index = min(range(len(reading.confidence)), key=reading.confidence.__getitem__)
@@ -179,13 +188,12 @@ class Handler(BaseHTTPRequestHandler):
         else:
             mean_conf = 0.0
             min_conf = "n/a"
-        print(
-            f"reader: recognized{tag} {len(reading.tiles)} tiles, "
-            f"mean_conf={mean_conf:.2f}, min_conf={min_conf}, melds={len(reading.melds)}, "
-            f"winning={reading.winning} ({elapsed_ms:.0f}ms)",
-            flush=True,
+        self._reply(
+            200,
+            as_json(reading),
+            f"recognized{tag} {len(reading.tiles)} tiles, mean_conf={mean_conf:.2f}, min_conf={min_conf}, "
+            f"melds={len(reading.melds)}, winning={reading.winning} ({elapsed_ms:.0f}ms)",
         )
-        self._send(200, as_json(reading))
 
 
 def main() -> None:
