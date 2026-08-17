@@ -29,7 +29,11 @@ public class TileRecognitionController {
   public ResponseEntity<Object> recognize(@Valid @RequestBody TileRecognitionRequest request) {
     try {
       HandRecognitionService.Recognition recognition =
-          service.recognize(request.getImageBase64(), request.getMimeType(), request.getEngine());
+          service.recognize(
+              request.getImageBase64(),
+              request.getMimeType(),
+              request.getEngine(),
+              request.getSessionId());
       return ResponseEntity.ok(
           new TileRecognitionResponse(
               recognition.rawJson(), recognition.warning(), recognition.sampleId()));

@@ -922,6 +922,7 @@ export default function SessionPage() {
           onClose={() => setIsPhotoModalOpen(false)}
           onApplyHand={handleApplyRecognizedHand}
           onSample={handlePhotoSample}
+          sessionId={session.id}
         />
       )}
     </>

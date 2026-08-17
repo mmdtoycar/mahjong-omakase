@@ -27,4 +27,7 @@ public class TileRecognitionRequest {
   @NotNull(message = "识别方式不能为空")
   @Pattern(regexp = "local|gemini", message = "识别方式只能是 local 或 gemini")
   private String engine = "local";
+
+  /** The session this photo is being recognised for, if any — purely for the reader's own log. */
+  private Long sessionId;
 }

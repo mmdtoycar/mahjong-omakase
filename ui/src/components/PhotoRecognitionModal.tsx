@@ -17,6 +17,8 @@ interface PhotoRecognitionModalProps {
   onApplyHand: (hand: RecognizedHand) => void
   /** Fires after every recognize attempt, success or miss, so a retaken photo's sample is tracked too. */
   onSample?: (sampleId: string | null) => void
+  /** Purely so the reader's own log can say which session a request was for. */
+  sessionId?: number
 }
 
 // Rotates a base64 image on an HTML5 Canvas by 0/90/180/270 degrees.
@@ -506,6 +508,7 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
   onClose,
   onApplyHand,
   onSample,
+  sessionId,
 }) => {
   // The normalized upload, kept pristine so rotation never compounds JPEG loss.
   const [sourceImage, setSourceImage] = useState<string | null>(null)
@@ -618,7 +621,11 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       if (base64.length > 8_000_000) {
         throw new Error('图片过大，请用较低分辨率重拍，或关闭 iPhone 的 ProRAW / 48MP')
       }
-      const { rawJson: responseText, warning: miss, sampleId } = await recognizeHandPhoto(base64, mimeType, 'local')
+      const {
+        rawJson: responseText,
+        warning: miss,
+        sampleId,
+      } = await recognizeHandPhoto(base64, mimeType, 'local', sessionId)
       onSample?.(sampleId ?? null)
 
       const jsonOutput = safeParseJSON(responseText)

@@ -1,6 +1,7 @@
 package com.mahjong.omakase.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -34,7 +35,7 @@ class TileRecognitionControllerTest {
    */
   @Test
   void answers503SoTheProxyDoesNotReplaceOurMessage() {
-    when(service.recognize(anyString(), anyString(), anyString()))
+    when(service.recognize(anyString(), anyString(), anyString(), any()))
         .thenThrow(new IllegalStateException("This model is currently experiencing high demand."));
 
     ResponseEntity<Object> response = controller.recognize(request());
@@ -48,7 +49,7 @@ class TileRecognitionControllerTest {
   /** A missing key is a server-side configuration gap, so it belongs on the same branch. */
   @Test
   void answers503WhenNoKeyIsConfigured() {
-    when(service.recognize(anyString(), anyString(), anyString()))
+    when(service.recognize(anyString(), anyString(), anyString(), any()))
         .thenThrow(new IllegalStateException("服务端未配置 Gemini API Key，请联系管理员"));
 
     assertThat(controller.recognize(request()).getStatusCode())
@@ -57,7 +58,7 @@ class TileRecognitionControllerTest {
 
   @Test
   void returnsTheModelJsonOnSuccess() {
-    when(service.recognize(anyString(), anyString(), anyString()))
+    when(service.recognize(anyString(), anyString(), anyString(), any()))
         .thenReturn(new Recognition("{\"concealed\":[\"1m\"]}", null, "2026-08-09/aabbccdd1122"));
 
     ResponseEntity<Object> response = controller.recognize(request());
@@ -95,7 +96,7 @@ class TileRecognitionControllerTest {
    */
   @Test
   void carriesTheFallbackWarningAlongsideTheHand() {
-    when(service.recognize(anyString(), anyString(), anyString()))
+    when(service.recognize(anyString(), anyString(), anyString(), any()))
         .thenReturn(new Recognition("{\"concealed\":[\"1m\"]}", "本地识别服务连不上，已自动改用在线识别", null));
 
     ResponseEntity<Object> response = controller.recognize(request());

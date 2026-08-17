@@ -57,13 +57,13 @@ public class HandRecognitionService {
   /**
    * Recognises one photo, locally unless the client asked for Gemini or no reader is configured.
    */
-  public Recognition recognize(String imageBase64, String mimeType, String engine) {
+  public Recognition recognize(String imageBase64, String mimeType, String engine, Long sessionId) {
     if (GEMINI.equals(engine) || !reader.isConfigured()) {
       TileRecognitionService.Answer answer = gemini.recognize(imageBase64, mimeType);
       return new Recognition(answer.rawJson(), null, answer.sampleId());
     }
     try {
-      String json = reader.recognize(imageBase64, mimeType);
+      String json = reader.recognize(imageBase64, mimeType, sessionId);
       // The Gemini path saves inside TileRecognitionService, once it has an answer to pair the
       // photo with; this is the same point in the local path.
       String sampleId = sampleStore.save(imageBase64, mimeType, LOCAL, json);

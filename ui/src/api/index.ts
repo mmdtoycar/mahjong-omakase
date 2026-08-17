@@ -238,13 +238,14 @@ export async function lookupClaimablePlayer(userName: string, firstName: string,
 export async function recognizeHandPhoto(
   imageBase64: string,
   mimeType: string,
-  engine: 'local' | 'gemini' = 'local'
+  engine: 'local' | 'gemini' = 'local',
+  sessionId?: number
 ): Promise<{ rawJson: string; warning?: string; sampleId?: string }> {
   try {
     const res = await fetch(`${API}/recognize`, {
       method: 'POST',
       headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ imageBase64, mimeType, engine }),
+      body: JSON.stringify({ imageBase64, mimeType, engine, sessionId }),
       // Gemini retries can take upward of a minute; without this, a stalled connection leaves the
       // recognize button disabled forever instead of surfacing an error.
       signal: AbortSignal.timeout(90_000),

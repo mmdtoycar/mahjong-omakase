@@ -2,6 +2,7 @@ package com.mahjong.omakase.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -45,7 +46,22 @@ class LocalReaderServiceTest {
     Fixture f = build();
     answer(f.server(), HttpStatus.OK, "{\"concealed\":[\"1m\"]}");
 
-    assertThat(f.service().recognize("BASE64", "image/jpeg")).isEqualTo("{\"concealed\":[\"1m\"]}");
+    assertThat(f.service().recognize("BASE64", "image/jpeg", null))
+        .isEqualTo("{\"concealed\":[\"1m\"]}");
+    f.server().verify();
+  }
+
+  /** Purely for the reader's own log — sent along only when the caller actually has one. */
+  @Test
+  void sendsTheSessionIdWhenGiven() {
+    Fixture f = build();
+    f.server()
+        .expect(requestTo(READER + "/recognize"))
+        .andExpect(content().json("{\"sessionId\":42}", false))
+        .andRespond(withSuccess("{\"concealed\":[\"1m\"]}", MediaType.APPLICATION_JSON));
+
+    f.service().recognize("BASE64", "image/jpeg", 42L);
+
     f.server().verify();
   }
 
@@ -55,7 +71,7 @@ class LocalReaderServiceTest {
     Fixture f = build();
     answer(f.server(), HttpStatus.UNPROCESSABLE_ENTITY, "{\"message\":\"no line of tiles found\"}");
 
-    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
+    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg", null))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("no line of tiles found");
   }
@@ -66,7 +82,7 @@ class LocalReaderServiceTest {
     Fixture f = build();
     answer(f.server(), HttpStatus.UNSUPPORTED_MEDIA_TYPE, "{\"message\":\"could not decode\"}");
 
-    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
+    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg", null))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("could not decode");
   }
@@ -82,7 +98,7 @@ class LocalReaderServiceTest {
     Fixture f = build();
     answer(f.server(), HttpStatus.BAD_REQUEST, "{\"message\":\"expected a JSON body\"}");
 
-    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
+    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg", null))
         .isInstanceOf(ReaderUnavailableException.class);
   }
 
@@ -91,7 +107,7 @@ class LocalReaderServiceTest {
     Fixture f = build();
     answer(f.server(), HttpStatus.NOT_FOUND, "{\"message\":\"not found\"}");
 
-    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
+    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg", null))
         .isInstanceOf(ReaderUnavailableException.class);
   }
 
@@ -100,7 +116,7 @@ class LocalReaderServiceTest {
     Fixture f = build();
     answer(f.server(), HttpStatus.INTERNAL_SERVER_ERROR, "");
 
-    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg"))
+    assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg", null))
         .isInstanceOf(ReaderUnavailableException.class);
   }
 
@@ -119,7 +135,7 @@ class LocalReaderServiceTest {
         .expect(requestTo(READER + "/recognize"))
         .andRespond(withSuccess("{\"concealed\":[\"1m\"]}", MediaType.APPLICATION_JSON));
 
-    service.recognize("BASE64", "image/jpeg");
+    service.recognize("BASE64", "image/jpeg", null);
 
     server.verify();
   }

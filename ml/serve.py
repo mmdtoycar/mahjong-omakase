@@ -63,7 +63,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def log_request(self, code="-", size="-") -> None:
         # /healthz is polled every few seconds and drowned out everything else in this log.
-        if self.path == "/healthz":
+        # A POST to /recognize logs its own received/outcome lines below; anything else (a GET to
+        # that path, say) still gets this line, since nothing else would report it.
+        if self.path == "/healthz" or (self.path == "/recognize" and self.command == "POST"):
             return
         print(f"reader: {self.command} {self.path} -> {code}", flush=True)
 
@@ -145,19 +147,23 @@ class Handler(BaseHTTPRequestHandler):
             print(f"reader: request #{request_id} rejected — not a JSON body with imageBase64", flush=True)
             self._send(400, {"message": "expected a JSON body with an imageBase64 field"})
             return
+        # A round does not exist yet at recognition time, so this is the most this log can place a
+        # request against — the session id, when the caller has one to give.
+        session_id = request.get("sessionId")
+        tag = f"#{request_id}" if session_id is None else f"#{request_id} (session {session_id})"
 
         try:
             raw = base64.b64decode(encoded, validate=True)
         except (binascii.Error, ValueError, TypeError):
             # TypeError is a number or an object where the string should be: valid JSON, so it gets
             # past the parse above, and b64decode refuses it rather than the base64 check doing so.
-            print(f"reader: request #{request_id} rejected — imageBase64 is not valid base64", flush=True)
+            print(f"reader: request {tag} rejected — imageBase64 is not valid base64", flush=True)
             self._send(400, {"message": "imageBase64 is not valid base64"})
             return
 
         bgr = decode(raw)
         if bgr is None:
-            print(f"reader: request #{request_id} rejected — could not decode the image", flush=True)
+            print(f"reader: request {tag} rejected — could not decode the image", flush=True)
             self._send(415, {"message": "could not decode the image"})
             return
 
@@ -167,7 +173,7 @@ class Handler(BaseHTTPRequestHandler):
         if isinstance(reading, str):
             # Nothing in the photo looked like a hand. A 422 rather than a 500: the request was fine,
             # the picture was not, and the caller should offer the online path instead.
-            print(f"reader: request #{request_id} declined — {reading} ({elapsed_ms:.0f}ms)", flush=True)
+            print(f"reader: request {tag} declined — {reading} ({elapsed_ms:.0f}ms)", flush=True)
             self._send(422, {"message": reading})
             return
         if reading.confidence:
@@ -178,7 +184,7 @@ class Handler(BaseHTTPRequestHandler):
             mean_conf = 0.0
             min_conf = "n/a"
         print(
-            f"reader: request #{request_id} recognized {len(reading.tiles)} tiles, "
+            f"reader: request {tag} recognized {len(reading.tiles)} tiles, "
             f"mean_conf={mean_conf:.2f}, min_conf={min_conf}, melds={len(reading.melds)}, "
             f"winning={reading.winning} ({elapsed_ms:.0f}ms)",
             flush=True,

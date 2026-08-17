@@ -29,11 +29,11 @@ class HandRecognitionServiceTest {
   @Test
   void readsLocallyByDefaultAndKeepsTheSample() {
     when(reader.isConfigured()).thenReturn(true);
-    when(reader.recognize(anyString(), anyString())).thenReturn(LOCAL_ANSWER);
+    when(reader.recognize(anyString(), anyString(), any())).thenReturn(LOCAL_ANSWER);
     when(samples.save(anyString(), anyString(), anyString(), anyString()))
         .thenReturn("2026-08-09/aabbccdd1122");
 
-    Recognition recognition = service.recognize("BASE64", "image/jpeg", "local");
+    Recognition recognition = service.recognize("BASE64", "image/jpeg", "local", 42L);
 
     assertThat(recognition.rawJson()).isEqualTo(LOCAL_ANSWER);
     assertThat(recognition.warning()).isNull();
@@ -50,12 +50,12 @@ class HandRecognitionServiceTest {
   @Test
   void returnsAnEmptyHandWhenTheReaderCannotBeReached() {
     when(reader.isConfigured()).thenReturn(true);
-    when(reader.recognize(anyString(), anyString()))
+    when(reader.recognize(anyString(), anyString(), any()))
         .thenThrow(new ReaderUnavailableException("connection refused"));
     when(samples.saveFailure(anyString(), anyString(), anyString(), anyString()))
         .thenReturn("2026-08-09/aabbccdd1122");
 
-    Recognition recognition = service.recognize("BASE64", "image/jpeg", "local");
+    Recognition recognition = service.recognize("BASE64", "image/jpeg", "local", null);
 
     assertThat(recognition.rawJson()).contains("\"concealed\":[]");
     assertThat(recognition.warning()).contains("连不上");
@@ -76,10 +76,10 @@ class HandRecognitionServiceTest {
   @Test
   void returnsAnEmptyHandWithAWarningWhenTheReaderDeclinedThePhoto() {
     when(reader.isConfigured()).thenReturn(true);
-    when(reader.recognize(anyString(), anyString()))
+    when(reader.recognize(anyString(), anyString(), any()))
         .thenThrow(new IllegalStateException("no line of tiles found"));
 
-    Recognition recognition = service.recognize("BASE64", "image/jpeg", "local");
+    Recognition recognition = service.recognize("BASE64", "image/jpeg", "local", null);
 
     assertThat(recognition.rawJson()).contains("\"concealed\":[]");
     assertThat(recognition.warning()).contains("没读出手牌").contains("no line of tiles found");
@@ -93,10 +93,10 @@ class HandRecognitionServiceTest {
   @Test
   void recordsWhyTheLocalReadFailedEvenThoughNothingIsFilledIn() {
     when(reader.isConfigured()).thenReturn(true);
-    when(reader.recognize(anyString(), anyString()))
+    when(reader.recognize(anyString(), anyString(), any()))
         .thenThrow(new IllegalStateException("no line of tiles found"));
 
-    service.recognize("BASE64", "image/jpeg", "local");
+    service.recognize("BASE64", "image/jpeg", "local", null);
 
     verify(samples)
         .saveFailure(
@@ -108,9 +108,9 @@ class HandRecognitionServiceTest {
   void asksGeminiWhenTheClientAsksForIt() {
     when(gemini.recognize(anyString(), anyString())).thenReturn(FROM_GEMINI);
 
-    assertThat(service.recognize("BASE64", "image/jpeg", "gemini").rawJson())
+    assertThat(service.recognize("BASE64", "image/jpeg", "gemini", null).rawJson())
         .isEqualTo(GEMINI_ANSWER);
-    verify(reader, never()).recognize(anyString(), anyString());
+    verify(reader, never()).recognize(anyString(), anyString(), any());
     // TileRecognitionService keeps its own sample once it has an answer, so this path must not add
     // a second one under the wrong name.
     verify(samples, never())
@@ -122,8 +122,8 @@ class HandRecognitionServiceTest {
     when(reader.isConfigured()).thenReturn(false);
     when(gemini.recognize(anyString(), anyString())).thenReturn(FROM_GEMINI);
 
-    assertThat(service.recognize("BASE64", "image/jpeg", "local").rawJson())
+    assertThat(service.recognize("BASE64", "image/jpeg", "local", null).rawJson())
         .isEqualTo(GEMINI_ANSWER);
-    verify(reader, never()).recognize(anyString(), anyString());
+    verify(reader, never()).recognize(anyString(), anyString(), any());
   }
 }
