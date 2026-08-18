@@ -922,6 +922,7 @@ public class GameService {
               stat.setAvgDealInPoints(totals.avgDealInPoints(p.getId()));
               stat.setRiichiWins(totals.riichiWins(p.getId()));
               stat.setMeldWins(totals.meldWins(p.getId()));
+              stat.setRecordedHandWins(totals.recordedHandWins(p.getId()));
 
               // Tier in the queried mode. A null gameMode spans all modes, so there's no single
               // rating to report.
@@ -976,6 +977,7 @@ public class GameService {
     private final Map<Long, Integer> dealInPointsSum = new HashMap<>();
     private final Map<Long, Integer> riichiWins = new HashMap<>();
     private final Map<Long, Integer> meldWins = new HashMap<>();
+    private final Map<Long, Integer> recordedHandWins = new HashMap<>();
 
     /**
      * Folds in one batch of {@code [roundId, winnerId, dealInPlayerId, playerId, score, fanDetails,
@@ -1015,6 +1017,12 @@ public class GameService {
             if (fanDetails != null && fanDetails.contains("立直")) {
               riichiWins.merge(winnerId, 1, Integer::sum);
             }
+            // Rounds from before fanDetails/winHand started being recorded have both null, so
+            // riichiWins and meldWins can't tell "not riichi/meld" apart from "unknown" — this is
+            // the denominator that leaves those rounds out instead of counting them as neither.
+            if (fanDetails != null || winHand != null) {
+              recordedHandWins.merge(winnerId, 1, Integer::sum);
+            }
           }
           if (dealInPlayerId != null) {
             dealIns.merge(dealInPlayerId, 1, Integer::sum);
@@ -1046,7 +1054,7 @@ public class GameService {
       return dealIns.getOrDefault(playerId, 0);
     }
 
-    /** Hands won having declared riichi — over handWins, same denominator as meldWins. */
+    /** Hands won having declared riichi — over recordedHandWins, same denominator as meldWins. */
     int riichiWins(Long playerId) {
       return riichiWins.getOrDefault(playerId, 0);
     }
@@ -1054,6 +1062,11 @@ public class GameService {
     /** Hands won with a meld — the standard definition, since a call with no win is not tracked. */
     int meldWins(Long playerId) {
       return meldWins.getOrDefault(playerId, 0);
+    }
+
+    /** riichiWins/meldWins' denominator: wins with fanDetails or winHand actually recorded. */
+    int recordedHandWins(Long playerId) {
+      return recordedHandWins.getOrDefault(playerId, 0);
     }
 
     /** 平均打点: over the wins, not over the rounds played, and 0 rather than a division by zero. */

@@ -429,6 +429,29 @@ class GameServiceStatsTest {
     assertThat(mine.getMeldWins()).isZero();
   }
 
+  /**
+   * Sessions from before fanDetails/winHand started being recorded have both null. riichiWins and
+   * meldWins can't tell that apart from "recorded, and neither" — recordedHandWins is the
+   * denominator that leaves these out instead of counting them as a hand won with neither.
+   */
+  @Test
+  void excludesAHandWithNoRecordedFanDataFromRecordedHandWins() {
+    PlayerStatsResponse mine =
+        leaderboardStatsFor(round(GUOBIAO_SESSION, 100L, ME, OPPONENT, 8000));
+
+    assertThat(mine.getHandWins()).isEqualTo(1);
+    assertThat(mine.getRecordedHandWins()).isZero();
+  }
+
+  /** Either field recorded is enough for the hand to count toward the denominator. */
+  @Test
+  void countsAHandWithEitherFieldRecordedTowardRecordedHandWins() {
+    PlayerStatsResponse mine =
+        leaderboardStatsFor(round(GUOBIAO_SESSION, 100L, ME, OPPONENT, 8000, "立直(1)", null));
+
+    assertThat(mine.getRecordedHandWins()).isEqualTo(1);
+  }
+
   @Test
   void hasNoModeStatsWithoutSessions() {
     assertThat(statsFor(List.of(), List.of())).isEmpty();

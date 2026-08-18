@@ -157,6 +157,7 @@ export default function StatsPage() {
         avgDealInPoints: stat?.avgDealInPoints ?? 0,
         riichiWins: stat?.riichiWins ?? 0,
         meldWins: stat?.meldWins ?? 0,
+        recordedHandWins: stat?.recordedHandWins ?? 0,
       }
     })
     .sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0))
@@ -207,9 +208,9 @@ export default function StatsPage() {
       '-'
     )
 
-  const riichiMeldCell = (riichiWins: number, meldWins: number, handWins: number) => {
-    const riichiRate = handWins > 0 ? ((riichiWins / handWins) * 100).toFixed(1) : '-'
-    const meldRate = handWins > 0 ? ((meldWins / handWins) * 100).toFixed(1) : '-'
+  const riichiMeldCell = (riichiWins: number, meldWins: number, recordedHandWins: number) => {
+    const riichiRate = recordedHandWins > 0 ? ((riichiWins / recordedHandWins) * 100).toFixed(1) : '-'
+    const meldRate = recordedHandWins > 0 ? ((meldWins / recordedHandWins) * 100).toFixed(1) : '-'
     return (
       <>
         {riichiRate}/{meldRate}
@@ -465,7 +466,7 @@ export default function StatsPage() {
                       <td className="num-cell">{pointsCell(p.avgDealInPoints, p.dealIns)}</td>
                       {gameMode === 'RIICHI' && (
                         <td className="num-cell num-cell-narrow">
-                          {riichiMeldCell(p.riichiWins, p.meldWins, p.handWins)}
+                          {riichiMeldCell(p.riichiWins, p.meldWins, p.recordedHandWins)}
                         </td>
                       )}
                     </tr>
