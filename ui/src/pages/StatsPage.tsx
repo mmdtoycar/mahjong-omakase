@@ -155,6 +155,8 @@ export default function StatsPage() {
         dealIns: stat?.dealIns ?? 0,
         avgWinPoints: stat?.avgWinPoints ?? 0,
         avgDealInPoints: stat?.avgDealInPoints ?? 0,
+        riichiWins: stat?.riichiWins ?? 0,
+        meldWins: stat?.meldWins ?? 0,
       }
     })
     .sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0))
@@ -204,6 +206,17 @@ export default function StatsPage() {
     ) : (
       '-'
     )
+
+  const riichiMeldCell = (riichiWins: number, meldWins: number, handWins: number) => {
+    const riichiRate = handWins > 0 ? ((riichiWins / handWins) * 100).toFixed(1) : '-'
+    const meldRate = handWins > 0 ? ((meldWins / handWins) * 100).toFixed(1) : '-'
+    return (
+      <>
+        {riichiRate}/{meldRate}
+        <span className="stat-unit">%</span>
+      </>
+    )
+  }
 
   /** 平均打点/铳点 — 分母为 0 时给 "-", 避免显示 0 误导. */
   const pointsCell = (value: number, count: number) => (count > 0 ? Math.round(value).toLocaleString() : '-')
@@ -420,9 +433,10 @@ export default function StatsPage() {
                   <tr>
                     <th className="col-rank">排名</th>
                     <th className="col-name">玩家</th>
-                    <th className="col-num-wide">平均排名</th>
+                    <th className="col-num-wide">均位</th>
                     <th className="col-num-wide">平均打点</th>
                     <th className="col-num-wide">平均铳点</th>
+                    {gameMode === 'RIICHI' && <th className="col-num-widest">和牌分布</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -449,6 +463,9 @@ export default function StatsPage() {
                       <td className="num-cell">{p.totalGames > 0 ? p.avgRank?.toFixed(2) : '-'}</td>
                       <td className="num-cell">{pointsCell(p.avgWinPoints, p.handWins)}</td>
                       <td className="num-cell">{pointsCell(p.avgDealInPoints, p.dealIns)}</td>
+                      {gameMode === 'RIICHI' && (
+                        <td className="num-cell">{riichiMeldCell(p.riichiWins, p.meldWins, p.handWins)}</td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

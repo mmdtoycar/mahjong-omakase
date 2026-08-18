@@ -365,11 +365,11 @@ table.fixed-table .col-rank {
   width: 44px;
 }
 
-/* Statistic columns deliberately carry no width: table-layout: fixed shares the remainder between
-   them, so a table with two of them and a table with three both come out even, with no per-column
-   pixel tuning. */
+/* Statistic columns carry no width on desktop: table-layout: fixed shares the remainder evenly.
+   Phones give the widest one (立直/副露) its own class with an explicit width instead — see below. */
 table.fixed-table .col-num,
 table.fixed-table .col-num-wide,
+table.fixed-table .col-num-widest,
 table.fixed-table .col-rating {
   text-align: right;
 }
@@ -983,9 +983,9 @@ table.auto-table {
   font-size: 0.9rem;
 }
 
-/* The percent sign and units sit one size below the number. */
+/* The percent sign and units sit well below the number */
 .stat-unit {
-  font-size: 0.75em;
+  font-size: 0.6em;
   margin-left: 1px;
 }
 
@@ -1624,21 +1624,29 @@ table.auto-table {
     letter-spacing: 0;
   }
 
-  .stats-table th,
-  .stats-table td {
-    padding-left: 4px;
-    padding-right: 4px;
+  table.stats-table th,
+  table.stats-table td {
+    padding-left: 2px;
+    padding-right: 2px;
   }
 
   table.stats-table .col-rank {
     width: 36px;
   }
 
-  /* 118px is the ceiling: any wider and the share left to each statistic column no longer fits
-     "1464(?)". */
   table.stats-table .col-name {
-    width: 118px;
+    width: 108px;
     padding-left: 6px;
+  }
+
+  /* Explicit widths instead of sharing the remainder — with 4 number columns that left every one
+     wider than its content needed. */
+  table.stats-table .col-num-wide {
+    width: 42px;
+  }
+
+  table.stats-table .col-num-widest {
+    width: 60px;
   }
 
   .stats-table .num-cell,

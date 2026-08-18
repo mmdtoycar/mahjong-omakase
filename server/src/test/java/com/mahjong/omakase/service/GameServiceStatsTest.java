@@ -73,10 +73,25 @@ class GameServiceStatsTest {
 
   /**
    * One row of {@code getRoundDetailsBySessions}: session, round, winner, deal-in, player, score.
+   * fanDetails and winHand default to absent, for the tests that do not care about either.
    */
   private static Object[] row(
       long sessionId, long roundId, Long winnerId, Long dealInId, long playerId, int score) {
-    return new Object[] {sessionId, roundId, winnerId, dealInId, playerId, score};
+    return row(sessionId, roundId, winnerId, dealInId, playerId, score, null, null);
+  }
+
+  private static Object[] row(
+      long sessionId,
+      long roundId,
+      Long winnerId,
+      Long dealInId,
+      long playerId,
+      int score,
+      String fanDetails,
+      String winHand) {
+    return new Object[] {
+      sessionId, roundId, winnerId, dealInId, playerId, score, fanDetails, winHand
+    };
   }
 
   /**
@@ -85,6 +100,22 @@ class GameServiceStatsTest {
    */
   private static List<Object[]> round(
       long sessionId, long roundId, Long winnerId, Long dealInId, int winScore) {
+    return round(sessionId, roundId, winnerId, dealInId, winScore, null, null);
+  }
+
+  private static List<Object[]> round(
+      long sessionId, long roundId, Long winnerId, Long dealInId, int winScore, String winHand) {
+    return round(sessionId, roundId, winnerId, dealInId, winScore, null, winHand);
+  }
+
+  private static List<Object[]> round(
+      long sessionId,
+      long roundId,
+      Long winnerId,
+      Long dealInId,
+      int winScore,
+      String fanDetails,
+      String winHand) {
     List<Object[]> rows = new ArrayList<>();
     for (long playerId : new long[] {ME, OPPONENT, 3L, 4L}) {
       int score = 0;
@@ -93,7 +124,7 @@ class GameServiceStatsTest {
       } else if (dealInId != null && dealInId == playerId) {
         score = -winScore;
       }
-      rows.add(row(sessionId, roundId, winnerId, dealInId, playerId, score));
+      rows.add(row(sessionId, roundId, winnerId, dealInId, playerId, score, fanDetails, winHand));
     }
     return rows;
   }
@@ -301,6 +332,91 @@ class GameServiceStatsTest {
     assertThat(mine.getAvgDealInPoints()).isEqualTo(6000.0);
     assertThat(mine.getGamesPlayed()).isEqualTo(1);
     assertThat(mine.getTotalScore()).isEqualTo(12000);
+  }
+
+  /**
+   * Sets up the leaderboard path (unlike {@link #statsFor}, which goes through the player page).
+   */
+  private PlayerStatsResponse leaderboardStatsFor(List<Object[]> rows) {
+    Player me = new Player();
+    me.setId(ME);
+    me.setUserName("me");
+    Player opponent = new Player();
+    opponent.setId(OPPONENT);
+    opponent.setUserName("opponent");
+    when(playerRepo.findAll()).thenReturn(List.of(me, opponent));
+    when(sessionRepo.findAll())
+        .thenReturn(List.of(session(GUOBIAO_SESSION, GameMode.GUOBIAO, SessionStatus.COMPLETED)));
+    when(roundScoreRepo.getTotalScoresBySessions(anyList()))
+        .thenReturn(
+            List.of(
+                new Object[] {GUOBIAO_SESSION, ME, 0},
+                new Object[] {GUOBIAO_SESSION, OPPONENT, 0}));
+    when(roundScoreRepo.getRoundDetailsBySessions(anyList())).thenReturn(rows);
+    return service.getPlayerStats(null, null, null).stream()
+        .filter(s -> ME == s.getPlayerId())
+        .findFirst()
+        .orElseThrow();
+  }
+
+  /** 立直: fanDetails lists it as a yaku. Round-level like handWins, so needs the same guard. */
+  @Test
+  void countsARiichiWinOnlyForTheWinnerAndOncePerRound() {
+    String fanDetails = "立直(1), 平和(1)";
+    PlayerStatsResponse mine =
+        leaderboardStatsFor(
+            List.of(
+                row(GUOBIAO_SESSION, 100L, ME, OPPONENT, ME, 8000, fanDetails, null),
+                row(GUOBIAO_SESSION, 100L, ME, OPPONENT, OPPONENT, -8000, fanDetails, null),
+                row(GUOBIAO_SESSION, 100L, ME, OPPONENT, 3L, 0, fanDetails, null),
+                row(GUOBIAO_SESSION, 100L, ME, OPPONENT, 4L, 0, fanDetails, null)));
+
+    assertThat(mine.getRiichiWins()).isEqualTo(1);
+  }
+
+  /** 两立直 (double riichi) also counts — it contains the same substring. */
+  @Test
+  void countsADoubleRiichiWinAsARiichiWin() {
+    PlayerStatsResponse mine =
+        leaderboardStatsFor(round(GUOBIAO_SESSION, 100L, ME, OPPONENT, 8000, "两立直(2)", null));
+
+    assertThat(mine.getRiichiWins()).isEqualTo(1);
+  }
+
+  /** A win with no 立直 in its yaku list is not a riichi win. */
+  @Test
+  void doesNotCountAWinWithNoRiichiDeclaration() {
+    PlayerStatsResponse mine =
+        leaderboardStatsFor(round(GUOBIAO_SESSION, 100L, ME, OPPONENT, 8000));
+
+    assertThat(mine.getRiichiWins()).isZero();
+  }
+
+  /**
+   * 副露: a win with a meld in the hand, `[` or `(` in winHand's grammar. Only the winner's row
+   * matters, and — same trap as handWins — the round-level winHand is repeated on all four rows.
+   */
+  @Test
+  void countsAMeldWinOnlyForTheWinnerAndOncePerRound() {
+    String openMeldHand = "1m2m3m^4m[5p5p5p]";
+    PlayerStatsResponse mine =
+        leaderboardStatsFor(
+            List.of(
+                row(GUOBIAO_SESSION, 100L, ME, OPPONENT, ME, 8000, null, openMeldHand),
+                row(GUOBIAO_SESSION, 100L, ME, OPPONENT, OPPONENT, -8000, null, openMeldHand),
+                row(GUOBIAO_SESSION, 100L, ME, OPPONENT, 3L, 0, null, openMeldHand),
+                row(GUOBIAO_SESSION, 100L, ME, OPPONENT, 4L, 0, null, openMeldHand)));
+
+    assertThat(mine.getMeldWins()).isEqualTo(1);
+  }
+
+  /** A concealed win — no `[` or `(` in winHand — is not a 副露 win. */
+  @Test
+  void doesNotCountAConcealedWinAsAMeldWin() {
+    PlayerStatsResponse mine =
+        leaderboardStatsFor(round(GUOBIAO_SESSION, 100L, ME, OPPONENT, 8000, "1m2m3m^4m"));
+
+    assertThat(mine.getMeldWins()).isZero();
   }
 
   @Test
