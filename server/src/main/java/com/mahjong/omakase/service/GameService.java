@@ -844,7 +844,7 @@ public class GameService {
     }
 
     // Bulk-load round details for ALL completed sessions in scope — one SQL — feeds the round-level
-    // metrics (和牌率/放铳率/自摸率/平均打点/平均铳点).
+    // metrics (和牌率/放铳率/自摸率/立直率/副露率/平均打点/平均铳点).
     Map<Long, List<Object[]>> roundsBySessionId = new HashMap<>();
     List<Long> allSessionIds = completedSessions.stream().map(GameSession::getId).toList();
     if (!allSessionIds.isEmpty()) {
@@ -853,7 +853,7 @@ public class GameService {
         // Drop the leading sessionId so the per-session shape matches accumulateRoundStats.
         roundsBySessionId
             .computeIfAbsent(sid, k -> new ArrayList<>())
-            .add(new Object[] {row[1], row[2], row[3], row[4], row[5]});
+            .add(new Object[] {row[1], row[2], row[3], row[4], row[5], row[6], row[7]});
       }
     }
 
@@ -920,6 +920,8 @@ public class GameService {
               stat.setDealIns(totals.dealtIn(p.getId()));
               stat.setAvgWinPoints(totals.avgWinPoints(p.getId()));
               stat.setAvgDealInPoints(totals.avgDealInPoints(p.getId()));
+              stat.setRiichiWins(totals.riichiWins(p.getId()));
+              stat.setMeldWins(totals.meldWins(p.getId()));
 
               // Tier in the queried mode. A null gameMode spans all modes, so there's no single
               // rating to report.
@@ -972,10 +974,12 @@ public class GameService {
     private final Map<Long, Integer> dealIns = new HashMap<>();
     private final Map<Long, Integer> winPointsSum = new HashMap<>();
     private final Map<Long, Integer> dealInPointsSum = new HashMap<>();
+    private final Map<Long, Integer> riichiWins = new HashMap<>();
+    private final Map<Long, Integer> meldWins = new HashMap<>();
 
     /**
-     * Folds in one batch of {@code [roundId, winnerId, dealInPlayerId, playerId, score]} rows, and
-     * may be called repeatedly to accumulate across sessions.
+     * Folds in one batch of {@code [roundId, winnerId, dealInPlayerId, playerId, score, fanDetails,
+     * winHand]} rows, and may be called repeatedly to accumulate across sessions.
      *
      * <p>The query returns one row per player per round, with the round-level columns repeated on
      * all four, so the per-round tallies are guarded by the ids already seen. Without that guard
@@ -989,6 +993,8 @@ public class GameService {
         Long dealInPlayerId = (Long) row[2];
         Long playerId = (Long) row[3];
         int score = ((Number) row[4]).intValue();
+        String fanDetails = (String) row[5];
+        String winHand = (String) row[6];
 
         roundsPlayed.merge(playerId, 1, Integer::sum);
 
@@ -998,6 +1004,16 @@ public class GameService {
             // 自摸 (self-draw): win with no deal-in player. 荣和 = handWins - tsumoWins.
             if (dealInPlayerId == null) {
               tsumoWins.merge(winnerId, 1, Integer::sum);
+            }
+            // 副露: the winning hand itself has an open meld, `[` in the same grammar
+            // MahjongHand.tsx renders and PhotoRecognitionModal.winHandToLabel parses. `(` is a
+            // closed meld (暗杠) — the hand stays 门清, so it must not count here.
+            if (winHand != null && winHand.indexOf('[') >= 0) {
+              meldWins.merge(winnerId, 1, Integer::sum);
+            }
+            // 立直: fanDetails lists the yaku, e.g. "立直(1), 平和(1)" — covers 两立直 too.
+            if (fanDetails != null && fanDetails.contains("立直")) {
+              riichiWins.merge(winnerId, 1, Integer::sum);
             }
           }
           if (dealInPlayerId != null) {
@@ -1028,6 +1044,16 @@ public class GameService {
 
     int dealtIn(Long playerId) {
       return dealIns.getOrDefault(playerId, 0);
+    }
+
+    /** Hands won having declared riichi — over handWins, same denominator as meldWins. */
+    int riichiWins(Long playerId) {
+      return riichiWins.getOrDefault(playerId, 0);
+    }
+
+    /** Hands won with a meld — the standard definition, since a call with no win is not tracked. */
+    int meldWins(Long playerId) {
+      return meldWins.getOrDefault(playerId, 0);
     }
 
     /** 平均打点: over the wins, not over the rounds played, and 0 rather than a division by zero. */
@@ -1103,7 +1129,8 @@ public class GameService {
     for (GameSession s : completed) modeBySession.put(s.getId(), s.getGameMode());
 
     // Partition round-detail rows by mode, reshaping to the [roundId, winnerId, dealInPlayerId,
-    // playerId, score] tuple that accumulateRoundStats expects (dropping the leading sessionId).
+    // playerId, score, riichiPlayerIds, winHand] tuple RoundTotals.add expects (dropping the
+    // leading sessionId).
     Map<GameMode, List<Object[]>> rowsByMode = new EnumMap<>(GameMode.class);
     List<Long> ids = completed.stream().map(GameSession::getId).toList();
     for (Object[] row : roundScoreRepo.getRoundDetailsBySessions(ids)) {
@@ -1111,7 +1138,7 @@ public class GameService {
       if (mode == null) continue;
       rowsByMode
           .computeIfAbsent(mode, k -> new ArrayList<>())
-          .add(new Object[] {row[1], row[2], row[3], row[4], row[5]});
+          .add(new Object[] {row[1], row[2], row[3], row[4], row[5], row[6], row[7]});
     }
 
     Map<String, PlayerDetailResponse.ModeStats> statsByMode = new HashMap<>();

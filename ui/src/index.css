@@ -365,11 +365,12 @@ table.fixed-table .col-rank {
   width: 44px;
 }
 
-/* Statistic columns deliberately carry no width: table-layout: fixed shares the remainder between
-   them, so a table with two of them and a table with three both come out even, with no per-column
-   pixel tuning. */
+/* Statistic columns carry no width on desktop: table-layout: fixed shares the remainder evenly.
+   Phones give the 全部玩家 table's three sizes an explicit width each instead — see below. */
 table.fixed-table .col-num,
+table.fixed-table .col-num-narrow,
 table.fixed-table .col-num-wide,
+table.fixed-table .col-num-widest,
 table.fixed-table .col-rating {
   text-align: right;
 }
@@ -983,9 +984,9 @@ table.auto-table {
   font-size: 0.9rem;
 }
 
-/* The percent sign and units sit one size below the number. */
+/* The percent sign and units sit well below the number */
 .stat-unit {
-  font-size: 0.75em;
+  font-size: 0.6em;
   margin-left: 1px;
 }
 
@@ -1617,33 +1618,57 @@ table.auto-table {
   }
 
   /* The stats table tightened for phones: headers, numbers and badges each go one size down, the fixed
-     columns (rank, player, 段位分) get smaller widths, and the number columns keep splitting whatever
-     table-layout: fixed leaves them. */
+     columns (rank, player) get smaller widths. */
   .stats-table th {
     font-size: 0.62rem;
     letter-spacing: 0;
   }
 
-  .stats-table th,
-  .stats-table td {
-    padding-left: 4px;
-    padding-right: 4px;
+  table.stats-table {
+    --stats-rank-col: 36px;
+    --stats-name-col: 118px;
+    --stats-widest-col: 0px;
+  }
+
+  table.stats-table.stats-table-riichi {
+    --stats-widest-col: 60px;
+  }
+
+  table.stats-table th,
+  table.stats-table td {
+    padding-left: 2px;
+    padding-right: 2px;
   }
 
   table.stats-table .col-rank {
-    width: 36px;
+    width: var(--stats-rank-col);
   }
 
-  /* 118px is the ceiling: any wider and the share left to each statistic column no longer fits
-     "1464(?)". */
   table.stats-table .col-name {
-    width: 118px;
+    width: var(--stats-name-col);
     padding-left: 6px;
+  }
+
+  table.stats-table .col-num-widest {
+    width: var(--stats-widest-col);
+  }
+
+  /* Shares add up to 1 so there's no remainder to redistribute. */
+  table.stats-table .col-num-narrow {
+    width: calc((100% - var(--stats-rank-col) - var(--stats-name-col) - var(--stats-widest-col)) * 0.24);
+  }
+
+  table.stats-table .col-num-wide {
+    width: calc((100% - var(--stats-rank-col) - var(--stats-name-col) - var(--stats-widest-col)) * 0.38);
   }
 
   .stats-table .num-cell,
   .stats-table .num-cell-rank {
     font-size: 0.78rem;
+  }
+
+  .stats-table .num-cell-narrow {
+    font-size: 0.65rem;
   }
 
   /* Shrink only the inline 段位 badges inside the stats table, and give the width back to the name. */

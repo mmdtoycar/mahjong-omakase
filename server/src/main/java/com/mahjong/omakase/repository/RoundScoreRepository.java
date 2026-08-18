@@ -24,12 +24,13 @@ public interface RoundScoreRepository extends JpaRepository<RoundScore, Long> {
 
   /**
    * Returns one row per (round × scoring player) across the given sessions: [sessionId, roundId,
-   * winnerId, dealInPlayerId, scoringPlayerId, score]. Used to compute Riichi round-level metrics
-   * (和牌率/放铳率/平均打点/平均铳点) without N+1 lazy loads. Excludes rows whose player has been nulled out by
-   * account deletion.
+   * winnerId, dealInPlayerId, scoringPlayerId, score, fanDetails, winHand]. Used to compute Riichi
+   * round-level metrics (和牌率/放铳率/立直率/副露率/平均打点/平均铳点) without N+1 lazy loads. Excludes rows whose
+   * player has been nulled out by account deletion.
    */
   @Query(
-      "SELECT r.gameSession.id, r.id, r.winnerId, r.dealInPlayerId, rs.player.id, rs.score "
+      "SELECT r.gameSession.id, r.id, r.winnerId, r.dealInPlayerId, rs.player.id, rs.score, "
+          + "r.fanDetails, r.winHand "
           + "FROM RoundScore rs JOIN rs.round r "
           + "WHERE r.gameSession.id IN :sessionIds AND rs.player IS NOT NULL")
   List<Object[]> getRoundDetailsBySessions(List<Long> sessionIds);
