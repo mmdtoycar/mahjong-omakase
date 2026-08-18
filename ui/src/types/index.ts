@@ -177,6 +177,7 @@ export interface PlayerStats {
   avgDealInPoints: number
   riichiWins: number
   meldWins: number
+  recordedHandWins: number
   tier?: TierKey | null
   skillRating?: number
   gamesNeeded?: number
