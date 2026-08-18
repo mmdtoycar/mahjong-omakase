@@ -433,9 +433,9 @@ export default function StatsPage() {
                   <tr>
                     <th className="col-rank">排名</th>
                     <th className="col-name">玩家</th>
-                    <th className="col-num-wide">均位</th>
-                    <th className="col-num-wide">平均打点</th>
-                    <th className="col-num-wide">平均铳点</th>
+                    <th className="col-num-narrow">均位</th>
+                    <th className="col-num-wide">打点</th>
+                    <th className="col-num-wide">铳点</th>
                     {gameMode === 'RIICHI' && <th className="col-num-widest">和牌分布</th>}
                   </tr>
                 </thead>
@@ -464,7 +464,9 @@ export default function StatsPage() {
                       <td className="num-cell">{pointsCell(p.avgWinPoints, p.handWins)}</td>
                       <td className="num-cell">{pointsCell(p.avgDealInPoints, p.dealIns)}</td>
                       {gameMode === 'RIICHI' && (
-                        <td className="num-cell">{riichiMeldCell(p.riichiWins, p.meldWins, p.handWins)}</td>
+                        <td className="num-cell num-cell-narrow">
+                          {riichiMeldCell(p.riichiWins, p.meldWins, p.handWins)}
+                        </td>
                       )}
                     </tr>
                   ))}

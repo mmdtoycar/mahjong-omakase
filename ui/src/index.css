@@ -366,8 +366,9 @@ table.fixed-table .col-rank {
 }
 
 /* Statistic columns carry no width on desktop: table-layout: fixed shares the remainder evenly.
-   Phones give the widest one (立直/副露) its own class with an explicit width instead — see below. */
+   Phones give the 全部玩家 table's three sizes an explicit width each instead — see below. */
 table.fixed-table .col-num,
+table.fixed-table .col-num-narrow,
 table.fixed-table .col-num-wide,
 table.fixed-table .col-num-widest,
 table.fixed-table .col-rating {
@@ -1617,11 +1618,17 @@ table.auto-table {
   }
 
   /* The stats table tightened for phones: headers, numbers and badges each go one size down, the fixed
-     columns (rank, player, 段位分) get smaller widths, and the number columns keep splitting whatever
-     table-layout: fixed leaves them. */
+     columns (rank, player) get smaller widths. */
   .stats-table th {
     font-size: 0.62rem;
     letter-spacing: 0;
+  }
+
+  /* Fixed widths; 均位/打点/铳点 below split whatever's left. */
+  table.stats-table {
+    --stats-rank-col: 36px;
+    --stats-name-col: 118px;
+    --stats-widest-col: 60px;
   }
 
   table.stats-table th,
@@ -1631,27 +1638,34 @@ table.auto-table {
   }
 
   table.stats-table .col-rank {
-    width: 36px;
+    width: var(--stats-rank-col);
   }
 
   table.stats-table .col-name {
-    width: 108px;
+    width: var(--stats-name-col);
     padding-left: 6px;
   }
 
-  /* Explicit widths instead of sharing the remainder — with 4 number columns that left every one
-     wider than its content needed. */
-  table.stats-table .col-num-wide {
-    width: 42px;
+  table.stats-table .col-num-widest {
+    width: var(--stats-widest-col);
   }
 
-  table.stats-table .col-num-widest {
-    width: 60px;
+  /* Shares add up to 1 so there's no remainder to redistribute. */
+  table.stats-table .col-num-narrow {
+    width: calc((100% - var(--stats-rank-col) - var(--stats-name-col) - var(--stats-widest-col)) * 0.24);
+  }
+
+  table.stats-table .col-num-wide {
+    width: calc((100% - var(--stats-rank-col) - var(--stats-name-col) - var(--stats-widest-col)) * 0.38);
   }
 
   .stats-table .num-cell,
   .stats-table .num-cell-rank {
     font-size: 0.78rem;
+  }
+
+  .stats-table .num-cell-narrow {
+    font-size: 0.65rem;
   }
 
   /* Shrink only the inline 段位 badges inside the stats table, and give the width back to the name. */
