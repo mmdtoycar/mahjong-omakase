@@ -452,6 +452,15 @@ class GameServiceStatsTest {
     assertThat(mine.getRecordedHandWins()).isEqualTo(1);
   }
 
+  /** Same as above, with only winHand recorded — the fanDetails branch is not the only path. */
+  @Test
+  void countsAHandWithWinHandOnlyRecordedTowardRecordedHandWins() {
+    PlayerStatsResponse mine =
+        leaderboardStatsFor(round(GUOBIAO_SESSION, 100L, ME, OPPONENT, 8000, null, "1m2m3m^4m"));
+
+    assertThat(mine.getRecordedHandWins()).isEqualTo(1);
+  }
+
   @Test
   void hasNoModeStatsWithoutSessions() {
     assertThat(statsFor(List.of(), List.of())).isEmpty();
