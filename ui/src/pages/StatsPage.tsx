@@ -428,7 +428,7 @@ export default function StatsPage() {
           <div className="card">
             <h2>全部玩家</h2>
             <div className="table-wrap">
-              <table className="fixed-table stats-table">
+              <table className={`fixed-table stats-table${gameMode === 'RIICHI' ? ' stats-table-riichi' : ''}`}>
                 <thead>
                   <tr>
                     <th className="col-rank">排名</th>

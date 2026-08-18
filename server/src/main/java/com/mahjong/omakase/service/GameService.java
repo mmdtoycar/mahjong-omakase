@@ -1005,9 +1005,10 @@ public class GameService {
             if (dealInPlayerId == null) {
               tsumoWins.merge(winnerId, 1, Integer::sum);
             }
-            // 副露: the winning hand itself has a meld — `[` (open) or `(` (closed), the same
-            // grammar MahjongHand.tsx renders and PhotoRecognitionModal.winHandToLabel parses.
-            if (winHand != null && (winHand.indexOf('[') >= 0 || winHand.indexOf('(') >= 0)) {
+            // 副露: the winning hand itself has an open meld, `[` in the same grammar
+            // MahjongHand.tsx renders and PhotoRecognitionModal.winHandToLabel parses. `(` is a
+            // closed meld (暗杠) — the hand stays 门清, so it must not count here.
+            if (winHand != null && winHand.indexOf('[') >= 0) {
               meldWins.merge(winnerId, 1, Integer::sum);
             }
             // 立直: fanDetails lists the yaku, e.g. "立直(1), 平和(1)" — covers 两立直 too.

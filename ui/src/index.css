@@ -1624,10 +1624,13 @@ table.auto-table {
     letter-spacing: 0;
   }
 
-  /* Fixed widths; 均位/打点/铳点 below split whatever's left. */
   table.stats-table {
     --stats-rank-col: 36px;
     --stats-name-col: 118px;
+    --stats-widest-col: 0px;
+  }
+
+  table.stats-table.stats-table-riichi {
     --stats-widest-col: 60px;
   }
 

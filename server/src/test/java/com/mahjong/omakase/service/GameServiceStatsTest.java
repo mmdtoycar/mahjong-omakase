@@ -393,8 +393,8 @@ class GameServiceStatsTest {
   }
 
   /**
-   * 副露: a win with a meld in the hand, `[` or `(` in winHand's grammar. Only the winner's row
-   * matters, and — same trap as handWins — the round-level winHand is repeated on all four rows.
+   * 副露: a win with an open meld, `[` in winHand's grammar. Only the winner's row matters, and —
+   * same trap as handWins — the round-level winHand is repeated on all four rows.
    */
   @Test
   void countsAMeldWinOnlyForTheWinnerAndOncePerRound() {
@@ -410,11 +410,21 @@ class GameServiceStatsTest {
     assertThat(mine.getMeldWins()).isEqualTo(1);
   }
 
-  /** A concealed win — no `[` or `(` in winHand — is not a 副露 win. */
+  /** A concealed win — no `[` in winHand — is not a 副露 win. */
   @Test
   void doesNotCountAConcealedWinAsAMeldWin() {
     PlayerStatsResponse mine =
         leaderboardStatsFor(round(GUOBIAO_SESSION, 100L, ME, OPPONENT, 8000, "1m2m3m^4m"));
+
+    assertThat(mine.getMeldWins()).isZero();
+  }
+
+  /** A closed kan (暗杠), `(` in winHand's grammar, keeps the hand 门清 — not a 副露 win either. */
+  @Test
+  void doesNotCountAClosedKanAsAMeldWin() {
+    PlayerStatsResponse mine =
+        leaderboardStatsFor(
+            round(GUOBIAO_SESSION, 100L, ME, OPPONENT, 8000, "1m2m3m^4m(5p5p5p5p)"));
 
     assertThat(mine.getMeldWins()).isZero();
   }
