@@ -7,15 +7,8 @@ import org.springframework.stereotype.Service;
 /**
  * Chooses which recogniser answers a photo, and keeps the sample either way.
  *
- * <p>The local reader is the only automatic path — Gemini is not called on a local failure. It used
- * to be: this project's whole point right now is bringing the local model up, and every local miss
- * that got quietly patched over by Gemini was tens of seconds of latency (Gemini's own retry chain
- * can run past a minute) for no benefit to that goal, while also hiding exactly the failures worth
- * looking at. A local miss now returns an empty hand plus a warning, and the user fills it in by
- * hand — which they can also just do in the calculator.
- *
- * <p>Gemini is not deleted: {@link #recognize} still answers {@code engine=gemini} the same as
- * before. There is simply no button that sends it any more.
+ * <p>Local only — Gemini ({@link TileRecognitionService}) is retired and unused legacy code now. A
+ * local miss returns an empty hand plus a warning, and the user fills it in by hand.
  *
  * <p>{@link RecognitionSampleStore#saveFailure} still runs on a local miss — that failure is itself
  * useful signal for the retraining this is all in service of.
@@ -25,7 +18,6 @@ import org.springframework.stereotype.Service;
 public class HandRecognitionService {
 
   public static final String LOCAL = "local";
-  public static final String GEMINI = "gemini";
 
   /** An empty, well-formed hand — safe for the browser to auto-apply as "nothing found". */
   private static final String EMPTY_HAND_JSON =
@@ -42,30 +34,17 @@ public class HandRecognitionService {
   public record Recognition(String rawJson, String warning, String sampleId) {}
 
   private final LocalReaderService reader;
-  private final TileRecognitionService gemini;
   private final RecognitionSampleStore sampleStore;
 
-  public HandRecognitionService(
-      LocalReaderService reader,
-      TileRecognitionService gemini,
-      RecognitionSampleStore sampleStore) {
+  public HandRecognitionService(LocalReaderService reader, RecognitionSampleStore sampleStore) {
     this.reader = reader;
-    this.gemini = gemini;
     this.sampleStore = sampleStore;
   }
 
-  /**
-   * Recognises one photo, locally unless the client asked for Gemini or no reader is configured.
-   */
-  public Recognition recognize(String imageBase64, String mimeType, String engine, Long sessionId) {
-    if (GEMINI.equals(engine) || !reader.isConfigured()) {
-      TileRecognitionService.Answer answer = gemini.recognize(imageBase64, mimeType);
-      return new Recognition(answer.rawJson(), null, answer.sampleId());
-    }
+  /** Recognises one photo, always locally. */
+  public Recognition recognize(String imageBase64, String mimeType, Long sessionId) {
     try {
       String json = reader.recognize(imageBase64, mimeType, sessionId);
-      // The Gemini path saves inside TileRecognitionService, once it has an answer to pair the
-      // photo with; this is the same point in the local path.
       String sampleId = sampleStore.save(imageBase64, mimeType, LOCAL, json);
       return new Recognition(json, null, sampleId);
     } catch (ReaderUnavailableException e) {

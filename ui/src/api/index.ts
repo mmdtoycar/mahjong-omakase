@@ -234,20 +234,17 @@ export async function lookupClaimablePlayer(userName: string, firstName: string,
  * The Gemini key, the prompt and the calibration legend all live server-side, so the
  * browser only ever ships the photo.
  */
-/** `engine` picks the recogniser: the local reader by default, Gemini when the user asks for it. */
 export async function recognizeHandPhoto(
   imageBase64: string,
   mimeType: string,
-  engine: 'local' | 'gemini' = 'local',
   sessionId?: number
 ): Promise<{ rawJson: string; warning?: string; sampleId?: string }> {
   try {
     const res = await fetch(`${API}/recognize`, {
       method: 'POST',
       headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ imageBase64, mimeType, engine, sessionId }),
-      // Gemini retries can take upward of a minute; without this, a stalled connection leaves the
-      // recognize button disabled forever instead of surfacing an error.
+      body: JSON.stringify({ imageBase64, mimeType, sessionId }),
+      // Without this a stalled connection leaves the recognize button disabled forever.
       signal: AbortSignal.timeout(90_000),
     })
     const data = await handleResponse<{ rawJson: string; warning?: string; sampleId?: string } | undefined>(res)

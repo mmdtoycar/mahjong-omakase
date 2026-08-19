@@ -10,10 +10,9 @@ import org.springframework.web.client.RestClient;
 /**
  * HTTP client used to call the local tile reader running beside this app.
  *
- * <p>Timeouts are an order of magnitude tighter than the Gemini client's, because the thing on the
- * other end is a sidecar on the same Docker network that answers in about half a second. Generous
- * timeouts would only turn "the reader is down" into a user staring at a spinner, when the useful
- * response to that is to fall back to Gemini quickly.
+ * <p>Timeouts are tight because the thing on the other end is a sidecar on the same Docker network
+ * that answers in about half a second. Generous timeouts would only turn "the reader is down" into
+ * a user staring at a spinner, when the useful response to that is to say so quickly.
  */
 @Configuration
 public class LocalReaderClientConfig {
@@ -26,8 +25,7 @@ public class LocalReaderClientConfig {
                 ClientHttpRequestFactorySettings.DEFAULTS
                     .withConnectTimeout(Duration.ofSeconds(2))
                     // A read of a 2048px photo measures ~0.5s. Ten seconds is room for a cold
-                    // container and a loaded droplet, and still short enough that falling back to
-                    // Gemini afterwards stays inside the gateway's 100s ceiling.
+                    // container and a loaded droplet.
                     .withReadTimeout(Duration.ofSeconds(10))))
         .build();
   }

@@ -16,13 +16,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
  * Sends a hand photo to Gemini and returns the model's raw JSON answer.
+ *
+ * <p>Retired and not wired into Spring (no {@code @Service}) — {@link HandRecognitionService} is
+ * local-only now. Kept as legacy code rather than deleted.
  *
  * <p>The API key never leaves the server: it is read from {@code GEMINI_API_KEYS} and attached as a
  * request header here. Several comma-separated keys may be supplied; on a quota/rate-limit response
@@ -32,7 +34,6 @@ import org.springframework.web.client.RestClientResponseException;
  * caller cannot repurpose this endpoint as a general-purpose Gemini relay.
  */
 @Slf4j
-@Service
 public class TileRecognitionService {
 
   private static final String ENDPOINT =

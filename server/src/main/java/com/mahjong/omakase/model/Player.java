@@ -2,6 +2,7 @@ package com.mahjong.omakase.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -33,7 +34,7 @@ public class Player {
   private String lastName;
 
   @Column(nullable = false)
-  private LocalDateTime createdAt = LocalDateTime.now();
+  private LocalDateTime createdAt = LocalDateTime.now(ZoneOffset.UTC);
 
   @Column(nullable = false, columnDefinition = "boolean default false")
   private boolean bot = false;

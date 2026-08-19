@@ -46,6 +46,16 @@
   --radius: 12px;
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 5%), 0 2px 4px -1px rgb(0 0 0 / 3%);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 8%), 0 4px 6px -2px rgb(0 0 0 / 3%);
+
+  /* Tailwind-slate/red/green scale — the palette the fullscreen scoreboard (.game-fs-*) draws
+     from, kept separate from the Solarized set above since it's a different design language. */
+  --fs-slate-900: #0f172a;
+  --fs-slate-500: #64748b;
+  --fs-slate-200: #e2e8f0;
+  --fs-slate-50: #f8fafc;
+  --fs-red-600: #dc2626;
+  --fs-red-100: #fee2e2;
+  --fs-green-500: #22c55e;
 }
 
 /* Rank Tags */
@@ -1212,25 +1222,6 @@ table.auto-table {
   border-color: var(--primary);
   background: var(--primary);
   color: white;
-}
-
-.player-card-wind {
-  background: linear-gradient(135deg, var(--accent), #e67e22);
-  color: white;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 800;
-  box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
-  border: none;
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  z-index: 2;
 }
 
 .player-select-card.disabled {
@@ -3097,8 +3088,8 @@ table.auto-table {
   width: 100vw;
   height: 100vh;
   z-index: 99999;
-  background: #fff;
-  color: #0f172a;
+  background: var(--card);
+  color: var(--fs-slate-900);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -3106,6 +3097,15 @@ table.auto-table {
     max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
   overflow-y: auto;
   animation: fade-in-fs 0.2s ease-out;
+  transition: background 0.3s ease;
+}
+
+.game-fs-overlay-warning {
+  background: #fde68a;
+}
+
+.game-fs-overlay-expired {
+  background: #fdecea;
 }
 
 @keyframes fade-in-fs {
@@ -3128,7 +3128,7 @@ table.auto-table {
   padding-bottom: 18px;
   padding-left: 64px; /* Clears the system close button iPadOS/iOS puts at the top left of element fullscreen. */
   padding-right: 64px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--fs-slate-200);
   min-height: 44px;
   gap: 16px;
   box-sizing: border-box;
@@ -3147,13 +3147,44 @@ table.auto-table {
 .game-fs-mode {
   font-size: 1.35rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--fs-slate-900);
   letter-spacing: -0.02em;
 }
 
 .game-fs-date {
   font-size: 0.9rem;
-  color: #64748b;
+  color: var(--fs-slate-500);
+}
+
+.game-fs-round-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 2.2rem;
+  padding: 14px 32px;
+  margin: 0 auto;
+}
+
+.game-fs-timer-banner {
+  font-size: 3rem;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-align: center;
+  padding: 12px;
+  border-radius: 14px;
+  color: var(--fs-slate-500);
+  background: var(--fs-slate-50);
+}
+
+.game-fs-timer-warning {
+  background: #fbbf24;
+  color: #78350f;
+}
+
+.game-fs-timer-expired {
+  background: var(--fs-red-100);
+  color: var(--fs-red-600);
 }
 
 .game-fs-actions {
@@ -3173,16 +3204,16 @@ table.auto-table {
   padding: 8px 18px;
   border-radius: 8px;
   border: 1px solid #cbd5e1;
-  background: #f8fafc;
+  background: var(--fs-slate-50);
   color: #334155;
   font-size: 0.9rem;
   font-weight: 600;
 }
 
 .game-fs-close-btn {
-  background: #fee2e2;
+  background: var(--fs-red-100);
   border-color: #fca5a5;
-  color: #dc2626;
+  color: var(--fs-red-600);
 }
 
 .game-fs-main {
@@ -3204,8 +3235,8 @@ table.auto-table {
 }
 
 .game-fs-player-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--card);
+  border: 1px solid var(--fs-slate-200);
   border-radius: 14px;
   padding: 20px 28px;
   display: flex;
@@ -3217,7 +3248,7 @@ table.auto-table {
 
 .game-fs-player-card.is-dealer {
   border-color: #f59e0b;
-  background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);
+  background: linear-gradient(135deg, #fffbeb 0%, var(--card) 100%);
   box-shadow: 0 4px 20px -2px rgb(245 158 11 / 20%);
 }
 
@@ -3264,7 +3295,7 @@ table.auto-table {
 .game-fs-player-name {
   font-size: 1.4rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--fs-slate-900);
 }
 
 .game-fs-player-score {
@@ -3279,7 +3310,7 @@ table.auto-table {
 }
 
 .game-fs-player-score.score-negative {
-  color: #dc2626;
+  color: var(--fs-red-600);
 }
 
 .pulse-dot {
@@ -3287,9 +3318,9 @@ table.auto-table {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #22c55e;
+  background: var(--fs-green-500);
   margin-right: 6px;
-  box-shadow: 0 0 8px #22c55e;
+  box-shadow: 0 0 8px var(--fs-green-500);
   animation: pulse-dot 1.5s infinite;
 }
 
@@ -3315,12 +3346,12 @@ table.auto-table {
   align-items: center;
   justify-content: space-between;
   padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--fs-slate-200);
 }
 
 .game-fs-detail-link {
   background: var(--accent, var(--mj-gold));
-  color: #fff;
+  color: var(--card);
   border: none;
   padding: 10px 22px;
   border-radius: 8px;
@@ -3330,7 +3361,7 @@ table.auto-table {
 
 .game-fs-tip {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--fs-slate-500);
 }
 
 @media (width <= 768px) {
@@ -3354,6 +3385,14 @@ table.auto-table {
 
   .game-fs-player-name {
     font-size: 1.2rem;
+  }
+
+  .game-fs-timer-banner {
+    font-size: 2.2rem;
+  }
+
+  .game-fs-round-badge {
+    font-size: 1.6rem;
   }
 }
 
@@ -3616,6 +3655,12 @@ table.auto-table {
   font-size: 0.85rem;
 }
 
+.photo-rec-fallback-text {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin: 0;
+}
+
 .photo-rec-submit-btn {
   background: linear-gradient(135deg, var(--mj-green) 0%, #1b4d3e 100%);
   color: white;
@@ -3680,4 +3725,90 @@ table.auto-table {
   font-size: 1.1rem;
   font-weight: 700;
   box-shadow: 0 2px 5px rgb(0 0 0 / 8%);
+}
+
+.modal-card.seat-assign-modal {
+  background: var(--card);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgb(0 0 0 / 25%);
+  overflow: hidden;
+  animation: modal-pop 0.25s ease-out;
+}
+
+.seat-assign-body {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.seat-compass {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 10px;
+  aspect-ratio: 1;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.seat-compass-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seat-compass-north {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.seat-compass-west {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.seat-compass-east {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.seat-compass-south {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.seat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 2px solid var(--primary);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.seat-card-wind {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.seat-card-name {
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.seat-assign-confirm-btn {
+  width: 100%;
 }

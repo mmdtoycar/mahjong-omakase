@@ -34,17 +34,11 @@ public class SessionDetailResponse {
   public static class PlayerInfo {
     private Long id;
     private String userName;
-    private String firstName;
-    private String lastName;
     private Integer seat;
     private String tier;
 
-    public PlayerInfo(Long id, String userName, String firstName, String lastName, Integer seat) {
-      this(id, userName, firstName, lastName, seat, null);
-    }
-
-    public String getDisplayName() {
-      return firstName + " " + lastName;
+    public PlayerInfo(Long id, String userName, Integer seat) {
+      this(id, userName, seat, null);
     }
   }
 

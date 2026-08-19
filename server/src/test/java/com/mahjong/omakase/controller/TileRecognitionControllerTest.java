@@ -9,8 +9,6 @@ import static org.mockito.Mockito.when;
 import com.mahjong.omakase.dto.TileRecognitionRequest;
 import com.mahjong.omakase.service.HandRecognitionService;
 import com.mahjong.omakase.service.HandRecognitionService.Recognition;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -35,7 +33,7 @@ class TileRecognitionControllerTest {
    */
   @Test
   void answers503SoTheProxyDoesNotReplaceOurMessage() {
-    when(service.recognize(anyString(), anyString(), anyString(), any()))
+    when(service.recognize(anyString(), anyString(), any()))
         .thenThrow(new IllegalStateException("This model is currently experiencing high demand."));
 
     ResponseEntity<Object> response = controller.recognize(request());
@@ -46,11 +44,11 @@ class TileRecognitionControllerTest {
         .isEqualTo(Map.of("message", "This model is currently experiencing high demand."));
   }
 
-  /** A missing key is a server-side configuration gap, so it belongs on the same branch. */
+  /** Any unexpected IllegalStateException out of the service still degrades to 503, not 500. */
   @Test
-  void answers503WhenNoKeyIsConfigured() {
-    when(service.recognize(anyString(), anyString(), anyString(), any()))
-        .thenThrow(new IllegalStateException("服务端未配置 Gemini API Key，请联系管理员"));
+  void answers503OnAnyUnexpectedFailure() {
+    when(service.recognize(anyString(), anyString(), any()))
+        .thenThrow(new IllegalStateException("something the service did not expect"));
 
     assertThat(controller.recognize(request()).getStatusCode())
         .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
@@ -58,7 +56,7 @@ class TileRecognitionControllerTest {
 
   @Test
   void returnsTheModelJsonOnSuccess() {
-    when(service.recognize(anyString(), anyString(), anyString(), any()))
+    when(service.recognize(anyString(), anyString(), any()))
         .thenReturn(new Recognition("{\"concealed\":[\"1m\"]}", null, "2026-08-09/aabbccdd1122"));
 
     ResponseEntity<Object> response = controller.recognize(request());
@@ -71,37 +69,17 @@ class TileRecognitionControllerTest {
   }
 
   /**
-   * `engine` has a default, and a pattern on its own would let an explicit null through and wipe
-   * it. The values are the contract between the browser and the router that picks a recogniser.
+   * A miss is a success with a note attached, not an error: the hand is empty, and the note is the
+   * only thing standing between "the local reader is broken" and nobody noticing for weeks.
    */
   @Test
-  void rejectsAnEngineThatIsNullOrUnknown() {
-    Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-
-    TileRecognitionRequest nulled = request();
-    nulled.setEngine(null);
-    assertThat(validator.validate(nulled)).hasSize(1);
-
-    TileRecognitionRequest unknown = request();
-    unknown.setEngine("claude");
-    assertThat(validator.validate(unknown)).hasSize(1);
-
-    assertThat(validator.validate(request())).isEmpty();
-    assertThat(new TileRecognitionRequest().getEngine()).isEqualTo("local");
-  }
-
-  /**
-   * A fallback is a success with a note attached, not an error: the hand is usable, and the note is
-   * the only thing standing between "the local reader is broken" and nobody noticing for weeks.
-   */
-  @Test
-  void carriesTheFallbackWarningAlongsideTheHand() {
-    when(service.recognize(anyString(), anyString(), anyString(), any()))
-        .thenReturn(new Recognition("{\"concealed\":[\"1m\"]}", "本地识别服务连不上，已自动改用在线识别", null));
+  void carriesTheMissWarningAlongsideTheEmptyHand() {
+    when(service.recognize(anyString(), anyString(), any()))
+        .thenReturn(new Recognition("{\"concealed\":[]}", "本地识别服务连不上，请直接输入", null));
 
     ResponseEntity<Object> response = controller.recognize(request());
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(response.getBody().toString()).contains("已自动改用在线识别");
+    assertThat(response.getBody().toString()).contains("请直接输入");
   }
 }
