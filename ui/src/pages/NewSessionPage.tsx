@@ -6,6 +6,7 @@ import { cardFontSize } from '../utils/fontSize'
 import { MSG } from '../constants'
 import { abbrName, parseError } from '../utils/format'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { SeatAssignmentModal } from '../components/SeatAssignmentModal'
 
 const MIN_PLAYERS = 3
 const MAX_PLAYERS = 4
@@ -20,6 +21,8 @@ export default function NewSessionPage() {
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [seatModalOpen, setSeatModalOpen] = useState(false)
+  const [seatError, setSeatError] = useState('')
 
   useEffect(() => {
     fetchPlayers()
@@ -54,10 +57,15 @@ export default function NewSessionPage() {
     )
   })
 
-  const handleStart = async () => {
+  const handleStart = () => {
     if (!canStart) return
+    setSeatError('')
+    setSeatModalOpen(true)
+  }
+
+  const handleConfirmSeats = async (orderedPlayerIds: number[]) => {
     setCreating(true)
-    setError('')
+    setSeatError('')
     try {
       const now = new Date()
       // 'en-US' pins the output format (M/D/YYYY, 24h HH:mm) — an empty locale array instead
@@ -71,10 +79,10 @@ export default function NewSessionPage() {
         hour12: false,
       })
       const defaultName = `Game ${dateStr} ${timeStr}`
-      const session = await createSession(defaultName, gameMode, selectedIds)
+      const session = await createSession(defaultName, gameMode, orderedPlayerIds)
       navigate(`/session/${session.id}`)
     } catch (e: unknown) {
-      setError(parseError(e))
+      setSeatError(parseError(e))
       setCreating(false)
     }
   }
@@ -103,11 +111,7 @@ export default function NewSessionPage() {
 
       <div className="form-group">
         <div style={{ display: 'block', marginBottom: 12 }}>
-          选择玩家{' '}
-          <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal' }}>
-            (请按照东南西北顺序点击玩家)
-          </span>{' '}
-          (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
+          选择玩家 (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
         </div>
 
         {players.length > 0 && (
@@ -138,9 +142,6 @@ export default function NewSessionPage() {
                   <div style={{ fontSize: '0.85rem', opacity: isSelected ? 0.9 : 0.6 }}>
                     {abbrName(p.firstName + ' ' + p.lastName)}
                   </div>
-                  {isSelected && (
-                    <div className="player-card-wind">{['东', '南', '西', '北'][selectedIds.indexOf(p.id)]}</div>
-                  )}
                 </div>
               )
             })}
@@ -173,10 +174,20 @@ export default function NewSessionPage() {
             </span>
           </div>
         )}
-        <button className="btn btn-accent btn-large" onClick={handleStart} disabled={!canStart || creating}>
-          {creating ? '创建中...' : `开始游戏 (${selectedIds.length}人)`}
+        <button className="btn btn-accent btn-large" onClick={handleStart} disabled={!canStart}>
+          开始游戏 ({selectedIds.length}人)
         </button>
       </div>
+
+      {seatModalOpen && (
+        <SeatAssignmentModal
+          players={players.filter((p) => selectedIds.includes(p.id))}
+          onCancel={() => setSeatModalOpen(false)}
+          onConfirm={handleConfirmSeats}
+          creating={creating}
+          error={seatError}
+        />
+      )}
     </div>
   )
 }

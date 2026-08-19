@@ -92,9 +92,6 @@ export interface PlayerPerformance {
 export interface PlayerInfo {
   id: number
   userName: string
-  firstName: string
-  lastName: string
-  displayName: string
   seat: number
   tier?: TierKey | null
 }
@@ -163,7 +160,6 @@ export interface AddRoundData {
 export interface PlayerStats {
   playerId: number
   userName: string
-  displayName: string
   gamesPlayed: number
   totalScore: number
   avgRank: number

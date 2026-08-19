@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Server-side proxy for hand photo recognition — keeps the Gemini key off the client. */
+/** Server-side proxy for hand photo recognition. */
 @Slf4j
 @RestController
 @RequestMapping("/api/recognize")
@@ -30,10 +30,7 @@ public class TileRecognitionController {
     try {
       HandRecognitionService.Recognition recognition =
           service.recognize(
-              request.getImageBase64(),
-              request.getMimeType(),
-              request.getEngine(),
-              request.getSessionId());
+              request.getImageBase64(), request.getMimeType(), request.getSessionId());
       return ResponseEntity.ok(
           new TileRecognitionResponse(
               recognition.rawJson(), recognition.warning(), recognition.sampleId()));

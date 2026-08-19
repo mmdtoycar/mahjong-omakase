@@ -20,6 +20,27 @@ const exitFs = () => {
   if (fn) Promise.resolve(fn.call(document)).catch(() => {})
 }
 
+export const GAME_DURATION_MS = 60 * 60 * 1000
+export const TIMER_WARNING_MS = 10 * 60 * 1000
+
+export function remainingMs(createdAt: string, now: number): number {
+  return GAME_DURATION_MS - (now - new Date(createdAt).getTime())
+}
+
+export function timerState(createdAt: string, now: number): 'normal' | 'warning' | 'expired' {
+  const remaining = remainingMs(createdAt, now)
+  if (remaining <= 0) return 'expired'
+  if (remaining <= TIMER_WARNING_MS) return 'warning'
+  return 'normal'
+}
+
+export function formatRemaining(createdAt: string, now: number): string {
+  const remaining = Math.max(0, remainingMs(createdAt, now))
+  const minutes = Math.floor(remaining / 60000)
+  const seconds = Math.floor((remaining % 60000) / 1000)
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
 interface PlayerEntry {
   rank: number
   name: string
@@ -51,6 +72,7 @@ export const GameCard: React.FC<Props> = ({
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const [fullscreen, setFullscreen] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeBtnRef = useRef<HTMLButtonElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -61,6 +83,12 @@ export const GameCard: React.FC<Props> = ({
     },
     []
   )
+
+  useEffect(() => {
+    if (!fullscreen || !isActive) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [fullscreen, isActive])
 
   useEffect(() => {
     if (!fullscreen) return
@@ -123,6 +151,7 @@ export const GameCard: React.FC<Props> = ({
   }, [fullscreen])
 
   const openFullscreen = () => {
+    setNow(Date.now())
     setFullscreen(true)
     if (!fsElement()) requestFs(document.documentElement)
   }
@@ -199,15 +228,17 @@ export const GameCard: React.FC<Props> = ({
       </div>
 
       {fullscreen && (
-        <div ref={overlayRef} className="game-fs-overlay" role="dialog" aria-modal="true" aria-label="全屏看盘">
+        <div
+          ref={overlayRef}
+          className={`game-fs-overlay${isActive ? ` game-fs-overlay-${timerState(createdAt, now)}` : ''}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="全屏看盘"
+        >
           <div className="game-fs-topbar">
             <div className="game-fs-title-area">
               <span className="game-fs-mode">{gameModeDisplayName}</span>
               <TableStrengthTag table={tableStrength} />
-              <span className={`badge ${isActive ? 'badge-progress' : 'badge-completed'}`}>
-                {isActive && <span className="pulse-dot" />}
-                {roundLabel}
-              </span>
               <span className="game-fs-date">
                 {new Date(createdAt).toLocaleString('en-US', {
                   timeZone: 'America/Los_Angeles',
@@ -235,6 +266,15 @@ export const GameCard: React.FC<Props> = ({
 
           <div className="game-fs-main">
             <div className="game-fs-scoreboard-col">
+              <div className={`badge game-fs-round-badge ${isActive ? 'badge-progress' : 'badge-completed'}`}>
+                {isActive && <span className="pulse-dot" />}
+                {roundLabel}
+              </div>
+              {isActive && (
+                <div className={`game-fs-timer-banner game-fs-timer-${timerState(createdAt, now)}`}>
+                  {timerState(createdAt, now) === 'expired' ? '时间到' : `⏱ ${formatRemaining(createdAt, now)}`}
+                </div>
+              )}
               {players.map((p, idx) => (
                 <div key={idx} className={`game-fs-player-card ${p.isDealer ? 'is-dealer' : ''} rank-${p.rank}`}>
                   <div className="game-fs-player-left">

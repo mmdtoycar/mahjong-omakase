@@ -19,9 +19,9 @@ import org.springframework.web.client.RestClientResponseException;
  * <p>The reader answers in the same shape Gemini does, so the response travels on to the browser
  * untouched, exactly as the Gemini text does.
  *
- * <p>The distinction this class exists to draw is between the two ways it can fail. Both fall back
- * to Gemini — {@link HandRecognitionService} sees to that, so the user gets their hand either way —
- * but they are not the same thing to tell them:
+ * <p>The distinction this class exists to draw is between the two ways it can fail. Neither falls
+ * back to Gemini any more — {@link HandRecognitionService} returns an empty hand and a warning
+ * instead — but they are not the same thing to tell the user:
  *
  * <ul>
  *   <li><strong>The reader is not there</strong> — container down, wrong URL, timeout. Nothing
@@ -60,11 +60,10 @@ public class LocalReaderService {
     this.restClient = localReaderRestClient;
     // Trailing slash stripped, because the endpoint below appends one. A reader.url ending in "/"
     // would otherwise produce ".../recognize" with a double slash, which the reader answers 404 —
-    // indistinguishable from the container being down, and so a silent fallback to Gemini forever.
+    // indistinguishable from the container being down.
     this.url = url == null ? "" : url.trim().replaceAll("/+$", "");
     if (this.url.isEmpty()) {
-      log.info(
-          "Local tile reader is not configured (reader.url is unset); recognition uses Gemini");
+      log.info("Local tile reader is not configured (reader.url is unset)");
     } else {
       log.info("Local tile reader at {}", this.url);
     }
@@ -112,7 +111,7 @@ public class LocalReaderService {
       return responseBody;
     } catch (ResourceAccessException e) {
       // Connect refused, DNS, or the read timing out. All infrastructure, none of it the user's
-      // problem, so this is the case that falls through to Gemini.
+      // problem.
       throw new ReaderUnavailableException(
           "could not reach the reader at " + url + ": " + e.getMessage(), e);
     } catch (RestClientResponseException e) {
@@ -133,7 +132,7 @@ public class LocalReaderService {
             e);
       }
       log.info("Local reader declined the photo ({}): {}", status, detail);
-      throw new IllegalStateException(detail.isBlank() ? "本地识别没有在照片里找到手牌，请重拍或改用在线识别" : detail, e);
+      throw new IllegalStateException(detail.isBlank() ? "本地识别没有在照片里找到手牌，请重拍或手动输入" : detail, e);
     }
   }
 

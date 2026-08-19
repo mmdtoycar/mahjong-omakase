@@ -8,7 +8,6 @@ import lombok.Setter;
 public class PlayerStatsResponse {
   private Long playerId;
   private String userName;
-  private String displayName;
   private int gamesPlayed;
   private int totalScore;
   private double avgRank;

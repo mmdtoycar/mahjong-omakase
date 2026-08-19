@@ -391,11 +391,7 @@ public class GameService {
                   Player p = gsp.getPlayer();
                   SessionDetailResponse.PlayerInfo info =
                       new SessionDetailResponse.PlayerInfo(
-                          p.getId(),
-                          p.getUserName(),
-                          p.getFirstName(),
-                          p.getLastName(),
-                          gsp.getSeat());
+                          p.getId(), p.getUserName(), gsp.getSeat());
                   info.setTier(tierService.computeTier(p, sessionMode, sessionThroneId).name());
                   return info;
                 })
@@ -905,7 +901,6 @@ public class GameService {
               PlayerStatsResponse stat = new PlayerStatsResponse();
               stat.setPlayerId(p.getId());
               stat.setUserName(p.getUserName());
-              stat.setDisplayName(p.getDisplayName());
               stat.setGamesPlayed(gamesPlayed.getOrDefault(p.getId(), 0));
               stat.setTotalScore(totalScores.getOrDefault(p.getId(), 0));
               stat.setWins(wins.getOrDefault(p.getId(), 0));

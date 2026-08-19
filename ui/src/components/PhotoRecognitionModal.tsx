@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Tile, TileSuit } from '../logic/shared/tiles'
 import { recognizeHandPhoto } from '../api'
 
@@ -523,18 +523,30 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
   // so recognition still works — show that rather than a broken-image icon.
   const [previewFailed, setPreviewFailed] = useState(false)
 
+  // Bumped on recognize and on close, so a stale response can't overwrite newer state.
+  const requestIdRef = useRef(0)
+  // Mirrors the latest sessionId so a response can tell whether it is still for the session it was
+  // asked about — a request outliving a session change must not file its sample under the new one.
+  const sessionIdRef = useRef(sessionId)
+  if (sessionIdRef.current !== sessionId) {
+    sessionIdRef.current = sessionId
+    requestIdRef.current++
+  }
+
   // Both callers keep this mounted and only toggle isOpen, so without this a reopen would
   // still show the previous photo.
   const [wasOpen, setWasOpen] = useState(isOpen)
   if (wasOpen !== isOpen) {
     setWasOpen(isOpen)
     if (!isOpen) {
+      requestIdRef.current++
       setSourceImage(null)
       setRotation(0)
       setImagePreview(null)
       setError(null)
       setWarning(null)
       setPreviewFailed(false)
+      setLoading(false)
     }
   }
 
@@ -607,6 +619,8 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       return
     }
 
+    const requestId = ++requestIdRef.current
+    const requestSessionId = sessionId
     setLoading(true)
     setError(null)
     setWarning(null)
@@ -621,12 +635,12 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       if (base64.length > 8_000_000) {
         throw new Error('图片过大，请用较低分辨率重拍，或关闭 iPhone 的 ProRAW / 48MP')
       }
-      const {
-        rawJson: responseText,
-        warning: miss,
-        sampleId,
-      } = await recognizeHandPhoto(base64, mimeType, 'local', sessionId)
-      onSample?.(sampleId ?? null)
+      const { rawJson: responseText, warning: miss, sampleId } = await recognizeHandPhoto(base64, mimeType, sessionId)
+      // Still worth recording even if a newer attempt has superseded this one, as long as it is for
+      // the same session — but not once the session itself has moved on underneath it.
+      if (sessionIdRef.current === requestSessionId) onSample?.(sampleId ?? null)
+
+      if (requestId !== requestIdRef.current) return
 
       const jsonOutput = safeParseJSON(responseText)
 
@@ -681,10 +695,11 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
       })
       onClose()
     } catch (err: any) {
+      if (requestId !== requestIdRef.current) return
       console.error('Photo recognition error:', err)
       setError(err.message || '识别失败，请重试')
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) setLoading(false)
     }
   }
 
@@ -777,16 +792,19 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
 
           {error && <div className="photo-rec-error">⚠️ {error}</div>}
           {warning && <div className="photo-rec-warning">ℹ️ {warning}</div>}
+          {(error || warning) && <p className="photo-rec-fallback-text">识别没有成功，请在算番器里手动输入手牌</p>}
 
           <button
             className="btn btn-accent photo-rec-submit-btn"
-            disabled={loading || !imagePreview}
-            onClick={handleRecognize}
+            disabled={loading || (!error && !warning && !imagePreview)}
+            onClick={error || warning ? onClose : handleRecognize}
           >
             {loading ? (
               <span className="loading-spinner-wrap">
                 <span className="spinner"></span> 正在识别中...
               </span>
+            ) : error || warning ? (
+              '关闭识别窗口'
             ) : (
               '✨ 开始识别'
             )}
