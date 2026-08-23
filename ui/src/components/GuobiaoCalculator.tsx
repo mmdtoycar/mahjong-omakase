@@ -269,7 +269,18 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
         {/* Flower tile button — up to 8 flowers */}
         <div
           className={`calc-tile-container selectable hua-tile-btn ${options.huaCount >= 8 ? 'disabled' : ''}`}
-          onClick={() => options.huaCount < 8 && setOptions((prev) => ({ ...prev, huaCount: prev.huaCount + 1 }))}
+          onPointerDown={(e) => {
+            if (e.button !== 0 || options.huaCount >= 8) return
+            setOptions((prev) => ({ ...prev, huaCount: prev.huaCount + 1 }))
+          }}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && options.huaCount < 8) {
+              e.preventDefault()
+              setOptions((prev) => ({ ...prev, huaCount: prev.huaCount + 1 }))
+            }
+          }}
+          tabIndex={options.huaCount < 8 ? 0 : undefined}
+          role="button"
           title="点击添加花牌"
         >
           <span className="hua-tile-char">花</span>
@@ -278,7 +289,22 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
 
       <div className="hand-display-area compact">
         {melds.map((m, i) => (
-          <div key={i} className="meld-box small" onClick={() => onHandMingClick(i)}>
+          <div
+            key={i}
+            className="meld-box small"
+            onPointerDown={(e) => {
+              if (e.button !== 0) return
+              onHandMingClick(i)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onHandMingClick(i)
+              }
+            }}
+            tabIndex={0}
+            role="button"
+          >
             {m.tiles.map((t, ti) => (
               <TileComponent
                 key={ti}
@@ -307,7 +333,18 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
         {options.huaCount > 0 && (
           <div
             className="calc-tile-container small selectable hua-tile-btn hua-hand-tile"
-            onClick={() => setOptions((prev) => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) }))}
+            onPointerDown={(e) => {
+              if (e.button !== 0) return
+              setOptions((prev) => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) }))
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setOptions((prev) => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) }))
+              }
+            }}
+            tabIndex={0}
+            role="button"
             title="点击移除花牌"
           >
             <span className="hua-tile-char">花</span>
@@ -350,7 +387,18 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
               <div
                 key={i}
                 className={`ting-row-item ${r.score < 8 ? 'invalid' : ''}`}
-                onClick={() => addTingedTile(r.tile)}
+                onPointerDown={(e) => {
+                  if (e.button !== 0) return
+                  addTingedTile(r.tile)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    addTingedTile(r.tile)
+                  }
+                }}
+                tabIndex={0}
+                role="button"
               >
                 <div className="ting-row-left">
                   <div className="ting-tile-wrap">

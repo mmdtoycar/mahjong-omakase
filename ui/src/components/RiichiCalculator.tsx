@@ -272,7 +272,19 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         ))}
         <div
           className={`calc-tile-container selectable hua-tile-btn ${options.doraCount >= 20 ? 'disabled' : ''}`}
-          onClick={() => options.doraCount < 20 && setOptions((prev) => ({ ...prev, doraCount: prev.doraCount + 1 }))}
+          onPointerDown={(e) => {
+            if (e.button !== 0 || options.doraCount >= 20) return
+            setOptions((prev) => ({ ...prev, doraCount: prev.doraCount + 1 }))
+          }}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && options.doraCount < 20) {
+              e.preventDefault()
+              setOptions((prev) => ({ ...prev, doraCount: prev.doraCount + 1 }))
+            }
+          }}
+          tabIndex={options.doraCount < 20 ? 0 : undefined}
+          role="button"
+          title="点击添加宝牌"
         >
           <span className="hua-tile-char">宝</span>
         </div>
@@ -280,7 +292,22 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
 
       <div className="hand-display-area compact">
         {melds.map((m, i) => (
-          <div key={i} className="meld-box small" onClick={() => onHandMingClick(i)}>
+          <div
+            key={i}
+            className="meld-box small"
+            onPointerDown={(e) => {
+              if (e.button !== 0) return
+              onHandMingClick(i)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onHandMingClick(i)
+              }
+            }}
+            tabIndex={0}
+            role="button"
+          >
             {m.tiles.map((t, ti) => (
               <TileComponent
                 key={ti}
@@ -308,7 +335,19 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         {options.doraCount > 0 && (
           <div
             className="calc-tile-container small selectable hua-tile-btn hua-hand-tile"
-            onClick={() => setOptions((prev) => ({ ...prev, doraCount: Math.max(0, prev.doraCount - 1) }))}
+            onPointerDown={(e) => {
+              if (e.button !== 0) return
+              setOptions((prev) => ({ ...prev, doraCount: Math.max(0, prev.doraCount - 1) }))
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setOptions((prev) => ({ ...prev, doraCount: Math.max(0, prev.doraCount - 1) }))
+              }
+            }}
+            tabIndex={0}
+            role="button"
+            title="点击移除宝牌"
           >
             <span className="hua-tile-char">宝</span>
             {options.doraCount > 1 && <span className="hua-count-badge">x{options.doraCount}</span>}

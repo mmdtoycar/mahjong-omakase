@@ -2278,6 +2278,16 @@ table.auto-table {
   grid-template-columns: repeat(9, minmax(0, 32px));
   gap: 4px;
   margin-bottom: 12px;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.calc-tile-container {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .tile-grid-compact .calc-tile-container {
@@ -2331,6 +2341,9 @@ table.auto-table {
   width: 100%;
   height: auto;
   display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .calc-tile-container.disabled {
