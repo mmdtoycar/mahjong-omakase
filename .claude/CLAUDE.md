@@ -111,6 +111,16 @@ depend on having one.
   earn its place: add it only when the tap produces no immediately visible result, and only when a
   spinner or a disabled state is not the better answer.
 
+**No mouse-only or keyboard-only affordances either — this app has no mouse or keyboard users.**
+
+- Do NOT write a `title` attribute for an explanatory tooltip. It only shows on hover; on a touch
+  screen it never appears, so it is dead weight for every real user of this app.
+- Do NOT add `onKeyDown`, `tabIndex`, or `role="button"` to a `div`/`span` to make it "keyboard
+  accessible", and do NOT build focus traps, `Escape`-to-close handlers, or auto-focus-on-open for
+  modals/dialogs. Nobody using this app tabs between elements or presses Escape.
+- Exception: `onKeyDown` on an actual text `<input>` (e.g. Enter-to-submit) is fine — that is a normal
+  on-screen-keyboard interaction on iPhone/iPad, not a desktop-only one.
+
 ## 8. Comments in English
 
 **Every comment in the codebase is written in English** — CSS, TypeScript, Java, Python alike.

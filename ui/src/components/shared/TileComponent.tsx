@@ -1,5 +1,6 @@
 import React from 'react'
 import { Tile } from '../../logic/shared/tiles'
+import { pointerTapHandlers } from '../../utils/pointerTap'
 
 const getTileKey = (tile: Tile): string => {
   if (tile.suit === 'm') return `Man${tile.rank}`
@@ -32,28 +33,13 @@ export const TileComponent: React.FC<{
   size?: 'normal' | 'small'
 }> = ({ tile, onClick, isWinning, isBack, disabled, size = 'normal' }) => {
   const tileKey = isBack ? 'Back' : getTileKey(tile)
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (disabled || !onClick) return
-    if (e.button !== 0) return
-    onClick()
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (disabled || !onClick) return
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      onClick()
-    }
-  }
+  const { onPointerDown, onPointerUp } = pointerTapHandlers(onClick, disabled)
 
   return (
     <div
       className={`calc-tile-container ${size} ${!disabled ? 'selectable' : 'disabled'}`}
-      onPointerDown={handlePointerDown}
-      onKeyDown={handleKeyDown}
-      tabIndex={!disabled && onClick ? 0 : undefined}
-      role={onClick ? 'button' : undefined}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
     >
       <img
         src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${tileKey}.svg`}

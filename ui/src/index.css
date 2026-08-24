@@ -2280,13 +2280,11 @@ table.auto-table {
   margin-bottom: 12px;
   touch-action: manipulation;
   user-select: none;
-  -webkit-user-select: none;
 }
 
 .calc-tile-container {
   touch-action: manipulation;
   user-select: none;
-  -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
 
@@ -3370,11 +3368,6 @@ table.auto-table {
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.95rem;
-}
-
-.game-fs-tip {
-  font-size: 0.85rem;
-  color: var(--fs-slate-500);
 }
 
 @media (width <= 768px) {

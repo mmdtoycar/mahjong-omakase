@@ -732,12 +732,11 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
                 type="button"
                 className="icon-control-btn"
                 onClick={handleRotateCounterClockwise}
-                title="逆时针旋转 90°"
                 disabled={loading}
               >
                 ↺
               </button>
-              <label className="icon-control-btn" title="重新选择图片">
+              <label className="icon-control-btn">
                 <input
                   type="file"
                   accept="image/*"

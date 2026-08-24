@@ -4,6 +4,7 @@ import { Meld, GameOptions, CalcResult } from '../logic/riichi/types'
 import { calculateHand } from '../logic/riichi/score'
 import { TileComponent, isSequenceDisabled } from './shared/TileComponent'
 import { ImportedHand } from '../logic/shared/importedHand'
+import { pointerTapHandlers } from '../utils/pointerTap'
 
 type Mode = {
   name: string
@@ -272,19 +273,10 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         ))}
         <div
           className={`calc-tile-container selectable hua-tile-btn ${options.doraCount >= 20 ? 'disabled' : ''}`}
-          onPointerDown={(e) => {
-            if (e.button !== 0 || options.doraCount >= 20) return
-            setOptions((prev) => ({ ...prev, doraCount: prev.doraCount + 1 }))
-          }}
-          onKeyDown={(e) => {
-            if ((e.key === 'Enter' || e.key === ' ') && options.doraCount < 20) {
-              e.preventDefault()
-              setOptions((prev) => ({ ...prev, doraCount: prev.doraCount + 1 }))
-            }
-          }}
-          tabIndex={options.doraCount < 20 ? 0 : undefined}
-          role="button"
-          title="点击添加宝牌"
+          {...pointerTapHandlers(
+            () => setOptions((prev) => ({ ...prev, doraCount: prev.doraCount + 1 })),
+            options.doraCount >= 20
+          )}
         >
           <span className="hua-tile-char">宝</span>
         </div>
@@ -292,22 +284,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
 
       <div className="hand-display-area compact">
         {melds.map((m, i) => (
-          <div
-            key={i}
-            className="meld-box small"
-            onPointerDown={(e) => {
-              if (e.button !== 0) return
-              onHandMingClick(i)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onHandMingClick(i)
-              }
-            }}
-            tabIndex={0}
-            role="button"
-          >
+          <div key={i} className="meld-box small" {...pointerTapHandlers(() => onHandMingClick(i))}>
             {m.tiles.map((t, ti) => (
               <TileComponent
                 key={ti}
@@ -335,19 +312,9 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         {options.doraCount > 0 && (
           <div
             className="calc-tile-container small selectable hua-tile-btn hua-hand-tile"
-            onPointerDown={(e) => {
-              if (e.button !== 0) return
+            {...pointerTapHandlers(() =>
               setOptions((prev) => ({ ...prev, doraCount: Math.max(0, prev.doraCount - 1) }))
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                setOptions((prev) => ({ ...prev, doraCount: Math.max(0, prev.doraCount - 1) }))
-              }
-            }}
-            tabIndex={0}
-            role="button"
-            title="点击移除宝牌"
+            )}
           >
             <span className="hua-tile-char">宝</span>
             {options.doraCount > 1 && <span className="hua-count-badge">x{options.doraCount}</span>}
