@@ -1224,6 +1224,25 @@ table.auto-table {
   color: white;
 }
 
+.player-card-wind {
+  background: linear-gradient(135deg, var(--accent), #e67e22);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
+  border: none;
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
+}
+
 .player-select-card.disabled {
   opacity: 0.5;
   cursor: not-allowed;

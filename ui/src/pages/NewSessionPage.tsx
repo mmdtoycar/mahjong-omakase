@@ -21,6 +21,7 @@ export default function NewSessionPage() {
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [manualSeats, setManualSeats] = useState(false)
   const [seatModalOpen, setSeatModalOpen] = useState(false)
   const [seatError, setSeatError] = useState('')
 
@@ -57,13 +58,7 @@ export default function NewSessionPage() {
     )
   })
 
-  const handleStart = () => {
-    if (!canStart) return
-    setSeatError('')
-    setSeatModalOpen(true)
-  }
-
-  const handleConfirmSeats = async (orderedPlayerIds: number[]) => {
+  const handleCreate = async (orderedPlayerIds: number[]) => {
     setCreating(true)
     setSeatError('')
     try {
@@ -84,6 +79,16 @@ export default function NewSessionPage() {
     } catch (e: unknown) {
       setSeatError(parseError(e))
       setCreating(false)
+    }
+  }
+
+  const handleStart = () => {
+    if (!canStart) return
+    if (manualSeats) {
+      handleCreate(selectedIds)
+    } else {
+      setSeatError('')
+      setSeatModalOpen(true)
     }
   }
 
@@ -110,8 +115,23 @@ export default function NewSessionPage() {
       </div>
 
       <div className="form-group">
-        <div style={{ display: 'block', marginBottom: 12 }}>
-          选择玩家 (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginBottom: 12,
+          }}
+        >
+          <div>
+            选择玩家 (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
+          </div>
+          <label className="checkbox-toggle" style={{ fontSize: '0.9rem' }}>
+            <input type="checkbox" checked={manualSeats} onChange={(e) => setManualSeats(e.target.checked)} />
+            <span>手动指定座次</span>
+          </label>
         </div>
 
         {players.length > 0 && (
@@ -136,6 +156,9 @@ export default function NewSessionPage() {
                   onClick={() => !isDisabled && togglePlayer(p.id)}
                   className={`player-select-card${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}`}
                 >
+                  {isSelected && manualSeats && (
+                    <div className="player-card-wind">{['东', '南', '西', '北'][selectedIds.indexOf(p.id)]}</div>
+                  )}
                   <div style={{ fontWeight: 600, fontSize: cardFontSize(p.userName, isMobile), marginBottom: 4 }}>
                     {p.userName}
                   </div>
@@ -174,8 +197,14 @@ export default function NewSessionPage() {
             </span>
           </div>
         )}
-        <button className="btn btn-accent btn-large" onClick={handleStart} disabled={!canStart}>
-          开始游戏 ({selectedIds.length}人)
+        {!seatModalOpen && seatError && (
+          <div className="alert alert-error" role="alert">
+            <span className="alert-icon">⚠</span>
+            <span className="alert-body">{seatError}</span>
+          </div>
+        )}
+        <button className="btn btn-accent btn-large" onClick={handleStart} disabled={!canStart || creating}>
+          {creating && !seatModalOpen ? '创建中...' : `开始游戏 (${selectedIds.length}人)`}
         </button>
       </div>
 
@@ -183,7 +212,7 @@ export default function NewSessionPage() {
         <SeatAssignmentModal
           players={players.filter((p) => selectedIds.includes(p.id))}
           onCancel={() => setSeatModalOpen(false)}
-          onConfirm={handleConfirmSeats}
+          onConfirm={handleCreate}
           creating={creating}
           error={seatError}
         />
