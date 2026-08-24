@@ -15,18 +15,18 @@ const TAP_MOVE_THRESHOLD_PX = 10
  * from one pointerdown to the pointerup right after it, which happens well before the next render.
  */
 export function pointerTapHandlers(onTap: (() => void) | undefined, disabled = false) {
-  let start: { x: number; y: number } | null = null
+  let start: { id: number; x: number; y: number } | null = null
 
   return {
     onPointerDown: (e: PointerEvent) => {
-      if (disabled || !onTap || e.button !== 0) return
-      start = { x: e.clientX, y: e.clientY }
+      if (disabled || !onTap || e.button !== 0 || !e.isPrimary || start) return
+      start = { id: e.pointerId, x: e.clientX, y: e.clientY }
     },
     onPointerUp: (e: PointerEvent) => {
-      if (disabled || !onTap || e.button !== 0) return
+      if (disabled || !onTap || e.button !== 0 || !e.isPrimary || !start || e.pointerId !== start.id) return
       const from = start
       start = null
-      if (!from || Math.hypot(e.clientX - from.x, e.clientY - from.y) > TAP_MOVE_THRESHOLD_PX) return
+      if (Math.hypot(e.clientX - from.x, e.clientY - from.y) > TAP_MOVE_THRESHOLD_PX) return
       onTap()
     },
   }
