@@ -5,6 +5,7 @@ import { calculateBestScore } from '../logic/guobiao/fan'
 import { checkTing } from '../logic/guobiao/ting'
 import { TileComponent, isSequenceDisabled } from './shared/TileComponent'
 import { ImportedHand } from '../logic/shared/importedHand'
+import { pointerTapHandlers } from '../utils/pointerTap'
 
 type Mode = {
   name: string
@@ -269,8 +270,10 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
         {/* Flower tile button — up to 8 flowers */}
         <div
           className={`calc-tile-container selectable hua-tile-btn ${options.huaCount >= 8 ? 'disabled' : ''}`}
-          onClick={() => options.huaCount < 8 && setOptions((prev) => ({ ...prev, huaCount: prev.huaCount + 1 }))}
-          title="点击添加花牌"
+          {...pointerTapHandlers(
+            () => setOptions((prev) => ({ ...prev, huaCount: prev.huaCount + 1 })),
+            options.huaCount >= 8
+          )}
         >
           <span className="hua-tile-char">花</span>
         </div>
@@ -278,7 +281,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
 
       <div className="hand-display-area compact">
         {melds.map((m, i) => (
-          <div key={i} className="meld-box small" onClick={() => onHandMingClick(i)}>
+          <div key={i} className="meld-box small" {...pointerTapHandlers(() => onHandMingClick(i))}>
             {m.tiles.map((t, ti) => (
               <TileComponent
                 key={ti}
@@ -307,8 +310,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
         {options.huaCount > 0 && (
           <div
             className="calc-tile-container small selectable hua-tile-btn hua-hand-tile"
-            onClick={() => setOptions((prev) => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) }))}
-            title="点击移除花牌"
+            {...pointerTapHandlers(() => setOptions((prev) => ({ ...prev, huaCount: Math.max(0, prev.huaCount - 1) })))}
           >
             <span className="hua-tile-char">花</span>
             {options.huaCount > 1 && <span className="hua-count-badge">x{options.huaCount}</span>}
@@ -350,7 +352,7 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
               <div
                 key={i}
                 className={`ting-row-item ${r.score < 8 ? 'invalid' : ''}`}
-                onClick={() => addTingedTile(r.tile)}
+                {...pointerTapHandlers(() => addTingedTile(r.tile))}
               >
                 <div className="ting-row-left">
                   <div className="ting-tile-wrap">

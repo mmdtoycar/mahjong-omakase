@@ -4,6 +4,7 @@ import { Meld, GameOptions, CalcResult } from '../logic/riichi/types'
 import { calculateHand } from '../logic/riichi/score'
 import { TileComponent, isSequenceDisabled } from './shared/TileComponent'
 import { ImportedHand } from '../logic/shared/importedHand'
+import { pointerTapHandlers } from '../utils/pointerTap'
 
 type Mode = {
   name: string
@@ -272,7 +273,10 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         ))}
         <div
           className={`calc-tile-container selectable hua-tile-btn ${options.doraCount >= 20 ? 'disabled' : ''}`}
-          onClick={() => options.doraCount < 20 && setOptions((prev) => ({ ...prev, doraCount: prev.doraCount + 1 }))}
+          {...pointerTapHandlers(
+            () => setOptions((prev) => ({ ...prev, doraCount: prev.doraCount + 1 })),
+            options.doraCount >= 20
+          )}
         >
           <span className="hua-tile-char">宝</span>
         </div>
@@ -280,7 +284,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
 
       <div className="hand-display-area compact">
         {melds.map((m, i) => (
-          <div key={i} className="meld-box small" onClick={() => onHandMingClick(i)}>
+          <div key={i} className="meld-box small" {...pointerTapHandlers(() => onHandMingClick(i))}>
             {m.tiles.map((t, ti) => (
               <TileComponent
                 key={ti}
@@ -308,7 +312,9 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         {options.doraCount > 0 && (
           <div
             className="calc-tile-container small selectable hua-tile-btn hua-hand-tile"
-            onClick={() => setOptions((prev) => ({ ...prev, doraCount: Math.max(0, prev.doraCount - 1) }))}
+            {...pointerTapHandlers(() =>
+              setOptions((prev) => ({ ...prev, doraCount: Math.max(0, prev.doraCount - 1) }))
+            )}
           >
             <span className="hua-tile-char">宝</span>
             {options.doraCount > 1 && <span className="hua-count-badge">x{options.doraCount}</span>}

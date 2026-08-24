@@ -53,11 +53,7 @@ export const RankBadge: React.FC<Props> = ({
   // BOT: bots are always UNRANKED but show 🤖 instead of "新"/"X/5" — they don't earn tiers.
   if (isBot && size === 'sm') {
     return (
-      <span
-        className={`rank-badge rank-badge-unranked-sm rank-badge-bot ${className ?? ''}`}
-        title="机器人"
-        onClick={onClick}
-      >
+      <span className={`rank-badge rank-badge-unranked-sm rank-badge-bot ${className ?? ''}`} onClick={onClick}>
         🤖
       </span>
     )
@@ -67,7 +63,6 @@ export const RankBadge: React.FC<Props> = ({
       <div
         className={`rank-badge rank-badge-unranked rank-badge-bot rank-badge-${size} ${className ?? ''}`}
         onClick={onClick}
-        title="机器人"
       >
         <div>🤖</div>
       </div>
