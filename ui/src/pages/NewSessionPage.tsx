@@ -60,7 +60,6 @@ export default function NewSessionPage() {
 
   const handleCreate = async (orderedPlayerIds: number[]) => {
     setCreating(true)
-    setError('')
     setSeatError('')
     try {
       const now = new Date()
@@ -78,11 +77,7 @@ export default function NewSessionPage() {
       const session = await createSession(defaultName, gameMode, orderedPlayerIds)
       navigate(`/session/${session.id}`)
     } catch (e: unknown) {
-      if (seatModalOpen) {
-        setSeatError(parseError(e))
-      } else {
-        setError(parseError(e))
-      }
+      setSeatError(parseError(e))
       setCreating(false)
     }
   }
@@ -131,15 +126,9 @@ export default function NewSessionPage() {
           }}
         >
           <div>
-            选择玩家{' '}
-            {manualSeats && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 'normal' }}>
-                (请按照东南西北顺序点击玩家)
-              </span>
-            )}{' '}
-            (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
+            选择玩家 (已选 {selectedIds.length}/{MIN_PLAYERS}-{MAX_PLAYERS})
           </div>
-          <label className="checkbox-toggle" style={{ fontSize: '0.9rem', cursor: 'pointer' }}>
+          <label className="checkbox-toggle" style={{ fontSize: '0.9rem' }}>
             <input type="checkbox" checked={manualSeats} onChange={(e) => setManualSeats(e.target.checked)} />
             <span>手动指定座次</span>
           </label>
@@ -206,6 +195,12 @@ export default function NewSessionPage() {
             <span className="alert-body">
               至少需要{MIN_PLAYERS}名玩家才能开始游戏。(还差 {MIN_PLAYERS - selectedIds.length} 人)
             </span>
+          </div>
+        )}
+        {!seatModalOpen && seatError && (
+          <div className="alert alert-error" role="alert">
+            <span className="alert-icon">⚠</span>
+            <span className="alert-body">{seatError}</span>
           </div>
         )}
         <button className="btn btn-accent btn-large" onClick={handleStart} disabled={!canStart || creating}>
