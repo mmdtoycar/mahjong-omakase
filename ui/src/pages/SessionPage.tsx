@@ -134,8 +134,6 @@ export default function SessionPage() {
     setIsChomboManual(false)
     setCalcError('')
     setCalcResetCount((prev) => prev + 1)
-    setGbImportedHand(null)
-    setRiichiImportedHand(null)
     setPhotoSampleIds([])
   }
 
