@@ -141,7 +141,9 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
   }, [])
 
   // Sync imported hand from photo recognition
-  const [prevImportTrigger, setPrevImportTrigger] = useState<number | undefined>(undefined)
+  // Seeded from the prop, not undefined: the hand outlives the round so its trigger can climb, and the
+  // 流局 checkbox unmounts this calculator — remounting on undefined reapplied the last round's hand.
+  const [prevImportTrigger, setPrevImportTrigger] = useState(importedHand?.trigger)
   if (importedHand && importedHand.trigger !== prevImportTrigger) {
     setPrevImportTrigger(importedHand.trigger)
     // A photo carries no 立直/一发/海底/dora information, so clear whatever the previous

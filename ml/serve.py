@@ -5,27 +5,23 @@ behind the JVM, and a read takes half a second — so there is nothing here that
 injection or async. Skipping the framework keeps three more packages out of an image that has to share a
 small droplet with a JVM, and out of the list of things to keep patched.
 
-The reader itself comes from reader.py, which is the module the whole pipeline grew up in and is
-covered by its own self-check.
+The reading itself comes from the recognition package beside this, which is where the whole pipeline
+lives and is covered by tests/test_reader.py. This module is the only entry point into it.
 
 Run it with `python serve.py`, or see the Dockerfile beside it.
 """
 
 import base64
 import binascii
-import io
 import json
 import os
 import sys
 import time
+from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 
-import cv2
-import numpy as np
-from PIL import Image
-
-from reader import as_json, decode, load_model, read_hand, shrink
+from recognition.reader import Meld, Refusal, as_json, decode, load_model, read_hand, shrink
+from recognition.tiles import BACK
 
 # The upload path already caps a photo at 2048px on the long edge, which is about 1.5MB of JPEG and 2MB
 # of base64. This leaves generous room above that and still refuses to buffer something absurd.
@@ -33,6 +29,23 @@ MAX_BODY = 12 * 1024 * 1024
 
 # Chunk-size lines are a few hex digits; anything longer is not framing.
 MAX_CHUNK_LINE = 32
+
+# The refusals this layer adds to the reader's own — see the note on those in recognition/reader.py. A reading that
+# broke a rule of the game rather than one that could not be produced.
+UNDECODABLE = "undecodable"  # the bytes are not an image this can open
+TOO_MANY_TILES = "too-many-tiles"  # more tiles than any hand holds, so something else was read as one
+IMPOSSIBLE_TILES = "impossible-tiles"  # more than the four of a tile that were ever made
+FACE_DOWN_IN_HAND = "face-down-in-hand"  # standing tiles read as face down, so this is not the hand
+TOO_UNCERTAIN = "too-uncertain"  # half the row in doubt, which is the cut rather than the tiles
+
+# How sure a cell has to be before it stops counting towards "half the row is in doubt". Its own number rather
+# than the reader's CONFIDENT, which is the bar for flagging a single tile as worth a look, because the two
+# move for different reasons: this one had to come down when the classifier learnt what a bare table looks
+# like. It became honest about the cells that are background — saying so at 0.4 rather than calling them a tile
+# back at 0.88 — and the gate then turned that honesty into two refusals. At 0.7 those two photos come back with
+# 13 more correct tiles between them and nothing wrong; 0.7 down to 0.4 all measure the same, so it sits at the
+# top of that range.
+SURE_ENOUGH = 0.7
 
 MODEL = None
 LABELS: list[str] = []
@@ -46,6 +59,37 @@ class BadRequest(Exception):
         super().__init__(message)
         self.status = status
         self.message = message
+
+
+def implausible(tiles: list[str], melds: list[Meld], sure: list[float]) -> Refusal | None:
+    """Why this reading cannot be tiles at all, whatever confidence it came back with.
+
+    Only what no set of tiles can be: four of any tile were ever made, and a standing row is never
+    mostly face down. What that last one means is that the standing hand was not found — on the samples
+    it fires on, the row it fires about is the only thing in the frame that fitted a grid at all. It does
+    not say a wall is in the frame, and it used to: an almost drawn-out wall is two blocks rather than a
+    long run, so face-down tiles being present says nothing about how many there are. A 暗杠 hides
+    exactly two, so one or two here is that many misread tiles, which the caller drops and the user
+    fills in. How many tiles there are is deliberately not checked: the calculators hold their result
+    until fourteen are entered, so a short reading is tiles the user keeps, not something to throw away.
+    """
+    every = list(tiles) + [tile for meld in melds for tile in meld.tiles]
+    # Eighteen is the ceiling: fourteen tiles, and one more for each of at most four 杠 that drew a
+    # replacement — four 杠 plus the pair being the most a hand can hold. Reaching it here means the
+    # standing row and something taken for a meld were both counted, which cannot both be right: a row of
+    # thirteen or fourteen is a whole hand, and a hand with any meld standing has eleven at most.
+    if len(every) > 18:
+        return Refusal(TOO_MANY_TILES, f"read {len(every)} tiles, and no hand holds more than eighteen")
+    backs = sum(1 for tile in tiles if tile == BACK)
+    if backs > 2:
+        return Refusal(FACE_DOWN_IN_HAND, f"read {backs} of the standing tiles as face down")
+    repeats = max(Counter(tile for tile in every if tile != BACK).values(), default=0)
+    if repeats > 4:
+        return Refusal(IMPOSSIBLE_TILES, f"read the same tile {repeats} times")
+    doubtful = sum(1 for chance in sure if chance < SURE_ENOUGH)
+    if sure and doubtful * 2 >= len(sure):
+        return Refusal(TOO_UNCERTAIN, f"unsure of {doubtful} of the {len(sure)} tiles")
+    return None
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -172,17 +216,31 @@ class Handler(BaseHTTPRequestHandler):
         bgr = decode(raw)
         if bgr is None:
             self._reply(
-                415, {"message": "could not decode the image"}, f"rejected{tag} — could not decode the image"
+                415,
+                {"code": UNDECODABLE, "message": "could not decode the image"},
+                f"rejected{tag} — {UNDECODABLE}: could not decode the image",
             )
             return
 
         started = time.perf_counter()
-        reading = read_hand(MODEL, LABELS, SIZE, shrink(bgr))
+        # The original as well as the shrunk copy: the row is found on the small one and the tiles are
+        # read off the large one. See the note in _read_hand_upright.
+        reading = read_hand(MODEL, LABELS, SIZE, shrink(bgr), full=bgr)
         elapsed_ms = (time.perf_counter() - started) * 1000
-        if isinstance(reading, str):
-            # Nothing in the photo looked like a hand. A 422 rather than a 500: the request was fine,
-            # the picture was not, and the caller should offer the online path instead.
-            self._reply(422, {"message": reading}, f"declined{tag} — {reading} ({elapsed_ms:.0f}ms)")
+        # A refused photo answers with the code as well as the sentence. The caller words the code for a
+        # player reading Chinese; the sentence is for whoever is reading the log, and passing it straight
+        # through to the browser is what used to happen.
+        refusal = (
+            reading
+            if isinstance(reading, Refusal)
+            else implausible(reading.tiles, reading.melds, reading.confidence)
+        )
+        if refusal is not None:
+            self._reply(
+                422,
+                {"code": refusal.code, "message": refusal.why},
+                f"declined{tag} — {refusal.code}: {refusal.why} ({elapsed_ms:.0f}ms)",
+            )
             return
         if reading.confidence:
             min_index = min(range(len(reading.confidence)), key=reading.confidence.__getitem__)
@@ -214,148 +272,5 @@ def main() -> None:
         sys.exit(0)
 
 
-# ── self-check ─────────────────────────────────────────────────────────────
-#
-# Drives the handler with a fake socket instead of a real one. Partly because this sandbox refuses to
-# bind a port, so there was no way to smoke-test the HTTP layer here at all; and partly because the
-# interesting cases are the refusals, which are tedious to provoke with curl and cheap to assert here.
-
-
-def self_check() -> int:
-    global MODEL, LABELS, SIZE
-    MODEL, LABELS, SIZE = load_model()
-
-    blank = cv2.imencode(".jpg", np.full((400, 600, 3), (50, 56, 30), np.uint8))[1]
-    # A hand photo is not in the repository — it is one table's tiles and 200KB of binary — so the two
-    # cases that need one are skipped when it is absent rather than failing the run.
-    hand_file = Path(__file__).resolve().parent / "data/test_hand.jpg"
-    photo = cv2.imencode(".jpg", cv2.imread(str(hand_file)))[1] if hand_file.exists() else None
-
-    def drive(raw: bytes):
-        """Push one raw request through the handler over a fake socket."""
-
-        class Driver(Handler):
-            def __init__(self):
-                self.rfile, self.wfile = io.BytesIO(raw), io.BytesIO()
-                self.client_address = ("127.0.0.1", 0)
-                self.requestline, self.request_version, self.command = "", "", ""
-                self.handle_one_request()
-
-            def setup(self):
-                pass
-
-            def finish(self):
-                pass
-
-            def log_request(self, code="-", size="-"):
-                pass
-
-        written = Driver().wfile.getvalue()
-        payload = written.split(b"\r\n\r\n", 1)[1]
-        return int(written.split(b" ", 2)[1]), json.loads(payload) if payload else {}
-
-    def request(
-        method: str,
-        path: str,
-        body: bytes | None = None,
-        length: int | None = None,
-        chunked: bool = False,
-    ):
-        head = f"{method} {path} HTTP/1.1\r\nHost: localhost\r\n"
-        if chunked:
-            head += "Transfer-Encoding: chunked\r\n"
-            framed = b""
-            for start in range(0, len(body or b""), 4089):  # 0xff9, the size that exposed this
-                piece = body[start : start + 4089]
-                framed += f"{len(piece):x}\r\n".encode() + piece + b"\r\n"
-            body = framed + b"0\r\n\r\n"
-        elif body is not None:
-            head += f"Content-Length: {length if length is not None else len(body)}\r\n"
-        return drive(head.encode() + b"\r\n" + (body or b""))
-
-    def encoded(buffer) -> bytes:
-        return json.dumps({"imageBase64": base64.b64encode(buffer.tobytes()).decode()}).encode()
-
-    def request_raw_chunked_garbage():
-        """A chunked body whose first chunk header is not a hex number."""
-        return drive(
-            b"POST /recognize HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n\r\nnope\r\n"
-        )
-
-    cases = [
-        ("healthz", lambda: request("GET", "/healthz"), 200),
-        ("unknown path", lambda: request("GET", "/nope"), 404),
-        ("POST to the wrong path", lambda: request("POST", "/nope", b"{}"), 404),
-        ("empty body", lambda: request("POST", "/recognize", b"", 0), 400),
-        ("not JSON", lambda: request("POST", "/recognize", b"not json"), 400),
-        ("no imageBase64", lambda: request("POST", "/recognize", b'{"mimeType":"image/jpeg"}'), 400),
-        (
-            "imageBase64 is not base64",
-            lambda: request("POST", "/recognize", b'{"imageBase64":"!!!!"}'),
-            400,
-        ),
-        (
-            "imageBase64 is not a string",
-            lambda: request("POST", "/recognize", b'{"imageBase64":123}'),
-            400,
-        ),
-        (
-            "base64 of something that is not an image",
-            lambda: request(
-                "POST", "/recognize", json.dumps({"imageBase64": base64.b64encode(b"nope").decode()}).encode()
-            ),
-            415,
-        ),
-        ("over the size limit", lambda: request("POST", "/recognize", b"{}", MAX_BODY + 1), 413),
-        ("a photo with no hand in it", lambda: request("POST", "/recognize", encoded(blank)), 422),
-    ]
-    if photo is not None:
-        cases.append(("the real hand photo", lambda: request("POST", "/recognize", encoded(photo)), 200))
-        # The regression that mattered. Spring's RestClient does not know the length of a JSON body it
-        # is serialising, so it sends Transfer-Encoding: chunked — which this server read as an empty
-        # body and then tried to parse the first chunk-size line as the next request line, answering
-        # `Bad request syntax ('ff9')`. Framed here at that same 0xff9 bytes per chunk.
-        cases.append(
-            (
-                "the same photo, chunked (as Spring sends it)",
-                lambda: request("POST", "/recognize", encoded(photo), chunked=True),
-                200,
-            )
-        )
-    else:
-        print(f"  skip {hand_file.name} is not present; the success path is unchecked")
-    cases.append(("chunked with a broken chunk header", request_raw_chunked_garbage, 400))
-    # HEIC, which is what an iPhone actually produces and what reaches this server whenever the browser
-    # could not decode it. Encoded here rather than checked in as a fixture, so the test exercises the
-    # decoder rather than one particular phone's file.
-    if photo is not None:
-        heic = io.BytesIO()
-        Image.open(io.BytesIO(photo.tobytes())).save(heic, format="HEIF", quality=80)
-        heic_body = json.dumps(
-            {"imageBase64": base64.b64encode(heic.getvalue()).decode(), "mimeType": "image/heic"}
-        ).encode()
-        cases.append(("the same photo as HEIC", lambda: request("POST", "/recognize", heic_body), 200))
-
-    failures = 0
-    for name, call, want in cases:
-        status, payload = call()
-        ok = status == want
-        failures += not ok
-        detail = payload.get("message") or f"{len(payload.get('concealed', []))} tiles"
-        print(f"  {'ok  ' if ok else 'FAIL'} {name:38s} {status} (want {want})  {detail}")
-
-    # The successful read has to come back in the shape the UI parses.
-    if photo is not None:
-        _, hand = request("POST", "/recognize", encoded(photo))
-        for field in ("concealed", "melds", "winningTile", "isSelfDraw", "notes"):
-            if field not in hand:
-                print(f"  FAIL response is missing {field}")
-                failures += 1
-    print(f"\n{len(cases) - failures}/{len(cases)} correct")
-    return failures
-
-
 if __name__ == "__main__":
-    if "--self-check" in sys.argv:
-        sys.exit(1 if self_check() else 0)
     main()

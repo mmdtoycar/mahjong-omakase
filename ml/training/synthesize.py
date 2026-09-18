@@ -25,25 +25,19 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-DATA = Path(__file__).resolve().parent / "data"
-FACES, MASKS = DATA / "faces", DATA / "masks"
+from recognition.tiles import BACK, DATA, FACES, MASKS, NEGATIVES, SIZE
 
-SIZE = 64  # what the classifier sees; a tile face is a simple shape and this is plenty
-
-# A 35th class for everything that is not a tile face. Without it the classifier is closed-set: it
-# has to answer with one of the 34, so felt, the table's plastic housing and a misaligned crop all
-# come back as some tile, often above 0.8 confidence. That broke reading a real photo — the housing
-# scored higher than the hand — and it would quietly write invented tiles into the score sheet.
-NOT_A_TILE = "none"
-
-# The face-down tile. Its own label rather than part of NOT_A_TILE, because it is what separates a
-# 暗杠 from a 明杠: four tiles with two of them turned over is concealed, does not count as 副露, and
-# does not break 门前清 — which changes the score. Folded into "not a tile" that is unrecoverable.
-BACK = "back"
-
-# A tile is not always upright in a photo, and the classifier is asked to name the face, not the
-# orientation, so all four quarter turns are the same class.
+# A tile is not always upright in a photo — the photo itself may be at any quarter turn — so the face has to
+# be named whichever way up it is, and all four turns carry the same face label.
+#
+# The turn is *also* labelled, separately, because a tile laid on its side is how a called meld is marked and
+# how the winning tile is marked, and that is the one thing left that would say where one meld ends and the
+# next begins. Over the 18 marked melds 15 have a turned tile, and on four of the five photos whose melds are
+# butted into one block every meld has one. Absolute orientation is no use on its own, since the photo turns
+# too; what the reader takes is the cell in a row whose turn differs from the rest.
 QUARTER_TURNS = (0, 1, 2, 3)
+# A crop that is not one tile face has no orientation. CrossEntropyLoss skips this target by default.
+NO_TURN = -100
 
 # Every surface a tile has been photographed on, as BGR medians measured off those photos: the brown wall
 # behind one calibration grid, the same brown carpet under warm and under dull light, and green felt four
@@ -60,6 +54,21 @@ TABLES = (
 )
 
 
+_NEGATIVES: list[np.ndarray] | None = None
+
+
+def load_negatives() -> list[np.ndarray]:
+    """Patches of real tables, kept in memory across every Synthesiser a run makes."""
+    global _NEGATIVES
+    if _NEGATIVES is None:
+        _NEGATIVES = [
+            image
+            for image in (cv2.imread(str(path)) for path in sorted(NEGATIVES.glob("*.png")))
+            if image is not None
+        ]
+    return _NEGATIVES
+
+
 def load_tiles() -> tuple[list[str], list[list[np.ndarray]], list[list[np.ndarray]]]:
     """Every label with each of its appearances and their cut-out masks.
 
@@ -69,7 +78,7 @@ def load_tiles() -> tuple[list[str], list[list[np.ndarray]], list[list[np.ndarra
     """
     labels = sorted(d.name for d in FACES.iterdir() if d.is_dir())
     if not labels:
-        raise SystemExit(f"no crops in {FACES} — run slice_calibration.py first")
+        raise SystemExit(f"no crops in {FACES} — run training/slice_calibration.py first")
     faces, masks = [], []
     for label in labels:
         variants = sorted(p.name for p in (FACES / label).glob("*.png"))
@@ -106,6 +115,8 @@ class Synthesiser:
         # Which index is the face-down tile, if the caller said. It is the one class that may be cropped
         # into — see the note on `slack` in sample().
         self.back = labels.index(BACK) if labels and BACK in labels else None
+        # Loaded once and shared: 1760 files reopened per sample would dominate the training loop.
+        self.tables_seen = load_negatives()
 
     # ── helpers ────────────────────────────────────────────────────────────
 
@@ -169,7 +180,7 @@ class Synthesiser:
         flat = np.full((height, width, 3), self._uniform(20, 230), np.float32)
         return np.clip(flat + self.rng.normal(0, 8, (height, width, 1)), 0, 255).astype(np.uint8)
 
-    def _warp(self, face: np.ndarray, mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def _warp(self, face: np.ndarray, mask: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
         """Rotation, a small perspective change, and the loose framing a detector would give."""
         turns = int(self.rng.choice(QUARTER_TURNS))
         if turns:
@@ -191,7 +202,7 @@ class Synthesiser:
         perspective = cv2.getPerspectiveTransform(source, target)
         face = cv2.warpPerspective(face, perspective, (width, height), borderValue=(0, 0, 0))
         mask = cv2.warpPerspective(mask, perspective, (width, height), borderValue=0)
-        return face, mask
+        return face, mask, turns
 
     def _photometric(self, image: np.ndarray) -> np.ndarray:
         """Exposure, white balance, focus and compression, roughly as a phone would vary them."""
@@ -248,10 +259,22 @@ class Synthesiser:
     # ── the sample ─────────────────────────────────────────────────────────
 
     def sample_negative(self) -> np.ndarray:
-        """Something a crop might contain that is not one tile face."""
+        """Something a crop might contain that is not one tile face.
+
+        One of the four is a patch of a real table, cut from the sample photos where no hand was marked. The
+        other three are composed, and composed negatives turn out not to cover what a table actually looks
+        like: of 528 real background patches, 156 came back as a tile and 57 of those as `back`, since a bare
+        table is as flat and featureless as a tile back. Two such cells decided a whole photo.
+        """
         pad = int(self._uniform(60, 200))
         canvas = self._background(pad, pad, exclude=0, tiles=False)
-        choice = self.rng.integers(0, 3)
+        choice = self.rng.integers(0, 4 if self.tables_seen else 3)
+        if choice == 3:
+            return self._photometric(
+                cv2.resize(
+                    self.tables_seen[int(self.rng.integers(0, len(self.tables_seen)))], (self.size, self.size)
+                )
+            )
         if choice == 0:
             # Two tiles meeting, which is what a misaligned grid produces.
             first, second = (int(self.rng.integers(0, len(self.faces))) for _ in range(2))
@@ -270,9 +293,9 @@ class Synthesiser:
             canvas = cv2.resize(face[:, :keep], (pad, pad))
         return self._photometric(cv2.resize(canvas, (self.size, self.size)))
 
-    def sample(self, index: int) -> np.ndarray:
-        """One augmented square BGR image of the tile at `index`."""
-        face, mask = self._warp(*self._variant(index))
+    def sample(self, index: int) -> tuple[np.ndarray, int]:
+        """One augmented square BGR image of the tile at `index`, and the quarter turn it was given."""
+        face, mask, turns = self._warp(*self._variant(index))
         height, width = mask.shape
 
         # Pad so the tile can sit anywhere in the frame with background all around it.
@@ -316,7 +339,7 @@ class Synthesiser:
 
         crop = self._occlude(crop)
         crop = self._photometric(crop)
-        return cv2.resize(crop, (self.size, self.size), interpolation=cv2.INTER_AREA)
+        return cv2.resize(crop, (self.size, self.size), interpolation=cv2.INTER_AREA), turns
 
 
 def contact_sheet(path: Path, labels: list[str], per_label: int = 8, hard: bool = False) -> None:
@@ -338,7 +361,7 @@ def contact_sheet(path: Path, labels: list[str], per_label: int = 8, hard: bool 
             cv2.LINE_AA,
         )
         for column in range(per_label):
-            tile = synth.sample(index)
+            tile, _ = synth.sample(index)
             y, x = row * cell + 2, 34 + column * cell + 2
             sheet[y : y + SIZE, x : x + SIZE] = tile
     cv2.imwrite(str(path), sheet)

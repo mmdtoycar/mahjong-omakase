@@ -25,25 +25,31 @@ nine tiles. With the tolerance scaled to the pitch, a 3-tile grid over that row 
 36px and caught 13 marks on 4 grid lines, tying the true 9-tile grid. Hence MAX_MARKS_PER_LINE: a
 boundary should account for about one mark, and a grid claiming three each is not describing tiles.
 
-Run `python grid_fit.py` to check all of this against the two calibration photos, whose tile counts are
-known. Only the first of the three is still pinned by them: the run that forced the third was a row of
-a calibration photo that has since been re-shot in a different layout, and on the photos as they now
-stand MAX_MARKS_PER_LINE can be loosened to 2.0, or PITCH_QUANTUM coarsened five times, with all eight
-columns still read correctly. Both constants stay as they are — the evidence for them was real and this
-check simply no longer reaches it, which is not the same as their being unnecessary. The reading of a
-real hand photo does still depend on them, and it is not a fixture here.
+Run `python -m tests.test_grid_fit` to check all of this against the two calibration photos, whose tile counts are
+known. Two of the three are pinned by them again. MAX_MARKS_PER_LINE was not, back when the check's
+recorded answers admitted a blind count of twelve or thirteen on four of the eight columns; narrowing the
+pitch window to what a tile actually measures made those four answer nine, and loosening the constant to
+2.0 now drops the check to 2 of 8. PITCH_QUANTUM is still unguarded — it can be coarsened five times with
+all eight columns read correctly — and stays as it is anyway: the evidence for it was real and a check
+failing to reach a limitation is not the same as the limitation being gone.
 """
 
-import sys
-from pathlib import Path
-
-import cv2
 import numpy as np
 
-# A tile is roughly 3:2, but perspective flattens it, so this stays generous. It only has to exclude
-# pitches that would make a "tile" a sliver or two tiles wide.
-MIN_PITCH_RATIO = 0.45
-MAX_PITCH_RATIO = 2.2
+# How wide a tile is against how deep its run is. Measured, not guessed: over the 44 rows marked by hand
+# on real photos the middle 90% lands between 0.57 and 0.90, tight because perspective foreshortens a
+# row's depth and its pitch together. This is what excludes a grid at a harmonic of the truth — reading
+# fourteen tiles as twenty-two needs a pitch 0.64 of the real one, which lands outside.
+#
+# The floor sits just under that spread rather than under every row. Four rows measure 0.45 to 0.58 and so
+# cannot be read at all, and each is a photo whose tiles were not laid out or was shot far too obliquely —
+# the deeper a row looks against its own pitch, the more of the tiles' sides the camera is seeing rather
+# than their faces. Letting those in means letting in grids at a harmonic on every other photo.
+#
+# It only holds while the run's box is the tiles, which is what candidate_runs trims it to; before that
+# the depth came back up to 2.6x too large and the window had to be wide enough to be no constraint.
+MIN_PITCH_RATIO = 0.55
+MAX_PITCH_RATIO = 1.05
 
 EDGE_STRIP = 0.15  # fraction of the run's width sampled along its edge, where the face is plain
 EDGE_PERCENTILE = 85  # of that strip, so a character reaching into it does not drag the profile down
@@ -54,7 +60,7 @@ MAX_MARKS_PER_LINE = 1.4  # above this the grid is too coarse to be describing t
 # Candidate pitches are rounded to this before searching, which collapses a couple of thousand
 # near-duplicates and takes the fit from 450ms to 40ms. Not coarser than this: at half a pixel the 萬
 # row of a calibration photo started answering fourteen tiles instead of nine — the speed-up was written
-# first and the self-check below caught it. That photo has since been re-shot as columns and no longer
+# first and tests/test_grid_fit.py caught it. That photo has since been re-shot as columns and no longer
 # reaches the failure, so the check no longer guards this; see the note at the end of the docstring.
 PITCH_QUANTUM = 0.1
 
@@ -109,6 +115,10 @@ def fit_grid(
     length, across = (h, w) if vertical else (w, h)
     low, high = across * MIN_PITCH_RATIO, across * MAX_PITCH_RATIO
     if expect:
+        # Ten percent either way, and not tighter. At three percent the count can no longer round to a
+        # neighbour, which is the drift read_line has to work around — but so few candidate pitches survive
+        # the filter that the fit returns nothing at all far more often, and end to end that cost three
+        # reads rather than saving any.
         nominal = length / expect
         low, high = max(low, nominal * 0.9), min(high, nominal * 1.1)
 
@@ -156,87 +166,3 @@ def fit_grid(
         offset -= pitch
     count = int((length - offset) / pitch + 0.25)
     return (pitch, offset, count) if count >= 1 else None
-
-
-# ── self-check ─────────────────────────────────────────────────────────────
-
-CALIBRATION = Path(__file__).resolve().parents[1] / "server/src/main/resources/calibration"
-
-# The four rows of each calibration photo, with the counts that are known by construction. Both photos
-# hold the same set of thirty-four faces plus two tile backs as a 4x9 grid, so every case here expects
-# nine — which the `blind` column is what saves from being a weak assertion, since a fit that had
-# quietly learned to answer nine would still pass the constrained half.
-#
-# The pitch is recorded alongside, because the count on its own is weak too: a grid can return the right
-# number of tiles on a pitch that is a few percent out, and every crop then creeps along the row until
-# the last ones straddle two tiles. These are the constrained path's answers on the exact boxes
-# slice_calibration.py hands it, and each agrees with (length - offset) / count to within a percent — so
-# they are checkable against the geometry rather than being a snapshot of whatever the code printed.
-#
-# `blind` is what the unconstrained fit should answer — the path a hand photo takes, where the count is
-# unknown. It is not always the truth, and the four cases here that are wrong are worth having: a suit
-# whose own design repeats along the row, the rings of 饼 or the bars of 条, litters the profile with
-# spurious marks and pulls the blind fit up to twelve or thirteen. Recording that keeps the limitation
-# visible and still catches a change to it, which asserting only the constrained path would not — the
-# PITCH_QUANTUM regression this check once caught showed up as a wrong *unconstrained* count, and
-# narrowing the candidates to a known count hides exactly that.
-KNOWN = [
-    ("brown row 1 (m)", "system_mahjong_calibration.jpg", (156, 86, 1376, 205), False, 9, 151.3, 13),
-    ("brown row 2 (p)", "system_mahjong_calibration.jpg", (159, 291, 1378, 205), False, 9, 151.5, 13),
-    ("brown row 3 (s)", "system_mahjong_calibration.jpg", (158, 496, 1377, 205), False, 9, 151.8, 9),
-    ("brown row 4 (z)", "system_mahjong_calibration.jpg", (159, 701, 1380, 205), False, 9, 151.8, 9),
-    ("green row 1 (m)", "system_mahjong_calibration_2.jpg", (139, 168, 1541, 232), False, 9, 168.7, 9),
-    ("green row 2 (p)", "system_mahjong_calibration_2.jpg", (139, 400, 1545, 232), False, 9, 169.0, 13),
-    ("green row 3 (s)", "system_mahjong_calibration_2.jpg", (141, 633, 1545, 232), False, 9, 169.2, 9),
-    ("green row 4 (z)", "system_mahjong_calibration_2.jpg", (144, 866, 1539, 232), False, 9, 169.5, 12),
-]
-
-PITCH_TOLERANCE = 0.03  # of the expected pitch
-# The parameter-free half of the assertion: the tiles have to account for the run, because the run's
-# box *is* the tiles. Anything less means the grid sits on part of it and the rest went unread;
-# anything more and it runs off the end onto the table. Tighter than the pitch check and needing no
-# reference value, so it is the one that would survive a re-shot calibration photo.
-MIN_SPAN = 0.97
-MAX_SPAN = 1.03
-
-
-def self_check() -> int:
-    failures = 0
-    for name, photo, box, vertical, count, pitch, blind in KNOWN:
-        bgr = cv2.imread(str(CALIBRATION / photo))
-        if bgr is None:
-            sys.exit(f"cannot read {CALIBRATION / photo}")
-        light = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0].astype(float)
-        length = box[3] if vertical else box[2]
-        # Both paths: the slicer tells fit_grid the count it knows, a hand photo cannot.
-        fit = fit_grid(light, box, vertical, expect=count)
-        unconstrained = fit_grid(light, box, vertical)
-        got_blind = unconstrained[2] if unconstrained else None
-
-        if fit is None:
-            print(f"  FAIL {name:20s} no fit")
-            failures += 1
-            continue
-        got_pitch, got_offset, got_count = fit
-        span = (got_offset + got_count * got_pitch) / length
-        problems = []
-        if got_count != count:
-            problems.append(f"count {got_count} != {count}")
-        if abs(got_pitch - pitch) > pitch * PITCH_TOLERANCE:
-            problems.append(f"pitch {got_pitch:.2f} != {pitch:.2f}")
-        if not MIN_SPAN <= span <= MAX_SPAN:
-            problems.append(f"covers {span:.2f} of the run")
-        if got_blind != blind:
-            problems.append(f"unconstrained {got_blind} != {blind}")
-        failures += bool(problems)
-        print(
-            f"  {'ok  ' if not problems else 'FAIL'} {name:20s}"
-            f" count {got_count:2d} pitch {got_pitch:6.2f} offset {got_offset:6.1f}"
-            f" span {span:.2f} blind {got_blind}  {'; '.join(problems)}"
-        )
-    print(f"\n{len(KNOWN) - failures}/{len(KNOWN)} correct")
-    return failures
-
-
-if __name__ == "__main__":
-    sys.exit(1 if self_check() else 0)

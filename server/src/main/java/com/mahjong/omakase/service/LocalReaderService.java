@@ -119,7 +119,8 @@ public class LocalReaderService {
       if (status >= 500) {
         throw new ReaderUnavailableException("the reader answered " + status, e);
       }
-      String detail = message(e.getResponseBodyAsString());
+      String detail = field(e.getResponseBodyAsString(), "message");
+      String code = field(e.getResponseBodyAsString(), "code");
       // Only 415 and 422 mean the reader looked at the photo and declined it: it could not decode
       // the
       // format, or nothing in the frame resembled a hand. Every other 4xx is this side's fault — a
@@ -131,26 +132,33 @@ public class LocalReaderService {
             "the reader answered " + status + " for a request it should have accepted: " + detail,
             e);
       }
-      log.info("Local reader declined the photo ({}): {}", status, detail);
-      throw new IllegalStateException(detail.isBlank() ? "本地识别没有在照片里找到手牌，请重拍或手动输入" : detail, e);
+      // The code travels, the sentence stays in the log. It is the caller that knows who is reading
+      // —
+      // a player, in Chinese — and the reader's own wording went straight to the browser before
+      // this,
+      // which is how "no run long enough to be a hand" ended up in front of someone whose row was
+      // fine.
+      log.info("Local reader declined the photo ({}, {}): {}", status, code, detail);
+      throw new IllegalStateException(code.isBlank() ? "unknown" : code, e);
     }
   }
 
   /**
-   * Pulls {@code message} out of the reader's error body, which is always {@code {"message": …}}.
+   * Pulls one field out of the reader's error body, which is always {@code {"code": …, "message":
+   * …}}.
    *
    * <p>Parsed rather than scanned for quotes. Hand-rolled index arithmetic stopped at the first
    * quote that looked closing, so a reason containing an escaped one came back truncated and a
    * unicode escape came back raw. {@link TileRecognitionService} already reads Gemini's error
    * bodies this way.
    */
-  private String message(String responseBody) {
+  private String field(String responseBody, String name) {
     if (responseBody == null || responseBody.isBlank()) {
       return "";
     }
     try {
-      JsonNode message = objectMapper.readTree(responseBody).path("message");
-      return message.isTextual() ? message.asText() : "";
+      JsonNode value = objectMapper.readTree(responseBody).path(name);
+      return value.isTextual() ? value.asText() : "";
     } catch (IOException e) {
       return "";
     }

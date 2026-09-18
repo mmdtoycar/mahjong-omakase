@@ -23,7 +23,7 @@ the photos were replaced makes that an independent check rather than a circular 
 next re-shoot should be settled too.
 
 Within a grid, the four rows come from dividing the block evenly, and the nine cells of each row from a
-periodic fit — see grid_fit.py. That split is not arbitrary. Nine tiles give a row eight interior
+periodic fit — see recognition/grid_fit.py. That split is not arbitrary. Nine tiles give a row eight interior
 boundaries to fit, which is plenty; four tiles give a column three, and fitting the vertical axis that
 way is visibly unstable — across the nine column strips of one photo it answered pitches from 190 to
 215 and twice claimed three tiles instead of four. Dividing evenly instead leans on the block's extent,
@@ -48,12 +48,11 @@ from typing import NamedTuple
 import cv2
 import numpy as np
 
-from grid_fit import fit_grid
-from synthesize import BACK
+from recognition.grid_fit import fit_grid
+from recognition.tiles import BACK, DATA, FACES, MASKS
 
 ROOT = Path(__file__).resolve().parents[1]
 CALIBRATION = ROOT / "server/src/main/resources/calibration"
-OUT = Path(__file__).resolve().parent / "data"
 
 
 class Photo(NamedTuple):
@@ -281,15 +280,15 @@ def slice_photo(photo: Photo) -> list[tuple[str, np.ndarray, np.ndarray]]:
 
 
 def write_variant(label: str, source: str, crop: np.ndarray, mask: np.ndarray) -> None:
-    """One appearance of one tile. A label can have several — see the note in synthesize.py."""
+    """One appearance of one tile. A label can have several — see the note in training/synthesize.py."""
     for directory, image in (("faces", crop), ("masks", mask.astype(np.uint8) * 255)):
-        path = OUT / directory / label
+        path = DATA / directory / label
         path.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(path / f"{source}.png"), image)
 
 
 def main() -> None:
-    faces, masks = OUT / "faces", OUT / "masks"
+    faces, masks = FACES, MASKS
     # Cleared rather than written over. These directories are the classifier's entire training input,
     # and a crop left behind from a photo that has since been re-shot goes on training it silently.
     for directory in (faces, masks):
@@ -352,7 +351,7 @@ def contact_sheet(cells: list[tuple[str, np.ndarray, np.ndarray]], cell: int = 1
             1,
             cv2.LINE_AA,
         )
-    path = OUT / "faces_contact_sheet.png"
+    path = DATA / "faces_contact_sheet.png"
     cv2.imwrite(str(path), sheet)
     print(f"contact sheet: {path}")
 

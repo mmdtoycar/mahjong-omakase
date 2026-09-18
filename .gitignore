@@ -37,3 +37,7 @@ bin/
 /node_modules/
 /package.json
 /package-lock.json
+
+# The sample archive pulled down from the server to work on recognition: real photos of real hands,
+# and the annotations made from them. Kept out of the repo, not out of the way — see ml/tools/annotate_samples.py.
+mahjong-samples/
