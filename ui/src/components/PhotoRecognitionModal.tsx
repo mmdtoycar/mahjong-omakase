@@ -762,42 +762,9 @@ export const PhotoRecognitionModal: React.FC<PhotoRecognitionModalProps> = ({
                     <p className="upload-sub-text">支持桌面或手机拍摄的麻将手牌</p>
                   </div>
                 </label>
-                {/* Only what changes the result, and each of these is something the reader relies on.
-                    Against an edge is the newest: every player pushes their hand up to the edge in front
-                    of them, so which side that edge is on tells the reader whose hand it is, and that is
-                    what settles which end holds the winning tile. Read off the frame instead — a hand
-                    lying across it taken to run left to right — it was wrong on 14 of 35 real photos
-                    while reporting that it knew, because a hand photographed from across the table runs
-                    the other way. Left/right splits concealed from melds, and both calculators score the
-                    winning tile from the last element.
-
-                    Nothing here about which way up to hold the phone, or about the wall: a row of
-                    face-down tiles is filtered out, and turning the photo the right way round is the
-                    reader's job rather than the photographer's. The discards are the exception worth
-                    asking about — they are face-up tiles in a run like any other, and on the first photo
-                    tried a corner of the pile fitted four cells and was read as a meld.
-
-                    Nothing on screen about leaving the winning tile upright, though it matters: turned a
-                    quarter it is a third wider than the rest of the row, so an even division cannot land on
-                    the tiles — the grid drifts and the reader answers thirteen for a row of fourteen, reading
-                    the thirteen correctly and losing the last one. Three of the sample photos lose a tile to
-                    exactly that, and cutting one cell wide instead was tried and measured worse. Left out
-                    because the list has to stay short enough to read, and the people using this know.
-
-                    A tile's width of gap is measured rather than guessed: over the 19 melds marked by hand,
-                    every one with a gap of 0.93 tile widths or more was found as a region of its own and
-                    every one at 0.28 or less was lost.
-
-                    "Every group" and not "in the middle", because the gap that counts is to the nearest group
-                    of tiles rather than to the hand. Every photo here with a single meld left a gap and every
-                    one of those melds was found; every photo with two or three of them left a gap before the
-                    first and then butted the rest together, and lost all of them — at row gaps of 2.5, 3.7,
-                    4.1 and 8.0 tile widths, which did no good at all, because two melds touching are one blob.
-
-                    A range rather than a figure, because a range is what a person can actually lay: one tile's
-                    width exactly is hard to judge, one or two is easy. Nothing here needs the gap to be
-                    precise — the melds found spanned 0.93 to 1.86 tile widths and the ones lost were all at
-                    0.28 or under. */}
+                {/* Only what changes the result. The edge tells the reader which seat the hand is,
+                    and that settles which end holds the winning tile. Gap measured: melds 0.93 tile
+                    widths apart or more were found, 0.28 or less were lost. */}
                 <ul className="photo-rec-tips">
                   <li>整排牌贴着桌沿摆整齐，和牌张放立牌最右边</li>
                   <li>立牌在左、副露在右，每组之间空出一两张牌的宽度</li>

@@ -1,23 +1,13 @@
 """Turns the calibration crops into an endless supply of labelled training images.
 
-There are only two photographs of each tile face, so the classifier's whole notion of "what a 5s looks
-like" comes from this file. Everything here exists to stop it learning something narrower than that —
-anything constant across the crops is a shortcut it will take, and every shortcut is a way for it to
-score well here and fail on a real photo.
+There are only two photographs of each tile face, so the classifier's whole notion of "what a 5s looks like"
+comes from this file. Anything constant across the crops is a shortcut it will take, and every shortcut is a
+way to score well here and fail on a real photo.
 
-Two decisions carry most of the weight:
-
-Tiles are pasted onto backgrounds, using the masks, rather than augmented in place. A crop's border
-still holds traces of the calibration photo — the shadow between two tiles, a highlight the crop could
-not remove without cutting into the 萬 — and pasting replaces all of it.
-
-The backgrounds include other tiles. In a real hand a tile's neighbours are tiles, so a detector's
-box will hold slivers of them; training only against tables or flat colour would leave the
-classifier meeting that for the first time in production.
-
-Geometry is deliberately wide. The prompt sent to Gemini has to tell it tiles appear at 0, 90 and
-180 degrees, so the same is true here, and a detector's boxes are looser and less square than these
-crops.
+Tiles are pasted onto backgrounds through the masks rather than augmented in place: a crop's border still holds
+traces of the calibration photo, and pasting replaces all of it. The backgrounds include other tiles, because
+in a real hand a tile's neighbours are tiles. Geometry is deliberately wide — a tile appears at any quarter
+turn and a cut cell is looser and less square than these crops.
 """
 
 from pathlib import Path
@@ -158,20 +148,10 @@ class Synthesiser:
             tiled = cv2.GaussianBlur(tiled, (0, 0), max(self._uniform(1.0, 3.0), 0.1))
             return np.clip(tiled * self._uniform(0.75, 1.0), 0, 255).astype(np.uint8)
         if choice < 8:
-            # A table, drawn as one of the surfaces actually photographed plus a jitter.
-            #
-            # This used to be two independent per-channel ranges, one "brown" and one "green", and both
-            # were guessed. The green one was simply wrong: it ran B 50-105, G 85-150, R 35-85, and the
-            # green backgrounds actually measured are (37,46,22), (34,82,74), (50,56,30) and (96,126,81).
-            # Only the last is inside it, so the model had barely been shown a dark green table at all —
-            # the commonest thing behind a real hand.
-            #
-            # Widening the ranges to cover them was the first fix and it made things worse: a box that
-            # holds both (37,46,22) and (96,126,81) also holds a lot of colours no table has, and on the
-            # one real photo it halved the confidence on 發, whose whole problem is green ink against a
-            # green surround. Sampling near a measured colour keeps the coverage and drops the invented
-            # part. The spread within one surface is still represented, because the same brown carpet
-            # appears twice, warm and dull, and the same felt three times.
+            # A table, drawn as one of the surfaces actually photographed plus a jitter. Two guessed
+            # per-channel ranges came before, and the green one held only one of the four measured greens.
+            # Widening them was worse — a box holding both (37,46,22) and (96,126,81) holds colours no table
+            # has, and it halved the confidence on 發, whose problem is green ink on a green surround.
             base = np.array(TABLES[int(self.rng.integers(0, len(TABLES)))], np.float32)
             base = base * self._uniform(0.75, 1.25) + self.rng.uniform(-12, 12, 3)
             field = np.full((height, width, 3), np.clip(base, 0, 255), np.float32)
@@ -314,19 +294,14 @@ class Synthesiser:
             face.astype(np.float32) * alpha + window * (1 - alpha)
         ).astype(np.uint8)
 
-        # Crop back to roughly the tile, as loosely as a detector would. Slack stays almost entirely
-        # positive for a face: a tight box is realistic, but cropping several percent into the face
-        # removes the numeral on a 萬 tile, which sits right at the top edge, and 1m 2m 3m become the
-        # same image. Inspecting the failures showed most of them were exactly that — samples whose
-        # label no longer follows from the image, which is label noise rather than a hard example.
+        # Crop back to roughly the tile, as loosely as a detector would. Slack stays almost entirely positive
+        # for a face: cropping several percent in removes the numeral on a 萬, which sits at the top edge, and
+        # 1m 2m 3m become the same image.
         #
-        # The face-down tile is the exception, and getting this wrong made the class unusable. A back has
-        # no numeral to lose: cropped into, it is still unmistakably a back. Meanwhile the reader cuts
-        # *inside* each fitted cell, so a real crop of a back shows no background at all — and with slack
-        # almost always positive, nearly every training sample did. The model learnt to expect that
-        # border. Measured on the twenty back crops: presented tight, as the reader presents them, twelve
-        # came back `none`; the same crops with a margin of felt pasted around them scored 0.94 to 0.97
-        # as `back` with `none` at 0.00. The class was fine and the framing was not.
+        # The face-down tile is the exception and getting it wrong made the class unusable. A back has no
+        # numeral to lose, and the reader cuts *inside* each cell so a real crop of one shows no background at
+        # all. Of the twenty back crops presented tight, twelve came back `none`; with a margin of felt pasted
+        # around them, 0.94 to 0.97 as `back`.
         low = -0.12 if index == self.back else -0.02
         slack = self._uniform(low, 0.18)
         cy, cx = top + height / 2, left + width / 2

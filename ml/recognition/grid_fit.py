@@ -1,53 +1,30 @@
 """Locates a row of butted tiles geometrically, before any model is involved.
 
-The first version searched for the grid by brute force — every plausible tile count, times a range of
-pitches, times a range of offsets — and scored each candidate by running the classifier over the crops
-it produced. It works, and on one real photo it cost 1,680 grid hypotheses and 22,680 tile
-classifications: 21 seconds of inference to read one hand. Fine for a script, hopeless for a phone.
+Tiles in a row are periodic, so the boundaries between them fall at regular intervals and fitting a regular
+grid to them gives the pitch and offset directly. Brute-forcing count, pitch and offset instead and scoring
+each candidate with the classifier cost 1,680 hypotheses and 21 seconds of inference on one photo.
 
-Almost all of that was recovering something the pixels already say. Tiles in a row are periodic, so
-the boundaries between them fall at regular intervals, and fitting a regular grid to them gives the
-pitch and offset directly. The count then follows from the length. No inference at all.
+Three things were learned the hard way here:
 
-Three things about this were learned the hard way, each after getting it wrong first:
+**A boundary is not always dark.** What separates two butted tiles is often the *lit bevel* of the next one.
+Looking only for dips gets six of the eight calibration columns wrong, so both minima and maxima are collected.
 
-**A boundary is not always dark.** The tiles of a calibration photo are pressed so close that what
-separates two of them is the *lit bevel* of the next one — brighter than the face beside it. Looking
-only for dips gets six of the eight columns below wrong. Both minima and maxima are collected.
+**Autocorrelation is not precise enough.** It returned a pitch of 81 against a true 86.9, and six percent
+compounds over thirteen tiles into most of a tile.
 
-**Autocorrelation is not precise enough.** It looked like the obvious tool and returned a pitch of 81
-against a true 86.9 on the real photo. Six percent compounds over thirteen tiles into most of a tile,
-so the boundaries have to be located and fitted individually.
+**A grid three times too coarse can explain more marks than the right one.** The bamboo of 条 litters the
+profile — 31 spurious marks over nine tiles — and a 3-tile grid tied the true 9-tile one. Hence
+MAX_MARKS_PER_LINE: a boundary should account for about one mark.
 
-**A grid three times too coarse can explain more marks than the right one.** The bamboo of the 条 suit
-is itself a row of vertical bars, which litters the profile with spurious marks — 31 of them across
-nine tiles. With the tolerance scaled to the pitch, a 3-tile grid over that row had a tolerance of
-36px and caught 13 marks on 4 grid lines, tying the true 9-tile grid. Hence MAX_MARKS_PER_LINE: a
-boundary should account for about one mark, and a grid claiming three each is not describing tiles.
-
-Run `python -m tests.test_grid_fit` to check all of this against the two calibration photos, whose tile counts are
-known. Two of the three are pinned by them again. MAX_MARKS_PER_LINE was not, back when the check's
-recorded answers admitted a blind count of twelve or thirteen on four of the eight columns; narrowing the
-pitch window to what a tile actually measures made those four answer nine, and loosening the constant to
-2.0 now drops the check to 2 of 8. PITCH_QUANTUM is still unguarded — it can be coarsened five times with
-all eight columns read correctly — and stays as it is anyway: the evidence for it was real and a check
-failing to reach a limitation is not the same as the limitation being gone.
+Checked against the two calibration photos, whose tile counts are known: `python -m tests.test_grid_fit`.
 """
 
 import numpy as np
 
-# How wide a tile is against how deep its run is. Measured, not guessed: over the 44 rows marked by hand
-# on real photos the middle 90% lands between 0.57 and 0.90, tight because perspective foreshortens a
-# row's depth and its pitch together. This is what excludes a grid at a harmonic of the truth — reading
-# fourteen tiles as twenty-two needs a pitch 0.64 of the real one, which lands outside.
-#
-# The floor sits just under that spread rather than under every row. Four rows measure 0.45 to 0.58 and so
-# cannot be read at all, and each is a photo whose tiles were not laid out or was shot far too obliquely —
-# the deeper a row looks against its own pitch, the more of the tiles' sides the camera is seeing rather
-# than their faces. Letting those in means letting in grids at a harmonic on every other photo.
-#
-# It only holds while the run's box is the tiles, which is what candidate_runs trims it to; before that
-# the depth came back up to 2.6x too large and the window had to be wide enough to be no constraint.
+# How wide a tile is against how deep its run is: over the 44 rows marked by hand the middle 90% lands between
+# 0.57 and 0.90. This is what excludes a grid at a harmonic of the truth. The floor sits just under that spread
+# rather than under every row — four rows measure 0.45 to 0.58 and cannot be read at all, each shot far too
+# obliquely, and letting them in means letting in harmonics everywhere else.
 MIN_PITCH_RATIO = 0.55
 MAX_PITCH_RATIO = 1.05
 
@@ -57,11 +34,8 @@ SMOOTH = 5
 MIN_SEPARATION = 0.45  # of the smallest plausible pitch; closer extrema are the same boundary
 FIT_TOLERANCE = 0.12  # of the pitch, for a mark to count as explained by a grid line
 MAX_MARKS_PER_LINE = 1.4  # above this the grid is too coarse to be describing tile boundaries
-# Candidate pitches are rounded to this before searching, which collapses a couple of thousand
-# near-duplicates and takes the fit from 450ms to 40ms. Not coarser than this: at half a pixel the 萬
-# row of a calibration photo started answering fourteen tiles instead of nine — the speed-up was written
-# first and tests/test_grid_fit.py caught it. That photo has since been re-shot as columns and no longer
-# reaches the failure, so the check no longer guards this; see the note at the end of the docstring.
+# Candidate pitches are rounded to this before searching, which collapses near-duplicates and takes the fit
+# from 450ms to 40ms. Not coarser: at half a pixel a calibration row answered fourteen tiles instead of nine.
 PITCH_QUANTUM = 0.1
 
 
@@ -105,20 +79,16 @@ def fit_grid(
 ) -> tuple[float, float, int] | None:
     """Pitch, offset and tile count for one run, along its long axis and relative to its own box.
 
-    `expect` narrows the candidate pitches to those that would produce that many tiles. It is for
-    callers that know the answer by construction — slicing a calibration photo whose layout is fixed —
-    and is not a substitute for the search: a suit whose own design repeats along the axis being fitted,
-    the bars of 条 or the rings of 饼, litters the profile with marks, and two of the eight calibration
-    columns come back with eleven and thirteen tiles when the count is not supplied.
+    `expect` narrows the candidate pitches to those producing that many tiles, for callers that know the answer
+    by construction. Not a substitute for the search: the bars of 条 and the rings of 饼 litter the profile, and
+    two of the eight calibration columns answer eleven and thirteen without the count.
     """
     _, _, w, h = box
     length, across = (h, w) if vertical else (w, h)
     low, high = across * MIN_PITCH_RATIO, across * MAX_PITCH_RATIO
     if expect:
-        # Ten percent either way, and not tighter. At three percent the count can no longer round to a
-        # neighbour, which is the drift read_line has to work around — but so few candidate pitches survive
-        # the filter that the fit returns nothing at all far more often, and end to end that cost three
-        # reads rather than saving any.
+        # Ten percent either way, not tighter: at three percent so few candidate pitches survive that the fit
+        # returns nothing far more often, which cost three reads end to end.
         nominal = length / expect
         low, high = max(low, nominal * 0.9), min(high, nominal * 1.1)
 
@@ -126,10 +96,8 @@ def fit_grid(
     if len(marks) < 3:
         return None
 
-    # Candidate pitches come from the gaps between marks. A gap can span more than one tile — an
-    # undetected boundary leaves a double gap — so each is also divided by 2, 3 and 4. They are then
-    # rounded to PITCH_QUANTUM, which collapses a couple of thousand near-duplicates; see the note on
-    # that constant for why the coarseness matters.
+    # Candidate pitches come from the gaps between marks, each also divided by 2, 3 and 4 because an
+    # undetected boundary leaves a double gap.
     positions = np.array(marks, dtype=float)
     gaps = positions[None, :] - positions[:, None]
     pitches = np.concatenate([gaps[gaps > 0] / divisor for divisor in (1, 2, 3, 4)])

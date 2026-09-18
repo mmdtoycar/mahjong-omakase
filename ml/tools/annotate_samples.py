@@ -1,25 +1,17 @@
 """Marks where the tiles are in a sample photo, so its confirmed hand becomes labelled crops.
 
-Marking by hand is the whole point. The automatic version of this reached four of the forty-four samples
-and only ever the rows the classifier already read correctly — a biased sample of the easy cases, which
-cannot teach it the tiles it gets wrong. Here the cut is right whatever the model thinks of it.
+Marking by hand is the whole point: the automatic version reached four of the forty-four samples and only ever
+the rows the classifier already read correctly, which cannot teach it the tiles it gets wrong.
 
-Four corners rather than the two ends of the row. A row photographed at an angle does not have one
-pitch — measured across five samples the spacing drifts by up to 28% from one end to the other — so
-dividing the box evenly puts the later cells between tiles. The quadrilateral is warped to a rectangle
-first, which makes the spacing uniform by construction, and the cells are cut from that.
+Four corners rather than two ends, because a row photographed at an angle has no single pitch — the spacing
+drifts by up to 28% end to end — so the quadrilateral is warped to a rectangle first and the cells cut from
+that. The order has to be confirmed by reading the captions: the score sheet's canonical order matched the
+photo on four of eleven samples, so it cannot be assumed.
 
-The order has to be confirmed too, by reading the captions rather than by trusting the check. A sample's
-hand is a set of labels in canonical order with the winning tile last, and that matched the order in the
-photo on four of the eleven samples where it could be checked, so it cannot be assumed. The classifier
-proposes an order; because the proposal is drawn from the hand it is always a permutation of it, so
-"these are the right tiles" is never the question — whether each one is under the right tile is.
+Annotations are saved beside the samples as the durable artefact. The crops can be cut again whenever the masks
+or the insets change; the corners cannot be recovered. Keep that file.
 
-Annotations are saved beside the samples, as the durable artefact — the crops can be cut again whenever
-the masks or the insets change, but the corners cannot be recovered. Keep that file.
-
-This is a tool, not the product: it wants a mouse, a keyboard and a window, none of which the app on a
-phone may assume.
+This is a tool, not the product: it wants a mouse, a keyboard and a window, none of which the app may assume.
 
     python -m tools.annotate_samples ../mahjong-samples          # mark the samples not yet marked
     python -m tools.annotate_samples ../mahjong-samples --write   # cut and write what has been marked
@@ -180,21 +172,13 @@ def confirm(
 ) -> list[str] | str:
     """The tiles in the order they appear, proposed by the classifier and confirmed against the strip.
 
-    Accepting takes `y` rather than a bare return, and deliberately: the proposal is drawn from the
-    confirmed hand, so it is always a rearrangement of it and "are these the right tiles" is never the
-    question — on the first row tried it still put 3s under a 萬 and 6m under a row of bamboo. Nothing
-    here can catch that; the captions have to be read.
+    Accepting takes `y` rather than a bare return, deliberately: the proposal is drawn from the confirmed hand
+    so it is always a rearrangement of it, and on the first row tried it still put 3s under a 萬. The captions
+    have to be read.
 
-    Typing a different number of tiles is how you say the photo holds a different number than the hand
-    recorded, which happens — a forgotten winning tile leaves the hand one short of what was
-    photographed. The count is then the typed one and the row is cut again, because the earlier rule that
-    the tiles had to match the hand made those photos impossible to annotate at all: no input could
-    satisfy it, so the only way out was to skip.
-
-    Once the counts disagree the proposal comes from the classifier alone, with the hand no longer able to
-    constrain it. Showing nothing at all was the first attempt and it left the strip captionless, which is
-    the one thing this screen is for — there was no way to tell what the cut had done, so it was another
-    dead end rather than a way through.
+    Typing a different number of tiles says the photo holds a different number than the hand recorded, which
+    happens — a forgotten winning tile leaves the hand one short. The row is then cut again at the typed count,
+    and the proposal comes from the classifier alone.
     """
     sized = np.stack([cv2.resize(c, (SIZE, SIZE), interpolation=cv2.INTER_AREA) for c in cells if c.size])
     if len(sized) != len(cells):
@@ -338,24 +322,15 @@ def negatives_sheet(files: list[Path], thumb: int = 48, per_row: int = 40) -> No
 def harvest_negatives(samples: Path, saved: dict, per_photo: int = 40) -> None:
     """Patches of whatever is not the hand, from every marked photo, for the `none` class to learn from.
 
-    Marking a row is the assertion that it holds tiles; everywhere else in the frame is the assertion that it
-    does not. That makes the annotations a source of real negatives as well as real tiles — the table, the
-    felt, the wall, the discards, a sleeve — and the `none` class had never seen one of those.
+    Marking a row asserts it holds tiles; everywhere else in the frame asserts it does not. Taken a margin away
+    from every marked quad, at the range of sizes a cell comes out at.
 
-    Taken a margin away from every marked quad, so a patch that clips the edge of a tile cannot be labelled as
-    holding none. Sizes are drawn over the range a cell comes out at, because a negative the model will never
-    be shown at that scale teaches it nothing.
-
-    And not everything outside the hand is background: the wall stands in most of these frames, and a patch of
-    it is a row of tile backs — taught as `none` that is the opposite of the `back` class, which is the one the
-    reader most often gets wrong on a bare table. Of the first 1760 patches taken with no filter at all, 236
-    were called `back` by a model that had not seen them. `holds_tiles` is what removes them; bounding to the
-    table surface as well only took that 236 to 220, because the wall is built on the table.
-
-    Nor is the frame bounded to the table. What is behind it — a sleeve, the floor, a curtain, a chair leg —
-    is not a tile either, and a candidate region that strays off the table is one the reader has to be able to
-    score badly. Judged by a model that had seen none of them, the 1592 patches taken this way hold no tiles:
-    the 195 it calls a tile are all cloth, skin, floor tile and metal, which is the confusion itself.
+    Not everything outside the hand is background, though: the wall stands in most of these frames and a patch
+    of it is a row of tile backs, which taught as `none` is the opposite of the `back` class. Of the first 1760
+    patches taken unfiltered, 236 were called `back` by a model that had not seen them; `holds_tiles` is what
+    removes them, and bounding to the table surface as well only took 236 to 220 because the wall is built on
+    the table. Nor is the frame bounded to it — a sleeve, the floor, a curtain are not tiles either, and a
+    region that strays off the table is one the reader has to be able to score badly.
     """
     rng = np.random.default_rng(0)
     NEGATIVES.mkdir(parents=True, exist_ok=True)

@@ -15,24 +15,15 @@ from recognition.grid_fit import fit_grid
 # Two levels up rather than one: this file sits in ml/tests, and the photos live with the server.
 CALIBRATION = Path(__file__).resolve().parents[2] / "server/src/main/resources/calibration"
 
-# The four rows of each calibration photo, with the counts that are known by construction. Both photos
-# hold the same set of thirty-four faces plus two tile backs as a 4x9 grid, so every case here expects
-# nine — which the `blind` column is what saves from being a weak assertion, since a fit that had
-# quietly learned to answer nine would still pass the constrained half.
+# The four rows of each calibration photo, with the counts known by construction: both hold the same 4x9 grid,
+# so every case expects nine. The `blind` column is what saves that from being a weak assertion, since a fit
+# that had learned to answer nine would still pass the constrained half.
 #
-# The pitch is recorded alongside, because the count on its own is weak too: a grid can return the right
-# number of tiles on a pitch that is a few percent out, and every crop then creeps along the row until
-# the last ones straddle two tiles. These are the constrained path's answers on the exact boxes
-# training/slice_calibration.py hands it, and each agrees with (length - offset) / count to within a percent — so
-# they are checkable against the geometry rather than being a snapshot of whatever the code printed.
-#
-# `blind` is what the unconstrained fit should answer — the path a hand photo takes, where the count is
-# unknown. It used to be wrong on four of these, pulled up to twelve or thirteen by a suit whose own
-# design repeats along the row, the rings of 饼 or the bars of 条. Narrowing MIN_PITCH_RATIO and
-# MAX_PITCH_RATIO to what a tile's width against its run's depth actually measures fixed all four: a
-# twelve- or thirteen-cell grid over nine tiles needs a pitch too small to be a tile and no longer gets
-# to compete. Asserted rather than dropped, because it is the blind path a photo takes and the
-# PITCH_QUANTUM regression this check once caught showed up as a wrong *unconstrained* count.
+# The pitch is recorded alongside because the count alone is weak too — a grid can return the right number on a
+# pitch a few percent out, and every crop then creeps along the row. Each agrees with (length - offset) / count
+# to within a percent, so these are checkable against the geometry rather than a snapshot of what the code
+# printed. `blind` was wrong on four of these until MIN_PITCH_RATIO and MAX_PITCH_RATIO were narrowed to what a
+# tile's width against its run's depth measures.
 KNOWN = [
     ("brown row 1 (m)", "system_mahjong_calibration.jpg", (156, 86, 1376, 205), False, 9, 151.3, 9),
     ("brown row 2 (p)", "system_mahjong_calibration.jpg", (159, 291, 1378, 205), False, 9, 151.5, 9),

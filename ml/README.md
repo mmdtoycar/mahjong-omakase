@@ -1,34 +1,31 @@
 # ml — local tile recognition
 
 Experiment to replace the Gemini photo-recognition call with a small local model. Gemini takes 11–24s and
-can fail on quota, model overload or the gateway timeout; this reads a whole photo in **~1.8s** locally.
+can fail on quota, model overload or the gateway timeout; this reads a whole photo in **716ms** locally.
 
-Over the 44 sample photos it hands back **514 of the 597 tiles** correctly and reads **24 of them whole**,
-with 34 wrong tiles across the archive, and turns down 1. What counts as correct is what the *photograph*
-shows, not what the score sheet recorded: the winning tile is often not in the frame — six of these photos are
-like that — and a 暗杠 shows two of its four tiles as backs. Ten photographs carry a known problem, noted
-beside the samples and scored like the rest. Grading them apart was tried both ways, as "must be refused" and
-as "not a fair test", and measuring settled it: what harms is a wrong tile, not a missing one.
+Over the 44 sample photos it hands back **518 of the 597 tiles** correctly and reads **21 of them whole**,
+with 31 wrong tiles, and turns down 1. What counts as correct is what the *photograph* shows, not what the
+score sheet recorded: the winning tile is often not in the frame, and a 暗杠 shows two of its four tiles as
+backs. Ten photographs carry a known problem, noted beside the samples and scored like the rest — grading them
+apart was tried both ways and measuring settled it, because what harms is a wrong tile, not a missing one.
 
-Cut from hand-marked corners at the known tile count the classifier reads **99%** of tiles.
-
-The `none` class is trained on 1760 patches of real table cut from the sample photos wherever no hand was
-marked — the felt, the rail, the wall, a sleeve. It had only ever seen composed negatives, and composed
-negatives turn out not to look like a table: of 528 real patches, 156 came back as a tile and 57 of those as
-`back`, a bare table being as flat as a tile back. Two such cells decided a whole photo, read as `back` at 0.75
-and 0.88 inside a row that was otherwise correct. With the real patches in, 451 of the 528 are called nothing,
-and the `back` confusion is halved.
+The classifier is trained on synthetic data augmented from the calibration crops, plus 1592 patches of real
+table cut from the sample photos wherever no hand was marked — the felt, the rail, a sleeve, the floor. Without
+them the `none` class had only ever seen composed negatives, which do not look like a table: of 528 real
+patches, 156 came back as a tile and 57 of those as `back`, a bare table being as flat as a tile back. Two such
+cells decided a whole photo. The patches are filtered by colour so the wall never gets in — a row of tile backs
+taught as background is the opposite of the `back` class — and unfiltered they cost 42 wrong tiles against 31.
 
 That change is also why the gate that refuses a photo for being half in doubt sits at 0.7 rather than 0.8: the
-classifier became honest about background cells, saying 0.4 where it used to say 0.88, and the old gate turned
-that honesty into two refusals.
+classifier became honest about background cells, saying 0.4 where it used to say 0.88.
 
-The classifier has a second head predicting the tile's quarter turn, since a tile laid on its side is how a
-called meld and the winning tile are marked. It is right 93% of the time on synthetic crops and 59 of 60 on
-real cells rotated by hand — and it calls all 19 real turned tiles in the sample photos upright, at 0.87 to
-0.98, while naming their faces correctly. Three explanations have been tested and ruled out; see turned_cells.
-Nothing relies on it. What does find a turned tile is cutting the row with one cell widened at each position in
-turn and keeping whichever cut reads best, which puts it in the right place on 13 of the 19.
+The standing row is never cut with one cell widened for a tile laid on its side, which is what takes a read from
+1826ms to 716ms. It costs four sample photographs, all with the winning tile turned a quarter — a hand is laid
+out with it upright. Melds still try every position, because the called tile in one is always turned.
+
+The classifier has a second head predicting the tile's quarter turn. It is right 94% of the time on synthetic
+crops and 59 of 60 on real cells rotated by hand, and calls 13 of the 19 real turned tiles in the sample photos
+upright. Four explanations have been tested and ruled out; see turned_cells. Nothing relies on it.
 
 Not deployed. The server still uses Gemini.
 
@@ -70,8 +67,8 @@ lines of synthetic-data generator — because `reader.py` took `SIZE` and `BACK`
 ```
 
 The classifier is 467k parameters, 64px input, 36 classes — the 34 faces, `back` for a face-down tile, and
-`none` for anything that is not one tile face. Exported to `runs/classifier.onnx`, 1.9MB. Trained purely on
-synthetic data augmented from the crops; no hand photos needed.
+`none` for anything that is not one tile face. Exported to `runs/classifier.onnx`, 1.9MB. Trained on
+synthetic data augmented from the crops, plus real background patches for `none`; no labelled hand photos.
 
 `none` and `back` both earn their place. Without `none` the model is closed-set and reads felt or the
 table's plastic housing as some tile above 0.8 confidence. Without `back` a 暗杠 cannot be told from a

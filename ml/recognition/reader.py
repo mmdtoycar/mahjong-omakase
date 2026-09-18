@@ -1,22 +1,12 @@
 """Reads a real hand photo end to end: finds the tiles, then names them with the classifier.
 
-Written to answer whether the staged plan was too cautious, and it was. A hand is laid out as a line
-of butted tiles, bright and nearly colourless against strongly coloured felt, so finding the line is
-a thresholding problem rather than a detection problem — no trained detector, and none of the labelled
-photos that would need.
+A hand is a line of butted tiles, bright and nearly colourless against strongly coloured felt, so finding
+the line is a thresholding problem rather than a detection problem — no trained detector, and none of the
+labelled photos that would need.
 
-Splitting the line is the part that needs care. The tiles touch, so the line comes back as one blob.
-The grid is found geometrically first — see grid_fit.py — and the classifier is then used only to
-choose between runs and to nudge the fit by a pixel or two. Confidence is the right signal for that
-nudging: a misaligned crop is half of one tile and half of the next, which the classifier is not
-confident about.
-
-Doing it the other way round was the first version and it was far too slow to ship: brute-forcing
-count, pitch and offset cost 1,680 grid hypotheses and 22,680 tile classifications on one photo, some
-21 seconds of inference. The geometry was in the pixels the whole time.
-
-On one real photo, from a table the model has never seen and felt a different colour from the
-calibration photo, this reads 13 of 13 tiles correctly, ten of them above 0.85.
+Splitting the line is the part that needs care. The grid is found geometrically first — see grid_fit.py —
+and the classifier only chooses between runs and nudges the fit by a pixel or two. Brute-forcing count,
+pitch and offset instead cost 1,680 grid hypotheses and 21 seconds of inference on one photo.
 """
 
 import argparse
@@ -93,21 +83,13 @@ COUNT_MARGIN = 0.05
 # steps, tiles read: 474 at 0.45, 499 at 0.6, 516 at 0.65, 518 at 0.75, 506 at 0.8, 459 at 0.9. The top is a
 # plateau rather than a spike, which is why the exact value is not load-bearing.
 SETTLED_ROW = 0.75
-# What a meld's face-up cells have to average. Its own number, below the bar a lone tile is held to, because a
-# meld is judged as a whole: three or four crops that agree on one tile corroborate each other, and the shape
-# check is what keeps that honest. Swept: 0.8 reports no meld at all on the sample archive, 0.6 reports three,
-# 0.5 reports four and every one of them right, and below 0.5 nothing more comes in either way.
+# What a meld's face-up cells have to average — below the bar a lone tile is held to, because crops that agree
+# on one tile corroborate each other. Swept: 0.8 reports no meld at all, 0.6 three, 0.5 four and all correct.
 MELD_FACE_FLOOR = 0.5
-# The count is *not* nudged, and that is a fix rather than an omission. Mean confidence cannot compare
-# grids of different lengths: fewer cells means the worst tile can be left out, so the score rises every
-# time one is dropped. On the one real photo, rotated to landscape the way the upload path sends it, the
-# scores ran 11 tiles 0.880, 12 tiles 0.866, 13 tiles 0.840 — monotonically rewarding truncation. The
-# refiner duly returned twelve tiles and quietly lost a 發; only the ±1 bound stopped it at twelve rather
-# than eleven. The portrait version happened to answer thirteen, which is why this sat unnoticed.
-#
-# The run's length is an unbiased estimate of the count and fit_grid already uses it — 13 cells spanned
-# 1.00 of the run against 0.92 for 12. So the geometry decides how many tiles there are and the
-# classifier only moves the grid by a fraction of a pitch, which is all it was ever good for.
+# The count is not nudged. Mean confidence cannot compare grids of different lengths — dropping a cell drops
+# the worst tile with it, so the score rises every time: 11 tiles 0.880, 12 tiles 0.866, 13 tiles 0.840 on the
+# one real photo, and the refiner duly lost a 發. Geometry decides the count; the classifier only moves the
+# grid by a fraction of a pitch.
 
 # What a run of this length is. Three or four tiles set aside is a meld; the long run is the standing
 # hand. Nothing else is part of the hand — a discard pile is neither.
@@ -116,60 +98,28 @@ MELD_SIZES = (3, 4)
 # hand and the line, not between each of them — see read_melds_in.
 MELD_BLOCKS = tuple(range(6, 17))
 
-# How many tiles may be standing in the hand. Thirteen or fourteen, and nothing in between those and the
-# short rows a hand with melds leaves: fourteen tiles and one more for each 杠 that drew a replacement, or
-# thirteen if the winning tile was never laid down, and a meld takes at least three of them out of the row.
-# So twelve and fifteen standing tiles are arrangements no hand can take, and admitting them — which this
-# did — cost real reads, because a grid one cell too fine over a row of fourteen answers fifteen and was
-# being accepted.
-#
-# The floor is the most valuable thing left to fix, and it is also the hardest. It turns away every hand
-# with a meld, which is the error a player with melds hits every time; widening it to range(5, 16) does
-# read those hands, 308-8's eight tiles all correct. What stops it is that nothing else can then tell the
-# standing row from a meld:
-#
-#   - By score, the shortest candidate tends to win, since mean confidence rises every time a cell is
-#     dropped — the bias the note on PITCH_NUDGE records. The repository's own test photo went from
-#     thirteen tiles to seven on nothing more than a JPEG re-encode.
-#   - By length, no: with four melds and a hand waiting on one tile the standing row is a single tile,
-#     two if the winning tile is there, so it is not reliably longer than a meld's three or four. Tried
-#     anyway and it read two of the photos that should have been refused.
-#   - By position, the row is the group at the start of the reading direction with the melds past a gap.
-#     That needs the direction before the melds are known, which rail_side now supplies — so this is the
-#     one still open rather than ruled out.
-#   - By the tiles themselves: a called meld has one tile laid on its side and the standing row has none,
-#     which separates them whatever their lengths. That is a convention to photograph by rather than
-#     something in the pixels today, and given the length argument above it is the only complete answer.
-#
-# The floor is now settled by `standing_sizes`, and by none of those: the melds are counted first and the
-# standing row's length follows from how many there are. Nothing has to tell the two apart by looking.
+# How many tiles may be standing with no meld set aside: fourteen, or thirteen if the winning tile was never
+# laid down. Twelve and fifteen are arrangements no hand can take, and admitting them cost real reads — a grid
+# one cell too fine over a row of fourteen answers fifteen. Shorter rows come from `standing_sizes`, which
+# subtracts three per meld, so nothing here has to tell a standing row from a meld by looking.
 HAND_SIZES = range(13, 15)
 
 
 def standing_sizes(counts: range, melds: int) -> tuple[int, ...]:
     """How many tiles can be standing, given how many melds were set aside.
 
-    A meld takes exactly three tiles out of the standing row whatever its own length: a kan is four tiles,
-    but it also draws a replacement, so the hand's total rises by one and the row still loses three. So the
-    row is pinned to as many lengths as `counts` has and no more — two, one for the winning tile laid down
-    with the hand and one for it not being there — instead of any length between one and fourteen.
+    A meld takes exactly three tiles out of the row whatever its own length: a kan is four, but it draws a
+    replacement, so the hand's total rises by one and the row still loses three.
 
-    How many melds there are is the hard part, not this. Counting the photo's separate tile regions and taking
-    one of them for the row was tried — it is the obvious reading of "the row is one block and the melds are
-    the others" — and it is right on 6 of the 40 sample photos and over by one to three on the rest, because
-    the candidates include the table's housing, the discards and whatever else is in frame.
+    Counting the photo's separate tile regions instead was tried and is right on 6 of the 40 sample photos,
+    because the candidates include the table's housing, the discards and whatever else is in frame.
     """
     return tuple(size for size in (count - 3 * melds for count in counts) if size >= 1)
 
 
-# How wide a tile is against the depth of the row it stands in. Measured over the 44 rows marked by hand:
-# median 0.77, middle 90% between 0.57 and 0.90. It is what tells three cells from four on the same run,
-# since their pitches differ by exactly 4/3 and only one of the two widths is a tile's.
-#
-# This replaced comparing a meld's pitch to the hand's, which sounded right — same tiles, same camera — and
-# is measurably wrong: over the 22 marked melds the ratio runs 0.62 to 2.18, because a meld with its called
-# tile laid on its side is much wider per tile, and it may be laid nearer or further than the row. See
-# choose_meld.
+# How wide a tile is against the depth of the row it stands in: median 0.77 over the 44 rows marked by hand.
+# It tells three cells from four on the same run, whose pitches differ by exactly 4/3. It replaced comparing a
+# meld's pitch to the hand's, which over the 22 marked melds runs 0.62 to 2.18 — see choose_meld.
 TILE_ASPECT = 0.77
 
 # How many of the standing row may read as face down before the region is not the standing row at all. A
@@ -248,29 +198,20 @@ def solid_band(present: np.ndarray) -> slice:
 def not_felt(bgr: np.ndarray) -> np.ndarray:
     """Whatever is sitting on the table, as the felt's own outline minus the felt.
 
-    The opposite way round from tile_mask, and it finds what that one misses. A tile here is found by
-    *not* being felt rather than by being bright, so glare cannot swallow it: on one photo the mask of
-    bright colourless pixels caught a band of felt sheen and returned the row 2.6x too deep, and on two
-    others it lost the row altogether while this found it at 0.93 and 0.76 against the marked corners.
+    The opposite way round from tile_mask: a tile is found by *not* being felt rather than by being bright,
+    so glare cannot swallow it. Felt is the one thing large, dark and strongly coloured, and both levels come
+    off the photo. What sits on it is a bite out of its outline, enclosed or a notch in the edge, and the
+    convex hull covers both — enclosed holes alone find 8 of the 44 marked rows against the hull's 33.
 
-    Felt is the one thing in the frame that is both large, dark and strongly coloured, and both levels
-    come from the photo itself rather than from constants, so neither of the two tables here is preferred.
-    What sits on it is a bite out of its outline: enclosed when the row is out in the open, a notch in the
-    edge when it is pushed up against the housing, and the convex hull covers both. Filling only enclosed
-    holes found 8 of the 44 marked rows against the hull's 33.
-
-    Worth its keep by one read, and no more: the mask of bright colourless pixels finds 38 of the 44 rows
-    on its own and the two together 39, which end to end is 15 photos read against 16.
+    Worth its keep by one read: tile_mask finds 38 of the 44 rows alone and the two together 39.
     """
     lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
     light = lab[:, :, 0]
     chroma = np.clip(np.hypot(lab[:, :, 1].astype(float) - 128, lab[:, :, 2].astype(float) - 128), 0, 255)
     level, _ = cv2.threshold(chroma.astype(np.uint8), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    # Coloured *and* dark, both levels read off this photo rather than fixed. Colour alone calls a tile
-    # felt: the green of 条 and the red of 筒 are far more chromatic than the cloth is, and the closing
-    # below then joins those strokes into one patch over the whole face — on one photo the felt mask
-    # swallowed the entire row and left only the white gaps between the ink. The face the ink sits on is
-    # bright, 200 to 220 against the cloth's 100 to 130, so lightness is what separates them.
+    # Coloured *and* dark. Colour alone calls a tile felt — 条 and 筒 ink is more chromatic than the cloth,
+    # and the closing below then joins the strokes over the whole face. The face is bright, 200 to 220
+    # against the cloth's 100 to 130, so lightness is what separates them.
     dim, _ = cv2.threshold(light, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     felt = ((chroma > level) & (light < dim)).astype(np.uint8)
     felt = cv2.morphologyEx(felt, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8))
@@ -287,22 +228,14 @@ def not_felt(bgr: np.ndarray) -> np.ndarray:
 def fit_edge(along: np.ndarray, across: np.ndarray) -> tuple[float, float]:
     """A line through one boundary of a blob, chosen by how much of the boundary it actually lies on.
 
-    Trimming outliers from a least-squares fit is not enough when a third of the boundary is a step rather
-    than a bump: the median residual rises with the step and nothing gets trimmed. A tile laid on its side is
-    shorter across the row than one standing, so the boundary steps down where it sits — measured, to 54% to
-    76% of the row's depth over four marked melds — and the fitted line then splits the step and tilts, which
-    skews every cell and not only the turned one.
-
-    So the line is chosen by inlier count from candidate pairs spread along the boundary, then refitted on its
-    own inliers. Two thirds of a boundary lying on the true line is plenty for that, where it defeats trimming.
+    Trimming outliers from a least-squares fit fails when a third of the boundary is a step rather than a bump:
+    a tile laid on its side is shorter across the row, so the boundary steps to 54-76% of its depth and the
+    fitted line splits the step and tilts. Chosen by inlier count instead, then refitted on its own inliers.
     Worth 13 of the 617 sample tiles and three whole photographs.
 
-    Three other ways round the same step were tried and lost: fitting only the columns as deep as the deepest
-    (401 to 434 tiles against 478, because depth also tapers along a row from perspective, by up to 2.2x, so
-    filtering on it cuts off the far end instead of the turned tile); deriving one boundary from the other at
-    the row's median depth, which the table's edge could pick out (472 and 466, and 18 whole photographs down
-    to 11, because parallel boundaries cannot hold the taper at all); and telling a step from a taper by the
-    residual of a straight fit, which separates the two only weakly — 0.111 against 0.064.
+    Three other ways round the same step lost: fitting only the deepest columns (401-434 tiles against 478,
+    since depth also tapers along a row by up to 2.2x); deriving one boundary from the other (472 and 466, and
+    18 whole photographs down to 11); telling a step from a taper by residual (0.111 against 0.064).
     """
     if len(along) < 8:
         slope, intercept = np.polyfit(along, across, 1)
@@ -341,13 +274,10 @@ def row_quad(blob: np.ndarray, at: tuple[int, int]) -> np.ndarray | None:
     Wound clockwise on screen with the row along the first edge, so warping it to an upright rectangle is
     a rotation and never a mirror.
 
-    The ends are the weak part of this and pulling them in afterwards does not fix it. Against the marked
-    corners the ends are over a tile out on 10 of the 43 rows found, and trimming the flattened strip by
-    column lightness takes that to 8 and the mean error from 0.40 tile widths to 0.36 — and end to end that
-    is 23 photographs read whole against 24, with 33 tiles wrong against 27. The same shape of answer as
-    perfect regions being worse than these: a shorter strip is a strip the count search has fewer ways to
-    fit, and it fits the wrong one more confidently. Column chroma and tile-mask coverage were tried on the
-    same rows and did not even improve the geometry.
+    The ends are the weak part and pulling them in afterwards does not fix it. Trimming the flattened strip by
+    column lightness improves the geometry — ends over a tile out on 8 of 43 rows against 10 — and reads worse:
+    23 photographs whole against 24, 33 tiles wrong against 27. Column chroma and tile-mask coverage did not
+    even improve the geometry.
     """
     across_row = blob.shape[1] >= blob.shape[0]
     lines = np.arange(blob.shape[0] if across_row else blob.shape[1])[:, None]
@@ -478,30 +408,16 @@ def read_line(
     With `refine` false this costs a single forward pass, which is all that is needed to tell a row of
     tiles from a strip of the table's plastic housing. The winner is then read again with `refine` on.
 
-    Every count in `counts` is asked for by name; there is no unconstrained fit any more. Fitting blind and
-    only asking outright when the answer fell outside the allowed counts was two bugs at once — a row of
-    fourteen comes back as thirteen at a pitch 1.4% too large, and thirteen is allowed, so it was taken and
-    fourteen was never tried. Measured, the blind fit adds nothing at all on top of the named counts.
+    Every count in `counts` is asked for by name, with no unconstrained fit: fitting blind returns a row of
+    fourteen as thirteen at a pitch 1.4% too large, and thirteen is allowed, so fourteen was never tried.
     """
     _, _, w, h = box
     vertical = h >= w
-    # Every count the caller allows, asked for outright, and the blind fit as well. Asking only when the
-    # blind answer fell *outside* the allowed counts was the bug this replaces: fit_grid pins the pitch to
-    # within a tenth of length/wanted and then recomputes the count from it, so a row of fourteen comes back
-    # as thirteen at a pitch 1.4% too large — and thirteen is allowed, so it was accepted and fourteen was
-    # never tried. Over the 44 rows framed by hand, 20 could not be fitted at their own tile count and this
-    # is most of them; five photos read thirteen of their fourteen tiles, every one of the thirteen right.
     length, depth = (h, w) if vertical else (w, h)
-    # Two grids per count, and the count itself is stated rather than fitted. A row of `wanted` tiles in a box
-    # that *is* the tiles has a pitch of length/wanted by arithmetic; the box is only approximately the tiles,
-    # so fit_grid's own pitch is offered alongside it and the classifier picks. Measured apart over the sample
-    # archive: length/wanted alone reads 286 of the 603 tiles, fit_grid's pitch alone 332, the two together
-    # 351, and the third below 365.
-    #
-    # Held to a tile's shape as well, and that is not a detail: a pitch of length/wanted always slices
-    # cleanly, so without the guard no run can fail on its count any more and the count stops discriminating.
-    # Ten and eleven then fit an eleven-tile row equally, the search settles on no melds, and every hand with
-    # melds loses them — 22 tiles when it was left out.
+    # Three pitches per count, because the box is only approximately the tiles. Measured apart: length/wanted
+    # alone reads 286 of the 603 tiles, fit_grid's pitch alone 332, the two together 351, the third below 365.
+    # The tile-shape guard is not a detail — length/wanted always slices cleanly, so without it no run can fail
+    # on its count, the search settles on no melds and every hand with melds loses them (22 tiles).
     grids = []
     for wanted in counts:
         narrowed = fit_grid(light, box, vertical, expect=wanted)
@@ -532,19 +448,12 @@ def read_line(
             if refine
             else [(pitch, offset)]
         )
-        # Evenly, and then with each cell in turn taken to hold a tile laid on its side. Melds only: a called
-        # tile can sit anywhere in one, and every position is tried. A standing row is never cut that way, and
-        # that is a decision about how the hand is laid out rather than a limit of the search — the winning tile
-        # is not to be turned. Asking for it at both ends of the row as well reads four more of the 44 sample
-        # photographs whole, all of them shot before that was settled, and costs 1.1s of a 1.8s read.
+        # Evenly, and then with each cell in turn taken to hold a tile laid on its side. Melds only, because
+        # the winning tile is not to be turned — asking at both ends of the row as well reads four more sample
+        # photographs whole, all shot before that was settled, and costs 1.1s of a 1.8s read.
         #
-        # Only on the refining pass: the coarse pass is choosing a region and a length, and neither depends on
-        # where within the run a turned tile sits.
-        #
-        # Against every pitch and offset nudge, not only against the best even cut. Trying it the cheap way —
-        # find the best nudge first, then the positions from that one alone — runs at 765ms a photo against
-        # 1.8s, and costs 17 tiles and four whole photographs. The nudge that suits an even cut is not the one
-        # a turned cut wants.
+        # Against every nudge, not only the best even cut: finding the best nudge first and the positions from
+        # that one alone runs at 765ms against 1.8s and costs 17 tiles and four whole photographs.
         places: tuple[int | None, ...] = (None,)
         if refine:
             places += tuple(range(count)) if count <= max(MELD_SIZES) else ()
@@ -599,17 +508,12 @@ def slice_line(
     """
     x, y, w, h = box
     origin = (y if vertical else x) + start
-    # The grid can start a hair before the run or end a hair after it, since the offset is nudged either way
-    # and the pitch with it. Clamped into the run rather than passed to numpy as it comes: a negative index
-    # counts from the *end* there, so a start of -1 silently produced an empty crop and the whole photo was
-    # refused as unsliceable. It cost five of the sample photos, four of which the classifier reads in full.
+    # Clamped into the run: a nudged offset can start before it, and a negative index counts from the *end* in
+    # numpy, so a start of -1 produced an empty crop and refused the photo. It cost five sample photos.
     limit = (y + h) if vertical else (x + w)
     edge = y if vertical else x
-    # A fixed number of pixels, and not a share of the cell, though the same grid is cut twice at very
-    # different scales — once off the 900px copy to score it, where a cell is about 50px, and once off the
-    # photo as it came, where the same cell is 120px. Trimming proportionally is the tidier idea and it is
-    # worse at every share tried, from 387 tiles at 3% down to 100 at 12%, against 390 for four pixels flat.
-    # The classifier was trained on crops framed a particular way and wants the tile's own edge in view.
+    # A fixed number of pixels, not a share of the cell, even though the same grid is cut at two scales.
+    # Proportional is the tidier idea and worse at every share: 387 tiles at 3% down to 100 at 12%.
     trim = inset
     # A turned cell is 1/TILE_ASPECT of an upright one, and the pitch given is the upright one's, so the run
     # would overrun by the difference; the whole grid shrinks to hold it.
@@ -661,22 +565,15 @@ def _run(model: ort.InferenceSession, crops: np.ndarray) -> list[np.ndarray]:
 def turned_cells(model: ort.InferenceSession, crops: np.ndarray) -> list[bool]:
     """Which of these cells holds a tile lying on its side, relative to the rest of the row.
 
-    Relative, and that is the whole point: the photograph may itself be at any quarter turn, so an absolute
-    orientation says nothing. What is left is the odd one out — a tile turned a quarter differs from its
-    neighbours by one turn or by three, and the photographer turns it either way, while a tile that is merely
-    upside down differs by two and is still standing upright in the row.
+    Relative, because the photograph may itself be at any quarter turn: the odd one out differs from its
+    neighbours by one turn or three, where a tile merely upside down differs by two and is still upright in the
+    row. Empty when the model has no turn head.
 
-    Empty when the model has no turn head, which is every model exported before this existed.
-
-    It does not work yet, and the reader does not rely on it. The head is right 93% of the time on synthetic
-    crops, 96% with the crop taken 30% into the frame, and 59 of 60 on real cells rotated by hand — and it
-    calls every one of the 19 real turned tiles in the sample photos upright, at 0.87 to 0.98, while naming
-    their faces correctly. Looked at side by side the cells plainly show a 萬 on its side and the head plainly
-    says otherwise.
-    Three explanations were tested and none holds: that a real cell is framed too tightly, since the tile fills
-    it (a 30% crop costs 13 points, not 96); that the head reads the stretch a rotate-then-resize leaves rather
-    than the glyph, since a real cell rotated and then squeezed back to its original shape is still called
-    turned 59 times in 60; and that it reads the direction of the lighting, of which _photometric has no term.
+    It does not work yet and the reader does not rely on it: 94% on synthetic crops and 59 of 60 on real cells
+    rotated by hand, against 13 of the 19 real turned tiles called upright. Four explanations tested and none
+    holds — framing too tight, the stretch a rotate-then-resize leaves, the direction of the lighting, and the
+    one real difference (a real turned cell is full width and 81% of the height, a synthetic one fills the
+    frame) which changed nothing when trained on.
     """
     outputs = _run(model, crops)
     if len(outputs) < 2:
@@ -689,15 +586,33 @@ def turned_cells(model: ort.InferenceSession, crops: np.ndarray) -> list[bool]:
 def classify(model: ort.InferenceSession, crops: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Best tile class per crop with its probability, and separately the probability of `none`.
 
-    Kept apart because the two are wanted for different things. Ranking candidate runs by plain top-1
-    confidence picked the table's plastic housing over the hand: read as fifteen crops of nothing it
-    scored 0.844 of confident "none" against the hand's 0.731, so selection has to score confidence
-    that something is *a tile*. But whether a crop is nothing at all is still worth knowing, and if
-    `none` is simply excluded it becomes unreachable — the check for it downstream was dead code.
+    Kept apart because ranking runs by plain top-1 confidence picked the table's housing over the hand: fifteen
+    crops of confident nothing scored 0.844 against the hand's 0.731. Selection has to score confidence that
+    something is *a tile*, while whether a crop is nothing at all is still worth knowing downstream.
     """
     every = probabilities(model, crops)
     faces = every[:, :-1]
     return faces.max(axis=1), faces.argmax(axis=1), every[:, -1]
+
+
+# The most pixels a photo may decode to. A phone's own camera is the thing to allow for — 48 megapixels
+# on the largest of them — and nothing here wants more, since the search runs at 900px and the full
+# resolution is only ever cut into cells. Well under Pillow's 89M default, which guards its path alone.
+MAX_PIXELS = 80_000_000
+
+
+def too_many_pixels(raw: bytes) -> bool:
+    """Whether the image's own header says it is bigger than this will decode.
+
+    False when the header cannot be read at all, which leaves the size unknown rather than acceptable. That
+    is the honest answer: anything Pillow cannot identify, cv2 will almost certainly refuse to decode too.
+    """
+    try:
+        with Image.open(io.BytesIO(raw)) as peek:
+            width, height = peek.size
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+        return False
+    return width * height > MAX_PIXELS
 
 
 def decode(raw: bytes) -> np.ndarray | None:
@@ -708,6 +623,10 @@ def decode(raw: bytes) -> np.ndarray | None:
     else will have: a HEIC only reaches the server because the browser could not draw it to a canvas,
     and drawing to a canvas is exactly what would have applied the orientation.
     """
+    # Before anything decodes: the byte limit on the request is not a limit on the pixels those bytes expand
+    # to, and Pillow's own bomb guard covers only its decode path below, which a JPEG never reaches.
+    if too_many_pixels(raw):
+        return None
     bgr = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
     if bgr is not None:
         return bgr
@@ -716,10 +635,7 @@ def decode(raw: bytes) -> np.ndarray | None:
             upright = ImageOps.exif_transpose(opened)
             return cv2.cvtColor(np.array(upright.convert("RGB")), cv2.COLOR_RGB2BGR)
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
-        # DecompressionBombError inherits straight from Exception, so it is not covered by the others.
-        # Pillow raises it past twice MAX_IMAGE_PIXELS (89M by default), which is the guard that matters
-        # here: the browser caps an upload at 2048px, but a HEIC that the browser could not decode
-        # arrives at whatever size the camera produced.
+        # DecompressionBombError inherits straight from Exception, so the others do not cover it.
         return None
 
 
@@ -816,9 +732,7 @@ def read_hand(
     angle = _line_angle(tile_mask(bgr))
     if abs(angle) < DESKEW_MIN_ANGLE:
         return upright
-    # Stops at the first candidate that is confident enough rather than always trying all of
-    # DESKEW_SEARCH — a photo that needed deskewing already cost one extra read; there is no reason
-    # to pay for the rest of the nudges once one of them reads the hand cleanly.
+    # Stops at the first candidate confident enough: a photo that needed deskewing already cost an extra read.
     best = None
     for nudge in DESKEW_SEARCH:
         turned = angle + nudge
@@ -863,34 +777,20 @@ def _read_hand_upright(
     # constant in the frame and a single pitch is what fit_grid is looking for.
     shape = choose_shape(model, labels, size, runs, counts)
     if shape is None:
-        # What went wrong is that no region could be framed as one even row, and saying so is the point:
-        # the tiles being few is one cause of it and by far not the commonest. On the sample archive this
-        # fires on a row split in two, a row photographed at enough of an angle that no single pitch fits
-        # it, and a hand with a tile pushed away from the rest — none of which is about length, and a
-        # message about length sent the photographer looking for the wrong thing.
+        # No region framed as one even row, which is what to say: the commonest causes are a row split in
+        # two, an angle no single pitch fits, and a tile pushed away from the rest. None is about length.
         short = [run for run in runs if meld_candidates(model, labels, size, run)]
         if short:
-            # Stated, not diagnosed. Three or four in a row beside the hand is what a meld looks like and
-            # also what a row broken into pieces looks like, and picking one reading was wrong on the
-            # sample archive as soon as it was tried: two photos with no melds at all were told they
-            # looked like a hand with melds, because their row had come apart into runs of that length.
+            # Stated, not diagnosed: three or four in a row is what a meld looks like and also what a row
+            # broken into pieces looks like, and guessing told two meldless photos they had melds.
             return Refusal(
                 SHORT_RUNS_ONLY,
                 f"only {len(short)} run(s) of three or four beside no standing row — either melds, "
                 "which are not read on their own yet, or a row that broke into pieces",
             )
-        # No separate word for "shot from too far off to one side", though it is a real and distinct way to
-        # lose a photo: four of the sample photos are noted for exactly that, at 0.38 to 0.55 of a tile's
-        # width against the row's depth where an ordinary one runs 0.66 to 0.92. They are read anyway now,
-        # and cleanly — nine to eleven tiles of fourteen with none or one wrong — so the message would have
-        # been wrong as well as unnecessary.
-        #
-        # It stays unnamed because that number cannot be computed here. It needs the tile's width, which needs
-        # the count, which is the thing that just failed. Measured from what is available instead — the widest
-        # cell any run could hold at any allowed count, over its own depth — the four land at 0.40, 0.49, 0.59
-        # and 1.11, straddling the readable photos completely, two of which sit lower than any of them at 0.30
-        # and 0.34. Tried once before against the run's box depth with the same result. A message that sends
-        # the photographer to change the angle is worse than a vague one when it is wrong this often.
+        # No separate word for "shot from too far off to one side", real though that is. It needs the tile's
+        # width, which needs the count, which is the thing that just failed; from what is available the four
+        # such sample photos land at 0.40 to 1.11 of the row's depth, straddling the readable ones completely.
         return Refusal(NO_ROW, "no region frames as one even row of tiles")
     hand, standing, beside = shape
 
@@ -967,18 +867,14 @@ def as_json(reading: Reading) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("photo", type=Path)
-    # A target size rather than a scale factor, because what matters is how many pixels a tile ends up
-    # being, and that follows from the absolute size. This was a fixed 0.25, which suited the 5712px
-    # photo it was written against and silently miscounted a 1280px one — 12 tiles instead of 13, at
-    # 0.55 mean confidence, because each tile came out 31px wide.
-    #
-    # 900 puts a tile at roughly 55px, close to the classifier's own 64px input, which is the sense in
-    # which it is not arbitrary: shrinking further throws away detail the model would use, and going much
-    # larger only sharpens the crop's edges into features the synthetic data does not have. Every setting
-    # from 640 to 1707 read the one real photo correctly, so the exact number is not delicate.
+    # A target size, not a scale factor: what matters is how many pixels a tile ends up being. A fixed 0.25
+    # suited the 5712px photo it was written against and miscounted a 1280px one. 900 puts a tile at roughly
+    # 55px, close to the classifier's 64px input; every setting from 640 to 1707 read the one real photo.
     parser.add_argument("--long-side", type=positive, default=LONG_SIDE)
-    parser.add_argument("--min-tiles", type=int, default=12)
-    parser.add_argument("--max-tiles", type=int, default=15)
+    # The same range serve.py reads under. Twelve and fifteen standing tiles are arrangements no hand can
+    # take — see HAND_SIZES — so a CLI that allowed them would answer a photo differently from the server.
+    parser.add_argument("--min-tiles", type=int, default=HAND_SIZES.start)
+    parser.add_argument("--max-tiles", type=int, default=HAND_SIZES.stop - 1)
     parser.add_argument("--json", action="store_true", help="print what the service would return")
     # Under data/ rather than /tmp: that directory is this script's own and gitignored, so two runs on
     # photos with the same stem cannot collide with each other or with anything else on the machine.
@@ -1033,10 +929,8 @@ NUMBERED_SUITS = ("m", "p", "s")
 def meld_kind(tiles: list[str]) -> str | None:
     """From the tiles alone, or None when they do not form a meld at all.
 
-    "Anything that is not three alike is a 吃" was the first version and it is wrong in a way that
-    matters: three tiles that merely passed the confidence floor — a corner of the discard pile, say —
-    would be reported as a 吃 and scored as one. A 吃 is three consecutive numbers in one suit, and
-    nothing else. A run that cannot be named is not a meld, and saying so is the only safe answer.
+    "Anything not three alike is a 吃" was the first version, and it reported a corner of the discard pile as
+    one. A 吃 is three consecutive numbers in one suit and nothing else.
     """
     if len(set(tiles)) == 1:
         return "gang" if len(tiles) == 4 else "ke" if len(tiles) == 3 else None
@@ -1052,13 +946,9 @@ def meld_kind(tiles: list[str]) -> str | None:
 class Meld(NamedTuple):
     """One set laid aside beside the hand: what kind it is, its tiles, and whether it opened the hand.
 
-    `is_open` decides the score rather than just the display. A 暗杠 is four tiles with two of them turned
-    face down, and it is *not* 副露 — it leaves the hand concealed and 门前清 intact — so it carries false,
-    while 吃, 碰 and 明杠 all carry true. That is the whole reason the face-down tile is its own class
-    instead of part of "not a tile".
-
-    The two turned-over tiles of a 暗杠 cannot be read, and do not need to be: a gang is four of one tile,
-    so the pair that is face up names all four.
+    `is_open` decides the score, not just the display: a 暗杠 is not 副露, so it leaves 门前清 intact and
+    carries false where 吃, 碰 and 明杠 carry true. That is why the face-down tile is its own class. Its two
+    turned-over tiles need no reading — a gang is four of one tile, so the face-up pair names all four.
     """
 
     kind: str
@@ -1069,17 +959,11 @@ class Meld(NamedTuple):
 def judge_meld(tiles: list[str], confidence: list[float], nothing: list[float]) -> Meld | str:
     """What a run of three or four crops is, or the reason it is not a meld.
 
-    Kept free of images so it can be checked against numbers rather than against a composed photograph —
-    see tests/test_reader.py. The first attempt at that check built melds out of the calibration crops, and every
-    failure it produced came from the composition rather than from this logic, which is worse than no
-    check at all: the temptation is then to loosen the code until the fixture passes.
+    Kept free of images so it can be checked against numbers — see tests/test_reader.py.
 
-    The two roles are judged separately, and lumping them together is what silently dropped 暗杠.
-
-    A face-up tile carries the meld's identity, so it has to be named outright — hence the floor. A
-    face-down tile names nothing; the pair that is face up already decides all four. All it has to
-    establish is that it is a tile back rather than a patch of table, and that question needs no
-    threshold: `back` simply has to beat `none`.
+    The two roles are judged separately, and lumping them together is what silently dropped 暗杠. A face-up
+    tile carries the meld's identity so it has to be named outright, hence the floor; a face-down one only has
+    to be a tile back rather than a patch of table, which needs no threshold beyond `back` beating `none`.
 
     Held to the face-up floor instead, the backs fail. Of the twenty tile-back crops there are, seven sit
     under 0.8 and two of those also read 32% not-a-tile — every one of them a pale back, whose faint
@@ -1101,25 +985,15 @@ def judge_meld(tiles: list[str], confidence: list[float], nothing: list[float]) 
     # as a gang of 1p at 0.00 confidence. There is no partial credit: get one tile wrong and the hand is
     # a different hand.
     #
-    # On the mean of the face-up cells rather than the weakest of them: three or four crops that
-    # independently agree on one tile corroborate each other in a way one crop cannot, and the shape check
-    # below is what keeps that honest — a run has to come out a 吃, 碰 or 杠, at the row's own pitch.
-    #
-    # The height is not relaxed, and that was measured rather than assumed. Dropping it to 0.6 does let one
-    # more meld through on the sample archive, and it costs 8 correctly-read tiles: the meld it admits makes
-    # its own photo hold five of a tile, so the whole photo is refused and its standing row goes with it.
-    # 308-2's 碰 reads ['5z', '5z', '5z'], correct, at a mean of 0.63, and is still turned away here.
+    # On the mean of the face-up cells, not the weakest: crops that independently agree corroborate each
+    # other, and the shape check below keeps that honest. Not relaxed, measured — 0.6 lets one more meld
+    # through and costs 8 correctly-read tiles, because that meld makes its photo hold five of a tile.
     weakest = sum(confidence[i] for i in faces) / len(faces) if faces else 0.0
     if weakest < MELD_FACE_FLOOR:
         return f"mean face-up confidence {weakest:.2f}"
     if backs:
-        # A 暗杠 is four tiles with exactly two of them turned over: the way this project photographs one,
-        # what the Gemini prompt describes, and what the on-screen instructions ask for.
-        #
-        # Requiring that shape is a stronger guard than the confidence floor it replaces for these crops,
-        # not a weaker one. Without it a run reading [back, back, back, 5p] would be scored as a gang of
-        # 5p on the evidence of a single face-up tile — and the point of getting 暗杠 right is that it
-        # leaves the hand 门前清, which changes the score.
+        # Exactly two turned over, which is how a 暗杠 is photographed. A stronger guard than the confidence
+        # floor it replaces: without it [back, back, back, 5p] is a gang on one face-up tile.
         if len(backs) != 2 or len(faces) != 2 or len({tiles[i] for i in faces}) != 1:
             return "face-down tiles but not a readable 暗杠"
         tiles = [tiles[faces[0]]] * 4
@@ -1132,11 +1006,8 @@ def judge_meld(tiles: list[str], confidence: list[float], nothing: list[float]) 
 def keep_possible(tiles: list[str], melds: list[Meld]) -> tuple[list[Meld], list[str]]:
     """The melds that can be there beside this row, and a note for any that cannot.
 
-    Four of a tile were ever made, so a meld that would make five of one is wrong. Dropping that meld rather
-    than the whole reading, because the harm is confined to it: on the sample photo this fires for, the row
-    read all eight of its tiles correctly and one of its two melds came back a 杠 of 2p where the photo holds
-    a 碰, and refusing on that threw away fourteen right tiles to avoid one wrong one. The same reasoning the
-    refusals themselves rest on — a missing tile costs a tap, a wrong tile costs a wrong score.
+    Four of a tile were ever made, so a meld that would make five is wrong. Dropping that meld rather than the
+    whole reading: on the photo this fires for, refusing threw away fourteen right tiles to avoid one wrong one.
     """
     held = Counter(tile for tile in tiles if tile != BACK)
     kept, notes = [], []
@@ -1155,16 +1026,11 @@ def keep_possible(tiles: list[str], melds: list[Meld]) -> tuple[list[Meld], list
 def lift_concealed_kan(tiles: list[str]) -> tuple[list[int], list[Meld]]:
     """A 暗杠 found among the standing tiles, taken out of the row and reported as the meld it is.
 
-    Four tiles with the middle two turned over is a 暗杠, and where it sits beside the row with no gap the row
-    swallows it: one sample photo reads `back 2z 2z back` in the middle of its standing tiles. Left there it is
-    wrong twice over — `back` is not a tile the calculator can score, and a 暗杠 leaves the hand 门前清, which
-    it cannot know unless the meld is named.
+    Where a 暗杠 sits beside the row with no gap the row swallows it: one sample photo reads `back 2z 2z back`
+    among its standing tiles. Left there `back` is not a tile the calculator can score, and 门前清 is lost.
 
-    Only this exact shape, two backs bracketing two of one tile. A 暗杠 is photographed that way by convention
-    and the shape is its own evidence; anything looser would turn a misread cell into a meld.
-
-    Gives back which cells to keep rather than the kept tiles, because the crops and the confidences have to
-    lose the same four and a caller that trimmed only the tiles would put the strip out of step with them.
+    Only this exact shape, two backs bracketing two of one tile — anything looser turns a misread cell into a
+    meld. Gives back which cells to keep, so the crops and confidences lose the same four.
     """
     for i in range(len(tiles) - 3):
         four = tiles[i : i + 4]
@@ -1186,24 +1052,13 @@ class Candidate(NamedTuple):
 def choose_meld(candidates: list[Candidate], depth: float) -> list[Meld]:
     """The melds a run holds, from its readings at each length: the best of them, split apart.
 
-    Kept free of images so it can be checked against numbers — see tests/test_reader.py. The first attempt at
-    that check built melds out of the calibration crops and every failure it produced came from the
-    composition rather than from this logic, which is worse than no check at all: the temptation is then to
-    loosen the code until the fixture passes.
+    Kept free of images so it can be checked against numbers — see tests/test_reader.py. A division counts for
+    whatever melds it yields; one that divides no way into anything that is a meld is not a block of melds.
 
-    A division counts for whatever melds it does yield; the parts that come out as nothing are dropped and the
-    rest kept. A block that divides no way at all into anything that is a meld is not a block of melds.
-
-    Ranked by how close a cell comes to a tile's shape rather than by confidence, and that is what tells three
-    cells from four on the same run: their pitches differ by exactly 4/3, so the only question is which width
-    is a tile's width, and a three-tile 碰 read as four cells is confidently *something* at 0.75 of the true
-    pitch. Ranking by confidence loses it. See TILE_ASPECT.
-
-    This used to compare the run's pitch against the *hand's* pitch, on the reasoning that they are the same
-    tiles photographed from the same place. Measured, they are not: over the 22 marked melds the ratio runs
-    from 0.62 to 2.18, only 10 of them inside the 0.8–1.25 the check allowed, because a meld with its called
-    tile laid on its side is far wider per tile than a standing row and it is often laid nearer or further
-    than the row as well. That check cost 50 correctly-read tiles across the archive and rescued none.
+    Ranked by how close a cell comes to a tile's shape, not by confidence: that is what tells three cells from
+    four on the same run, since a 碰 read as four cells is confidently *something* at 0.75 of the true pitch.
+    Comparing the run's pitch to the *hand's* instead was measurably wrong — 0.62 to 2.18 over the 22 marked
+    melds — and cost 50 correctly-read tiles while rescuing none. See TILE_ASPECT.
     """
     best = None
     for candidate in candidates:
@@ -1221,10 +1076,8 @@ def choose_meld(candidates: list[Candidate], depth: float) -> list[Meld]:
                 at += part
             if not found:
                 continue
-            # The most melds a division yields, and among equals the one whose cells come closest to a tile's
-            # shape. Requiring *every* part to be a meld threw the good ones away beside a bad one: on one
-            # photo a block of six read 4p 5p 6p and then 7z 7z 2s — a 吃 read perfectly and a 碰 with one cell
-            # misread — and the whole block was dropped for the sake of the second.
+            # The most melds a division yields, and among equals the closest to a tile's shape. Requiring
+            # *every* part to be a meld dropped a whole block of six for one misread cell in its second half.
             off = abs(candidate.pitch / max(depth, 1) - TILE_ASPECT)
             if best is None or (len(found), -off) > (len(best[1]), -best[0]):
                 best = (off, found)
@@ -1307,20 +1160,14 @@ def choose_shape(
 ) -> tuple[Run, tuple[int, ...], list[tuple[Run, Meld]]] | None:
     """Which run is the standing row, how long it is, and which runs beside it are melds — as one answer.
 
-    The row's own reading settles its length and nothing else does. That is the third design here and the
-    first that works. Counting the melds first and subtracting was wrong in both directions at once: every run
-    that happened to fit three or four cells was counted, so hands with no melds had two invented and their
-    row was asked for eight tiles, while hands with real melds read none of them. Requiring a meld run beside
-    the row to corroborate the count was wrong for a different reason — when the melds are butted against the
-    row they share its blob, so no meld run exists to corroborate anything and no meld count can ever hold. One
-    sample photo has the right region fitting its 8 tiles at 0.83 under two melds and was refused outright for
-    want of a meld run, while the wrong answer at one meld scored 0.31. Dropping the requirement is worth 19 of
-    the 477 sample tiles.
+    The fewest melds whose arithmetic leaves a row reading at or above SETTLED_ROW, with the melds then read
+    out of whatever sits beside it. Fewest, because scoring across meld counts cannot work: each extra meld
+    drops three cells and mean confidence rises every time one is dropped, so the highest score is always the
+    emptiest hand — tried, and it read a row of ten as eight on three photos.
 
-    So: the fewest melds whose arithmetic leaves a row that reads well, and the melds are then read out of
-    whatever sits beside it. Fewest, because scoring across meld counts cannot work — each extra meld takes
-    three tiles off the row, mean confidence rises every time a cell is dropped, and the highest score is
-    therefore always the emptiest hand. Tried, and it read a row of ten as eight on three photos.
+    Requiring a meld run beside the row to corroborate the count was the earlier design and cannot hold: melds
+    butted against the row share its blob, so no meld run exists to corroborate anything. Dropping that
+    requirement is worth 19 of the 477 sample tiles.
     """
     for melds in range(5):
         standing = standing_sizes(counts, melds)
@@ -1339,25 +1186,18 @@ def choose_shape(
         if best is None or best[0] < SETTLED_ROW:
             continue
         _, fit, hand = best
-        # Read only now, and only if the arithmetic says there is something to read. Reading every run as a
-        # possible block of melds costs 10s a photo, against 0.8s for the whole of the rest of this; nothing
-        # about it belongs in the search when the search no longer depends on it.
-        #
-        # Note that nothing here forbids a meld holding a tile the row also holds. The same tile can perfectly
-        # well be standing and in a meld — 碰 7m, then wait on 4m/7m holding 5m 6m.
+        # Read only if the arithmetic says there is something to read: reading every run as a possible block
+        # of melds costs 10s a photo against 0.8s for the rest of this. Nothing forbids a meld holding a tile
+        # the row also holds — 碰 7m, then wait on 4m/7m holding 5m 6m.
         found: list[tuple[Run, Meld]] = []
         if melds:
             for run in runs:
                 if run.box == hand.box:
                     continue
                 found += [(run, meld) for meld in read_melds_in(model, labels, size, run)]
-        # Fewer melds may come back than the row's length assumed, and then the answer is short by three
-        # tiles for each one missing. That looks like a bug and is not: making it consistent was measured
-        # three ways and every one of them is worse. Reading the row again at the length the melds found do
-        # imply gives 490 of the 597 sample tiles against 518; refusing outright when they do not match gives
-        # 476 and turns one refusal into eight, and a refusal costs the photographer all fourteen tiles.
-        # Eleven cells cut across fourteen tiles read eleven of them right, and handing those back beats
-        # every consistent alternative.
+        # Fewer melds may come back than the row's length assumed, leaving the answer three tiles short for
+        # each. It looks like a bug and is not: re-reading the row at the length the melds found imply gives
+        # 490 of the 597 sample tiles against 518, and refusing outright gives 476 and eight refusals for one.
         return hand, standing, found[:melds]
     return None
 
@@ -1373,12 +1213,10 @@ class Direction(NamedTuple):
 def rail_side(bgr: np.ndarray, hand_box: tuple[int, int, int, int]) -> bool | None:
     """Whether the table's edge is on the low side of the run across it, or None if neither side is it.
 
-    Every player pushes their hand up against the edge in front of them, so the side that edge lies on
-    says which seat the hand belongs to, and that is what fixes which end holds the winning tile. Felt is
-    strongly coloured — green on one of the two tables here, brown on the other — and the housing beside
-    it is grey, so the two are told apart by chroma and not by lightness. That is measured, not assumed:
-    over the 35 rows marked by hand the housing is often the *lighter* of the two sides, and picking the
-    greyer one gets the seat right on 31 of 33 against 15 of 33 for picking the darker.
+    Every player pushes their hand up against the edge in front of them, so which side that edge is on says
+    which seat the hand belongs to, and that fixes which end holds the winning tile. Told apart by chroma, not
+    lightness: the housing is often the *lighter* side, and picking the greyer one gets the seat right on 31 of
+    33 rows against 15 of 33 for the darker.
     """
     x, y, w, h = hand_box
     vertical = h >= w
@@ -1410,27 +1248,15 @@ def reading_order(
 ) -> Direction:
     """Whether the sliced tiles have to be reversed so the winning tile lands last.
 
-    The calculator takes the last element of the concealed array as the winning tile, and the
-    photographer's convention puts that tile at the right-hand end of the standing hand with the melds
-    beyond it. So the run has to be handed over finishing at whichever end is physically the right one.
+    The calculator takes the last element of the concealed array as the winning tile, and the photographer
+    puts that tile at the right-hand end with the melds beyond it. Two independent ways to tell, because either
+    alone has a hole: the melds sit past the right end, so the end they are nearer is it — only the ones roughly
+    in line count, since the discard pile is also a run and sits off to the side. Failing that, the table's edge
+    gives the seat and the seat gives the direction; see rail_side.
 
-    Two independent ways to tell, because either alone has a hole:
-
-    The melds settle it whatever way the phone was held — they sit past the right end of the hand, so the
-    end they are nearer is the right end. Only the ones roughly in line with the hand count: in the one
-    real photo the discard pile is also a run of four, and it sits off to the side, so it would point the
-    wrong way if any blob were allowed to vote.
-
-    Failing that, the table's edge, which the hand is pushed up against: see rail_side. Which side it
-    lies on gives the seat, and the seat gives the direction — a hand across the frame with the housing
-    above it belongs to the player opposite and reads right to left, while one up the frame with the
-    housing to its left belongs to the player on the left and reads top to bottom.
-
-    What used to be here instead was the frame alone: a hand lying across it was taken to read left to
-    right. That is only true of the photographer's own hand, and it was wrong on 14 of the 35 rows in the
-    sample archive — 40% — while reporting that it knew. A wrong winning tile is a wrong score, so when
-    neither the melds nor the edge settles it this now says so instead. An admitted unknown is one tap in
-    the review screen.
+    The frame alone was here before — a hand lying across it taken to read left to right — and that is true only
+    of the photographer's own hand: wrong on 14 of the 35 sample rows while reporting that it knew. A wrong
+    winning tile is a wrong score, so an unknown is admitted instead, which costs one tap in the review screen.
     """
     x, y, w, h = hand_box
     vertical = h >= w
