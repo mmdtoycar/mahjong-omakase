@@ -44,8 +44,8 @@
     64
   ],
   "preprocessing": "RGB, divide by 255, subtract 0.5",
-  "parameters": 467588,
-  "synthetic_accuracy": 0.9992592592592593,
-  "widened_accuracy": 0.9913888888888889,
-  "caveat": "Both figures come from images derived from one calibration photo per class. They measure invariance to the augmentations in synthesize.py, not accuracy on a real photo."
+  "parameters": 468104,
+  "synthetic_accuracy": 0.995462962962963,
+  "widened_accuracy": 0.9700925925925926,
+  "caveat": "Both figures come from images derived from one calibration photo per class. They measure invariance to the augmentations in training/synthesize.py, not accuracy on a real photo."
 }

@@ -41,6 +41,26 @@ public class HandRecognitionService {
     this.sampleStore = sampleStore;
   }
 
+  /**
+   * What to tell the player about a photo the reader would not read. Codes come from reader.py and
+   * serve.py; several collapse into one sentence because they are the same thing to hold a phone
+   * about. An unknown code falls back rather than showing a bare English identifier.
+   */
+  private static String advice(String code) {
+    return switch (code) {
+      case "undecodable" -> "这张图片打不开，请换一张或者重拍";
+      case "no-tiles" -> "没看到手牌，请对准这一副牌重拍";
+      case "no-row",
+          "short-runs-only",
+          "unreadable-row",
+          "face-down-in-hand",
+          "impossible-tiles",
+          "too-many-tiles" -> "手牌不整齐，请把牌摆整齐重拍";
+      case "too-uncertain" -> "手牌看不清，请对准这一副牌重拍";
+      default -> "本地识别没读出手牌，请重拍或手动输入";
+    };
+  }
+
   /** Recognises one photo, always locally. */
   public Recognition recognize(String imageBase64, String mimeType, Long sessionId) {
     try {
@@ -55,11 +75,10 @@ public class HandRecognitionService {
       String sampleId = sampleStore.saveFailure(imageBase64, mimeType, LOCAL, e.getMessage());
       return new Recognition(EMPTY_HAND_JSON, "本地识别服务连不上，请直接输入", sampleId);
     } catch (IllegalStateException e) {
-      // The reader looked at the photo and declined it — usually nothing in the frame resembles a
-      // row of tiles. That detail *is* worth showing, because the fix next time is to reframe.
+      // Worded here rather than in the reader: product copy does not belong in the sidecar.
       log.warn("Local recognition declined the photo: {}", e.getMessage());
       String sampleId = sampleStore.saveFailure(imageBase64, mimeType, LOCAL, e.getMessage());
-      return new Recognition(EMPTY_HAND_JSON, "本地识别没读出手牌：" + e.getMessage(), sampleId);
+      return new Recognition(EMPTY_HAND_JSON, advice(e.getMessage()), sampleId);
     }
   }
 }

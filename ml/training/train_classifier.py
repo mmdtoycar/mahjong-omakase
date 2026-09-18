@@ -7,7 +7,7 @@ hard part of this project is the data, not the model.
 On the numbers this prints: **validation accuracy here is not an estimate of accuracy on a real
 photo.** Every image, training and validation alike, is derived from the same 34 crops of the same
 one calibration photograph. A high score means the model has learned to be invariant to the
-augmentations written in synthesize.py; it says nothing about the ways a real photo will differ that
+augmentations written in training/synthesize.py; it says nothing about the ways a real photo will differ that
 were not thought of. The `hard` split — every augmentation range widened past what training saw — is
 the closest available proxy, and it is still a proxy.
 
@@ -23,10 +23,10 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
-from synthesize import NOT_A_TILE, SIZE, Synthesiser, load_tiles
+from recognition.tiles import NOT_A_TILE, RUNS, SIZE
+from training.synthesize import NO_TURN, QUARTER_TURNS, Synthesiser, load_tiles
 
 DATA = Path(__file__).resolve().parent / "data"
-RUNS = Path(__file__).resolve().parent / "runs"
 
 # Seed ranges, kept apart so no two splits can draw the same sample.
 TRAIN_SEEDS = (0, 10_000_000)
@@ -57,21 +57,34 @@ class TileDataset(Dataset):
     def __len__(self) -> int:
         return self.count
 
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, int]:
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, int, int]:
         target = index % len(self.labels)  # every class equally often
         span = self.seed_high - self.seed_low
         seed = self.seed_low + (index * 2_654_435_761 + self.epoch * 40_960_001) % span
         synth = Synthesiser(
             self.faces, self.masks, seed=seed, hard=self.hard, size=self.size, labels=self.labels
         )
-        image = synth.sample_negative() if target == len(self.faces) else synth.sample(target)
+        if target == len(self.faces):
+            image, turns = synth.sample_negative(), NO_TURN
+        else:
+            image, turns = synth.sample(target)
         # BGR uint8 HWC to RGB float CHW, centred on zero.
         rgb = image[:, :, ::-1].astype(np.float32) / 255.0
-        return torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1)) - 0.5), target
+        return torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1)) - 0.5), target, turns
 
 
 class TileNet(nn.Module):
-    """Four downsampling blocks into a pooled classifier. ~300k parameters."""
+    """Four downsampling blocks into a pooled classifier, and a second head for the quarter turn.
+
+    Two heads over one trunk rather than two models: naming the face and saying which way up it is are the
+    same problem seen twice, and the features that separate 1m from 2m are the features that say which way the
+    numeral sits. The turn head is four outputs on top of the same 128 pooled channels, so it costs 516 of the
+    model's parameters.
+
+    Why the turn is wanted at all: a tile laid on its side is how a called meld is marked and how the winning
+    tile is marked, and it is the one signal left that says where one meld ends and the next begins. See
+    QUARTER_TURNS in synthesize.
+    """
 
     def __init__(self, classes: int):
         super().__init__()
@@ -88,12 +101,13 @@ class TileNet(nn.Module):
             )
 
         self.features = nn.Sequential(block(3, 32), block(32, 64), block(64, 96), block(96, 128))
-        self.head = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Dropout(0.2), nn.Linear(128, classes)
-        )
+        self.pool = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Dropout(0.2))
+        self.head = nn.Linear(128, classes)
+        self.turn = nn.Linear(128, len(QUARTER_TURNS))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.head(self.features(x))
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        pooled = self.pool(self.features(x))
+        return self.head(pooled), self.turn(pooled)
 
 
 def evaluate(model: nn.Module, loader: DataLoader, device: str, classes: int) -> dict:
@@ -102,8 +116,8 @@ def evaluate(model: nn.Module, loader: DataLoader, device: str, classes: int) ->
     confusion = torch.zeros(classes, classes, dtype=torch.long)
     scores: list[tuple[float, bool]] = []
     with torch.no_grad():
-        for images, targets in loader:
-            probabilities = torch.softmax(model(images.to(device)), 1).cpu()
+        for images, targets, _ in loader:
+            probabilities = torch.softmax(model(images.to(device))[0], 1).cpu()
             confidence, predicted = probabilities.max(1)
             for actual, guess, sure in zip(targets, predicted, confidence):
                 confusion[actual, guess] += 1
@@ -154,9 +168,13 @@ def main() -> None:
     # 13.6k costs under 30s single-threaded, and generating on demand keeps augmentation variety
     # unbounded — a fixed pre-generated pool would be something the model could start memorising.
     parser.add_argument("--workers", type=int, default=0)
+    # Only to measure how much of a difference between two runs is the runs rather than the change. It
+    # moves the weight initialisation and the synthesis draw together, which is the whole of the
+    # randomness here: the training images are generated on demand from a seed, not sampled from a pool.
+    parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
-    torch.manual_seed(0)
+    torch.manual_seed(args.seed)
     device = "mps" if torch.backends.mps.is_available() else "cpu"
     labels, _, _ = load_tiles()
     labels = [*labels, NOT_A_TILE]
@@ -172,7 +190,9 @@ def main() -> None:
             persistent_workers=args.workers > 0,
         )
 
-    train = loader(classes * args.per_class, TRAIN_SEEDS, False, True)
+    # Well clear of the validation, hard and watch ranges above, or a reseeded run would train on them.
+    shift = args.seed * 100_000_000
+    train = loader(classes * args.per_class, (TRAIN_SEEDS[0] + shift, TRAIN_SEEDS[1] + shift), False, True)
     # Small during training so the per-epoch line is cheap; large for the final report, because 60
     # samples a class puts an error bar of a couple of points on every figure below.
     watch = loader(classes * 60, WATCH_SEEDS, False, False)
@@ -193,22 +213,27 @@ def main() -> None:
     for epoch in range(1, args.epochs + 1):
         train.dataset.epoch = epoch
         model.train()
-        running, seen, right = 0.0, 0, 0
-        for images, targets in train:
-            images, targets = images.to(device), targets.to(device)
+        running, seen, right, turned_right, turned_seen = 0.0, 0, 0, 0, 0
+        for images, targets, turns in train:
+            images, targets, turns = images.to(device), targets.to(device), turns.to(device)
             optimiser.zero_grad(set_to_none=True)
-            output = model(images)
-            loss = criterion(output, targets)
+            output, turn_output = model(images)
+            # Summed, unweighted. The turn is the easier of the two problems and does not need the trunk bent
+            # towards it; if the face accuracy drops for it, that is the thing to weight down.
+            loss = criterion(output, targets) + criterion(turn_output, turns)
             loss.backward()
             optimiser.step()
             schedule.step()
             running += loss.item() * targets.size(0)
             right += (output.argmax(1) == targets).sum().item()
             seen += targets.size(0)
+            real = turns >= 0
+            turned_right += (turn_output.argmax(1)[real] == turns[real]).sum().item()
+            turned_seen += int(real.sum())
         measured = evaluate(model, watch, device, classes)
         print(
             f"epoch {epoch:2d}  loss {running / seen:.4f}  train {right / seen:.4f}"
-            f"  val {measured['accuracy']:.4f}"
+            f"  val {measured['accuracy']:.4f}  turn {turned_right / max(turned_seen, 1):.4f}"
         )
         if measured["accuracy"] >= best:
             best = measured["accuracy"]
@@ -265,8 +290,8 @@ def export(model: nn.Module, labels: list[str], parameters: int, same: dict, wid
         (torch.zeros(1, 3, size, size),),
         str(path),
         input_names=["image"],
-        output_names=["logits"],
-        dynamic_axes={"image": {0: "batch"}, "logits": {0: "batch"}},
+        output_names=["logits", "turn"],
+        dynamic_axes={"image": {0: "batch"}, "logits": {0: "batch"}, "turn": {0: "batch"}},
     )
     # The exporter puts the weights in a sidecar .onnx.data by default. Fold them back in: whatever
     # loads this — a browser, a sidecar process — is simpler with one file to fetch.
@@ -285,7 +310,7 @@ def export(model: nn.Module, labels: list[str], parameters: int, same: dict, wid
                 "widened_accuracy": wider["accuracy"],
                 "caveat": (
                     "Both figures come from images derived from one calibration photo per class. "
-                    "They measure invariance to the augmentations in synthesize.py, not accuracy on "
+                    "They measure invariance to the augmentations in training/synthesize.py, not accuracy on "
                     "a real photo."
                 ),
             },

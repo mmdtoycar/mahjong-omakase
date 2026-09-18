@@ -124,7 +124,9 @@ export const GuobiaoCalculator: React.FC<GuobiaoCalculatorProps> = ({
   }, [])
 
   // Sync imported hand from photo recognition
-  const [prevImportTrigger, setPrevImportTrigger] = useState<number | undefined>(undefined)
+  // Seeded from the prop for the same reason as RiichiCalculator: nothing unmounts this one today, but
+  // the hand outlives the round, so undefined here would reapply it to whatever mounts next.
+  const [prevImportTrigger, setPrevImportTrigger] = useState(importedHand?.trigger)
   if (importedHand && importedHand.trigger !== prevImportTrigger) {
     setPrevImportTrigger(importedHand.trigger)
     // A photo carries no 花牌/绝张/杠上/海底 information, so clear whatever the previous

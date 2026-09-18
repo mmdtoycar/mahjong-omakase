@@ -69,22 +69,31 @@ class LocalReaderServiceTest {
   @Test
   void treats422AsThePhotoBeingUnreadable() {
     Fixture f = build();
-    answer(f.server(), HttpStatus.UNPROCESSABLE_ENTITY, "{\"message\":\"no line of tiles found\"}");
+    answer(
+        f.server(),
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        "{\"code\":\"no-row\",\"message\":\"no region frames as one even row of tiles\"}");
 
+    // The code, not the sentence: it is what the caller words for the player, and the sentence it
+    // came
+    // with is English prose meant for the log.
     assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg", null))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("no line of tiles found");
+        .hasMessage("no-row");
   }
 
   /** 415 likewise: it looked at the bytes and could not decode them. */
   @Test
   void treats415AsThePhotoBeingUnreadable() {
     Fixture f = build();
-    answer(f.server(), HttpStatus.UNSUPPORTED_MEDIA_TYPE, "{\"message\":\"could not decode\"}");
+    answer(
+        f.server(),
+        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+        "{\"code\":\"undecodable\",\"message\":\"could not decode the image\"}");
 
     assertThatThrownBy(() -> f.service().recognize("BASE64", "image/jpeg", null))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("could not decode");
+        .hasMessage("undecodable");
   }
 
   /**
