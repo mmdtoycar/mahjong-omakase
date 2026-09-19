@@ -39,7 +39,7 @@ def self_check() -> int:
     blank = cv2.imencode(".jpg", np.full((400, 600, 3), (50, 56, 30), np.uint8))[1]
     # A hand photo is not in the repository — it is one table's tiles and 200KB of binary — so the two
     # cases that need one are skipped when it is absent rather than failing the run.
-    hand_file = Path(__file__).resolve().parents[1] / "data/test_hand.jpg"
+    hand_file = Path(__file__).resolve().parent / "test_hand.jpg"
     photo = cv2.imencode(".jpg", cv2.imread(str(hand_file)))[1] if hand_file.exists() else None
 
     def drive(raw: bytes):

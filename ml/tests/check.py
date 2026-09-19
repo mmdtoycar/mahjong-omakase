@@ -1,9 +1,8 @@
-"""Runs every check in this directory, and is what the Dockerfile calls as its build gate.
+"""Runs every check in this directory. CI runs this; so does the pre-push habit.
 
-A runner rather than pytest, because the server image has no pytest in it and should not: it installs
-`requirements-serve.txt` and nothing else, and the gate has to run inside the image it is gating. Each check
-is a plain `self_check()` returning the number of failures, so there is nothing to discover and nothing to
-configure.
+A runner rather than pytest, because nothing here needs discovery or configuration: each check is a plain
+`self_check()` returning its number of failures. It needs only `requirements-serve.txt` — no torch — which is
+why CI can run all of it in half a minute.
 
     python -m tests.check          # from ml/
     python -m tests.test_reader    # one of them on its own
