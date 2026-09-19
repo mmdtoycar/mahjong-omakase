@@ -54,8 +54,8 @@ jobs:
       - name: Run tests
         run: npm run test:run
 
-  reader:
-    name: Reader
+  ml:
+    name: ML Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
