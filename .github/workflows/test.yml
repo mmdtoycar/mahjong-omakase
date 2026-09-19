@@ -53,3 +53,55 @@ jobs:
 
       - name: Run tests
         run: npm run test:run
+
+  ml:
+    name: ML Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ml/requirements-serve.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-serve.txt
+        working-directory: ml
+
+      - name: Run checks
+        run: python -m tests.check
+        working-directory: ml
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build the image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ml/Dockerfile
+          push: false
+          load: true
+          tags: mahjong-reader:pr
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Read one real photo through it
+        run: |
+          docker run -d --name reader -p 8000:8000 mahjong-reader:pr
+          for _ in $(seq 40); do
+            curl -fsS http://127.0.0.1:8000/healthz >/dev/null 2>&1 && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/healthz
+          python - <<'EOF' > /tmp/hand.json
+          import base64, json, pathlib
+          raw = pathlib.Path("ml/tests/test_hand.jpg").read_bytes()
+          print(json.dumps({"imageBase64": base64.b64encode(raw).decode(), "mimeType": "image/jpeg"}))
+          EOF
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            --data @/tmp/hand.json http://127.0.0.1:8000/recognize
+          docker logs reader
