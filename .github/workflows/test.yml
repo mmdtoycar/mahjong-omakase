@@ -54,12 +54,9 @@ jobs:
       - name: Run tests
         run: npm run test:run
 
-  ml:
-    name: Reader Checks
+  reader:
+    name: Reader
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ml
     steps:
       - uses: actions/checkout@v7
 
@@ -72,20 +69,16 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements-serve.txt
+        working-directory: ml
 
       - name: Run checks
         run: python -m tests.check
-
-  reader:
-    name: Reader Image
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
+        working-directory: ml
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build the local reader
+      - name: Build the image
         uses: docker/build-push-action@v7
         with:
           context: .
