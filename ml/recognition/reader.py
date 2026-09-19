@@ -837,15 +837,27 @@ def _read_hand_upright(
     crops = crops[keep]
     melds, notes = keep_possible(tiles, hidden + [meld for _, meld in beside])
 
-    # The winning tile only when which end it sits at was actually established. The calculator moves it
-    # to the end of the array itself, so an honest null costs one tap and a guess costs a wrong score.
-    winning = tiles[-1] if direction.known and tiles else None
+    winning = winning_tile(tiles, direction.known)
     if not direction.known:
         notes.append(f"which end holds the winning tile is unknown ({direction.why})")
+    elif winning is None and tiles:
+        notes.append("the tile at the winning end read as face down, so which one it is was not reported")
     unsure = [f"#{i + 1} {t}" for i, (t, c) in enumerate(zip(tiles, sure)) if c < CONFIDENT]
     if unsure:
         notes.append(f"least certain about {', '.join(unsure)} — worth a look")
     return Reading(tiles, sure, melds, winning, direction, hand.box, pitch, crops, notes)
+
+
+def winning_tile(tiles: list[str], direction_known: bool) -> str | None:
+    """Which tile won, from the row in hand order, or None when this cannot say.
+
+    Only when the end it sits at was established, and only when that end is a tile rather than a back. An
+    honest null costs one tap; naming `back` cost the whole tile, because the browser drops what it cannot
+    parse and `back` is not a tile any calculator scores. Seen twice in one evening of real rounds.
+    """
+    if not direction_known or not tiles or tiles[-1] == BACK:
+        return None
+    return tiles[-1]
 
 
 def as_json(reading: Reading) -> dict:
