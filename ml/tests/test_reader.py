@@ -25,6 +25,7 @@ from recognition.reader import (
     choose_meld,
     judge_meld,
     reading_order,
+    winning_tile,
 )
 
 
@@ -173,7 +174,23 @@ def self_check() -> int:
         failures += not ok
         print(f"  {'ok  ' if ok else 'FAIL'} {name:28s} -> reverse={got.reverse} known={got.known}")
 
-    total = len(cases) + len(choices) + len(orders)
+    # And which tile won. A back at the winning end used to be handed over as the winning tile, and the
+    # browser drops what it cannot parse, so the tile was lost rather than left to be tapped in. It
+    # reached production: two of one evening's rounds came back winning=back.
+    winners = [
+        ("a tile at the known end", ["1m", "2m", "3m"], True, "3m"),
+        ("a back at the known end", ["1m", "2m", BACK], True, None),
+        ("a back anywhere else", [BACK, "2m", "3m"], True, "3m"),
+        ("the end is not known", ["1m", "2m", "3m"], False, None),
+        ("nothing was read", [], True, None),
+    ]
+    for name, tiles, known, expected in winners:
+        got = winning_tile(tiles, known)
+        ok = got == expected
+        failures += not ok
+        print(f"  {'ok  ' if ok else 'FAIL'} {name:28s} -> {got}")
+
+    total = len(cases) + len(choices) + len(orders) + len(winners)
     print(f"\n{total - failures}/{total} correct")
     return failures
 
