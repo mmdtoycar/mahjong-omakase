@@ -53,3 +53,25 @@ jobs:
 
       - name: Run tests
         run: npm run test:run
+
+  reader:
+    # Built here because it is not built anywhere else before main. The image runs the ml self-checks as its
+    # own last build step, so a broken reader fails this job rather than the deploy — where `needs: build`
+    # turns it into a skipped deploy, and the server stops shipping too. That is exactly what happened to
+    # #183: one COPY of a gitignored file, and nothing reached the server for a day and a half.
+    name: Reader Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build the local reader
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ml/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
