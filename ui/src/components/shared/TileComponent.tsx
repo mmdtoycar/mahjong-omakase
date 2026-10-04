@@ -31,15 +31,17 @@ export const TileComponent: React.FC<{
   isBack?: boolean
   disabled?: boolean
   size?: 'normal' | 'small'
-}> = ({ tile, onClick, isWinning, isBack, disabled, size = 'normal' }) => {
+}> = ({ tile, onClick, isWinning, isBack, disabled = false, size = 'normal' }) => {
   const tileKey = isBack ? 'Back' : getTileKey(tile)
+  const isClickable = Boolean(onClick && !disabled)
+  const isGrayedOut = Boolean(disabled && onClick)
   const { onPointerDown, onPointerUp } = pointerTapHandlers(onClick, disabled)
 
   return (
     <div
-      className={`calc-tile-container ${size} ${!disabled ? 'selectable' : 'disabled'}`}
-      onPointerDown={onPointerDown}
-      onPointerUp={onPointerUp}
+      className={`calc-tile-container ${size} ${isClickable ? 'selectable' : ''} ${isGrayedOut ? 'disabled' : ''}`}
+      onPointerDown={isClickable ? onPointerDown : undefined}
+      onPointerUp={isClickable ? onPointerUp : undefined}
     >
       <img
         src={`https://raw.githubusercontent.com/FluffyStuff/riichi-mahjong-tiles/master/Regular/${tileKey}.svg`}
