@@ -9,6 +9,7 @@ import PlayerDetailPage from './pages/PlayerDetailPage'
 import AdminPage from './pages/AdminPage'
 import FanTablePage from './pages/FanTablePage'
 import CalculatorPage from './pages/CalculatorPage'
+import PracticePage from './pages/PracticePage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 import { fetchCurrentUser } from './api'
@@ -97,6 +98,7 @@ function App() {
           <Link to="/home">首页</Link>
           <Link to="/game">游戏</Link>
           <Link to="/stats">统计</Link>
+          <Link to="/practice">切牌练习</Link>
           <Link to="/calculator">算番器</Link>
           <Link to="/fan-table">番表</Link>
         </nav>
@@ -157,6 +159,7 @@ function App() {
           />
           <Route path="/fan-table" element={<FanTablePage />} />
           <Route path="/calculator" element={<CalculatorPage />} />
+          <Route path="/practice" element={<PracticePage />} />
           <Route path="/player/:id" element={<PlayerDetailPage />} />
           <Route
             path="/admin"
