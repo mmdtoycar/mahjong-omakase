@@ -51,6 +51,9 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Lint CSS
+        run: npm run lint:css
+
       - name: Run tests
         run: npm run test:run
 
@@ -69,6 +72,10 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements-serve.txt
+        working-directory: ml
+
+      - name: Lint
+        run: ruff check . && ruff format --check .
         working-directory: ml
 
       - name: Run checks
