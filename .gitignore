@@ -10,7 +10,6 @@ build/
 server/src/main/resources/static/
 
 # UI
-ui/node_modules
 ui/node_modules/
 ui/dist/
 .vite/
