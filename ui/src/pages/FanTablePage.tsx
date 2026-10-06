@@ -225,7 +225,6 @@ const FanTablePage: React.FC = () => {
                           <span
                             className="badge badge-discovery badge-sm"
                             style={{ fontSize: nameFontSize(currentDiscovery.playerName, isMobile) }}
-                            title={`首位达成者: ${currentDiscovery.playerName}`}
                           >
                             本月冠名: {currentDiscovery.playerName}
                           </span>
@@ -234,7 +233,6 @@ const FanTablePage: React.FC = () => {
                           <span
                             className="badge badge-discovery-prev badge-sm"
                             style={{ fontSize: nameFontSize(prevDiscovery.playerName, isMobile) }}
-                            title={`历史冠名: ${prevDiscovery.playerName}（本月尚未被发现）`}
                           >
                             历史冠名: {prevDiscovery.playerName}
                           </span>

@@ -72,11 +72,7 @@ export const RankBadge: React.FC<Props> = ({
   // Unranked + sm: render compact progress chip
   if (tier === 'UNRANKED' && size === 'sm') {
     return (
-      <span
-        className={`rank-badge rank-badge-unranked-sm ${className ?? ''}`}
-        title={showProgress ? `挑战中 ${progressPlayed}/5` : '未定段'}
-        onClick={onClick}
-      >
+      <span className={`rank-badge rank-badge-unranked-sm ${className ?? ''}`} onClick={onClick}>
         {showProgress ? `${progressPlayed}/5` : <span className="rank-badge-new">新</span>}
       </span>
     )
@@ -99,7 +95,6 @@ export const RankBadge: React.FC<Props> = ({
       <span
         className={`rank-badge rank-badge-${size}${isThrone ? ' rank-badge-throne' : ''} ${className ?? ''}`}
         onClick={onClick}
-        title={label}
       >
         <span className="rank-badge-fallback">{label.slice(0, 1)}</span>
         {size !== 'sm' && (
@@ -116,7 +111,6 @@ export const RankBadge: React.FC<Props> = ({
   return (
     <span
       className={`rank-badge rank-badge-${size}${isThrone ? ' rank-badge-throne' : ''} ${className ?? ''}`}
-      title={`${label}${rating !== undefined ? ` · ${rating.toFixed(0)}` : ''}`}
       onClick={onClick}
     >
       <img src={src} alt={label} className="rank-badge-img" onError={() => setImgFailed(true)} />

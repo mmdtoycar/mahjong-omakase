@@ -339,11 +339,7 @@ export default function StatsPage() {
                               userName={s.userName}
                               gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
                             />
-                            <span
-                              className="player-name"
-                              title={s.userName}
-                              style={{ fontSize: tableNameFontSize(s.userName, isMobile) }}
-                            >
+                            <span className="player-name" style={{ fontSize: tableNameFontSize(s.userName, isMobile) }}>
                               {s.userName}
                             </span>
                           </span>
@@ -452,11 +448,7 @@ export default function StatsPage() {
                             userName={p.userName}
                             gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
                           />
-                          <span
-                            className="player-name"
-                            title={p.userName}
-                            style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}
-                          >
+                          <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>
                             {p.userName}
                           </span>
                         </span>
