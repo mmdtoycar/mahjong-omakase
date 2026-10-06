@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class MonthlyResetJob {
+public class MonthlySnapshotJob {
 
   private static final ZoneId ZONE_PACIFIC = ZoneId.of("America/Los_Angeles");
 
@@ -21,7 +21,7 @@ public class MonthlyResetJob {
 
   /** Cron: minute=0 hour=0 day=1 month=* dayOfWeek=*, in America/Los_Angeles. */
   @Scheduled(cron = "0 0 0 1 * *", zone = "America/Los_Angeles")
-  public void runMonthlyReset() {
+  public void runMonthlySnapshot() {
     YearMonth justEnded = YearMonth.from(LocalDate.now(ZONE_PACIFIC)).minusMonths(1);
     log.info("Monthly tier snapshot starting for {}", justEnded);
     tierService.snapshotMonth(justEnded.getYear(), justEnded.getMonthValue());

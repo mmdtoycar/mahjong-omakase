@@ -53,19 +53,15 @@ public class TierService {
   /** Moves each human along the ladder; bots keep their place but are not rated. */
   public void onSessionCompleted(GameSession session, Map<Long, Integer> totalScoresByPlayer) {
     if (session.getStatus() != SessionStatus.COMPLETED) return;
-    if (!rate(session, totalScoresByPlayer, null)) return;
+    rate(session, totalScoresByPlayer, null);
     sessionRepo.save(session);
   }
 
-  /** {@code gamesBefore} is set when replaying history. False unless 3 or 4 at the table. */
-  private boolean rate(
+  /** {@code gamesBefore} is set when replaying history. */
+  private void rate(
       GameSession session, Map<Long, Integer> totals, Map<Long, Integer> gamesBefore) {
     GameMode mode = session.getGameMode();
     List<Integer> table = totals.values().stream().sorted(Comparator.reverseOrder()).toList();
-    if (table.size() != 3 && table.size() != 4) {
-      log.warn("Session id={} has {} scored players, not rated", session.getId(), table.size());
-      return false;
-    }
     // 魂珠 double when two or more at the table are 斗战圣佛 before the game — a bot never is.
     Map<Long, Player> seated = new HashMap<>();
     for (GameSessionPlayer gsp : session.getPlayers()) {
@@ -103,7 +99,6 @@ public class TierService {
       incrementGames(p, mode);
       playerRepo.save(p);
     }
-    return true;
   }
 
   /** Upserts each player's current state for (year, month), for modes they have played. */
@@ -294,12 +289,14 @@ public class TierService {
     int processed = 0;
     int skipped = 0;
     for (GameSession s : sessions) {
-      Map<Long, Integer> games = gamesSoFar.computeIfAbsent(s.getGameMode(), m -> new HashMap<>());
-      if (rate(s, aggregateSessionScores(s), games)) {
-        processed++;
-      } else {
+      Map<Long, Integer> scores = aggregateSessionScores(s);
+      // A session completed without a single round has nothing to rate.
+      if (scores.isEmpty()) {
         skipped++;
+        continue;
       }
+      rate(s, scores, gamesSoFar.computeIfAbsent(s.getGameMode(), m -> new HashMap<>()));
+      processed++;
     }
     playerRepo.saveAll(all);
     log.info("Ladder backfill complete: {} sessions processed, {} skipped", processed, skipped);

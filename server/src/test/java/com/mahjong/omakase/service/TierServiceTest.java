@@ -143,17 +143,6 @@ public class TierServiceTest {
   }
 
   @Test
-  public void aTableOfTwoIsNotRated() {
-    Map<Long, Integer> totals = scores(10, -10);
-    GameSession s = session(GameMode.GUOBIAO, totals, null);
-
-    tierService.onSessionCompleted(s, totals);
-
-    assertNull(seat(s, 1).getLadderDelta());
-    assertEquals(0, seat(s, 1).getPlayer().getGamesGuobiao());
-  }
-
-  @Test
   public void 齐天大圣StarsGetHarder() {
     assertEquals(300, Ladder.starCap(6));
     assertEquals(400, Ladder.starCap(7));
@@ -301,6 +290,19 @@ public class TierServiceTest {
     assertEquals(75 + 30 + 0.5 * 40, first.getLadderPointsAfter(), 1e-9);
     // History does not count as games played; those counters were already right.
     assertEquals(0, first.getPlayer().getGamesRiichi());
+  }
+
+  @Test
+  public void backfillSkipsASessionWithNoRounds() {
+    GameSession s = session(GameMode.RIICHI, scores(0, 0, 0, 0), null);
+    s.setCreatedAt(LocalDateTime.of(2026, 9, 1, 20, 0));
+    when(playerRepo.findAll())
+        .thenReturn(s.getPlayers().stream().map(GameSessionPlayer::getPlayer).toList());
+    when(sessionRepo.findByStatusOrderByCreatedAtDesc(SessionStatus.COMPLETED))
+        .thenReturn(List.of(s));
+
+    assertEquals(new TierService.BackfillResult(0, 1), tierService.backfillLadder());
+    assertNull(seat(s, 1).getLadderDelta());
   }
 
   private static Round round(GameSession s, Map<Long, Integer> totals) {

@@ -7,8 +7,8 @@ import lombok.Setter;
 
 /**
  * Snapshot of a player's skill state at the END of a given Pacific calendar month, for the given
- * mode. Written by the monthly reset cron (right before applying the soft regression) and by the
- * one-shot backfill replay. Used to render historical tier on the players-stats page.
+ * mode. Written by the monthly snapshot cron. Used to render historical tier on the players-stats
+ * page.
  */
 @Entity
 @Table(
@@ -39,7 +39,7 @@ public class PlayerMonthlySkill {
   @Column(name = "season_month", nullable = false)
   private int month;
 
-  /** Rating at end of month, BEFORE the soft reset is applied. */
+  /** The old ELO rating at end of month. */
   @Column(nullable = false)
   private double skillRating;
 

@@ -87,7 +87,7 @@ public class AdminController {
     return Map.of("message", "Session deleted");
   }
 
-  /** Seeds everyone's 段位战 from all completed sessions; changes nothing else, safe to re-run. */
+  /** Replays all completed sessions into everyone's 段位战 and each game's result; safe to re-run. */
   @PostMapping("/tier/backfill")
   public Map<String, Object> backfillTier(
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
