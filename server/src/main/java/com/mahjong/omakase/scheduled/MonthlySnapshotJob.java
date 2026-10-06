@@ -9,14 +9,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Runs the monthly skill rating snapshot + soft-reset on the 1st of each month at 00:00 PT.
- * Snapshot first (captures end-of-month state of the just-ended month), THEN soft-reset.
- */
+/** Snapshots the just-ended month's tiers on the 1st at 00:00 PT; 段位战 itself never resets. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class MonthlyResetJob {
+public class MonthlySnapshotJob {
 
   private static final ZoneId ZONE_PACIFIC = ZoneId.of("America/Los_Angeles");
 
@@ -24,11 +21,10 @@ public class MonthlyResetJob {
 
   /** Cron: minute=0 hour=0 day=1 month=* dayOfWeek=*, in America/Los_Angeles. */
   @Scheduled(cron = "0 0 0 1 * *", zone = "America/Los_Angeles")
-  public void runMonthlyReset() {
+  public void runMonthlySnapshot() {
     YearMonth justEnded = YearMonth.from(LocalDate.now(ZONE_PACIFIC)).minusMonths(1);
-    log.info("Monthly skill snapshot + reset starting (snapshot for {})", justEnded);
+    log.info("Monthly tier snapshot starting for {}", justEnded);
     tierService.snapshotMonth(justEnded.getYear(), justEnded.getMonthValue());
-    tierService.monthlyReset();
-    log.info("Monthly skill snapshot + reset done");
+    log.info("Monthly tier snapshot done");
   }
 }

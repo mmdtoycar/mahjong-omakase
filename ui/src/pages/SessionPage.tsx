@@ -9,10 +9,9 @@ import { MahjongHand } from '../components/MahjongHand'
 import { tableNameFontSize } from '../utils/fontSize'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
-import { scoreClass, parseError, seatRankMedal } from '../utils/format'
+import { scoreClass, parseError, seatRankMedal, ladderResultText, ladderMoveText } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
-import { TableStrengthTag } from '../components/TableStrengthTag'
 import { PhotoRecognitionModal, RecognizedHand, winHandToLabel } from '../components/PhotoRecognitionModal'
 import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
@@ -747,7 +746,6 @@ export default function SessionPage() {
                 {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
               </span>
             </span>
-            <TableStrengthTag table={session.tableStrength} size="md" />
             {session.status === 'IN_PROGRESS' && (
               <button className="btn btn-danger btn-small" onClick={handleComplete} disabled={submitting}>
                 结束游戏
@@ -768,7 +766,14 @@ export default function SessionPage() {
                       <span className={`rank-tag rank-tag-${rankMap[p.id]?.rank}`}>
                         {seatRankMedal(rankMap[p.id]?.rank ?? 0) ?? `#${rankMap[p.id]?.rank ?? 0}`}
                       </span>
-                      <RankBadge tier={p.tier} size="sm" userName={p.userName} />
+                      <RankBadge
+                        tier={p.tier}
+                        size="sm"
+                        stars={p.stars ?? undefined}
+                        points={p.points ?? undefined}
+                        starCap={p.starCap ?? undefined}
+                        userName={p.userName}
+                      />
                       <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>
                         {p.userName}
                       </span>
@@ -891,6 +896,8 @@ export default function SessionPage() {
                   const val = session.totalScores[p.id] || 0
                   const rankDelta = ratingDelta(p.id)
                   const rank = rankMap[p.id]?.rank ?? i + 1
+                  const result = rankDelta != null ? ladderResultText(p) : null
+                  const move = result ? ladderMoveText(p) : null
                   return (
                     <tr key={p.id}>
                       <td className="col-rank">
@@ -900,6 +907,20 @@ export default function SessionPage() {
                         <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>
                           {p.userName}
                         </span>
+                        {result && (
+                          <div className="ladder-result">
+                            {result}
+                            {move && (
+                              <span
+                                className={`ladder-move ${
+                                  p.ladderMove?.endsWith('UP') ? 'score-positive' : 'score-negative'
+                                }`}
+                              >
+                                {move}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className={`${scoreClass(val)} num-cell`}>{val > 0 ? `+${val}` : val}</td>
                       <td className={`num-cell-rank-delta${rankDelta != null ? ' ' + scoreClass(rankDelta) : ''}`}>

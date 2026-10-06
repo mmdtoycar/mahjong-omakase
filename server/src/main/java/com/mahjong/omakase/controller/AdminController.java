@@ -87,19 +87,15 @@ public class AdminController {
     return Map.of("message", "Session deleted");
   }
 
-  /**
-   * Skill rating backfill: replays every completed session in chronological order to seed current
-   * ELO ratings for all players. After the first deploy + curl invocation succeeds, incremental
-   * updates happen automatically in {@link com.mahjong.omakase.service.GameService#completeSession}
-   * and the monthly cron handles the soft reset. This endpoint then has no reason to exist.
-   */
+  /** Replays all completed sessions into everyone's 段位战 and each game's result; safe to re-run. */
   @PostMapping("/tier/backfill")
   public Map<String, Object> backfillTier(
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
     requireAdmin(authHeader);
-    TierService.BackfillResult r = tierService.backfillAllHistory();
+    TierService.BackfillResult r = tierService.backfillLadder();
     gameService.evictAllCaches();
-    log.info("Admin triggered tier backfill: processed={} skipped={}", r.processed(), r.skipped());
+    log.info(
+        "Admin triggered ladder backfill: processed={} skipped={}", r.processed(), r.skipped());
     return Map.of("processed", r.processed(), "skipped", r.skipped());
   }
 }

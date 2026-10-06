@@ -110,7 +110,6 @@ export default function DashboardPage() {
               createdAt={s.createdAt}
               roundLabel={`${s.roundCount}局 已结束`}
               isActive={false}
-              tableStrength={s.tableStrength}
               players={
                 s.rankings
                   ? s.rankings.map((p) => ({
@@ -118,6 +117,9 @@ export default function DashboardPage() {
                       name: p.userName,
                       score: p.totalScore,
                       tier: p.tier ?? null,
+                      stars: p.stars,
+                      points: p.points,
+                      starCap: p.starCap,
                     }))
                   : []
               }

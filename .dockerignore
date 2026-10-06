@@ -6,6 +6,7 @@ build
 data
 ui/node_modules
 ui/dist
+ui/design
 server/src/main/resources/static
 *.iml
 .DS_Store

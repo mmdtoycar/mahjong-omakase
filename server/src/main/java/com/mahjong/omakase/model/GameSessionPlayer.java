@@ -37,4 +37,16 @@ public class GameSessionPlayer {
 
   /** 本场对局结束后的段位分. Null under the same conditions as {@link #ratingDelta}. */
   @Column private Double ratingAfter;
+
+  /** 段位战 points (or 魂珠) this session earned; null before 段位战, which used {@link #ratingDelta}. */
+  @Column private Double ladderDelta;
+
+  /** Ladder level before this session. */
+  @Column private Integer ladderLevelBefore;
+
+  /** Ladder level after this session. */
+  @Column private Integer ladderLevelAfter;
+
+  /** Points or 魂珠 into that level after this session. */
+  @Column private Double ladderPointsAfter;
 }

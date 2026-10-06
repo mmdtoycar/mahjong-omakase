@@ -25,4 +25,10 @@ public class PlayerStatsResponse {
   private String tier;
   private double skillRating;
   private int gamesNeeded;
+
+  /** 段位战 stars, points into the star and the star's cap. Null for months before 段位战. */
+  private Integer stars;
+
+  private Double ladderPoints;
+  private Integer starCap;
 }

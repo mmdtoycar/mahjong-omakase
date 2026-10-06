@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { TierKey, tierLabel } from '../types'
-import { skillRatingText } from '../utils/format'
+import { ladderPointsText, skillRatingText, tierScoreText } from '../utils/format'
 
 interface Props {
   tier?: TierKey | null
@@ -10,6 +10,11 @@ interface Props {
   gamesNeeded?: number
   /** Optional rating overlay shown beside the image (md/lg only). Unranked ratings render as "XXXX(?)". */
   rating?: number
+  /** 段位战 stars (1-3), drawn under the emblem the way 雀魂 does. */
+  stars?: number
+  /** 段位战 points into the current star; shown instead of {@link rating} when given with {@link starCap}. */
+  points?: number
+  starCap?: number
   /** Player userName — used to detect BOT and render 🤖 instead of UNRANKED placeholder. */
   userName?: string
   /** Click target — links to player detail / profile / etc. */
@@ -30,6 +35,9 @@ export const RankBadge: React.FC<Props> = ({
   size = 'sm',
   gamesNeeded,
   rating,
+  stars,
+  points,
+  starCap,
   userName,
   onClick,
   className,
@@ -38,8 +46,7 @@ export const RankBadge: React.FC<Props> = ({
   if (!tier) return null
   const isBot = !!userName && userName.toUpperCase() === 'BOT'
   const imageBase = TIER_TO_IMAGE[tier]
-  // Always use _small.png — large versions are 3-6MB and tank performance.
-  const src = imageBase ? `/rank/${imageBase}_small.png` : null
+  const src = imageBase ? `/rank/tier/${imageBase}${size === 'sm' ? '_sm' : ''}.webp` : null
   // Reset failure state when src changes — otherwise a one-time load failure
   // would stick around for later tier/source changes in the same component instance.
   useEffect(() => {
@@ -49,6 +56,27 @@ export const RankBadge: React.FC<Props> = ({
   const isThrone = tier === 'LV4_THRONE'
   const showProgress = tier === 'UNRANKED' && typeof gamesNeeded === 'number' && gamesNeeded > 0
   const progressPlayed = typeof gamesNeeded === 'number' ? Math.max(0, 5 - gamesNeeded) : 0
+  const ladder = points !== undefined && starCap !== undefined ? ladderPointsText(points, starCap) : null
+  const scoreText = ladder ?? (rating !== undefined ? rating.toFixed(0) : null)
+  const isDou = isThrone && starCap === 0 && points !== undefined
+  // 斗战圣佛's 魂珠 are on the emblem, so not repeated under the name.
+  const score = isDou ? null : scoreText
+  // Hugs the emblem's lower-left edge; the bottom star lights first.
+  const starRow = isDou ? (
+    <span className={`rank-badge-beans${Math.floor(points) <= 0 ? ' rank-badge-beans-empty' : ''}`}>
+      <span className="rank-badge-bean" />
+      {Math.floor(points)}
+    </span>
+  ) : stars && !isThrone ? (
+    [1, 2, 3].map((i) => (
+      <img
+        key={i}
+        src={i > stars ? '/rank/icon/star_empty.webp' : '/rank/icon/star.webp'}
+        alt=""
+        className={`rank-badge-star rank-badge-star-${i}`}
+      />
+    ))
+  ) : null
 
   // BOT: bots are always UNRANKED but show 🤖 instead of "新"/"X/5" — they don't earn tiers.
   if (isBot && size === 'sm') {
@@ -72,11 +100,7 @@ export const RankBadge: React.FC<Props> = ({
   // Unranked + sm: render compact progress chip
   if (tier === 'UNRANKED' && size === 'sm') {
     return (
-      <span
-        className={`rank-badge rank-badge-unranked-sm ${className ?? ''}`}
-        title={showProgress ? `挑战中 ${progressPlayed}/5` : '未定段'}
-        onClick={onClick}
-      >
+      <span className={`rank-badge rank-badge-unranked-sm ${className ?? ''}`} onClick={onClick}>
         {showProgress ? `${progressPlayed}/5` : <span className="rank-badge-new">新</span>}
       </span>
     )
@@ -88,7 +112,11 @@ export const RankBadge: React.FC<Props> = ({
     return (
       <div className={`rank-badge rank-badge-unranked rank-badge-${size} ${className ?? ''}`} onClick={onClick}>
         <div>{showProgress ? `${progressPlayed}/5` : '未定段'}</div>
-        {rating !== undefined && <span className="rank-badge-rating">{skillRatingText(rating, 'UNRANKED')}</span>}
+        {ladder ? (
+          <span className="rank-badge-rating">{ladder}(?)</span>
+        ) : (
+          rating !== undefined && <span className="rank-badge-rating">{skillRatingText(rating, 'UNRANKED')}</span>
+        )}
       </div>
     )
   }
@@ -99,13 +127,15 @@ export const RankBadge: React.FC<Props> = ({
       <span
         className={`rank-badge rank-badge-${size}${isThrone ? ' rank-badge-throne' : ''} ${className ?? ''}`}
         onClick={onClick}
-        title={label}
       >
-        <span className="rank-badge-fallback">{label.slice(0, 1)}</span>
+        <span className="rank-badge-emblem">
+          <span className="rank-badge-fallback">{label.slice(0, 1)}</span>
+          {starRow}
+        </span>
         {size !== 'sm' && (
           <span className="rank-badge-meta">
             <span className="rank-badge-name">{label}</span>
-            {rating !== undefined && <span className="rank-badge-rating">{rating.toFixed(0)}</span>}
+            {score && <span className="rank-badge-rating">{score}</span>}
           </span>
         )}
       </span>
@@ -116,16 +146,26 @@ export const RankBadge: React.FC<Props> = ({
   return (
     <span
       className={`rank-badge rank-badge-${size}${isThrone ? ' rank-badge-throne' : ''} ${className ?? ''}`}
-      title={`${label}${rating !== undefined ? ` · ${rating.toFixed(0)}` : ''}`}
       onClick={onClick}
     >
-      <img src={src} alt={label} className="rank-badge-img" onError={() => setImgFailed(true)} />
+      <span className="rank-badge-emblem">
+        <img src={src} alt={label} className="rank-badge-img" onError={() => setImgFailed(true)} />
+        {starRow}
+      </span>
       {size !== 'sm' && (
         <span className="rank-badge-meta">
           <span className="rank-badge-name">{label}</span>
-          {rating !== undefined && <span className="rank-badge-rating">{rating.toFixed(0)}</span>}
+          {score && <span className="rank-badge-rating">{score}</span>}
         </span>
       )}
     </span>
   )
 }
+
+/** 段位分 for a stats row, with the 魂珠 icon for 斗战圣佛. */
+export const TierScore: React.FC<{ row: Parameters<typeof tierScoreText>[0] }> = ({ row }) => (
+  <>
+    {row.tier === 'LV4_THRONE' && row.starCap === 0 ? <span className="rank-badge-bean" /> : null}
+    {tierScoreText(row)}
+  </>
+)

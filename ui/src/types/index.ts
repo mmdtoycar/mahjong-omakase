@@ -43,7 +43,6 @@ export interface GameSession {
   createdAt: string
   roundCount: number
   rankings?: PlayerPerformance[]
-  tableStrength?: string | null
 }
 
 export type TierKey = 'UNRANKED' | 'LV1' | 'LV2' | 'LV3' | 'LV4_THRONE'
@@ -51,7 +50,7 @@ export type TierKey = 'UNRANKED' | 'LV1' | 'LV2' | 'LV3' | 'LV4_THRONE'
 /** 段位与隐藏分信息 (单一模式). */
 export interface TierInfo {
   tier: TierKey
-  /** 0-4 — maps to /rank/lv{level}.png (level 0 = 未定段, no image). */
+  /** 0-4 — maps to /rank/tier/lv{level}.webp (level 0 = 未定段, no image). */
   level: number
   rating: number
   /** Games in this mode (国标 / 立直 / 东北). */
@@ -59,6 +58,11 @@ export interface TierInfo {
   /** When unranked: 5 - games (counts down to ranked debut for THIS mode). 0 once ranked. */
   gamesNeeded: number
   peakRating: number
+  /** 段位战 stars within the tier, 1 to 3. */
+  stars: number
+  /** 段位战 points into the current star out of {@link starCap}, or 斗战圣佛's 魂珠 with a cap of 0. */
+  points: number
+  starCap: number
 }
 
 export interface PlayerTierResponse {
@@ -87,6 +91,10 @@ export interface PlayerPerformance {
   totalScore: number
   rank: number
   tier?: TierKey | null
+  /** 段位战 position after this game, as in {@link TierInfo}. */
+  stars?: number | null
+  points?: number | null
+  starCap?: number | null
 }
 
 export interface PlayerInfo {
@@ -94,6 +102,12 @@ export interface PlayerInfo {
   userName: string
   seat: number
   tier?: TierKey | null
+  /** 段位战 position after this game (live while in progress), as in {@link TierInfo}. */
+  stars?: number | null
+  points?: number | null
+  starCap?: number | null
+  /** Set at 结算 when the level moved. */
+  ladderMove?: 'TIER_UP' | 'STAR_UP' | 'STAR_DOWN' | 'TIER_DOWN' | null
 }
 
 export interface RoundInfo {
@@ -125,7 +139,6 @@ export interface SessionDetail {
   startingPoints: number
   /** 每位玩家本场对局的段位分变化; 进行中的对局为空. */
   ratingDeltas?: Record<number, number>
-  tableStrength?: string | null
 }
 
 export interface ConfirmedHand {
@@ -175,8 +188,13 @@ export interface PlayerStats {
   meldWins: number
   recordedHandWins: number
   tier?: TierKey | null
+  /** Sort order within the month: 段位战 position, or the old rating for months before 段位战. */
   skillRating?: number
   gamesNeeded?: number
+  /** 段位战 stars, points into the star and the star's cap. Null for months before 段位战. */
+  stars?: number | null
+  ladderPoints?: number | null
+  starCap?: number | null
 }
 
 export interface Season {

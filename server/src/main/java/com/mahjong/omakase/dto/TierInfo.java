@@ -3,6 +3,7 @@ package com.mahjong.omakase.dto;
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.model.Player;
 import com.mahjong.omakase.model.Tier;
+import com.mahjong.omakase.service.Ladder;
 import com.mahjong.omakase.service.TierService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,12 +34,43 @@ public class TierInfo {
   /** All-time peak rating in this mode */
   private double peakRating;
 
+  /** 段位战 stars within the tier, 1 to 3. */
+  private int stars;
+
+  /** 段位战 points into the current star. */
+  private double points;
+
+  /** Points that fill the current star; 0 for 斗战圣佛, whose 魂珠 have no cap. */
+  private int starCap;
+
   public static TierInfo of(TierService tierService, Player p, GameMode mode) {
-    return of(tierService, p, mode, tierService.findThroneId(mode));
+    Tier t = tierService.computeTier(p, mode);
+    TierInfo info = ofLadder(t, TierService.getLadder(p, mode));
+    info.setRating(
+        switch (mode) {
+          case GUOBIAO -> p.getSkillGuobiao();
+          case RIICHI -> p.getSkillRiichi();
+          case DONGBEI -> p.getSkillDongbei();
+        });
+    int games =
+        switch (mode) {
+          case GUOBIAO -> p.getGamesGuobiao();
+          case RIICHI -> p.getGamesRiichi();
+          case DONGBEI -> p.getGamesDongbei();
+        };
+    info.setGames(games);
+    info.setGamesNeeded(t == Tier.UNRANKED ? Math.max(0, TierService.RANKED_MIN_GAMES - games) : 0);
+    info.setPeakRating(
+        switch (mode) {
+          case GUOBIAO -> p.getPeakSkillGuobiao();
+          case RIICHI -> p.getPeakSkillRiichi();
+          case DONGBEI -> p.getPeakSkillDongbei();
+        });
+    return info;
   }
 
-  public static TierInfo of(TierService tierService, Player p, GameMode mode, Long throneId) {
-    Tier t = tierService.computeTier(p, mode, throneId);
+  /** Tier and 段位战 position only, for a seat's state after a past game. */
+  public static TierInfo ofLadder(Tier t, Ladder.State ladder) {
     int level =
         switch (t) {
           case UNRANKED -> 0;
@@ -47,32 +79,12 @@ public class TierInfo {
           case LV3 -> 3;
           case LV4_THRONE -> 4;
         };
-    double rating =
-        switch (mode) {
-          case GUOBIAO -> p.getSkillGuobiao();
-          case RIICHI -> p.getSkillRiichi();
-          case DONGBEI -> p.getSkillDongbei();
-        };
-    int games =
-        switch (mode) {
-          case GUOBIAO -> p.getGamesGuobiao();
-          case RIICHI -> p.getGamesRiichi();
-          case DONGBEI -> p.getGamesDongbei();
-        };
-    double peak =
-        switch (mode) {
-          case GUOBIAO -> p.getPeakSkillGuobiao();
-          case RIICHI -> p.getPeakSkillRiichi();
-          case DONGBEI -> p.getPeakSkillDongbei();
-        };
-    int needed = t == Tier.UNRANKED ? Math.max(0, TierService.RANKED_MIN_GAMES - games) : 0;
     return TierInfo.builder()
         .tier(t.name())
         .level(level)
-        .rating(rating)
-        .games(games)
-        .gamesNeeded(needed)
-        .peakRating(peak)
+        .stars(Ladder.stars(ladder.level()))
+        .points(ladder.points())
+        .starCap(Ladder.starCap(ladder.level()))
         .build();
   }
 }

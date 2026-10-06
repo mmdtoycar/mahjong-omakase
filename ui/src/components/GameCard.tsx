@@ -5,7 +5,6 @@ import { tableNameFontSize } from '../utils/fontSize'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { TierKey } from '../types'
 import { RankBadge } from './RankBadge'
-import { TableStrengthTag } from './TableStrengthTag'
 
 // Fullscreen API with webkit fallback + feature-detection (Safari/iPadOS use webkit*; iPhone has neither).
 type FsDoc = Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => void }
@@ -48,6 +47,9 @@ interface PlayerEntry {
   wind?: string
   isDealer?: boolean
   tier?: TierKey | null
+  stars?: number | null
+  points?: number | null
+  starCap?: number | null
 }
 
 interface Props {
@@ -57,18 +59,9 @@ interface Props {
   roundLabel: string
   isActive: boolean
   players: PlayerEntry[]
-  tableStrength?: string | null
 }
 
-export const GameCard: React.FC<Props> = ({
-  id,
-  gameModeDisplayName,
-  createdAt,
-  roundLabel,
-  isActive,
-  players,
-  tableStrength,
-}) => {
+export const GameCard: React.FC<Props> = ({ id, gameModeDisplayName, createdAt, roundLabel, isActive, players }) => {
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const [fullscreen, setFullscreen] = useState(false)
@@ -145,7 +138,6 @@ export const GameCard: React.FC<Props> = ({
         <div className="session-card-header">
           <div className="session-card-mode">
             <span className="mode-text">{gameModeDisplayName}</span>
-            <TableStrengthTag table={tableStrength} />
           </div>
           <div className="session-card-meta">
             <span className="session-card-date">
@@ -169,7 +161,14 @@ export const GameCard: React.FC<Props> = ({
                   {seatRankMedal(p.rank) ?? `#${p.rank}`}
                 </span>
                 {p.wind && <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>{p.wind}</span>}
-                <RankBadge tier={p.tier} size="sm" userName={p.name} />
+                <RankBadge
+                  tier={p.tier}
+                  size="sm"
+                  stars={p.stars ?? undefined}
+                  points={p.points ?? undefined}
+                  starCap={p.starCap ?? undefined}
+                  userName={p.name}
+                />
                 <span className="player-name" style={{ fontSize: tableNameFontSize(p.name, isMobile) }}>
                   {p.name}
                 </span>
@@ -190,7 +189,6 @@ export const GameCard: React.FC<Props> = ({
           <div className="game-fs-topbar">
             <div className="game-fs-title-area">
               <span className="game-fs-mode">{gameModeDisplayName}</span>
-              <TableStrengthTag table={tableStrength} />
               <span className="game-fs-date">
                 {new Date(createdAt).toLocaleString('en-US', {
                   timeZone: 'America/Los_Angeles',
@@ -232,7 +230,14 @@ export const GameCard: React.FC<Props> = ({
                             {p.wind} {p.isDealer && '庄'}
                           </span>
                         )}
-                        <RankBadge tier={p.tier} size="md" userName={p.name} />
+                        <RankBadge
+                          tier={p.tier}
+                          size="md"
+                          stars={p.stars ?? undefined}
+                          points={p.points ?? undefined}
+                          starCap={p.starCap ?? undefined}
+                          userName={p.name}
+                        />
                         <span className="game-fs-player-name">{p.name}</span>
                       </div>
                     </div>

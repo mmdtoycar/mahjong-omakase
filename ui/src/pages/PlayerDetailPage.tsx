@@ -67,7 +67,9 @@ export default function PlayerDetailPage() {
                     tier={info.tier}
                     size="md"
                     userName={tier.userName}
-                    rating={info.rating}
+                    stars={info.stars}
+                    points={info.points}
+                    starCap={info.starCap}
                     gamesNeeded={info.gamesNeeded}
                   />
                 </div>

@@ -120,7 +120,7 @@ export default function LoginPage() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <img src="/logo-header.png" alt="Mahjong Omakase" className="login-logo" />
+        <img src="/logo.webp" alt="Mahjong Omakase" className="login-logo" />
         <h2 className="login-title">Mahjong Omakase</h2>
 
         {error && (

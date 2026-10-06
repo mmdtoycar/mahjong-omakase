@@ -26,8 +26,6 @@ public class SessionDetailResponse {
   /** 每位玩家本场对局的段位分变化. Empty while the session is in progress. */
   private Map<Long, Double> ratingDeltas = Collections.emptyMap();
 
-  private String tableStrength;
-
   @Getter
   @Setter
   @AllArgsConstructor
@@ -37,8 +35,24 @@ public class SessionDetailResponse {
     private Integer seat;
     private String tier;
 
+    /** 段位战 position after this game (live while in progress), as in {@link TierInfo}. */
+    private Integer stars;
+
+    private Double points;
+    private Integer starCap;
+
+    /** TIER_UP / STAR_UP / STAR_DOWN / TIER_DOWN at 结算; null if the level held. */
+    private String ladderMove;
+
     public PlayerInfo(Long id, String userName, Integer seat) {
-      this(id, userName, seat, null);
+      this(id, userName, seat, null, null, null, null, null);
+    }
+
+    public void setLadder(TierInfo info) {
+      tier = info.getTier();
+      stars = info.getStars();
+      points = info.getPoints();
+      starCap = info.getStarCap();
     }
   }
 

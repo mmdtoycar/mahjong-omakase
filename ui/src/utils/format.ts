@@ -1,5 +1,5 @@
 import { MSG } from '../constants'
-import { TierKey } from '../types'
+import { PlayerInfo, TierKey, tierLabel } from '../types'
 
 /**
  * Abbreviates a name to initials.
@@ -65,4 +65,44 @@ export function skillRatingText(rating: number | undefined, tier: TierKey | null
   if (!rating) return '-'
   const val = rating.toFixed(0)
   return !tier || tier === 'UNRANKED' ? `${val}(?)` : val
+}
+
+/** Points into the current star out of the star's cap, e.g. "63/100"; 斗战圣佛's 魂珠 have no cap. */
+export function ladderPointsText(points: number, starCap: number): string {
+  return starCap ? `${Math.floor(points)}/${starCap}` : `${Math.floor(points)}`
+}
+
+/** A seat's 段位 after a game, e.g. 美猴王 2星 98/150; null while unranked. */
+export function ladderResultText(p: PlayerInfo): string | null {
+  if (!p.tier || p.tier === 'UNRANKED' || p.points == null || p.starCap == null) return null
+  const pts = ladderPointsText(p.points, p.starCap)
+  return p.starCap ? `${tierLabel(p.tier)} ${p.stars}星 ${pts}` : `${tierLabel(p.tier)} ${pts} 魂珠`
+}
+
+export function ladderMoveText(p: PlayerInfo): string | null {
+  if (!p.tier) return null
+  switch (p.ladderMove) {
+    case 'TIER_UP':
+      return `晋升${tierLabel(p.tier)}`
+    case 'STAR_UP':
+      return '升星'
+    case 'STAR_DOWN':
+      return '掉星'
+    case 'TIER_DOWN':
+      return `降为${tierLabel(p.tier)}`
+    default:
+      return p.starCap === 0 && p.points != null && Math.floor(p.points) <= 0 ? '魂珠已空' : null
+  }
+}
+
+/** 段位分 for a stats row: 段位战 points, or the old rating before it; (?) while unranked. */
+export function tierScoreText(row: {
+  skillRating?: number
+  tier?: TierKey | null
+  ladderPoints?: number | null
+  starCap?: number | null
+}): string {
+  if (row.ladderPoints == null || row.starCap == null) return skillRatingText(row.skillRating, row.tier)
+  const val = ladderPointsText(row.ladderPoints, row.starCap)
+  return !row.tier || row.tier === 'UNRANKED' ? `${val}(?)` : val
 }
