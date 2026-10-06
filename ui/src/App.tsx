@@ -90,7 +90,7 @@ function App() {
     <div>
       <header className="app-header">
         <Link to="/home" className="logo-link">
-          <img src="/logo-header.png" alt="Mahjong Omakase" className="logo" />
+          <img src="/logo.webp" alt="Mahjong Omakase" className="logo" />
           <h1>Mahjong Omakase</h1>
         </Link>
         <nav>

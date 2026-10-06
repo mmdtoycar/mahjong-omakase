@@ -61,7 +61,7 @@ export default function HomePage() {
       <div className="hero-section">
         <Link to="/new-session" className="hero-logo-link">
           <div className="hero-logo-ring">
-            <img src="/logo-header.png" alt="" className="hero-logo-img" />
+            <img src="/logo.webp" alt="" className="hero-logo-img" />
           </div>
           <span className="hero-cta">
             麻将，启动<span style={{ marginLeft: '-0.005em' }}>!</span>
