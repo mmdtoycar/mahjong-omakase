@@ -31,7 +31,4 @@ public class PlayerStatsResponse {
 
   private Double ladderPoints;
   private Integer starCap;
-
-  /** 斗战圣佛 Lv.1 and up, 0 below it. Null for months before 段位战. */
-  private Integer douLevel;
 }

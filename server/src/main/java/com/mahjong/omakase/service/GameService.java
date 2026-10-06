@@ -889,7 +889,6 @@ public class GameService {
                     stat.setStars(info.stars());
                     stat.setLadderPoints(info.ladderPoints());
                     stat.setStarCap(info.starCap());
-                    stat.setDouLevel(info.douLevel());
                   } else {
                     stat.setTier(Tier.UNRANKED.name());
                     stat.setSkillRating(0);
@@ -903,7 +902,6 @@ public class GameService {
                   stat.setStars(live.getStars());
                   stat.setLadderPoints(live.getPoints());
                   stat.setStarCap(live.getStarCap());
-                  stat.setDouLevel(live.getDouLevel());
                 }
               } else {
                 stat.setTier(null);

@@ -119,7 +119,6 @@ export default function DashboardPage() {
                       tier: p.tier ?? null,
                       stars: p.stars,
                       points: p.points,
-                      douLevel: p.douLevel,
                     }))
                   : []
               }

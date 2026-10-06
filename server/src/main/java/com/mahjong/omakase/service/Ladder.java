@@ -3,18 +3,18 @@ package com.mahjong.omakase.service;
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.model.Tier;
 
-/** 段位战 rules: 灵明石猴 / 美猴王 / 齐天大圣 in stars, then 斗战圣佛 levels counted in 豆 (like 魂天). */
+/** 段位战 rules: 灵明石猴 / 美猴王 / 齐天大圣 in stars, then 斗战圣佛 counted in 魂珠. */
 public final class Ladder {
 
   private Ladder() {}
 
   public static final int START_LEVEL = 3;
 
-  /** Levels 0..8 are stars; 9 and up are 斗战圣佛 Lv.1, Lv.2, ... */
+  /** Levels 0..8 are stars; 9 is 斗战圣佛. */
   public static final int DOU_LEVEL = 9;
 
+  /** 魂珠 on reaching 斗战圣佛; running out drops back to 齐天大圣. */
   public static final int DOU_START = 10;
-  public static final int DOU_TO_LEVEL_UP = 20;
 
   private static final int[] DOU_4 = {3, 1, -1, -3};
   private static final int[] DOU_3 = {3, 0, -3};
@@ -39,7 +39,7 @@ public final class Ladder {
   /** A newcomer cannot drop out of 美猴王 in their first this-many games of a mode. */
   public static final int PROTECTED_GAMES = 10;
 
-  /** {@code level} 0..8 stars or 9+ 斗战圣佛; {@code points} into it (豆 for 斗战圣佛). */
+  /** {@code level} 0..8 stars or 9 斗战圣佛; {@code points} into the star, or 魂珠. */
   public record State(int level, double points) {
     public static State start() {
       return new State(START_LEVEL, starCap(START_LEVEL) / 2.0);
@@ -50,19 +50,14 @@ public final class Ladder {
     return level >= DOU_LEVEL;
   }
 
-  /** Points that fill the current star, or 豆 that complete a 斗战圣佛 level. */
+  /** Points that fill the current star; 0 for 斗战圣佛, whose 魂珠 have no cap. */
   public static int starCap(int level) {
-    return isDou(level) ? DOU_TO_LEVEL_UP : STAR_CAP[level];
+    return isDou(level) ? 0 : STAR_CAP[level];
   }
 
   /** 1 to 3; 0 for 斗战圣佛. */
   public static int stars(int level) {
     return isDou(level) ? 0 : level % 3 + 1;
-  }
-
-  /** 斗战圣佛 Lv.1 and up; 0 below it. */
-  public static int douLevel(int level) {
-    return isDou(level) ? level - DOU_LEVEL + 1 : 0;
   }
 
   public static Tier tierOf(int level) {
@@ -87,7 +82,7 @@ public final class Ladder {
     return s.level() * 1000.0 + s.points();
   }
 
-  /** One game's points; ties split their places. 斗战圣佛 gets 豆, doubled if all-斗战圣佛. */
+  /** One game's points; ties split their places. 斗战圣佛 gets 魂珠, doubled if all-斗战圣佛. */
   public static double gain(
       int[] places, int tableSize, int score, GameMode mode, int level, boolean allDou) {
     double placement = 0;
@@ -119,16 +114,19 @@ public final class Ladder {
     };
   }
 
-  /** Moves a full star up and a negative one down, half full; 斗战圣佛 levels restart at 10 豆. */
+  /** Moves a full star up and a negative one down, half full; 斗战圣佛 drops once its 魂珠 run out. */
   public static State apply(State before, double gain, boolean protectedNewcomer) {
     int level = before.level();
     double points = before.points() + gain;
+    if (isDou(level)) {
+      return points > 0 ? new State(level, points) : new State(level - 1, starCap(level - 1) / 2.0);
+    }
     if (points >= starCap(level)) {
       level++;
       points = isDou(level) ? DOU_START : starCap(level) / 2.0;
     } else if (points < 0 && level > 0) {
       level--;
-      points = isDou(level) ? DOU_START : starCap(level) / 2.0;
+      points = starCap(level) / 2.0;
     } else if (level == 0) {
       points = Math.max(points, 0);
     }

@@ -15,8 +15,6 @@ interface Props {
   /** 段位战 points into the current star; shown instead of {@link rating} when given with {@link starCap}. */
   points?: number
   starCap?: number
-  /** 斗战圣佛 Lv.1 and up: drawn under the emblem in place of stars, with {@link points} counted in 豆. */
-  douLevel?: number
   /** Player userName — used to detect BOT and render 🤖 instead of UNRANKED placeholder. */
   userName?: string
   /** Click target — links to player detail / profile / etc. */
@@ -40,7 +38,6 @@ export const RankBadge: React.FC<Props> = ({
   stars,
   points,
   starCap,
-  douLevel,
   userName,
   onClick,
   className,
@@ -59,9 +56,9 @@ export const RankBadge: React.FC<Props> = ({
   const isThrone = tier === 'LV4_THRONE'
   const showProgress = tier === 'UNRANKED' && typeof gamesNeeded === 'number' && gamesNeeded > 0
   const progressPlayed = typeof gamesNeeded === 'number' ? Math.max(0, 5 - gamesNeeded) : 0
-  const ladder = points !== undefined && starCap ? ladderPointsText(points, starCap) : null
+  const ladder = points !== undefined && starCap !== undefined ? ladderPointsText(points, starCap) : null
   const scoreText = ladder ?? (rating !== undefined ? rating.toFixed(0) : null)
-  const isDou = isThrone && !!douLevel
+  const isDou = isThrone && starCap === 0
   const score =
     scoreText && isDou ? (
       <>
@@ -71,22 +68,18 @@ export const RankBadge: React.FC<Props> = ({
     ) : (
       scoreText
     )
-  // Hugs the emblem's lower-left edge; the bottom star lights first. 斗战圣佛 shows its 豆 there instead.
-  const starRow = isDou ? (
-    <span className="rank-badge-beans">
-      <span className="rank-badge-bean" />×{Math.floor(points ?? 0)}
-    </span>
-  ) : stars && !isThrone ? (
-    [1, 2, 3].map((i) => (
-      <img
-        key={i}
-        src={i > stars ? '/rank/icon/star_empty.webp' : '/rank/icon/star.webp'}
-        alt=""
-        className={`rank-badge-star rank-badge-star-${i}`}
-      />
-    ))
-  ) : null
-  const name = isDou ? `${label} Lv.${douLevel}` : label
+  // Hugs the emblem's lower-left edge; the bottom star lights first.
+  const starRow =
+    stars && !isThrone
+      ? [1, 2, 3].map((i) => (
+          <img
+            key={i}
+            src={i > stars ? '/rank/icon/star_empty.webp' : '/rank/icon/star.webp'}
+            alt=""
+            className={`rank-badge-star rank-badge-star-${i}`}
+          />
+        ))
+      : null
 
   // BOT: bots are always UNRANKED but show 🤖 instead of "新"/"X/5" — they don't earn tiers.
   if (isBot && size === 'sm') {
@@ -144,7 +137,7 @@ export const RankBadge: React.FC<Props> = ({
         </span>
         {size !== 'sm' && (
           <span className="rank-badge-meta">
-            <span className="rank-badge-name">{name}</span>
+            <span className="rank-badge-name">{label}</span>
             {score && <span className="rank-badge-rating">{score}</span>}
           </span>
         )}
@@ -164,7 +157,7 @@ export const RankBadge: React.FC<Props> = ({
       </span>
       {size !== 'sm' && (
         <span className="rank-badge-meta">
-          <span className="rank-badge-name">{name}</span>
+          <span className="rank-badge-name">{label}</span>
           {score && <span className="rank-badge-rating">{score}</span>}
         </span>
       )}
@@ -172,12 +165,10 @@ export const RankBadge: React.FC<Props> = ({
   )
 }
 
-/** 段位分 for a stats row, with the 豆 icon for 斗战圣佛. */
-export const TierScore: React.FC<{ row: Parameters<typeof tierScoreText>[0] & { douLevel?: number | null } }> = ({
-  row,
-}) => (
+/** 段位分 for a stats row, with the 魂珠 icon for 斗战圣佛. */
+export const TierScore: React.FC<{ row: Parameters<typeof tierScoreText>[0] }> = ({ row }) => (
   <>
-    {row.douLevel ? <span className="rank-badge-bean" /> : null}
+    {row.tier === 'LV4_THRONE' && row.starCap === 0 ? <span className="rank-badge-bean" /> : null}
     {tierScoreText(row)}
   </>
 )

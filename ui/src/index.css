@@ -1349,31 +1349,7 @@ table.auto-table {
   font-weight: 700;
 }
 
-/* 斗战圣佛's 豆 count, where the stars would be. */
-.rank-badge-beans {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  font-weight: 800;
-  line-height: 1;
-  color: white;
-  text-shadow: 0 0 2px rgb(52 28 12), 0 1px 2px rgb(52 28 12);
-  white-space: nowrap;
-}
-
-.rank-badge-sm .rank-badge-beans {
-  font-size: 0.65rem;
-}
-
-.rank-badge-md .rank-badge-beans {
-  font-size: 1rem;
-}
-
-.rank-badge-lg .rank-badge-beans {
-  font-size: 1.6rem;
-}
-
-/* 豆 */
+/* 魂珠 */
 .rank-badge-bean {
   display: inline-block;
   width: 1em;

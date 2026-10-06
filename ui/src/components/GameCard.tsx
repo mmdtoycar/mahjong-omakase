@@ -49,7 +49,6 @@ interface PlayerEntry {
   tier?: TierKey | null
   stars?: number | null
   points?: number | null
-  douLevel?: number | null
 }
 
 interface Props {
@@ -166,7 +165,6 @@ export const GameCard: React.FC<Props> = ({ id, gameModeDisplayName, createdAt, 
                   size="sm"
                   stars={p.stars ?? undefined}
                   points={p.points ?? undefined}
-                  douLevel={p.douLevel ?? undefined}
                   userName={p.name}
                 />
                 <span className="player-name" style={{ fontSize: tableNameFontSize(p.name, isMobile) }}>
@@ -235,7 +233,6 @@ export const GameCard: React.FC<Props> = ({ id, gameModeDisplayName, createdAt, 
                           size="md"
                           stars={p.stars ?? undefined}
                           points={p.points ?? undefined}
-                          douLevel={p.douLevel ?? undefined}
                           userName={p.name}
                         />
                         <span className="game-fs-player-name">{p.name}</span>

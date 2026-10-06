@@ -40,13 +40,12 @@ public class SessionDetailResponse {
 
     private Double points;
     private Integer starCap;
-    private Integer douLevel;
 
     /** TIER_UP / STAR_UP / STAR_DOWN / TIER_DOWN at 结算; null if the level held. */
     private String ladderMove;
 
     public PlayerInfo(Long id, String userName, Integer seat) {
-      this(id, userName, seat, null, null, null, null, null, null);
+      this(id, userName, seat, null, null, null, null, null);
     }
 
     public void setLadder(TierInfo info) {
@@ -54,7 +53,6 @@ public class SessionDetailResponse {
       stars = info.getStars();
       points = info.getPoints();
       starCap = info.getStarCap();
-      douLevel = info.getDouLevel();
     }
   }
 

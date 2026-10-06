@@ -64,7 +64,7 @@ public class TierService {
       log.warn("Session id={} has {} scored players, not rated", session.getId(), table.size());
       return false;
     }
-    // 豆 double when everyone at the table is 斗战圣佛 before the game — a bot never is.
+    // 魂珠 double when everyone at the table is 斗战圣佛 before the game — a bot never is.
     Map<Long, Player> seated = new HashMap<>();
     for (GameSessionPlayer gsp : session.getPlayers()) {
       if (gsp.getPlayer() != null) seated.put(gsp.getPlayer().getId(), gsp.getPlayer());
@@ -152,8 +152,7 @@ public class TierService {
       int gamesNeeded,
       Integer stars,
       Double ladderPoints,
-      Integer starCap,
-      Integer douLevel) {}
+      Integer starCap) {}
 
   /** Tiers for a month: the ladder if recorded, else the old ELO and its one 斗战圣佛. */
   public Map<Long, MonthlyTierInfo> computeMonthlySnapshotTiers(
@@ -217,8 +216,7 @@ public class TierService {
               needed,
               level != null ? Ladder.stars(level) : null,
               s.getLadderPoints(),
-              level != null ? Ladder.starCap(level) : null,
-              level != null ? Ladder.douLevel(level) : null));
+              level != null ? Ladder.starCap(level) : null));
     }
     return result;
   }

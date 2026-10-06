@@ -150,7 +150,6 @@ export default function StatsPage() {
         skillRating: stat?.skillRating,
         stars: stat?.stars,
         ladderPoints: stat?.ladderPoints,
-        douLevel: stat?.douLevel,
         totalGames: stat?.gamesPlayed ?? 0,
         gamesNeeded: stat?.gamesNeeded,
         avgRank: stat?.avgRank,
@@ -342,7 +341,6 @@ export default function StatsPage() {
                               userName={s.userName}
                               stars={s.stars ?? undefined}
                               points={s.ladderPoints ?? undefined}
-                              douLevel={s.douLevel ?? undefined}
                               gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
                             />
                             <span className="player-name" style={{ fontSize: tableNameFontSize(s.userName, isMobile) }}>
@@ -456,7 +454,6 @@ export default function StatsPage() {
                             userName={p.userName}
                             stars={p.stars ?? undefined}
                             points={p.ladderPoints ?? undefined}
-                            douLevel={p.douLevel ?? undefined}
                             gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
                           />
                           <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>

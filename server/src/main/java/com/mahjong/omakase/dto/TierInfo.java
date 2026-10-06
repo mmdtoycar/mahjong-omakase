@@ -40,11 +40,8 @@ public class TierInfo {
   /** 段位战 points into the current star. */
   private double points;
 
-  /** Points that fill the current star, or 豆 that complete a 斗战圣佛 level. */
+  /** Points that fill the current star; 0 for 斗战圣佛, whose 魂珠 have no cap. */
   private int starCap;
-
-  /** 斗战圣佛 Lv.1 and up; 0 below it, where {@link #stars} applies instead. */
-  private int douLevel;
 
   public static TierInfo of(TierService tierService, Player p, GameMode mode) {
     Tier t = tierService.computeTier(p, mode);
@@ -88,7 +85,6 @@ public class TierInfo {
         .stars(Ladder.stars(ladder.level()))
         .points(ladder.points())
         .starCap(Ladder.starCap(ladder.level()))
-        .douLevel(Ladder.douLevel(ladder.level()))
         .build();
   }
 }

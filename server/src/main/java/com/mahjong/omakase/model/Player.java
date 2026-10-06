@@ -79,7 +79,7 @@ public class Player {
   @Column(nullable = false, columnDefinition = "double default 1500.0")
   private double peakSkillDongbei = 1500.0;
 
-  // ===== 段位战 (per mode): level (0..8 stars, 9+ 斗战圣佛) and points or 豆 into it — see Ladder =====
+  // ===== 段位战 (per mode): level (0..8 stars, 9 斗战圣佛) and points or 魂珠 into it — see Ladder =====
   @Column(nullable = false, columnDefinition = "int default 3")
   private int ladderLevelGuobiao = 3;
 

@@ -58,6 +58,6 @@ public class PlayerMonthlySkill {
   /** Ladder level at month end; null before 段位战, whose tier comes from {@link #skillRating}. */
   @Column private Integer ladderLevel;
 
-  /** Points or 豆 into that level at month end. */
+  /** Points or 魂珠 into that level at month end. */
   @Column private Double ladderPoints;
 }

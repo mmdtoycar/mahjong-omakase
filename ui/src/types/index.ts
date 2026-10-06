@@ -60,11 +60,9 @@ export interface TierInfo {
   peakRating: number
   /** 段位战 stars within the tier, 1 to 3. */
   stars: number
-  /** 段位战 points into the current star, or 豆 into a 斗战圣佛 level, out of {@link starCap}. */
+  /** 段位战 points into the current star out of {@link starCap}, or 斗战圣佛's 魂珠 with a cap of 0. */
   points: number
   starCap: number
-  /** 斗战圣佛 Lv.1 and up; 0 below it, where {@link stars} applies instead. */
-  douLevel: number
 }
 
 export interface PlayerTierResponse {
@@ -97,7 +95,6 @@ export interface PlayerPerformance {
   stars?: number | null
   points?: number | null
   starCap?: number | null
-  douLevel?: number | null
 }
 
 export interface PlayerInfo {
@@ -109,7 +106,6 @@ export interface PlayerInfo {
   stars?: number | null
   points?: number | null
   starCap?: number | null
-  douLevel?: number | null
   /** Set at 结算 when the level moved. */
   ladderMove?: 'TIER_UP' | 'STAR_UP' | 'STAR_DOWN' | 'TIER_DOWN' | null
 }
@@ -199,8 +195,6 @@ export interface PlayerStats {
   stars?: number | null
   ladderPoints?: number | null
   starCap?: number | null
-  /** 斗战圣佛 Lv.1 and up, 0 below it. Null for months before 段位战. */
-  douLevel?: number | null
 }
 
 export interface Season {

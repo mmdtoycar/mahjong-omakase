@@ -23,13 +23,11 @@ public class PlayerPerformanceDTO {
 
   private Double points;
   private Integer starCap;
-  private Integer douLevel;
 
   public void setLadder(TierInfo info) {
     tier = info.getTier();
     stars = info.getStars();
     points = info.getPoints();
     starCap = info.getStarCap();
-    douLevel = info.getDouLevel();
   }
 }

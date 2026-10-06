@@ -196,13 +196,12 @@ public class TierServiceTest {
   public void filling齐天大圣ThreeStarsReaches斗战圣佛() {
     Ladder.State dou = Ladder.apply(new Ladder.State(8, 490), 15, false);
     assertEquals(new Ladder.State(Ladder.DOU_LEVEL, Ladder.DOU_START), dou);
-    assertEquals(1, Ladder.douLevel(dou.level()));
     assertEquals(0, Ladder.stars(dou.level()));
     assertEquals(Tier.LV4_THRONE, Ladder.tierOf(dou.level()));
   }
 
   @Test
-  public void 斗战圣佛Counts豆ByPlacementAlone() {
+  public void 斗战圣佛Counts魂珠ByPlacementAlone() {
     // 素点 does not count, however big.
     assertEquals(3, Ladder.gain(new int[] {0}, 4, 90000, GameMode.RIICHI, 9, false), 1e-9);
     assertEquals(1, Ladder.gain(new int[] {1}, 4, 0, GameMode.RIICHI, 9, false), 1e-9);
@@ -214,12 +213,11 @@ public class TierServiceTest {
   }
 
   @Test
-  public void 斗战圣佛LevelsMoveAt20AndBelowZero() {
-    assertEquals(new Ladder.State(10, 10), Ladder.apply(new Ladder.State(9, 18), 3, false));
-    assertEquals(new Ladder.State(9, 10), Ladder.apply(new Ladder.State(10, 1), -3, false));
-    // Zero itself holds; only less than zero drops.
-    assertEquals(new Ladder.State(9, 0), Ladder.apply(new Ladder.State(9, 1), -1, false));
-    // Lv.1 drops back to 齐天大圣 3 stars, half full.
+  public void 斗战圣佛魂珠HaveNoCapAndRunningOutDrops() {
+    assertEquals(new Ladder.State(9, 21), Ladder.apply(new Ladder.State(9, 18), 3, false));
+    assertEquals(new Ladder.State(9, 63), Ladder.apply(new Ladder.State(9, 60), 3, false));
+    // Running out drops back to 齐天大圣 3 stars, half full.
+    assertEquals(new Ladder.State(8, 250), Ladder.apply(new Ladder.State(9, 1), -1, false));
     assertEquals(new Ladder.State(8, 250), Ladder.apply(new Ladder.State(9, 1), -3, false));
   }
 
@@ -319,7 +317,6 @@ public class TierServiceTest {
     assertEquals("STAR_UP", Ladder.move(3, 4));
     assertEquals("TIER_UP", Ladder.move(5, 6));
     assertEquals("TIER_UP", Ladder.move(8, 9), "into 斗战圣佛");
-    assertEquals("STAR_UP", Ladder.move(9, 10), "斗战圣佛 Lv.1 to Lv.2");
     assertEquals("STAR_DOWN", Ladder.move(4, 3));
     assertEquals("TIER_DOWN", Ladder.move(3, 2));
   }
@@ -384,7 +381,7 @@ public class TierServiceTest {
                 snapshot(1L, 1700, 4, 20.0),
                 snapshot(2L, 1300, 7, 80.0),
                 snapshot(3L, 1500, 9, 12.0),
-                snapshot(4L, 1500, 10, 4.0)));
+                snapshot(4L, 1500, 9, 40.0)));
 
     Map<Long, TierService.MonthlyTierInfo> tiers =
         tierService.computeMonthlySnapshotTiers(GameMode.RIICHI, 2026, 10);
@@ -393,11 +390,10 @@ public class TierServiceTest {
     assertEquals(Tier.LV3, tiers.get(2L).tier(), "the furthest-along 齐天大圣 is not singled out");
     assertEquals(2, tiers.get(2L).stars());
     assertEquals(400, tiers.get(2L).starCap());
-    // 斗战圣佛 is a level, and more than one player can hold it.
+    // More than one player can be 斗战圣佛, and their 魂珠 have no cap.
     assertEquals(Tier.LV4_THRONE, tiers.get(3L).tier());
     assertEquals(Tier.LV4_THRONE, tiers.get(4L).tier());
-    assertEquals(1, tiers.get(3L).douLevel());
-    assertEquals(2, tiers.get(4L).douLevel());
-    assertEquals(20, tiers.get(4L).starCap());
+    assertEquals(40.0, tiers.get(4L).ladderPoints(), 1e-9);
+    assertEquals(0, tiers.get(4L).starCap());
   }
 }
