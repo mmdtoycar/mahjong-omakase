@@ -771,6 +771,7 @@ export default function SessionPage() {
                         size="sm"
                         stars={p.stars ?? undefined}
                         points={p.points ?? undefined}
+                        starCap={p.starCap ?? undefined}
                         userName={p.userName}
                       />
                       <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>

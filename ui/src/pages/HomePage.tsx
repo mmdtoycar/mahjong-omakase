@@ -105,6 +105,7 @@ export default function HomePage() {
                       tier: p.tier ?? null,
                       stars: p.stars,
                       points: p.points,
+                      starCap: p.starCap,
                     }
                   })}
                 />
@@ -143,6 +144,7 @@ export default function HomePage() {
                                 size="sm"
                                 stars={player.stars ?? undefined}
                                 points={player.ladderPoints ?? undefined}
+                                starCap={player.starCap ?? undefined}
                                 gamesNeeded={undefined}
                                 userName={player.userName}
                               />
