@@ -19,8 +19,8 @@ public final class Ladder {
   private static final int[] DOU_4 = {3, 1, -1, -3};
   private static final int[] DOU_3 = {3, 0, -3};
 
-  /** Points that fill one star, by tier. */
-  private static final int[] STAR_CAP = {100, 150, 300};
+  /** Points that fill each star, 灵明石猴 1 星 to 齐天大圣 3 星; 齐天大圣's rise so 斗战圣佛 is hard to reach. */
+  private static final int[] STAR_CAP = {100, 100, 100, 150, 150, 150, 300, 400, 500};
 
   private static final int[] PLACE_POINTS_4 = {30, 10, 0};
   private static final int[] LAST_POINTS_4 = {0, -30, -50};
@@ -52,7 +52,7 @@ public final class Ladder {
 
   /** Points that fill the current star, or 豆 that complete a 斗战圣佛 level. */
   public static int starCap(int level) {
-    return isDou(level) ? DOU_TO_LEVEL_UP : STAR_CAP[level / 3];
+    return isDou(level) ? DOU_TO_LEVEL_UP : STAR_CAP[level];
   }
 
   /** 1 to 3; 0 for 斗战圣佛. */

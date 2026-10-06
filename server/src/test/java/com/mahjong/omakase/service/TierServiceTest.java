@@ -148,6 +148,15 @@ public class TierServiceTest {
   }
 
   @Test
+  public void 齐天大圣StarsGetHarder() {
+    assertEquals(300, Ladder.starCap(6));
+    assertEquals(400, Ladder.starCap(7));
+    assertEquals(500, Ladder.starCap(8));
+    assertEquals(new Ladder.State(7, 200), Ladder.apply(new Ladder.State(6, 290), 15, false));
+    assertEquals(new Ladder.State(8, 250), Ladder.apply(new Ladder.State(7, 390), 15, false));
+  }
+
+  @Test
   public void starsFillAndEmpty() {
     // Filling a star moves to the next, half full.
     assertEquals(new Ladder.State(4, 75), Ladder.apply(new Ladder.State(3, 140), 15, false));
@@ -179,7 +188,7 @@ public class TierServiceTest {
 
   @Test
   public void filling齐天大圣ThreeStarsReaches斗战圣佛() {
-    Ladder.State dou = Ladder.apply(new Ladder.State(8, 290), 15, false);
+    Ladder.State dou = Ladder.apply(new Ladder.State(8, 490), 15, false);
     assertEquals(new Ladder.State(Ladder.DOU_LEVEL, Ladder.DOU_START), dou);
     assertEquals(1, Ladder.douLevel(dou.level()));
     assertEquals(0, Ladder.stars(dou.level()));
@@ -205,7 +214,7 @@ public class TierServiceTest {
     // Zero itself holds; only less than zero drops.
     assertEquals(new Ladder.State(9, 0), Ladder.apply(new Ladder.State(9, 1), -1, false));
     // Lv.1 drops back to 齐天大圣 3 stars, half full.
-    assertEquals(new Ladder.State(8, 150), Ladder.apply(new Ladder.State(9, 1), -3, false));
+    assertEquals(new Ladder.State(8, 250), Ladder.apply(new Ladder.State(9, 1), -3, false));
   }
 
   private void seatAt(GameSession s, long playerId, int level) {
@@ -304,7 +313,7 @@ public class TierServiceTest {
     assertEquals(Tier.LV2, tiers.get(1L).tier());
     assertEquals(Tier.LV3, tiers.get(2L).tier(), "the furthest-along 齐天大圣 is not singled out");
     assertEquals(2, tiers.get(2L).stars());
-    assertEquals(300, tiers.get(2L).starCap());
+    assertEquals(400, tiers.get(2L).starCap());
     // 斗战圣佛 is a level, and more than one player can hold it.
     assertEquals(Tier.LV4_THRONE, tiers.get(3L).tier());
     assertEquals(Tier.LV4_THRONE, tiers.get(4L).tier());
