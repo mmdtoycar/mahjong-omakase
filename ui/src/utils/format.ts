@@ -1,5 +1,5 @@
 import { MSG } from '../constants'
-import { TierKey } from '../types'
+import { PlayerInfo, TierKey, tierLabel } from '../types'
 
 /**
  * Abbreviates a name to initials.
@@ -70,6 +70,29 @@ export function skillRatingText(rating: number | undefined, tier: TierKey | null
 /** Points into the current star out of the star's cap, e.g. "63/100". */
 export function ladderPointsText(points: number, starCap: number): string {
   return `${Math.floor(points)}/${starCap}`
+}
+
+/** A seat's 段位 after a game, e.g. 美猴王 2星 98/150; null while unranked. */
+export function ladderResultText(p: PlayerInfo): string | null {
+  if (!p.tier || p.tier === 'UNRANKED' || p.points == null || !p.starCap) return null
+  const pts = ladderPointsText(p.points, p.starCap)
+  return p.douLevel ? `${tierLabel(p.tier)} Lv.${p.douLevel} ${pts} 豆` : `${tierLabel(p.tier)} ${p.stars}星 ${pts}`
+}
+
+export function ladderMoveText(p: PlayerInfo): string | null {
+  if (!p.tier) return null
+  switch (p.ladderMove) {
+    case 'TIER_UP':
+      return `晋升${tierLabel(p.tier)}`
+    case 'STAR_UP':
+      return p.douLevel ? `升至 Lv.${p.douLevel}` : '升星'
+    case 'STAR_DOWN':
+      return p.douLevel ? `降至 Lv.${p.douLevel}` : '掉星'
+    case 'TIER_DOWN':
+      return `降为${tierLabel(p.tier)}`
+    default:
+      return null
+  }
 }
 
 /** 段位分 for a stats row: 段位战 points, or the old rating before it; (?) while unranked. */

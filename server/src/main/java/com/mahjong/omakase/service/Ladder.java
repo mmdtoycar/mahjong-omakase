@@ -74,6 +74,14 @@ public final class Ladder {
     };
   }
 
+  /** A game's move along the ladder; null when the level stayed put. */
+  public static String move(int before, int after) {
+    if (after == before) return null;
+    boolean tierChanged = tierOf(after) != tierOf(before);
+    if (after > before) return tierChanged ? "TIER_UP" : "STAR_UP";
+    return tierChanged ? "TIER_DOWN" : "STAR_DOWN";
+  }
+
   /** Orders players by ladder position. */
   public static double sortKey(State s) {
     return s.level() * 1000.0 + s.points();

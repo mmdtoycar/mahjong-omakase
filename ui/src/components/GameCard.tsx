@@ -47,6 +47,9 @@ interface PlayerEntry {
   wind?: string
   isDealer?: boolean
   tier?: TierKey | null
+  stars?: number | null
+  points?: number | null
+  douLevel?: number | null
 }
 
 interface Props {
@@ -158,7 +161,14 @@ export const GameCard: React.FC<Props> = ({ id, gameModeDisplayName, createdAt, 
                   {seatRankMedal(p.rank) ?? `#${p.rank}`}
                 </span>
                 {p.wind && <span className={`wind-tag ${p.isDealer ? 'wind-tag-dealer' : ''}`}>{p.wind}</span>}
-                <RankBadge tier={p.tier} size="sm" userName={p.name} />
+                <RankBadge
+                  tier={p.tier}
+                  size="sm"
+                  stars={p.stars ?? undefined}
+                  points={p.points ?? undefined}
+                  douLevel={p.douLevel ?? undefined}
+                  userName={p.name}
+                />
                 <span className="player-name" style={{ fontSize: tableNameFontSize(p.name, isMobile) }}>
                   {p.name}
                 </span>
@@ -220,7 +230,14 @@ export const GameCard: React.FC<Props> = ({ id, gameModeDisplayName, createdAt, 
                             {p.wind} {p.isDealer && '庄'}
                           </span>
                         )}
-                        <RankBadge tier={p.tier} size="md" userName={p.name} />
+                        <RankBadge
+                          tier={p.tier}
+                          size="md"
+                          stars={p.stars ?? undefined}
+                          points={p.points ?? undefined}
+                          douLevel={p.douLevel ?? undefined}
+                          userName={p.name}
+                        />
                         <span className="game-fs-player-name">{p.name}</span>
                       </div>
                     </div>

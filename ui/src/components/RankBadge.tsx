@@ -71,18 +71,22 @@ export const RankBadge: React.FC<Props> = ({
     ) : (
       scoreText
     )
-  // 斗战圣佛 counts levels rather than stars.
+  // Hugs the emblem's lower-left edge; the bottom star lights first. 斗战圣佛 shows its 豆 there instead.
   const starRow = isDou ? (
-    <span className="rank-badge-dou-level">Lv.{douLevel}</span>
-  ) : stars && !isThrone ? (
-    <span className="rank-badge-stars">
-      {[1, 2, 3].map((i) => (
-        <span key={i} className={i > stars ? 'rank-badge-star-empty' : undefined}>
-          ★
-        </span>
-      ))}
+    <span className="rank-badge-beans">
+      <span className="rank-badge-bean" />×{Math.floor(points ?? 0)}
     </span>
+  ) : stars && !isThrone ? (
+    [1, 2, 3].map((i) => (
+      <img
+        key={i}
+        src={i > stars ? '/rank/icon/star_empty.webp' : '/rank/icon/star.webp'}
+        alt=""
+        className={`rank-badge-star rank-badge-star-${i}`}
+      />
+    ))
   ) : null
+  const name = isDou ? `${label} Lv.${douLevel}` : label
 
   // BOT: bots are always UNRANKED but show 🤖 instead of "新"/"X/5" — they don't earn tiers.
   if (isBot && size === 'sm') {
@@ -140,7 +144,7 @@ export const RankBadge: React.FC<Props> = ({
         </span>
         {size !== 'sm' && (
           <span className="rank-badge-meta">
-            <span className="rank-badge-name">{label}</span>
+            <span className="rank-badge-name">{name}</span>
             {score && <span className="rank-badge-rating">{score}</span>}
           </span>
         )}
@@ -160,7 +164,7 @@ export const RankBadge: React.FC<Props> = ({
       </span>
       {size !== 'sm' && (
         <span className="rank-badge-meta">
-          <span className="rank-badge-name">{label}</span>
+          <span className="rank-badge-name">{name}</span>
           {score && <span className="rank-badge-rating">{score}</span>}
         </span>
       )}

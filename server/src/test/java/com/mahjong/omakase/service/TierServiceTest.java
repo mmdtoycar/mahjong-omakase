@@ -8,11 +8,14 @@ import com.mahjong.omakase.model.GameSession;
 import com.mahjong.omakase.model.GameSessionPlayer;
 import com.mahjong.omakase.model.Player;
 import com.mahjong.omakase.model.PlayerMonthlySkill;
+import com.mahjong.omakase.model.Round;
+import com.mahjong.omakase.model.RoundScore;
 import com.mahjong.omakase.model.SessionStatus;
 import com.mahjong.omakase.model.Tier;
 import com.mahjong.omakase.repository.GameSessionRepository;
 import com.mahjong.omakase.repository.PlayerMonthlySkillRepository;
 import com.mahjong.omakase.repository.PlayerRepository;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,15 +24,17 @@ import org.junit.jupiter.api.Test;
 
 public class TierServiceTest {
 
+  private PlayerRepository playerRepo;
+  private GameSessionRepository sessionRepo;
   private PlayerMonthlySkillRepository monthlyRepo;
   private TierService tierService;
 
   @BeforeEach
   public void setUp() {
+    playerRepo = mock(PlayerRepository.class);
+    sessionRepo = mock(GameSessionRepository.class);
     monthlyRepo = mock(PlayerMonthlySkillRepository.class);
-    tierService =
-        new TierService(
-            mock(PlayerRepository.class), mock(GameSessionRepository.class), monthlyRepo);
+    tierService = new TierService(playerRepo, sessionRepo, monthlyRepo);
   }
 
   private Player player(long id) {
@@ -87,6 +92,7 @@ public class TierServiceTest {
       GameSessionPlayer gsp = seat(s, i + 1);
       double expected = placement[i] + guobiaoSoten(totals.get((long) i + 1));
       assertEquals(expected, gsp.getLadderDelta(), 1e-9, "points for place " + (i + 1));
+      assertEquals(Ladder.START_LEVEL, gsp.getLadderLevelBefore());
       assertEquals(Ladder.START_LEVEL, gsp.getLadderLevelAfter(), "still 美猴王 1 star");
       assertEquals(75 + expected, gsp.getLadderPointsAfter(), 1e-9);
       assertEquals(75 + expected, gsp.getPlayer().getLadderPointsGuobiao(), 1e-9);
@@ -267,6 +273,79 @@ public class TierServiceTest {
     assertEquals(Tier.LV1, tierService.computeTier(p, GameMode.DONGBEI));
     // 国标 has no games, so it stays unranked even though 东北 is ranked.
     assertEquals(Tier.UNRANKED, tierService.computeTier(p, GameMode.GUOBIAO));
+  }
+
+  @Test
+  public void backfillRecordsEachSeatsResult() {
+    Map<Long, Integer> totals = scores(40000, 10000, -20000, -30000);
+    GameSession s = session(GameMode.RIICHI, totals, null);
+    s.setCreatedAt(LocalDateTime.of(2026, 9, 1, 20, 0));
+    s.getRounds().add(round(s, totals));
+    seat(s, 1).getPlayer().setLadderLevelRiichi(8);
+    seat(s, 1).getPlayer().setLadderPointsRiichi(490);
+    when(playerRepo.findAll())
+        .thenReturn(s.getPlayers().stream().map(GameSessionPlayer::getPlayer).toList());
+    when(sessionRepo.findByStatusOrderByCreatedAtDesc(SessionStatus.COMPLETED))
+        .thenReturn(List.of(s));
+
+    assertEquals(new TierService.BackfillResult(1, 0), tierService.backfillLadder());
+
+    // The replay starts everyone over, so the earlier 齐天大圣 level is gone.
+    GameSessionPlayer first = seat(s, 1);
+    assertEquals(Ladder.START_LEVEL, first.getLadderLevelBefore());
+    assertEquals(30 + 0.5 * 40, first.getLadderDelta(), 1e-9);
+    assertEquals(Ladder.START_LEVEL, first.getLadderLevelAfter());
+    assertEquals(75 + 30 + 0.5 * 40, first.getLadderPointsAfter(), 1e-9);
+    // History does not count as games played; those counters were already right.
+    assertEquals(0, first.getPlayer().getGamesRiichi());
+  }
+
+  private static Round round(GameSession s, Map<Long, Integer> totals) {
+    Round r = new Round();
+    r.setGameSession(s);
+    for (GameSessionPlayer gsp : s.getPlayers()) {
+      RoundScore rs = new RoundScore();
+      rs.setRound(r);
+      rs.setPlayer(gsp.getPlayer());
+      rs.setScore(totals.get(gsp.getPlayer().getId()));
+      r.getScores().add(rs);
+    }
+    return r;
+  }
+
+  @Test
+  public void movesNameStarsAndTiers() {
+    assertNull(Ladder.move(4, 4));
+    assertEquals("STAR_UP", Ladder.move(3, 4));
+    assertEquals("TIER_UP", Ladder.move(5, 6));
+    assertEquals("TIER_UP", Ladder.move(8, 9), "into 斗战圣佛");
+    assertEquals("STAR_UP", Ladder.move(9, 10), "斗战圣佛 Lv.1 to Lv.2");
+    assertEquals("STAR_DOWN", Ladder.move(4, 3));
+    assertEquals("TIER_DOWN", Ladder.move(3, 2));
+  }
+
+  @Test
+  public void aSeatShowsItsStateAfterThatGame() {
+    Map<Long, Integer> totals = scores(100, 20, -40, -80);
+    GameSession s = session(GameMode.GUOBIAO, totals, null);
+    GameSessionPlayer gsp = seat(s, 1);
+    Player p = gsp.getPlayer();
+    p.setGamesGuobiao(TierService.RANKED_MIN_GAMES);
+    p.setLadderLevelGuobiao(7);
+
+    // Not rated yet: the live state.
+    assertEquals("LV3", tierService.seatTier(gsp, GameMode.GUOBIAO).getTier());
+
+    gsp.setLadderLevelAfter(4);
+    gsp.setLadderPointsAfter(98.0);
+    var info = tierService.seatTier(gsp, GameMode.GUOBIAO);
+    assertEquals("LV2", info.getTier());
+    assertEquals(2, info.getStars());
+    assertEquals(98.0, info.getPoints(), 1e-9);
+    assertEquals(150, info.getStarCap());
+
+    p.setGamesGuobiao(TierService.RANKED_MIN_GAMES - 1);
+    assertEquals("UNRANKED", tierService.seatTier(gsp, GameMode.GUOBIAO).getTier());
   }
 
   private PlayerMonthlySkill snapshot(long playerId, double rating, Integer level, Double points) {

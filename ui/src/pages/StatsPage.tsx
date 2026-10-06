@@ -149,6 +149,7 @@ export default function StatsPage() {
         tier: stat?.tier ?? 'UNRANKED',
         skillRating: stat?.skillRating,
         stars: stat?.stars,
+        ladderPoints: stat?.ladderPoints,
         douLevel: stat?.douLevel,
         totalGames: stat?.gamesPlayed ?? 0,
         gamesNeeded: stat?.gamesNeeded,
@@ -340,6 +341,7 @@ export default function StatsPage() {
                               size="sm"
                               userName={s.userName}
                               stars={s.stars ?? undefined}
+                              points={s.ladderPoints ?? undefined}
                               douLevel={s.douLevel ?? undefined}
                               gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
                             />
@@ -453,6 +455,7 @@ export default function StatsPage() {
                             size="sm"
                             userName={p.userName}
                             stars={p.stars ?? undefined}
+                            points={p.ladderPoints ?? undefined}
                             douLevel={p.douLevel ?? undefined}
                             gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
                           />

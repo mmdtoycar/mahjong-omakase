@@ -185,15 +185,25 @@ export default function ProfilePage() {
                     const info =
                       selectedMode === 'GUOBIAO' ? tier.guobiao : selectedMode === 'RIICHI' ? tier.riichi : tier.dongbei
                     return (
-                      <RankBadge
-                        tier={info.tier}
-                        size="lg"
-                        stars={info.stars}
-                        points={info.points}
-                        starCap={info.starCap}
-                        douLevel={info.douLevel}
-                        gamesNeeded={info.gamesNeeded}
-                      />
+                      <>
+                        <RankBadge
+                          tier={info.tier}
+                          size="lg"
+                          stars={info.stars}
+                          points={info.points}
+                          starCap={info.starCap}
+                          douLevel={info.douLevel}
+                          gamesNeeded={info.gamesNeeded}
+                        />
+                        {info.tier !== 'UNRANKED' && (
+                          <div className="ladder-progress">
+                            <div
+                              className="ladder-progress-fill"
+                              style={{ width: `${Math.min(100, (info.points / info.starCap) * 100)}%` }}
+                            />
+                          </div>
+                        )}
+                      </>
                     )
                   })()}
                 </div>

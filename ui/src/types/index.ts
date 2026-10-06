@@ -93,6 +93,11 @@ export interface PlayerPerformance {
   totalScore: number
   rank: number
   tier?: TierKey | null
+  /** 段位战 position after this game, as in {@link TierInfo}. */
+  stars?: number | null
+  points?: number | null
+  starCap?: number | null
+  douLevel?: number | null
 }
 
 export interface PlayerInfo {
@@ -100,6 +105,13 @@ export interface PlayerInfo {
   userName: string
   seat: number
   tier?: TierKey | null
+  /** 段位战 position after this game (live while in progress), as in {@link TierInfo}. */
+  stars?: number | null
+  points?: number | null
+  starCap?: number | null
+  douLevel?: number | null
+  /** Set at 结算 when the level moved. */
+  ladderMove?: 'TIER_UP' | 'STAR_UP' | 'STAR_DOWN' | 'TIER_DOWN' | null
 }
 
 export interface RoundInfo {

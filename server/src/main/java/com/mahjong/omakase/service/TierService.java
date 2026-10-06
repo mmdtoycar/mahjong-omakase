@@ -1,5 +1,6 @@
 package com.mahjong.omakase.service;
 
+import com.mahjong.omakase.dto.TierInfo;
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.model.GameSession;
 import com.mahjong.omakase.model.GameSessionPlayer;
@@ -86,6 +87,10 @@ public class TierService {
       double gain = Ladder.gain(places, table.size(), score, mode, before.level(), allDou);
       Ladder.State after = Ladder.apply(before, gain, games < Ladder.PROTECTED_GAMES);
       setLadder(p, mode, after);
+      gsp.setLadderDelta(gain);
+      gsp.setLadderLevelBefore(before.level());
+      gsp.setLadderLevelAfter(after.level());
+      gsp.setLadderPointsAfter(after.points());
 
       if (gamesBefore != null) {
         gamesBefore.merge(p.getId(), 1, Integer::sum);
@@ -93,9 +98,6 @@ public class TierService {
       }
       incrementGames(p, mode);
       playerRepo.save(p);
-      gsp.setLadderDelta(gain);
-      gsp.setLadderLevelAfter(after.level());
-      gsp.setLadderPointsAfter(after.points());
     }
     return true;
   }
@@ -221,27 +223,6 @@ public class TierService {
     return result;
   }
 
-  /** Everyone's tier as of a session's month: snapshots for past months, live state otherwise. */
-  public Map<Long, Tier> resolveTiersForDate(GameMode mode, LocalDateTime referenceUtc) {
-    YearMonth queryMonth =
-        YearMonth.from(
-            referenceUtc.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDate());
-    YearMonth currentMonth = YearMonth.from(java.time.LocalDate.now(ZONE_PACIFIC));
-    if (queryMonth.isBefore(currentMonth)) {
-      Map<Long, MonthlyTierInfo> snap =
-          computeMonthlySnapshotTiers(mode, queryMonth.getYear(), queryMonth.getMonthValue());
-      Map<Long, Tier> out = new HashMap<>();
-      snap.forEach((pid, info) -> out.put(pid, info.tier()));
-      return out;
-    }
-    Map<Long, Tier> out = new HashMap<>();
-    for (Player p : playerRepo.findAll()) {
-      if (p.isBot()) continue;
-      out.put(p.getId(), computeTier(p, mode));
-    }
-    return out;
-  }
-
   private LocalDateTime[] currentMonthUtcRange() {
     return monthUtcRangeFor(java.time.LocalDate.now(ZONE_PACIFIC));
   }
@@ -281,9 +262,20 @@ public class TierService {
     return monthlyGamesByPlayer(mode, startUtc, endUtc).getOrDefault(p.getId(), 0);
   }
 
+  /** The seat's 段位 after this game if it was rated, else the player's current one. */
+  public TierInfo seatTier(GameSessionPlayer gsp, GameMode mode) {
+    Player p = gsp.getPlayer();
+    if (gsp.getLadderLevelAfter() == null) return TierInfo.of(this, p, mode);
+    Ladder.State after = new Ladder.State(gsp.getLadderLevelAfter(), gsp.getLadderPointsAfter());
+    Tier t = computeTier(p, mode) == Tier.UNRANKED ? Tier.UNRANKED : Ladder.tierOf(after.level());
+    return TierInfo.ofLadder(t, after);
+  }
+
   // ===== Backfill =====
 
-  /** Replays every completed session to seed the live ladder only; safe to re-run. */
+  /**
+   * Replays every completed session into the live ladder and each seat's result; safe to re-run.
+   */
   public BackfillResult backfillLadder() {
     List<Player> all = playerRepo.findAll();
     for (Player p : all) {

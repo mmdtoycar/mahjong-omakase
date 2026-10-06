@@ -117,6 +117,9 @@ export default function DashboardPage() {
                       name: p.userName,
                       score: p.totalScore,
                       tier: p.tier ?? null,
+                      stars: p.stars,
+                      points: p.points,
+                      douLevel: p.douLevel,
                     }))
                   : []
               }

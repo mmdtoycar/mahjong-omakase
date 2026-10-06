@@ -103,6 +103,9 @@ export default function HomePage() {
                       wind: getWindName(menfeng),
                       isDealer: p.id === state.dealerPlayerId,
                       tier: p.tier ?? null,
+                      stars: p.stars,
+                      points: p.points,
+                      douLevel: p.douLevel,
                     }
                   })}
                 />
@@ -140,6 +143,7 @@ export default function HomePage() {
                                 tier={player.tier}
                                 size="sm"
                                 stars={player.stars ?? undefined}
+                                points={player.ladderPoints ?? undefined}
                                 douLevel={player.douLevel ?? undefined}
                                 gamesNeeded={undefined}
                                 userName={player.userName}

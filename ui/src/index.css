@@ -1259,8 +1259,7 @@ table.auto-table {
 
 .rank-badge-img {
   display: block;
-  border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* Per-size dimensions — applied to <img> / fallback box / UNRANKED card. */
@@ -1288,10 +1287,6 @@ table.auto-table {
   font-size: 0.75rem;
 }
 
-.rank-badge-md .rank-badge-img {
-  border-radius: 50%;
-}
-
 .rank-badge-md .rank-badge-meta,
 .rank-badge-lg .rank-badge-meta {
   display: inline-flex;
@@ -1316,67 +1311,76 @@ table.auto-table {
   filter: drop-shadow(0 0 8px rgb(255 200 50 / 60%));
 }
 
-/* 段位战 stars, one row under the emblem. */
+/* 段位战 stars hug the emblem's lower-left edge, bottom star first. */
 .rank-badge-emblem {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  position: relative;
+  display: inline-block;
 }
 
-.rank-badge-stars {
-  display: inline-flex;
-  gap: 1px;
-  line-height: 1;
-  color: var(--mj-gold);
+.rank-badge-star {
+  position: absolute;
+  width: 31%;
+  transform: translate(-50%, -50%);
 }
 
-.rank-badge-star-empty {
-  color: var(--border);
+.rank-badge-star-1 {
+  left: 35%;
+  top: 91%;
 }
 
-.rank-badge-sm .rank-badge-stars {
+.rank-badge-star-2 {
+  left: 17%;
+  top: 79%;
+}
+
+.rank-badge-star-3 {
+  left: 7%;
+  top: 59%;
+}
+
+/* 结算: the seat's 段位 after the game, and any star or tier it moved. */
+.ladder-result {
   font-size: 0.75rem;
+  color: var(--text-light);
 }
 
-.rank-badge-md .rank-badge-stars {
-  font-size: 1.25rem;
+.ladder-move {
+  margin-left: 6px;
+  font-weight: 700;
 }
 
-.rank-badge-lg .rank-badge-stars {
-  font-size: 2rem;
-}
-
-.rank-badge-dou-level {
-  line-height: 1;
+/* 斗战圣佛's 豆 count, where the stars would be. */
+.rank-badge-beans {
+  position: absolute;
+  left: 0;
+  bottom: 0;
   font-weight: 800;
-  background: linear-gradient(90deg, var(--mj-gold), #ff9800, var(--mj-gold));
-  background-clip: text;
-  color: transparent;
+  line-height: 1;
+  color: white;
+  text-shadow: 0 0 2px rgb(52 28 12), 0 1px 2px rgb(52 28 12);
+  white-space: nowrap;
 }
 
-.rank-badge-sm .rank-badge-dou-level {
-  font-size: 0.75rem;
+.rank-badge-sm .rank-badge-beans {
+  font-size: 0.65rem;
 }
 
-.rank-badge-md .rank-badge-dou-level {
-  font-size: 1.1rem;
+.rank-badge-md .rank-badge-beans {
+  font-size: 1rem;
 }
 
-.rank-badge-lg .rank-badge-dou-level {
+.rank-badge-lg .rank-badge-beans {
   font-size: 1.6rem;
 }
 
 /* 豆 */
 .rank-badge-bean {
   display: inline-block;
-  width: 0.8em;
-  height: 0.8em;
-  margin-right: 0.25em;
-  border-radius: 50%;
-  vertical-align: -0.05em;
-  background: radial-gradient(circle at 35% 30%, #fff6c8 0%, var(--mj-gold) 45%, #b8860b 100%);
-  box-shadow: 0 0 4px rgb(255 200 50 / 60%);
+  width: 1em;
+  height: 1em;
+  margin-right: 0.15em;
+  vertical-align: -0.15em;
+  background: url('/rank/icon/bean.webp') center / contain no-repeat;
 }
 
 .rank-badge-fallback {
@@ -1482,10 +1486,26 @@ table.auto-table {
 /* Profile tier section (inside stats card, follows mode selector) */
 .profile-tier-section {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   padding: 12px 0 16px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 16px;
+}
+
+/* Progress to the next star, or to the next 斗战圣佛 level. */
+.ladder-progress {
+  width: min(100%, 280px);
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-muted);
+  overflow: hidden;
+}
+
+.ladder-progress-fill {
+  height: 100%;
+  background: var(--mj-gold);
 }
 
 /* ===== Calculator page ===== */

@@ -41,6 +41,9 @@ public class GameSessionPlayer {
   /** 段位战 points (or 豆) this session earned; null before 段位战, which used {@link #ratingDelta}. */
   @Column private Double ladderDelta;
 
+  /** Ladder level before this session. */
+  @Column private Integer ladderLevelBefore;
+
   /** Ladder level after this session. */
   @Column private Integer ladderLevelAfter;
 

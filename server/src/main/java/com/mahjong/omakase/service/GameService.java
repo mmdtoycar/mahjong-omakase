@@ -281,46 +281,21 @@ public class GameService {
   @Transactional(readOnly = true)
   @Cacheable("sessionSummaries")
   public List<SessionSummaryResponse> getAllSessionSummaries() {
-    List<GameSession> sessions = sessionRepo.findAllByOrderByCreatedAtDesc();
-    Map<String, Map<Long, Tier>> tiersCache = new HashMap<>();
-    return sessions.stream().map(s -> toSummary(s, tiersCache)).toList();
+    return sessionRepo.findAllByOrderByCreatedAtDesc().stream().map(this::toSummary).toList();
   }
 
-  private String monthCacheKey(GameMode mode, LocalDateTime sessionUtc) {
-    java.time.LocalDate pt =
-        sessionUtc.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDate();
-    return mode.name() + ":" + pt.getYear() + "-" + pt.getMonthValue();
-  }
-
-  private SessionSummaryResponse toSummary(GameSession s, Map<String, Map<Long, Tier>> tiersCache) {
+  private SessionSummaryResponse toSummary(GameSession s) {
     SessionSummaryResponse r = SessionSummaryResponse.from(s);
-    GameMode mode = s.getGameMode();
-    List<Player> players =
-        s.getPlayers().stream().map(GameSessionPlayer::getPlayer).filter(Objects::nonNull).toList();
-
-    String key = monthCacheKey(mode, s.getCreatedAt());
-    Map<Long, Tier> tiers =
-        tiersCache.computeIfAbsent(
-            key, k -> tierService.resolveTiersForDate(mode, s.getCreatedAt()));
-
-    annotateRankingsTier(r.getRankings(), players, tiers, mode);
-    return r;
-  }
-
-  private void annotateRankingsTier(
-      List<PlayerPerformanceDTO> rankings,
-      List<Player> players,
-      Map<Long, Tier> tiers,
-      GameMode mode) {
-    if (rankings == null) return;
-    Map<Long, Player> byId = new HashMap<>();
-    for (Player p : players) byId.put(p.getId(), p);
-    for (PlayerPerformanceDTO row : rankings) {
-      Player p = byId.get(row.getPlayerId());
-      if (p == null) continue;
-      Tier t = tiers.get(p.getId());
-      row.setTier((t != null ? t : tierService.computeTier(p, mode)).name());
+    if (r.getRankings() == null) return r;
+    Map<Long, GameSessionPlayer> seats = new HashMap<>();
+    for (GameSessionPlayer gsp : s.getPlayers()) {
+      if (gsp.getPlayer() != null) seats.put(gsp.getPlayer().getId(), gsp);
     }
+    for (PlayerPerformanceDTO row : r.getRankings()) {
+      GameSessionPlayer gsp = seats.get(row.getPlayerId());
+      if (gsp != null) row.setLadder(tierService.seatTier(gsp, s.getGameMode()));
+    }
+    return r;
   }
 
   public List<GameSession> getAllSessions() {
@@ -387,7 +362,11 @@ public class GameService {
                   SessionDetailResponse.PlayerInfo info =
                       new SessionDetailResponse.PlayerInfo(
                           p.getId(), p.getUserName(), gsp.getSeat());
-                  info.setTier(tierService.computeTier(p, sessionMode).name());
+                  info.setLadder(tierService.seatTier(gsp, sessionMode));
+                  if (gsp.getLadderLevelBefore() != null) {
+                    info.setLadderMove(
+                        Ladder.move(gsp.getLadderLevelBefore(), gsp.getLadderLevelAfter()));
+                  }
                   return info;
                 })
             .collect(Collectors.toList()));
