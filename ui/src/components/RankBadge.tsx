@@ -58,28 +58,25 @@ export const RankBadge: React.FC<Props> = ({
   const progressPlayed = typeof gamesNeeded === 'number' ? Math.max(0, 5 - gamesNeeded) : 0
   const ladder = points !== undefined && starCap !== undefined ? ladderPointsText(points, starCap) : null
   const scoreText = ladder ?? (rating !== undefined ? rating.toFixed(0) : null)
-  const isDou = isThrone && starCap === 0
-  const score =
-    scoreText && isDou ? (
-      <>
-        <span className="rank-badge-bean" />
-        {scoreText}
-      </>
-    ) : (
-      scoreText
-    )
+  const isDou = isThrone && starCap === 0 && points !== undefined
+  // 斗战圣佛's 魂珠 are on the emblem, so not repeated under the name.
+  const score = isDou ? null : scoreText
   // Hugs the emblem's lower-left edge; the bottom star lights first.
-  const starRow =
-    stars && !isThrone
-      ? [1, 2, 3].map((i) => (
-          <img
-            key={i}
-            src={i > stars ? '/rank/icon/star_empty.webp' : '/rank/icon/star.webp'}
-            alt=""
-            className={`rank-badge-star rank-badge-star-${i}`}
-          />
-        ))
-      : null
+  const starRow = isDou ? (
+    <span className="rank-badge-beans">
+      <span className="rank-badge-bean" />
+      {Math.floor(points)}
+    </span>
+  ) : stars && !isThrone ? (
+    [1, 2, 3].map((i) => (
+      <img
+        key={i}
+        src={i > stars ? '/rank/icon/star_empty.webp' : '/rank/icon/star.webp'}
+        alt=""
+        className={`rank-badge-star rank-badge-star-${i}`}
+      />
+    ))
+  ) : null
 
   // BOT: bots are always UNRANKED but show 🤖 instead of "新"/"X/5" — they don't earn tiers.
   if (isBot && size === 'sm') {

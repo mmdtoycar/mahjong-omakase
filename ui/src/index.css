@@ -1349,6 +1349,36 @@ table.auto-table {
   font-weight: 700;
 }
 
+/* 斗战圣佛's 魂珠, hung off the emblem's lower-left edge so it never covers the face. */
+.rank-badge-beans {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform: translate(-30%, 35%);
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1em 0.35em 0.1em 0.15em;
+  border: 1px solid var(--mj-gold);
+  border-radius: 999px;
+  background: rgb(52 28 12 / 90%);
+  color: var(--mj-gold);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.rank-badge-sm .rank-badge-beans {
+  font-size: 0.6rem;
+}
+
+.rank-badge-md .rank-badge-beans {
+  font-size: 0.95rem;
+}
+
+.rank-badge-lg .rank-badge-beans {
+  font-size: 1.5rem;
+}
+
 /* 魂珠 */
 .rank-badge-bean {
   display: inline-block;
