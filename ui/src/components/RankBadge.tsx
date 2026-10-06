@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { TierKey, tierLabel } from '../types'
-import { ladderPointsText, skillRatingText } from '../utils/format'
+import { ladderPointsText, skillRatingText, tierScoreText } from '../utils/format'
 
 interface Props {
   tier?: TierKey | null
@@ -15,6 +15,8 @@ interface Props {
   /** 段位战 points into the current star; shown instead of {@link rating} when given with {@link starCap}. */
   points?: number
   starCap?: number
+  /** 斗战圣佛 Lv.1 and up: drawn under the emblem in place of stars, with {@link points} counted in 豆. */
+  douLevel?: number
   /** Player userName — used to detect BOT and render 🤖 instead of UNRANKED placeholder. */
   userName?: string
   /** Click target — links to player detail / profile / etc. */
@@ -38,6 +40,7 @@ export const RankBadge: React.FC<Props> = ({
   stars,
   points,
   starCap,
+  douLevel,
   userName,
   onClick,
   className,
@@ -58,18 +61,29 @@ export const RankBadge: React.FC<Props> = ({
   const showProgress = tier === 'UNRANKED' && typeof gamesNeeded === 'number' && gamesNeeded > 0
   const progressPlayed = typeof gamesNeeded === 'number' ? Math.max(0, 5 - gamesNeeded) : 0
   const ladder = points !== undefined && starCap ? ladderPointsText(points, starCap) : null
-  const score = ladder ?? (rating !== undefined ? rating.toFixed(0) : null)
-  // The throne is a title above the stars, so it shows the halo alone.
-  const starRow =
-    stars && !isThrone ? (
-      <span className="rank-badge-stars">
-        {[1, 2, 3].map((i) => (
-          <span key={i} className={i > stars ? 'rank-badge-star-empty' : undefined}>
-            ★
-          </span>
-        ))}
-      </span>
-    ) : null
+  const scoreText = ladder ?? (rating !== undefined ? rating.toFixed(0) : null)
+  const isDou = isThrone && !!douLevel
+  const score =
+    scoreText && isDou ? (
+      <>
+        <span className="rank-badge-bean" />
+        {scoreText}
+      </>
+    ) : (
+      scoreText
+    )
+  // 斗战圣佛 counts levels rather than stars.
+  const starRow = isDou ? (
+    <span className="rank-badge-dou-level">Lv.{douLevel}</span>
+  ) : stars && !isThrone ? (
+    <span className="rank-badge-stars">
+      {[1, 2, 3].map((i) => (
+        <span key={i} className={i > stars ? 'rank-badge-star-empty' : undefined}>
+          ★
+        </span>
+      ))}
+    </span>
+  ) : null
 
   // BOT: bots are always UNRANKED but show 🤖 instead of "新"/"X/5" — they don't earn tiers.
   if (isBot && size === 'sm') {
@@ -154,3 +168,13 @@ export const RankBadge: React.FC<Props> = ({
     </span>
   )
 }
+
+/** 段位分 for a stats row, with the 豆 icon for 斗战圣佛. */
+export const TierScore: React.FC<{ row: Parameters<typeof tierScoreText>[0] & { douLevel?: number | null } }> = ({
+  row,
+}) => (
+  <>
+    {row.douLevel ? <span className="rank-badge-bean" /> : null}
+    {tierScoreText(row)}
+  </>
+)

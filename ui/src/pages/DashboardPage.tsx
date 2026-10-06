@@ -110,7 +110,6 @@ export default function DashboardPage() {
               createdAt={s.createdAt}
               roundLabel={`${s.roundCount}局 已结束`}
               isActive={false}
-              tableStrength={s.tableStrength}
               players={
                 s.rankings
                   ? s.rankings.map((p) => ({

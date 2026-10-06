@@ -191,6 +191,7 @@ export default function ProfilePage() {
                         stars={info.stars}
                         points={info.points}
                         starCap={info.starCap}
+                        douLevel={info.douLevel}
                         gamesNeeded={info.gamesNeeded}
                       />
                     )

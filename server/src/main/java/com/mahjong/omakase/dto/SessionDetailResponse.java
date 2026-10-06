@@ -26,8 +26,6 @@ public class SessionDetailResponse {
   /** 每位玩家本场对局的段位分变化. Empty while the session is in progress. */
   private Map<Long, Double> ratingDeltas = Collections.emptyMap();
 
-  private String tableStrength;
-
   @Getter
   @Setter
   @AllArgsConstructor

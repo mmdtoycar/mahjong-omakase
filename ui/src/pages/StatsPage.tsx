@@ -3,14 +3,14 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { PlayerStats, Player, GameModeKey, GAME_MODES, getCurrentSeason, BestRound } from '../types'
 import { fetchStats, fetchPlayers, fetchBestRounds } from '../api'
 import { MahjongHand } from '../components/MahjongHand'
-import { RankBadge } from '../components/RankBadge'
+import { RankBadge, TierScore } from '../components/RankBadge'
 
 type Tab = 'games' | 'players'
 
 const currentSeason = getCurrentSeason()
 
 import { statFontSize, tableNameFontSize } from '../utils/fontSize'
-import { parseError, rankMedal, tierScoreText } from '../utils/format'
+import { parseError, rankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { useActiveSeasons } from '../hooks/useActiveSeasons'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -149,6 +149,7 @@ export default function StatsPage() {
         tier: stat?.tier ?? 'UNRANKED',
         skillRating: stat?.skillRating,
         stars: stat?.stars,
+        douLevel: stat?.douLevel,
         totalGames: stat?.gamesPlayed ?? 0,
         gamesNeeded: stat?.gamesNeeded,
         avgRank: stat?.avgRank,
@@ -339,6 +340,7 @@ export default function StatsPage() {
                               size="sm"
                               userName={s.userName}
                               stars={s.stars ?? undefined}
+                              douLevel={s.douLevel ?? undefined}
                               gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
                             />
                             <span className="player-name" style={{ fontSize: tableNameFontSize(s.userName, isMobile) }}>
@@ -348,7 +350,9 @@ export default function StatsPage() {
                         </td>
                         <td className="num-cell">{rateCell(s.handWins, s.roundsPlayed)}</td>
                         <td className="num-cell">{rateCell(s.dealIns, s.roundsPlayed)}</td>
-                        <td className="num-cell-rank">{tierScoreText(s)}</td>
+                        <td className="num-cell-rank">
+                          <TierScore row={s} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -449,6 +453,7 @@ export default function StatsPage() {
                             size="sm"
                             userName={p.userName}
                             stars={p.stars ?? undefined}
+                            douLevel={p.douLevel ?? undefined}
                             gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
                           />
                           <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>

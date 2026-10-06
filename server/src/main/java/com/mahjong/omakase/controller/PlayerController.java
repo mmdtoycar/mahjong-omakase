@@ -72,18 +72,15 @@ public class PlayerController {
   /** Bulk tier lookup for a list of player ids — used by 排行榜 / 计分板 / GameCard. */
   @GetMapping("/tier")
   public List<PlayerTierResponse> tiersBulk(@RequestParam List<Long> ids) {
-    Long guobiaoThrone = tierService.findThroneId(GameMode.GUOBIAO);
-    Long riichiThrone = tierService.findThroneId(GameMode.RIICHI);
-    Long dongbeiThrone = tierService.findThroneId(GameMode.DONGBEI);
     return playerRepo.findAllById(ids).stream()
         .map(
             p ->
                 PlayerTierResponse.builder()
                     .playerId(p.getId())
                     .userName(p.getUserName())
-                    .guobiao(TierInfo.of(tierService, p, GameMode.GUOBIAO, guobiaoThrone))
-                    .riichi(TierInfo.of(tierService, p, GameMode.RIICHI, riichiThrone))
-                    .dongbei(TierInfo.of(tierService, p, GameMode.DONGBEI, dongbeiThrone))
+                    .guobiao(TierInfo.of(tierService, p, GameMode.GUOBIAO))
+                    .riichi(TierInfo.of(tierService, p, GameMode.RIICHI))
+                    .dongbei(TierInfo.of(tierService, p, GameMode.DONGBEI))
                     .build())
         .toList();
   }

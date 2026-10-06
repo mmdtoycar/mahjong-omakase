@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom'
 import { fetchHomeSummary } from '../api'
 import { GAME_MODES, SessionDetail, PlayerStats, BestRound, getCurrentSeason } from '../types'
 import { GameCard } from '../components/GameCard'
-import { RankBadge } from '../components/RankBadge'
+import { RankBadge, TierScore } from '../components/RankBadge'
 import { deriveGameState, getWindName } from '../utils/gameState'
 import { rankByScore } from '../logic/ranking'
 import { nameFontSize } from '../utils/fontSize'
-import { rankMedal, tierScoreText } from '../utils/format'
+import { rankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { useIsMobile } from '../hooks/useIsMobile'
 
@@ -92,7 +92,6 @@ export default function HomePage() {
                   createdAt={s.createdAt}
                   roundLabel={`${state.displayName} 进行中`}
                   isActive={true}
-                  tableStrength={s.tableStrength}
                   players={ranked.map((p) => {
                     const score = s.totalScores[p.id] || 0
                     const seat = p.seat ?? s.players.findIndex((op) => op.id === p.id) + 1
@@ -141,6 +140,7 @@ export default function HomePage() {
                                 tier={player.tier}
                                 size="sm"
                                 stars={player.stars ?? undefined}
+                                douLevel={player.douLevel ?? undefined}
                                 gamesNeeded={undefined}
                                 userName={player.userName}
                               />
@@ -151,7 +151,9 @@ export default function HomePage() {
                                 {player.userName}
                               </span>
                             </span>
-                            <span className="player-score">{tierScoreText(player)}</span>
+                            <span className="player-score">
+                              <TierScore row={player} />
+                            </span>
                           </div>
                         </div>
                       ))

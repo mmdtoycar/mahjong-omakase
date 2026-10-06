@@ -87,12 +87,7 @@ public class AdminController {
     return Map.of("message", "Session deleted");
   }
 
-  /**
-   * 段位战 backfill: replays every completed session in order to seed each player's ladder position.
-   * Only live ladder state is written — past 结算 deltas, monthly snapshots and game counts stay as
-   * they are — and it starts everyone over each run, so running it twice is harmless. After it has
-   * run once, sessions update the ladder as they complete.
-   */
+  /** Seeds everyone's 段位战 from all completed sessions; changes nothing else, safe to re-run. */
   @PostMapping("/tier/backfill")
   public Map<String, Object> backfillTier(
       @RequestHeader(value = "Authorization", required = false) String authHeader) {

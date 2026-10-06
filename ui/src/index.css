@@ -1347,6 +1347,38 @@ table.auto-table {
   font-size: 2rem;
 }
 
+.rank-badge-dou-level {
+  line-height: 1;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--mj-gold), #ff9800, var(--mj-gold));
+  background-clip: text;
+  color: transparent;
+}
+
+.rank-badge-sm .rank-badge-dou-level {
+  font-size: 0.75rem;
+}
+
+.rank-badge-md .rank-badge-dou-level {
+  font-size: 1.1rem;
+}
+
+.rank-badge-lg .rank-badge-dou-level {
+  font-size: 1.6rem;
+}
+
+/* 豆 */
+.rank-badge-bean {
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  margin-right: 0.25em;
+  border-radius: 50%;
+  vertical-align: -0.05em;
+  background: radial-gradient(circle at 35% 30%, #fff6c8 0%, var(--mj-gold) 45%, #b8860b 100%);
+  box-shadow: 0 0 4px rgb(255 200 50 / 60%);
+}
+
 .rank-badge-fallback {
   display: inline-flex;
   align-items: center;
@@ -1454,87 +1486,6 @@ table.auto-table {
   padding: 12px 0 16px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 16px;
-}
-
-/* ===== TableStrengthTag — 桌力 ===== */
-.table-strength {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-}
-
-.table-strength-md {
-  font-size: 1rem;
-  padding: 6px 16px;
-}
-
-.table-strength-emoji {
-  font-size: 1.1em;
-}
-
-/* 大圣之间 — the top tier: flame red and gold, with an animated fire ring. */
-@keyframes dasheng-flame {
-  0%,
-  100% {
-    box-shadow: inset 0 0 0 2px rgb(120 30 0 / 60%), inset 0 1px 0 rgb(255 255 255 / 35%),
-      0 0 8px 1px rgb(255 100 30 / 55%), 0 0 16px 3px rgb(255 60 0 / 30%);
-  }
-
-  50% {
-    box-shadow: inset 0 0 0 2px rgb(120 30 0 / 60%), inset 0 1px 0 rgb(255 255 255 / 55%),
-      0 0 14px 2px rgb(255 150 30 / 75%), 0 0 26px 5px rgb(255 80 0 / 50%);
-  }
-}
-
-.table-strength-dasheng {
-  background: linear-gradient(135deg, #d4351c 0%, #f0a429 100%);
-  color: #fff;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 30%);
-  animation: dasheng-flame 1.8s ease-in-out infinite;
-}
-
-/* 贪之间 — ink teal with gold text and border: expensive-looking without shouting. */
-.table-strength-tan {
-  background: linear-gradient(135deg, #1a3a3a 0%, #0d2828 100%);
-  color: #f4d03f;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 30%), inset 0 0 0 2px rgb(244 208 63 / 35%), inset 0 1px 0 rgb(244 208 63 / 30%);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 50%);
-}
-
-.table-strength-tan .table-strength-emoji {
-  filter: drop-shadow(0 0 3px rgb(244 208 63 / 70%));
-}
-
-/* 狠之间 — jade green, with a yin-yang gradient. */
-.table-strength-hen {
-  background: linear-gradient(135deg, #4a9b94 0%, #2c5f5b 100%);
-  color: #fff;
-  box-shadow: 0 1px 3px rgb(44 95 91 / 35%), inset 0 0 0 2px rgb(15 50 47 / 50%), inset 0 1px 0 rgb(255 255 255 / 25%);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 25%);
-}
-
-.table-strength-hen .table-strength-emoji {
-  filter: drop-shadow(0 0 2px rgb(255 255 255 / 50%));
-}
-
-/* 狱之间 — stormy violet-blue. */
-.table-strength-yu {
-  background: linear-gradient(135deg, #4f3eb3 0%, #6c5ce7 100%);
-  color: #fff;
-  box-shadow: 0 2px 6px rgb(76 60 179 / 30%), inset 0 0 0 2px rgb(40 28 110 / 55%), inset 0 1px 0 rgb(255 255 255 / 20%);
-}
-
-/* 铳之间 — plain beige-green. */
-.table-strength-chong {
-  background: linear-gradient(135deg, #e8ecdf 0%, #c4cfa8 100%);
-  color: #4a5a30;
-  box-shadow: inset 0 0 0 2px rgb(120 140 80 / 35%), inset 0 1px 0 rgb(255 255 255 / 40%);
 }
 
 /* ===== Calculator page ===== */

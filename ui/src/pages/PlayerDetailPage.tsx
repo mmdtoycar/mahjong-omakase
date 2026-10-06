@@ -70,6 +70,7 @@ export default function PlayerDetailPage() {
                     stars={info.stars}
                     points={info.points}
                     starCap={info.starCap}
+                    douLevel={info.douLevel}
                     gamesNeeded={info.gamesNeeded}
                   />
                 </div>

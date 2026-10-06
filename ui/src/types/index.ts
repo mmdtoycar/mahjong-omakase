@@ -43,7 +43,6 @@ export interface GameSession {
   createdAt: string
   roundCount: number
   rankings?: PlayerPerformance[]
-  tableStrength?: string | null
 }
 
 export type TierKey = 'UNRANKED' | 'LV1' | 'LV2' | 'LV3' | 'LV4_THRONE'
@@ -61,9 +60,11 @@ export interface TierInfo {
   peakRating: number
   /** 段位战 stars within the tier, 1 to 3. */
   stars: number
-  /** 段位战 points into the current star, out of {@link starCap}. */
+  /** 段位战 points into the current star, or 豆 into a 斗战圣佛 level, out of {@link starCap}. */
   points: number
   starCap: number
+  /** 斗战圣佛 Lv.1 and up; 0 below it, where {@link stars} applies instead. */
+  douLevel: number
 }
 
 export interface PlayerTierResponse {
@@ -130,7 +131,6 @@ export interface SessionDetail {
   startingPoints: number
   /** 每位玩家本场对局的段位分变化; 进行中的对局为空. */
   ratingDeltas?: Record<number, number>
-  tableStrength?: string | null
 }
 
 export interface ConfirmedHand {
@@ -187,6 +187,8 @@ export interface PlayerStats {
   stars?: number | null
   ladderPoints?: number | null
   starCap?: number | null
+  /** 斗战圣佛 Lv.1 and up, 0 below it. Null for months before 段位战. */
+  douLevel?: number | null
 }
 
 export interface Season {

@@ -56,7 +56,6 @@ class GameServiceStatsTest {
           mock(GameSessionPlayerRepository.class),
           mock(FanDiscoveryRepository.class),
           mock(TierService.class),
-          mock(TableStrengthService.class),
           mock(PlayerMonthlySkillRepository.class),
           mock(CacheManager.class),
           mock(RecognitionSampleStore.class),

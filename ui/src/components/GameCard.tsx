@@ -5,7 +5,6 @@ import { tableNameFontSize } from '../utils/fontSize'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { TierKey } from '../types'
 import { RankBadge } from './RankBadge'
-import { TableStrengthTag } from './TableStrengthTag'
 
 // Fullscreen API with webkit fallback + feature-detection (Safari/iPadOS use webkit*; iPhone has neither).
 type FsDoc = Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => void }
@@ -57,18 +56,9 @@ interface Props {
   roundLabel: string
   isActive: boolean
   players: PlayerEntry[]
-  tableStrength?: string | null
 }
 
-export const GameCard: React.FC<Props> = ({
-  id,
-  gameModeDisplayName,
-  createdAt,
-  roundLabel,
-  isActive,
-  players,
-  tableStrength,
-}) => {
+export const GameCard: React.FC<Props> = ({ id, gameModeDisplayName, createdAt, roundLabel, isActive, players }) => {
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const [fullscreen, setFullscreen] = useState(false)
@@ -145,7 +135,6 @@ export const GameCard: React.FC<Props> = ({
         <div className="session-card-header">
           <div className="session-card-mode">
             <span className="mode-text">{gameModeDisplayName}</span>
-            <TableStrengthTag table={tableStrength} />
           </div>
           <div className="session-card-meta">
             <span className="session-card-date">
@@ -190,7 +179,6 @@ export const GameCard: React.FC<Props> = ({
           <div className="game-fs-topbar">
             <div className="game-fs-title-area">
               <span className="game-fs-mode">{gameModeDisplayName}</span>
-              <TableStrengthTag table={tableStrength} />
               <span className="game-fs-date">
                 {new Date(createdAt).toLocaleString('en-US', {
                   timeZone: 'America/Los_Angeles',

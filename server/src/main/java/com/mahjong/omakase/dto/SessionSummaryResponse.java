@@ -20,9 +20,6 @@ public class SessionSummaryResponse {
   private int roundCount;
   private List<PlayerPerformanceDTO> rankings;
 
-  /** "铳之间" / "狠之间" / "贪之间" / "狱之间" / "大圣之间" */
-  private String tableStrength;
-
   public static SessionSummaryResponse from(GameSession session) {
     SessionSummaryResponse r = new SessionSummaryResponse();
     r.id = session.getId();

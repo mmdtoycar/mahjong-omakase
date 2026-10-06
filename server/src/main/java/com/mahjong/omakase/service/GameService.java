@@ -39,7 +39,6 @@ public class GameService {
   private final GameSessionPlayerRepository gameSessionPlayerRepo;
   private final FanDiscoveryRepository fanDiscoveryRepo;
   private final TierService tierService;
-  private final TableStrengthService tableStrengthService;
   private final PlayerMonthlySkillRepository monthlySkillRepo;
   private final CacheManager cacheManager;
   private final RecognitionSampleStore sampleStore;
@@ -53,7 +52,6 @@ public class GameService {
       GameSessionPlayerRepository gameSessionPlayerRepo,
       FanDiscoveryRepository fanDiscoveryRepo,
       TierService tierService,
-      TableStrengthService tableStrengthService,
       PlayerMonthlySkillRepository monthlySkillRepo,
       CacheManager cacheManager,
       RecognitionSampleStore sampleStore,
@@ -65,7 +63,6 @@ public class GameService {
     this.gameSessionPlayerRepo = gameSessionPlayerRepo;
     this.fanDiscoveryRepo = fanDiscoveryRepo;
     this.tierService = tierService;
-    this.tableStrengthService = tableStrengthService;
     this.monthlySkillRepo = monthlySkillRepo;
     this.cacheManager = cacheManager;
     this.sampleStore = sampleStore;
@@ -306,7 +303,6 @@ public class GameService {
         tiersCache.computeIfAbsent(
             key, k -> tierService.resolveTiersForDate(mode, s.getCreatedAt()));
 
-    r.setTableStrength(tableStrengthService.compute(players, mode, tiers).getDisplayName());
     annotateRankingsTier(r.getRankings(), players, tiers, mode);
     return r;
   }
@@ -381,7 +377,6 @@ public class GameService {
     resp.setCreatedAt(session.getCreatedAt());
 
     GameMode sessionMode = session.getGameMode();
-    final Long sessionThroneId = tierService.findThroneId(sessionMode);
 
     resp.setPlayers(
         session.getPlayers().stream()
@@ -392,20 +387,10 @@ public class GameService {
                   SessionDetailResponse.PlayerInfo info =
                       new SessionDetailResponse.PlayerInfo(
                           p.getId(), p.getUserName(), gsp.getSeat());
-                  info.setTier(tierService.computeTier(p, sessionMode, sessionThroneId).name());
+                  info.setTier(tierService.computeTier(p, sessionMode).name());
                   return info;
                 })
             .collect(Collectors.toList()));
-
-    List<Player> players =
-        session.getPlayers().stream()
-            .map(GameSessionPlayer::getPlayer)
-            .filter(Objects::nonNull)
-            .toList();
-    resp.setTableStrength(
-        tableStrengthService
-            .compute(players, sessionMode, session.getCreatedAt())
-            .getDisplayName());
 
     Map<Long, String> playerNameMap =
         session.getPlayers().stream()
@@ -469,10 +454,7 @@ public class GameService {
     return resp;
   }
 
-  /**
-   * Per-player 段位分 change recorded when this session was completed: 段位战 points, or the old ELO
-   * change for sessions completed before 段位战. Empty while the session is in progress.
-   */
+  /** Each player's 段位分 change at 结算: 段位战 points, or the old ELO change before it. */
   private Map<Long, Double> collectRatingDeltas(GameSession session) {
     Map<Long, Double> deltas = new HashMap<>();
     for (GameSessionPlayer gsp : session.getPlayers()) {
@@ -805,9 +787,6 @@ public class GameService {
     }
     final Map<Long, TierService.MonthlyTierInfo> historicalTiersFinal = historicalTiers;
 
-    final Long liveThroneId =
-        historicalTiers == null && gameMode != null ? tierService.findThroneId(gameMode) : null;
-
     Map<Long, Integer> totalScores = new HashMap<>();
     Map<Long, Integer> gamesPlayed = new HashMap<>();
     Map<Long, Integer> wins = new HashMap<>();
@@ -931,19 +910,21 @@ public class GameService {
                     stat.setStars(info.stars());
                     stat.setLadderPoints(info.ladderPoints());
                     stat.setStarCap(info.starCap());
+                    stat.setDouLevel(info.douLevel());
                   } else {
                     stat.setTier(Tier.UNRANKED.name());
                     stat.setSkillRating(0);
                     stat.setGamesNeeded(TierService.RANKED_MIN_GAMES);
                   }
                 } else {
-                  TierInfo live = TierInfo.of(tierService, p, gameMode, liveThroneId);
+                  TierInfo live = TierInfo.of(tierService, p, gameMode);
                   stat.setTier(live.getTier());
                   stat.setSkillRating(Ladder.sortKey(TierService.getLadder(p, gameMode)));
                   stat.setGamesNeeded(live.getGamesNeeded());
                   stat.setStars(live.getStars());
                   stat.setLadderPoints(live.getPoints());
                   stat.setStarCap(live.getStarCap());
+                  stat.setDouLevel(live.getDouLevel());
                 }
               } else {
                 stat.setTier(null);

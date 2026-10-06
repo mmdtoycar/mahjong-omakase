@@ -12,7 +12,6 @@ import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameSta
 import { scoreClass, parseError, seatRankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
-import { TableStrengthTag } from '../components/TableStrengthTag'
 import { PhotoRecognitionModal, RecognizedHand, winHandToLabel } from '../components/PhotoRecognitionModal'
 import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
 import { Meld as RiichiMeld } from '../logic/riichi/types'
@@ -747,7 +746,6 @@ export default function SessionPage() {
                 {session.status === 'IN_PROGRESS' ? '进行中' : '已结束'}
               </span>
             </span>
-            <TableStrengthTag table={session.tableStrength} size="md" />
             {session.status === 'IN_PROGRESS' && (
               <button className="btn btn-danger btn-small" onClick={handleComplete} disabled={submitting}>
                 结束游戏

@@ -9,10 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Snapshots the just-ended month's tiers on the 1st of each month at 00:00 PT, for the historical
- * tier view. 段位战 carries over between months, so nothing is reset.
- */
+/** Snapshots the just-ended month's tiers on the 1st at 00:00 PT; 段位战 itself never resets. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

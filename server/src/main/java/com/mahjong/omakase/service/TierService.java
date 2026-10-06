@@ -24,16 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Runs 段位战 (per mode), classifies players into tiers (灵明石猴/美猴王/齐天大圣/斗战圣佛), and writes per-month
- * snapshots used to render historical tier on the players-stats page.
- *
- * <p>Each of 国标 / 立直 / 东北 has its own ladder and throne. The rules are in {@link Ladder}. Nothing
- * is reset: points carry over from one month to the next.
- *
- * <p>Months before 段位战 were rated by a pairwise ELO. Their snapshots and per-session deltas are
- * kept as they were, and the tier shown for those months is still read from that rating.
- */
+/** 段位战 per mode (rules in {@link Ladder}), tiers and monthly snapshots. */
 @Slf4j
 @Service
 @Transactional
@@ -45,14 +36,8 @@ public class TierService {
   public static final double LV3_CUTOFF = 1500.0;
   public static final int RANKED_MIN_GAMES = 5;
 
-  /**
-   * 王座 also needs this many games in the window below (live) or in the month (history), so it
-   * passes on when its holder stops playing. A rolling window rather than the calendar month, or
-   * the throne would sit empty at the start of every month.
-   */
+  /** Games that month for the single 斗战圣佛 of months before 段位战. */
   public static final int THRONE_MIN_GAMES = 5;
-
-  public static final int THRONE_WINDOW_DAYS = 30;
 
   // Pacific timezone — month boundary uses PT.
   private static final java.time.ZoneId ZONE_PACIFIC = java.time.ZoneId.of("America/Los_Angeles");
@@ -62,22 +47,14 @@ public class TierService {
   private final GameSessionRepository sessionRepo;
   private final PlayerMonthlySkillRepository monthlySkillRepo;
 
-  /**
-   * Moves every human player in this completed session along their ladder for its mode, and records
-   * what the session earned on their {@link GameSessionPlayer} row for the 结算 display. Bots are not
-   * rated but keep their place at the table: finishing behind one still costs a place.
-   */
+  /** Moves each human along the ladder; bots keep their place but are not rated. */
   public void onSessionCompleted(GameSession session, Map<Long, Integer> totalScoresByPlayer) {
     if (session.getStatus() != SessionStatus.COMPLETED) return;
     if (!rate(session, totalScoresByPlayer, null)) return;
     sessionRepo.save(session);
   }
 
-  /**
-   * Applies one session to the ladder. {@code gamesBefore} supplies each player's games so far in
-   * this mode when replaying history; null means read the live counter, record the result on the
-   * session, and count the game. Returns false when the table is not three or four players.
-   */
+  /** {@code gamesBefore} is set when replaying history. False unless 3 or 4 at the table. */
   private boolean rate(
       GameSession session, Map<Long, Integer> totals, Map<Long, Integer> gamesBefore) {
     GameMode mode = session.getGameMode();
@@ -86,6 +63,16 @@ public class TierService {
       log.warn("Session id={} has {} scored players, not rated", session.getId(), table.size());
       return false;
     }
+    // 豆 double when everyone at the table is 斗战圣佛 before the game — a bot never is.
+    Map<Long, Player> seated = new HashMap<>();
+    for (GameSessionPlayer gsp : session.getPlayers()) {
+      if (gsp.getPlayer() != null) seated.put(gsp.getPlayer().getId(), gsp.getPlayer());
+    }
+    boolean allDou =
+        totals.keySet().stream()
+            .map(seated::get)
+            .allMatch(p -> p != null && !p.isBot() && Ladder.isDou(getLadder(p, mode).level()));
+
     for (GameSessionPlayer gsp : session.getPlayers()) {
       Player p = gsp.getPlayer();
       if (p == null || p.isBot()) continue;
@@ -96,7 +83,7 @@ public class TierService {
           IntStream.range(0, table.size()).filter(i -> table.get(i).equals(score)).toArray();
       int games = gamesBefore != null ? gamesBefore.getOrDefault(p.getId(), 0) : getGames(p, mode);
       Ladder.State before = getLadder(p, mode);
-      double gain = Ladder.gain(places, table.size(), score, mode, before.level());
+      double gain = Ladder.gain(places, table.size(), score, mode, before.level(), allDou);
       Ladder.State after = Ladder.apply(before, gain, games < Ladder.PROTECTED_GAMES);
       setLadder(p, mode, after);
 
@@ -113,14 +100,7 @@ public class TierService {
     return true;
   }
 
-  /**
-   * Write per-(player, mode) snapshots of the player's CURRENT state, tagged with the given (year,
-   * month). Idempotent — re-runs upsert in place.
-   *
-   * <p>Only writes a row for a (player, mode) where the player has at least one lifetime game in
-   * that mode. {@code monthlyGames} can be 0 (player didn't play that mode this month but already
-   * has a tier from earlier).
-   */
+  /** Upserts each player's current state for (year, month), for modes they have played. */
   public void snapshotMonth(int year, int month) {
     LocalDateTime[] range = monthUtcRangeFor(java.time.LocalDate.of(year, month, 1));
     // Bulk: 1 SQL per mode for the whole month, then map.get per (player, mode).
@@ -157,74 +137,23 @@ public class TierService {
     log.info("Snapshot {}/{} wrote {} rows", year, month, written);
   }
 
-  /** Compute tier for a player in a given mode, factoring in the throne (单 1 位). */
+  /** Unranked until {@link #RANKED_MIN_GAMES}, then the ladder level's tier. */
   public Tier computeTier(Player p, GameMode mode) {
-    return computeTier(p, mode, findThroneId(mode));
-  }
-
-  /**
-   * Throne-aware overload — caller passes the precomputed throne id so we don't redo {@code
-   * findThrone} for every player in a stats response. Pass {@code null} when no qualified throne
-   * holder exists.
-   */
-  public Tier computeTier(Player p, GameMode mode, Long throneId) {
     if (getGames(p, mode) < RANKED_MIN_GAMES) return Tier.UNRANKED;
-    Tier tier = Ladder.tierOf(getLadder(p, mode).level());
-    boolean throne = tier == Tier.LV3 && throneId != null && throneId.equals(p.getId());
-    return throne ? Tier.LV4_THRONE : tier;
+    return Ladder.tierOf(getLadder(p, mode).level());
   }
 
-  /**
-   * The throne holder for a mode: the single furthest-along 齐天大圣 with at least {@link
-   * #THRONE_MIN_GAMES} games in the last {@link #THRONE_WINDOW_DAYS} days. A tie at the top
-   * produces no holder, so the result does not depend on iteration order.
-   */
-  public Player findThrone(GameMode mode) {
-    LocalDateTime now = LocalDateTime.now(ZONE_UTC);
-    Map<Long, Integer> recent =
-        monthlyGamesByPlayer(mode, now.minusDays(THRONE_WINDOW_DAYS), now.plusMinutes(1));
-    List<Player> qualified =
-        playerRepo.findAll().stream()
-            .filter(p -> !p.isBot())
-            .filter(p -> getGames(p, mode) >= RANKED_MIN_GAMES)
-            .filter(p -> Ladder.tierOf(getLadder(p, mode).level()) == Tier.LV3)
-            .filter(p -> recent.getOrDefault(p.getId(), 0) >= THRONE_MIN_GAMES)
-            .toList();
-    if (qualified.isEmpty()) return null;
-    double top =
-        qualified.stream().mapToDouble(p -> Ladder.sortKey(getLadder(p, mode))).max().orElseThrow();
-    List<Player> best =
-        qualified.stream().filter(p -> Ladder.sortKey(getLadder(p, mode)) == top).toList();
-    return best.size() == 1 ? best.get(0) : null;
-  }
-
-  /**
-   * Just the throne's player id (or null) — saves loading the full Player when only the id is
-   * needed.
-   */
-  public Long findThroneId(GameMode mode) {
-    Player throne = findThrone(mode);
-    return throne != null ? throne.getId() : null;
-  }
-
-  /**
-   * One player's tier for a historical month. {@code sortScore} orders players within that month;
-   * the ladder fields are null for months from before 段位战.
-   */
+  /** A historical tier; the ladder fields are null for months before 段位战. */
   public record MonthlyTierInfo(
       Tier tier,
       double sortScore,
       int gamesNeeded,
       Integer stars,
       Double ladderPoints,
-      Integer starCap) {}
+      Integer starCap,
+      Integer douLevel) {}
 
-  /**
-   * Historical tiers for every player who has a snapshot for (mode, year, month). Months written by
-   * 段位战 read the ladder; older months read the ELO rating with its old cutoffs. Throne = the single
-   * best snapshot that is in the top tier with ≥ {@link #RANKED_MIN_GAMES} games overall and ≥
-   * {@link #THRONE_MIN_GAMES} that month.
-   */
+  /** Tiers for a month: the ladder if recorded, else the old ELO and its one 斗战圣佛. */
   public Map<Long, MonthlyTierInfo> computeMonthlySnapshotTiers(
       GameMode mode, int year, int month) {
     List<PlayerMonthlySkill> rows = monthlySkillRepo.findByModeAndYearAndMonth(mode, year, month);
@@ -246,6 +175,7 @@ public class TierService {
 
     List<PlayerMonthlySkill> throneCandidates =
         rows.stream()
+            .filter(s -> s.getLadderLevel() == null)
             .filter(s -> base.get(s.getPlayer().getId()) == Tier.LV3)
             .filter(s -> s.getGames() >= RANKED_MIN_GAMES)
             .filter(s -> s.getMonthlyGames() >= THRONE_MIN_GAMES)
@@ -285,17 +215,13 @@ public class TierService {
               needed,
               level != null ? Ladder.stars(level) : null,
               s.getLadderPoints(),
-              level != null ? Ladder.starCap(level) : null));
+              level != null ? Ladder.starCap(level) : null,
+              level != null ? Ladder.douLevel(level) : null));
     }
     return result;
   }
 
-  /**
-   * Resolve per-player tier for everyone, as of the given session's PT calendar month. For past
-   * months we read from {@link PlayerMonthlySkill} snapshots; for the current/future month we fall
-   * back to live state. Used by {@link TableStrengthService} so historical sessions show the label
-   * they had at the time, not what today's ratings would suggest.
-   */
+  /** Everyone's tier as of a session's month: snapshots for past months, live state otherwise. */
   public Map<Long, Tier> resolveTiersForDate(GameMode mode, LocalDateTime referenceUtc) {
     YearMonth queryMonth =
         YearMonth.from(
@@ -309,10 +235,9 @@ public class TierService {
       return out;
     }
     Map<Long, Tier> out = new HashMap<>();
-    Long throneId = findThroneId(mode);
     for (Player p : playerRepo.findAll()) {
       if (p.isBot()) continue;
-      out.put(p.getId(), computeTier(p, mode, throneId));
+      out.put(p.getId(), computeTier(p, mode));
     }
     return out;
   }
@@ -358,12 +283,7 @@ public class TierService {
 
   // ===== Backfill =====
 
-  /**
-   * Seeds every player's ladder from the completed sessions on record, replayed oldest first. Only
-   * the live ladder state is written: past sessions keep the delta shown at their 结算, past months
-   * keep the tier they were shown with, and game counts are left alone. Everyone starts over at
-   * {@link Ladder.State#start} each run, so it is safe to run again.
-   */
+  /** Replays every completed session to seed the live ladder only; safe to re-run. */
   public BackfillResult backfillLadder() {
     List<Player> all = playerRepo.findAll();
     for (Player p : all) {
@@ -412,11 +332,7 @@ public class TierService {
 
   // ===== Per-mode getters/setters =====
 
-  /**
-   * The setters are switch <b>statements</b>, which the compiler does not check for exhaustiveness
-   * the way it checks switch expressions. A GameMode added later and missed here would silently
-   * never update — so throw instead.
-   */
+  /** The setters are switch statements, not checked for exhaustiveness, so a missed mode throws. */
   private static IllegalArgumentException unhandledMode(GameMode mode) {
     return new IllegalArgumentException("Unhandled GameMode: " + mode);
   }

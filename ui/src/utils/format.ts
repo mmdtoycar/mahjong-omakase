@@ -72,10 +72,7 @@ export function ladderPointsText(points: number, starCap: number): string {
   return `${Math.floor(points)}/${starCap}`
 }
 
-/**
- * 段位分 for a stats row: 段位战 points under 段位战, the old rating for months before it, with the
- * same (?) suffix while unranked.
- */
+/** 段位分 for a stats row: 段位战 points, or the old rating before it; (?) while unranked. */
 export function tierScoreText(row: {
   skillRating?: number
   tier?: TierKey | null

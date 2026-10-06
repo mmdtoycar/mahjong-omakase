@@ -88,8 +88,8 @@ public class TierServiceTest {
       double expected = placement[i] + guobiaoSoten(totals.get((long) i + 1));
       assertEquals(expected, gsp.getLadderDelta(), 1e-9, "points for place " + (i + 1));
       assertEquals(Ladder.START_LEVEL, gsp.getLadderLevelAfter(), "still 美猴王 1 star");
-      assertEquals(50 + expected, gsp.getLadderPointsAfter(), 1e-9);
-      assertEquals(50 + expected, gsp.getPlayer().getLadderPointsGuobiao(), 1e-9);
+      assertEquals(75 + expected, gsp.getLadderPointsAfter(), 1e-9);
+      assertEquals(75 + expected, gsp.getPlayer().getLadderPointsGuobiao(), 1e-9);
       assertEquals(1, gsp.getPlayer().getGamesGuobiao());
       // The old rating is no longer touched.
       assertNull(gsp.getRatingDelta());
@@ -109,7 +109,7 @@ public class TierServiceTest {
       assertEquals(1, p.getGamesDongbei());
       assertNotEquals(Ladder.State.start(), TierService.getLadder(p, GameMode.DONGBEI));
       assertEquals(0, p.getGamesGuobiao());
-      assertEquals(50.0, p.getLadderPointsGuobiao(), 1e-9);
+      assertEquals(Ladder.State.start(), TierService.getLadder(p, GameMode.GUOBIAO));
     }
   }
 
@@ -150,33 +150,94 @@ public class TierServiceTest {
   @Test
   public void starsFillAndEmpty() {
     // Filling a star moves to the next, half full.
-    assertEquals(new Ladder.State(4, 50), Ladder.apply(new Ladder.State(3, 90), 15, false));
+    assertEquals(new Ladder.State(4, 75), Ladder.apply(new Ladder.State(3, 140), 15, false));
     // Crossing into the next tier starts half of that tier's larger star.
-    assertEquals(new Ladder.State(6, 75), Ladder.apply(new Ladder.State(5, 95), 10, false));
+    assertEquals(new Ladder.State(6, 150), Ladder.apply(new Ladder.State(5, 145), 10, false));
     // Dropping below zero moves back a star, half full.
-    assertEquals(new Ladder.State(2, 30), Ladder.apply(new Ladder.State(3, 10), -20, false));
+    assertEquals(new Ladder.State(2, 50), Ladder.apply(new Ladder.State(3, 10), -20, false));
     // The bottom star never drops and never goes negative.
     assertEquals(new Ladder.State(0, 0), Ladder.apply(new Ladder.State(0, 5), -20, false));
-    // The top star stops filling at its cap.
-    assertEquals(new Ladder.State(8, 150), Ladder.apply(new Ladder.State(8, 140), 40, false));
   }
 
   @Test
   public void newcomersCannotFallOutOf美猴王() {
     assertEquals(new Ladder.State(3, 0), Ladder.apply(new Ladder.State(3, 10), -40, true));
-    assertEquals(new Ladder.State(2, 30), Ladder.apply(new Ladder.State(3, 10), -40, false));
+    assertEquals(new Ladder.State(2, 50), Ladder.apply(new Ladder.State(3, 10), -40, false));
   }
 
   @Test
   public void lastPlaceCostsMoreTheHigherTheTier() {
     int[] last = {3};
-    assertEquals(0, Ladder.gain(last, 4, 0, GameMode.RIICHI, 0), 1e-9);
-    assertEquals(-30, Ladder.gain(last, 4, 0, GameMode.RIICHI, 3), 1e-9);
-    assertEquals(-50, Ladder.gain(last, 4, 0, GameMode.RIICHI, 6), 1e-9);
+    assertEquals(0, Ladder.gain(last, 4, 0, GameMode.RIICHI, 0, false), 1e-9);
+    assertEquals(-30, Ladder.gain(last, 4, 0, GameMode.RIICHI, 3, false), 1e-9);
+    assertEquals(-50, Ladder.gain(last, 4, 0, GameMode.RIICHI, 6, false), 1e-9);
     // 1000 立直 points of 素点 is half a point.
-    assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 1000, GameMode.RIICHI, 3), 1e-9);
+    assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 1000, GameMode.RIICHI, 3, false), 1e-9);
     // Three at the table: 1st and 2nd, then a tier-dependent last.
-    assertEquals(-25, Ladder.gain(new int[] {2}, 3, 0, GameMode.RIICHI, 3), 1e-9);
+    assertEquals(-25, Ladder.gain(new int[] {2}, 3, 0, GameMode.RIICHI, 3, false), 1e-9);
+  }
+
+  @Test
+  public void filling齐天大圣ThreeStarsReaches斗战圣佛() {
+    Ladder.State dou = Ladder.apply(new Ladder.State(8, 290), 15, false);
+    assertEquals(new Ladder.State(Ladder.DOU_LEVEL, Ladder.DOU_START), dou);
+    assertEquals(1, Ladder.douLevel(dou.level()));
+    assertEquals(0, Ladder.stars(dou.level()));
+    assertEquals(Tier.LV4_THRONE, Ladder.tierOf(dou.level()));
+  }
+
+  @Test
+  public void 斗战圣佛Counts豆ByPlacementAlone() {
+    // 素点 does not count, however big.
+    assertEquals(3, Ladder.gain(new int[] {0}, 4, 90000, GameMode.RIICHI, 9, false), 1e-9);
+    assertEquals(1, Ladder.gain(new int[] {1}, 4, 0, GameMode.RIICHI, 9, false), 1e-9);
+    assertEquals(-1, Ladder.gain(new int[] {2}, 4, 0, GameMode.RIICHI, 9, false), 1e-9);
+    assertEquals(-3, Ladder.gain(new int[] {3}, 4, -90000, GameMode.RIICHI, 9, false), 1e-9);
+    assertEquals(-3, Ladder.gain(new int[] {2}, 3, 0, GameMode.RIICHI, 9, false), 1e-9);
+    // A table of nothing but 斗战圣佛 doubles it.
+    assertEquals(-6, Ladder.gain(new int[] {3}, 4, 0, GameMode.RIICHI, 9, true), 1e-9);
+  }
+
+  @Test
+  public void 斗战圣佛LevelsMoveAt20AndBelowZero() {
+    assertEquals(new Ladder.State(10, 10), Ladder.apply(new Ladder.State(9, 18), 3, false));
+    assertEquals(new Ladder.State(9, 10), Ladder.apply(new Ladder.State(10, 1), -3, false));
+    // Zero itself holds; only less than zero drops.
+    assertEquals(new Ladder.State(9, 0), Ladder.apply(new Ladder.State(9, 1), -1, false));
+    // Lv.1 drops back to 齐天大圣 3 stars, half full.
+    assertEquals(new Ladder.State(8, 150), Ladder.apply(new Ladder.State(9, 1), -3, false));
+  }
+
+  private void seatAt(GameSession s, long playerId, int level) {
+    Player p = seat(s, playerId).getPlayer();
+    p.setLadderLevelRiichi(level);
+    p.setLadderPointsRiichi(10);
+    p.setGamesRiichi(50);
+  }
+
+  @Test
+  public void anAll斗战圣佛TableDoubles() {
+    Map<Long, Integer> totals = scores(30000, 10000, -10000, -30000);
+    GameSession s = session(GameMode.RIICHI, totals, null);
+    for (long id = 1; id <= 4; id++) seatAt(s, id, 9);
+
+    tierService.onSessionCompleted(s, totals);
+
+    assertEquals(6, seat(s, 1).getLadderDelta(), 1e-9);
+    assertEquals(-6, seat(s, 4).getLadderDelta(), 1e-9);
+  }
+
+  @Test
+  public void oneSeatBelow斗战圣佛MeansNoDoubling() {
+    Map<Long, Integer> totals = scores(30000, 10000, -10000, -30000);
+    GameSession s = session(GameMode.RIICHI, totals, null);
+    for (long id = 1; id <= 3; id++) seatAt(s, id, 9);
+    seatAt(s, 4, 8);
+
+    tierService.onSessionCompleted(s, totals);
+
+    assertEquals(3, seat(s, 1).getLadderDelta(), 1e-9);
+    assertEquals(-50 - 15, seat(s, 4).getLadderDelta(), 1e-9, "齐天大圣 last place, with 素点");
   }
 
   @Test
@@ -185,18 +246,18 @@ public class TierServiceTest {
     p.setLadderLevelDongbei(7);
 
     p.setGamesDongbei(TierService.RANKED_MIN_GAMES - 1);
-    assertEquals(Tier.UNRANKED, tierService.computeTier(p, GameMode.DONGBEI, null));
+    assertEquals(Tier.UNRANKED, tierService.computeTier(p, GameMode.DONGBEI));
 
     p.setGamesDongbei(TierService.RANKED_MIN_GAMES);
-    assertEquals(Tier.LV3, tierService.computeTier(p, GameMode.DONGBEI, null));
-    assertEquals(Tier.LV4_THRONE, tierService.computeTier(p, GameMode.DONGBEI, 1L));
-
+    assertEquals(Tier.LV3, tierService.computeTier(p, GameMode.DONGBEI));
+    p.setLadderLevelDongbei(9);
+    assertEquals(Tier.LV4_THRONE, tierService.computeTier(p, GameMode.DONGBEI));
     p.setLadderLevelDongbei(4);
-    assertEquals(Tier.LV2, tierService.computeTier(p, GameMode.DONGBEI, 1L), "throne needs 齐天大圣");
+    assertEquals(Tier.LV2, tierService.computeTier(p, GameMode.DONGBEI));
     p.setLadderLevelDongbei(1);
-    assertEquals(Tier.LV1, tierService.computeTier(p, GameMode.DONGBEI, null));
+    assertEquals(Tier.LV1, tierService.computeTier(p, GameMode.DONGBEI));
     // 国标 has no games, so it stays unranked even though 东北 is ranked.
-    assertEquals(Tier.UNRANKED, tierService.computeTier(p, GameMode.GUOBIAO, null));
+    assertEquals(Tier.UNRANKED, tierService.computeTier(p, GameMode.GUOBIAO));
   }
 
   private PlayerMonthlySkill snapshot(long playerId, double rating, Integer level, Double points) {
@@ -220,7 +281,7 @@ public class TierServiceTest {
     Map<Long, TierService.MonthlyTierInfo> tiers =
         tierService.computeMonthlySnapshotTiers(GameMode.RIICHI, 2026, 9);
 
-    assertEquals(Tier.LV4_THRONE, tiers.get(1L).tier());
+    assertEquals(Tier.LV4_THRONE, tiers.get(1L).tier(), "that month's single 斗战圣佛");
     assertEquals(Tier.LV2, tiers.get(2L).tier());
     assertNull(tiers.get(1L).stars());
     assertEquals(1620, tiers.get(1L).sortScore(), 1e-9);
@@ -234,15 +295,21 @@ public class TierServiceTest {
             List.of(
                 snapshot(1L, 1700, 4, 20.0),
                 snapshot(2L, 1300, 7, 80.0),
-                snapshot(3L, 1500, 6, 140.0)));
+                snapshot(3L, 1500, 9, 12.0),
+                snapshot(4L, 1500, 10, 4.0)));
 
     Map<Long, TierService.MonthlyTierInfo> tiers =
         tierService.computeMonthlySnapshotTiers(GameMode.RIICHI, 2026, 10);
 
     assertEquals(Tier.LV2, tiers.get(1L).tier());
-    assertEquals(Tier.LV4_THRONE, tiers.get(2L).tier(), "furthest along 齐天大圣");
-    assertEquals(Tier.LV3, tiers.get(3L).tier());
+    assertEquals(Tier.LV3, tiers.get(2L).tier(), "the furthest-along 齐天大圣 is not singled out");
     assertEquals(2, tiers.get(2L).stars());
-    assertEquals(150, tiers.get(2L).starCap());
+    assertEquals(300, tiers.get(2L).starCap());
+    // 斗战圣佛 is a level, and more than one player can hold it.
+    assertEquals(Tier.LV4_THRONE, tiers.get(3L).tier());
+    assertEquals(Tier.LV4_THRONE, tiers.get(4L).tier());
+    assertEquals(1, tiers.get(3L).douLevel());
+    assertEquals(2, tiers.get(4L).douLevel());
+    assertEquals(20, tiers.get(4L).starCap());
   }
 }
