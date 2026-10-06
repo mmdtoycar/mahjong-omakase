@@ -33,11 +33,11 @@ public final class Ladder {
   /** 素点 counts half, so placement stays the bulk of every game. */
   private static final double SOTEN_WEIGHT = 0.5;
 
-  /** Median pairwise gap in session totals per mode (Apr–Oct 2026), so 素点 is on one scale. */
-  private static final double RIICHI_GAP = 14550;
+  /** One share of 素点 per mode: what one player pays on the smallest hand. */
+  private static final int RIICHI_SOTEN_UNIT = 1000;
 
-  private static final double GUOBIAO_GAP = 62;
-  private static final double DONGBEI_GAP = 32;
+  private static final int GUOBIAO_SOTEN_UNIT = 8;
+  private static final int DONGBEI_SOTEN_UNIT = 2;
 
   /** A newcomer cannot drop out of 美猴王 in their first this-many games of a mode. */
   public static final int PROTECTED_GAMES = 10;
@@ -99,7 +99,7 @@ public final class Ladder {
     if (isDou(level)) {
       return doubled ? placement * 2 : placement;
     }
-    return placement + SOTEN_WEIGHT * score * RIICHI_GAP / gap(mode) / 1000.0;
+    return placement + SOTEN_WEIGHT * score / sotenUnit(mode);
   }
 
   private static int placePoints(int place, int tableSize, int tier) {
@@ -109,11 +109,11 @@ public final class Ladder {
     return place < 3 ? PLACE_POINTS_4[place] : LAST_POINTS_4[tier];
   }
 
-  private static double gap(GameMode mode) {
+  private static double sotenUnit(GameMode mode) {
     return switch (mode) {
-      case RIICHI -> RIICHI_GAP;
-      case GUOBIAO -> GUOBIAO_GAP;
-      case DONGBEI -> DONGBEI_GAP;
+      case RIICHI -> RIICHI_SOTEN_UNIT;
+      case GUOBIAO -> GUOBIAO_SOTEN_UNIT;
+      case DONGBEI -> DONGBEI_SOTEN_UNIT;
     };
   }
 

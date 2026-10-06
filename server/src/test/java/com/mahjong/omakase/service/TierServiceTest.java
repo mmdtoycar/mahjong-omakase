@@ -75,9 +75,9 @@ public class TierServiceTest {
         .orElseThrow();
   }
 
-  /** 国标's 素点 term: half a point per (14550 / 62) / 1000 of score — see Ladder. */
+  /** 国标's 素点 term: half a point per 8 of score — see Ladder. */
   private static double guobiaoSoten(int score) {
-    return 0.5 * score * 14550 / 62 / 1000.0;
+    return 0.5 * score / 8;
   }
 
   @Test
@@ -175,8 +175,10 @@ public class TierServiceTest {
     assertEquals(0, Ladder.gain(last, 4, 0, GameMode.RIICHI, 0, false), 1e-9);
     assertEquals(-30, Ladder.gain(last, 4, 0, GameMode.RIICHI, 3, false), 1e-9);
     assertEquals(-50, Ladder.gain(last, 4, 0, GameMode.RIICHI, 6, false), 1e-9);
-    // 1000 立直 points of 素点 is half a point.
+    // One share of 素点 is half a point: 1000 立直 points, 8 国标 or 2 东北.
     assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 1000, GameMode.RIICHI, 3, false), 1e-9);
+    assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 8, GameMode.GUOBIAO, 3, false), 1e-9);
+    assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 2, GameMode.DONGBEI, 3, false), 1e-9);
     // Three at the table: 1st and 2nd, then a tier-dependent last.
     assertEquals(-25, Ladder.gain(new int[] {2}, 3, 0, GameMode.RIICHI, 3, false), 1e-9);
   }
