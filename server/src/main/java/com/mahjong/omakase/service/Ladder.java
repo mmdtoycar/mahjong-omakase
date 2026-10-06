@@ -13,7 +13,7 @@ public final class Ladder {
   /** Levels 0..8 are stars; 9 is 斗战圣佛. */
   public static final int DOU_LEVEL = 9;
 
-  /** 魂珠 on reaching 斗战圣佛; running out drops back to 齐天大圣. */
+  /** 魂珠 on reaching 斗战圣佛; going below zero drops back to 齐天大圣. */
   public static final int DOU_START = 10;
 
   /** 斗战圣佛 at one table that double its 魂珠. */
@@ -117,12 +117,16 @@ public final class Ladder {
     };
   }
 
-  /** Moves a full star up and a negative one down, half full; 斗战圣佛 drops once its 魂珠 run out. */
+  /**
+   * Moves a full star up and a negative one down, half full; 斗战圣佛 drops once its 魂珠 go negative.
+   */
   public static State apply(State before, double gain, boolean protectedNewcomer) {
     int level = before.level();
     double points = before.points() + gain;
     if (isDou(level)) {
-      return points > 0 ? new State(level, points) : new State(level - 1, starCap(level - 1) / 2.0);
+      return points >= 0
+          ? new State(level, points)
+          : new State(level - 1, starCap(level - 1) / 2.0);
     }
     if (points >= starCap(level)) {
       level++;

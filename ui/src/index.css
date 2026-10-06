@@ -1367,6 +1367,11 @@ table.auto-table {
   white-space: nowrap;
 }
 
+.rank-badge-beans-empty {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .rank-badge-sm .rank-badge-beans {
   font-size: 0.6rem;
 }

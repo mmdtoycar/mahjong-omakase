@@ -91,7 +91,7 @@ export function ladderMoveText(p: PlayerInfo): string | null {
     case 'TIER_DOWN':
       return `降为${tierLabel(p.tier)}`
     default:
-      return null
+      return p.starCap === 0 && p.points != null && Math.floor(p.points) <= 0 ? '魂珠已空' : null
   }
 }
 

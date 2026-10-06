@@ -63,7 +63,7 @@ export const RankBadge: React.FC<Props> = ({
   const score = isDou ? null : scoreText
   // Hugs the emblem's lower-left edge; the bottom star lights first.
   const starRow = isDou ? (
-    <span className="rank-badge-beans">
+    <span className={`rank-badge-beans${Math.floor(points) <= 0 ? ' rank-badge-beans-empty' : ''}`}>
       <span className="rank-badge-bean" />
       {Math.floor(points)}
     </span>

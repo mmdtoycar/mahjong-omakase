@@ -213,11 +213,11 @@ public class TierServiceTest {
   }
 
   @Test
-  public void 斗战圣佛魂珠HaveNoCapAndRunningOutDrops() {
+  public void 斗战圣佛魂珠HaveNoCapAndGoingNegativeDrops() {
     assertEquals(new Ladder.State(9, 21), Ladder.apply(new Ladder.State(9, 18), 3, false));
     assertEquals(new Ladder.State(9, 63), Ladder.apply(new Ladder.State(9, 60), 3, false));
-    // Running out drops back to 齐天大圣 3 stars, half full.
-    assertEquals(new Ladder.State(8, 250), Ladder.apply(new Ladder.State(9, 1), -1, false));
+    // Zero holds; below zero drops back to 齐天大圣 3 stars, half full.
+    assertEquals(new Ladder.State(9, 0), Ladder.apply(new Ladder.State(9, 1), -1, false));
     assertEquals(new Ladder.State(8, 250), Ladder.apply(new Ladder.State(9, 1), -3, false));
   }
 
