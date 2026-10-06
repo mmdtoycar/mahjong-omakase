@@ -66,3 +66,23 @@ export function skillRatingText(rating: number | undefined, tier: TierKey | null
   const val = rating.toFixed(0)
   return !tier || tier === 'UNRANKED' ? `${val}(?)` : val
 }
+
+/** Points into the current star out of the star's cap, e.g. "63/100". */
+export function ladderPointsText(points: number, starCap: number): string {
+  return `${Math.floor(points)}/${starCap}`
+}
+
+/**
+ * 段位分 for a stats row: 段位战 points under 段位战, the old rating for months before it, with the
+ * same (?) suffix while unranked.
+ */
+export function tierScoreText(row: {
+  skillRating?: number
+  tier?: TierKey | null
+  ladderPoints?: number | null
+  starCap?: number | null
+}): string {
+  if (row.ladderPoints == null || !row.starCap) return skillRatingText(row.skillRating, row.tier)
+  const val = ladderPointsText(row.ladderPoints, row.starCap)
+  return !row.tier || row.tier === 'UNRANKED' ? `${val}(?)` : val
+}

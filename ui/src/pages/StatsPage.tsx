@@ -10,7 +10,7 @@ type Tab = 'games' | 'players'
 const currentSeason = getCurrentSeason()
 
 import { statFontSize, tableNameFontSize } from '../utils/fontSize'
-import { parseError, rankMedal, skillRatingText } from '../utils/format'
+import { parseError, rankMedal, tierScoreText } from '../utils/format'
 import { MSG } from '../constants'
 import { useActiveSeasons } from '../hooks/useActiveSeasons'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -148,6 +148,7 @@ export default function StatsPage() {
         ...p,
         tier: stat?.tier ?? 'UNRANKED',
         skillRating: stat?.skillRating,
+        stars: stat?.stars,
         totalGames: stat?.gamesPlayed ?? 0,
         gamesNeeded: stat?.gamesNeeded,
         avgRank: stat?.avgRank,
@@ -337,6 +338,7 @@ export default function StatsPage() {
                               tier={s.tier}
                               size="sm"
                               userName={s.userName}
+                              stars={s.stars ?? undefined}
                               gamesNeeded={s.tier === 'UNRANKED' ? s.gamesNeeded : undefined}
                             />
                             <span className="player-name" style={{ fontSize: tableNameFontSize(s.userName, isMobile) }}>
@@ -346,7 +348,7 @@ export default function StatsPage() {
                         </td>
                         <td className="num-cell">{rateCell(s.handWins, s.roundsPlayed)}</td>
                         <td className="num-cell">{rateCell(s.dealIns, s.roundsPlayed)}</td>
-                        <td className="num-cell-rank">{skillRatingText(s.skillRating, s.tier)}</td>
+                        <td className="num-cell-rank">{tierScoreText(s)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -446,6 +448,7 @@ export default function StatsPage() {
                             tier={p.tier ?? 'UNRANKED'}
                             size="sm"
                             userName={p.userName}
+                            stars={p.stars ?? undefined}
                             gamesNeeded={p.tier === 'UNRANKED' || !p.tier ? p.gamesNeeded : undefined}
                           />
                           <span className="player-name" style={{ fontSize: tableNameFontSize(p.userName, isMobile) }}>

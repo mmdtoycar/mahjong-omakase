@@ -1316,6 +1316,37 @@ table.auto-table {
   filter: drop-shadow(0 0 8px rgb(255 200 50 / 60%));
 }
 
+/* 段位战 stars, one row under the emblem. */
+.rank-badge-emblem {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.rank-badge-stars {
+  display: inline-flex;
+  gap: 1px;
+  line-height: 1;
+  color: var(--mj-gold);
+}
+
+.rank-badge-star-empty {
+  color: var(--border);
+}
+
+.rank-badge-sm .rank-badge-stars {
+  font-size: 0.75rem;
+}
+
+.rank-badge-md .rank-badge-stars {
+  font-size: 1.25rem;
+}
+
+.rank-badge-lg .rank-badge-stars {
+  font-size: 2rem;
+}
+
 .rank-badge-fallback {
   display: inline-flex;
   align-items: center;

@@ -54,4 +54,13 @@ public class PlayerMonthlySkill {
   /** All-time peak rating through the end of this month. */
   @Column(nullable = false)
   private double peakRating;
+
+  /**
+   * 段位战 level (0..8) at the end of this month. Null for months before 段位战, whose tier is read from
+   * {@link #skillRating} instead.
+   */
+  @Column private Integer ladderLevel;
+
+  /** Points into that star at the end of this month. Null under the same conditions. */
+  @Column private Double ladderPoints;
 }

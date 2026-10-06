@@ -3,6 +3,7 @@ package com.mahjong.omakase.dto;
 import com.mahjong.omakase.model.GameMode;
 import com.mahjong.omakase.model.Player;
 import com.mahjong.omakase.model.Tier;
+import com.mahjong.omakase.service.Ladder;
 import com.mahjong.omakase.service.TierService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,6 +33,15 @@ public class TierInfo {
 
   /** All-time peak rating in this mode */
   private double peakRating;
+
+  /** 段位战 stars within the tier, 1 to 3. */
+  private int stars;
+
+  /** 段位战 points into the current star. */
+  private double points;
+
+  /** Points that fill the current star. */
+  private int starCap;
 
   public static TierInfo of(TierService tierService, Player p, GameMode mode) {
     return of(tierService, p, mode, tierService.findThroneId(mode));
@@ -66,6 +76,7 @@ public class TierInfo {
           case DONGBEI -> p.getPeakSkillDongbei();
         };
     int needed = t == Tier.UNRANKED ? Math.max(0, TierService.RANKED_MIN_GAMES - games) : 0;
+    Ladder.State ladder = TierService.getLadder(p, mode);
     return TierInfo.builder()
         .tier(t.name())
         .level(level)
@@ -73,6 +84,9 @@ public class TierInfo {
         .games(games)
         .gamesNeeded(needed)
         .peakRating(peak)
+        .stars(Ladder.stars(ladder.level()))
+        .points(ladder.points())
+        .starCap(Ladder.starCap(ladder.level()))
         .build();
   }
 }

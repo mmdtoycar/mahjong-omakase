@@ -470,15 +470,15 @@ public class GameService {
   }
 
   /**
-   * Per-player 段位分 change recorded when this session was completed. Empty while the session is in
-   * progress, and for completed sessions predating the column (run the tier backfill to fill those
-   * in).
+   * Per-player 段位分 change recorded when this session was completed: 段位战 points, or the old ELO
+   * change for sessions completed before 段位战. Empty while the session is in progress.
    */
   private Map<Long, Double> collectRatingDeltas(GameSession session) {
     Map<Long, Double> deltas = new HashMap<>();
     for (GameSessionPlayer gsp : session.getPlayers()) {
-      if (gsp.getPlayer() == null || gsp.getRatingDelta() == null) continue;
-      deltas.put(gsp.getPlayer().getId(), gsp.getRatingDelta());
+      if (gsp.getPlayer() == null) continue;
+      Double delta = gsp.getLadderDelta() != null ? gsp.getLadderDelta() : gsp.getRatingDelta();
+      if (delta != null) deltas.put(gsp.getPlayer().getId(), delta);
     }
     return deltas;
   }
@@ -585,7 +585,7 @@ public class GameService {
     session.setStatus(SessionStatus.COMPLETED);
     sessionRepo.save(session);
 
-    // Update hidden skill ratings (国标 / 立直 only).
+    // Move everyone at the table along their 段位战 ladder for this mode.
     Map<Long, Integer> totals = new HashMap<>();
     for (Object[] row : roundScoreRepo.getTotalScoresBySession(sessionId)) {
       if (row[0] != null) totals.put((Long) row[0], ((Number) row[1]).intValue());
@@ -926,8 +926,11 @@ public class GameService {
                   TierService.MonthlyTierInfo info = historicalTiersFinal.get(p.getId());
                   if (info != null) {
                     stat.setTier(info.tier().name());
-                    stat.setSkillRating(info.skillRating());
+                    stat.setSkillRating(info.sortScore());
                     stat.setGamesNeeded(info.gamesNeeded());
+                    stat.setStars(info.stars());
+                    stat.setLadderPoints(info.ladderPoints());
+                    stat.setStarCap(info.starCap());
                   } else {
                     stat.setTier(Tier.UNRANKED.name());
                     stat.setSkillRating(0);
@@ -936,8 +939,11 @@ public class GameService {
                 } else {
                   TierInfo live = TierInfo.of(tierService, p, gameMode, liveThroneId);
                   stat.setTier(live.getTier());
-                  stat.setSkillRating(live.getRating());
+                  stat.setSkillRating(Ladder.sortKey(TierService.getLadder(p, gameMode)));
                   stat.setGamesNeeded(live.getGamesNeeded());
+                  stat.setStars(live.getStars());
+                  stat.setLadderPoints(live.getPoints());
+                  stat.setStarCap(live.getStarCap());
                 }
               } else {
                 stat.setTier(null);

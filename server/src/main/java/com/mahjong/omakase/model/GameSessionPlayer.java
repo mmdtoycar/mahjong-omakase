@@ -37,4 +37,18 @@ public class GameSessionPlayer {
 
   /** 本场对局结束后的段位分. Null under the same conditions as {@link #ratingDelta}. */
   @Column private Double ratingAfter;
+
+  /**
+   * 段位战 points this session earned. Null for sessions completed before 段位战, which carry the old
+   * {@link #ratingDelta} instead.
+   */
+  @Column private Double ladderDelta;
+
+  /**
+   * 段位战 level (0..8) after this session. Null under the same conditions as {@link #ladderDelta}.
+   */
+  @Column private Integer ladderLevelAfter;
+
+  /** Points into that star after this session. Null under the same conditions. */
+  @Column private Double ladderPointsAfter;
 }

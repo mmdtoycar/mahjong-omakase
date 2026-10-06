@@ -18,22 +18,21 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Computes hidden skill ratings (per mode) using Pairwise ELO + tanh softening, classifies players
- * into tiers (灵明石猴/美猴王/齐天大圣/斗战圣佛), runs the monthly soft reset, and writes per-month skill
+ * Runs 段位战 (per mode), classifies players into tiers (灵明石猴/美猴王/齐天大圣/斗战圣佛), and writes per-month
  * snapshots used to render historical tier on the players-stats page.
  *
- * <p>All three modes (国标 / 立直 / 东北) are ranked, each with its own independent rating, throne and
- * monthly reset.
+ * <p>Each of 国标 / 立直 / 东北 has its own ladder and throne. The rules are in {@link Ladder}. Nothing
+ * is reset: points carry over from one month to the next.
  *
- * <p>Tiers are derived state — never persisted directly. Persisted state is the rating, the game
- * count, the all-time peak rating per mode, the per-session rating delta (for the 结算 display), and
- * the per-month snapshots.
+ * <p>Months before 段位战 were rated by a pairwise ELO. Their snapshots and per-session deltas are
+ * kept as they were, and the tier shown for those months is still read from that rating.
  */
 @Slf4j
 @Service
@@ -41,135 +40,82 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TierService {
 
-  // Tunables — keep in sync with EloSimulationTest defaults.
-  public static final double INITIAL_RATING = 1500.0;
-  public static final double K_NEW = 48.0;
-  public static final double K_STABLE = 24.0;
-  public static final int NEW_PLAYER_GAMES = 10;
-  public static final double TANH_SCALE = 2.0;
-
-  // Tier cutoffs (locked: < 1400 / 1400-1500 / > 1500 + throne).
+  // Tier cutoffs of the old ELO rating, for months whose snapshots predate 段位战.
   public static final double LV2_CUTOFF = 1400.0;
   public static final double LV3_CUTOFF = 1500.0;
   public static final int RANKED_MIN_GAMES = 5;
 
-  /** 王座(斗战圣佛)还要本月至少 N 场, 否则不流转给不活跃高分玩家. */
-  public static final int THRONE_MONTHLY_MIN_GAMES = 5;
+  /**
+   * 王座 also needs this many games in the window below (live) or in the month (history), so it
+   * passes on when its holder stops playing. A rolling window rather than the calendar month, or
+   * the throne would sit empty at the start of every month.
+   */
+  public static final int THRONE_MIN_GAMES = 5;
+
+  public static final int THRONE_WINDOW_DAYS = 30;
 
   // Pacific timezone — month boundary uses PT.
   private static final java.time.ZoneId ZONE_PACIFIC = java.time.ZoneId.of("America/Los_Angeles");
   private static final java.time.ZoneId ZONE_UTC = java.time.ZoneId.of("UTC");
-
-  // Monthly soft reset: new = MEAN + ALPHA * (old - MEAN). 0.7 = mild regression to the mean.
-  public static final double RESET_ALPHA = 0.7;
 
   private final PlayerRepository playerRepo;
   private final GameSessionRepository sessionRepo;
   private final PlayerMonthlySkillRepository monthlySkillRepo;
 
   /**
-   * Update skill ratings for all human players in this completed session, and record each player's
-   * rating change on their {@link com.mahjong.omakase.model.GameSessionPlayer} row so the session
-   * page can show it at 结算. Bots are skipped (their rating doesn't change and they're filtered out
-   * of the pairwise updates).
+   * Moves every human player in this completed session along their ladder for its mode, and records
+   * what the session earned on their {@link GameSessionPlayer} row for the 结算 display. Bots are not
+   * rated but keep their place at the table: finishing behind one still costs a place.
    */
   public void onSessionCompleted(GameSession session, Map<Long, Integer> totalScoresByPlayer) {
     if (session.getStatus() != SessionStatus.COMPLETED) return;
-    GameMode mode = session.getGameMode();
-
-    // Filter to humans with a recorded score, sorted by score descending = rank order.
-    List<Map.Entry<Player, Integer>> ranked = new ArrayList<>();
-    for (Player p : session.getPlayers().stream().map(gsp -> gsp.getPlayer()).toList()) {
-      if (p == null || p.isBot()) continue;
-      Integer score = totalScoresByPlayer.get(p.getId());
-      if (score == null) continue;
-      ranked.add(Map.entry(p, score));
-    }
-    ranked.sort(Map.Entry.<Player, Integer>comparingByValue().reversed());
-
-    if (ranked.size() < 2) return;
-
-    Map<Long, Double> deltas = applyPairwiseElo(mode, ranked);
-
-    for (Map.Entry<Player, Integer> e : ranked) {
-      Player p = e.getKey();
-      incrementGames(p, mode);
-      bumpPeak(p, mode);
-      playerRepo.save(p);
-    }
-
-    for (GameSessionPlayer gsp : session.getPlayers()) {
-      Player p = gsp.getPlayer();
-      if (p == null) continue;
-      Double delta = deltas.get(p.getId());
-      if (delta == null) continue;
-      gsp.setRatingDelta(delta);
-      gsp.setRatingAfter(getRating(p, mode));
-    }
+    if (!rate(session, totalScoresByPlayer, null)) return;
     sessionRepo.save(session);
   }
 
-  /** Applies the pairwise ELO update and returns each player's rating delta for this session. */
-  private Map<Long, Double> applyPairwiseElo(
-      GameMode mode, List<Map.Entry<Player, Integer>> ranked) {
-    int n = ranked.size();
-    // Snapshot starting ratings + games BEFORE the loop. Reading from the live Player object
-    // inside the nested loop would let earlier pairings perturb later ones, making the result
-    // depend on iteration order instead of just the final standings.
-    double[] startRatings = new double[n];
-    int[] startGames = new int[n];
-    double[] deltas = new double[n];
-    for (int i = 0; i < n; i++) {
-      Player p = ranked.get(i).getKey();
-      startRatings[i] = getRating(p, mode);
-      startGames[i] = getGames(p, mode);
+  /**
+   * Applies one session to the ladder. {@code gamesBefore} supplies each player's games so far in
+   * this mode when replaying history; null means read the live counter, record the result on the
+   * session, and count the game. Returns false when the table is not three or four players.
+   */
+  private boolean rate(
+      GameSession session, Map<Long, Integer> totals, Map<Long, Integer> gamesBefore) {
+    GameMode mode = session.getGameMode();
+    List<Integer> table = totals.values().stream().sorted(Comparator.reverseOrder()).toList();
+    if (table.size() != 3 && table.size() != 4) {
+      log.warn("Session id={} has {} scored players, not rated", session.getId(), table.size());
+      return false;
     }
-    for (int i = 0; i < n; i++) {
-      for (int j = i + 1; j < n; j++) {
-        double si = startRatings[i];
-        double sj = startRatings[j];
-        int gi = startGames[i];
-        int gj = startGames[j];
+    for (GameSessionPlayer gsp : session.getPlayers()) {
+      Player p = gsp.getPlayer();
+      if (p == null || p.isBot()) continue;
+      Integer score = totals.get(p.getId());
+      if (score == null) continue;
 
-        double actual = ranked.get(i).getValue().equals(ranked.get(j).getValue()) ? 0.5 : 1.0;
-        double expected = 1.0 / (1.0 + Math.pow(10, (sj - si) / 400.0));
-        double softDelta = Math.tanh((actual - expected) * TANH_SCALE);
+      int[] places =
+          IntStream.range(0, table.size()).filter(i -> table.get(i).equals(score)).toArray();
+      int games = gamesBefore != null ? gamesBefore.getOrDefault(p.getId(), 0) : getGames(p, mode);
+      Ladder.State before = getLadder(p, mode);
+      double gain = Ladder.gain(places, table.size(), score, mode, before.level());
+      Ladder.State after = Ladder.apply(before, gain, games < Ladder.PROTECTED_GAMES);
+      setLadder(p, mode, after);
 
-        double kI = (gi < NEW_PLAYER_GAMES) ? K_NEW : K_STABLE;
-        double kJ = (gj < NEW_PLAYER_GAMES) ? K_NEW : K_STABLE;
-
-        deltas[i] += kI * softDelta;
-        deltas[j] -= kJ * softDelta;
+      if (gamesBefore != null) {
+        gamesBefore.merge(p.getId(), 1, Integer::sum);
+        continue;
       }
-    }
-    Map<Long, Double> deltaByPlayer = new HashMap<>();
-    for (int i = 0; i < n; i++) {
-      Player p = ranked.get(i).getKey();
-      setRating(p, mode, startRatings[i] + deltas[i]);
-      deltaByPlayer.put(p.getId(), deltas[i]);
-    }
-    return deltaByPlayer;
-  }
-
-  /** Monthly soft reset: pulls every rating toward MEAN by (1 - ALPHA). Peaks are untouched. */
-  public void monthlyReset() {
-    List<Player> all = playerRepo.findAll();
-    int n = 0;
-    for (Player p : all) {
-      if (p.isBot()) continue;
-      for (GameMode mode : GameMode.values()) {
-        setRating(p, mode, INITIAL_RATING + RESET_ALPHA * (getRating(p, mode) - INITIAL_RATING));
-      }
+      incrementGames(p, mode);
       playerRepo.save(p);
-      n++;
+      gsp.setLadderDelta(gain);
+      gsp.setLadderLevelAfter(after.level());
+      gsp.setLadderPointsAfter(after.points());
     }
-    log.info("Monthly soft-reset applied to {} players (alpha={})", n, RESET_ALPHA);
+    return true;
   }
 
   /**
-   * Write per-(player, mode) snapshots of the player's CURRENT skill state, tagged with the given
-   * (year, month). Must be called BEFORE applying the soft reset for that month boundary, so the
-   * snapshot reflects end-of-month rating. Idempotent — re-runs upsert in place.
+   * Write per-(player, mode) snapshots of the player's CURRENT state, tagged with the given (year,
+   * month). Idempotent — re-runs upsert in place.
    *
    * <p>Only writes a row for a (player, mode) where the player has at least one lifetime game in
    * that mode. {@code monthlyGames} can be 0 (player didn't play that mode this month but already
@@ -189,8 +135,6 @@ public class TierService {
       for (GameMode mode : GameMode.values()) {
         if (getGames(p, mode) == 0) continue;
         int mgames = monthlyByMode.get(mode).getOrDefault(p.getId(), 0);
-        double rating = getRating(p, mode);
-        double peak = getPeak(p, mode);
         PlayerMonthlySkill snap =
             monthlySkillRepo
                 .findByPlayerIdAndModeAndYearAndMonth(p.getId(), mode, year, month)
@@ -199,10 +143,13 @@ public class TierService {
         snap.setMode(mode);
         snap.setYear(year);
         snap.setMonth(month);
-        snap.setSkillRating(rating);
+        snap.setSkillRating(getRating(p, mode));
         snap.setGames(getGames(p, mode));
         snap.setMonthlyGames(mgames);
-        snap.setPeakRating(peak);
+        snap.setPeakRating(getPeak(p, mode));
+        Ladder.State ladder = getLadder(p, mode);
+        snap.setLadderLevel(ladder.level());
+        snap.setLadderPoints(ladder.points());
         monthlySkillRepo.save(snap);
         written++;
       }
@@ -217,36 +164,38 @@ public class TierService {
 
   /**
    * Throne-aware overload — caller passes the precomputed throne id so we don't redo {@code
-   * findThrone} (= {@code playerRepo.findAll()} + monthly count) for every player in a stats
-   * response. Pass {@code null} when no qualified throne holder exists.
+   * findThrone} for every player in a stats response. Pass {@code null} when no qualified throne
+   * holder exists.
    */
   public Tier computeTier(Player p, GameMode mode, Long throneId) {
     if (getGames(p, mode) < RANKED_MIN_GAMES) return Tier.UNRANKED;
-    double rating = getRating(p, mode);
-    if (rating < LV2_CUTOFF) return Tier.LV1;
-    if (rating < LV3_CUTOFF) return Tier.LV2;
-    return (throneId != null && throneId.equals(p.getId())) ? Tier.LV4_THRONE : Tier.LV3;
+    Tier tier = Ladder.tierOf(getLadder(p, mode).level());
+    boolean throne = tier == Tier.LV3 && throneId != null && throneId.equals(p.getId());
+    return throne ? Tier.LV4_THRONE : tier;
   }
 
   /**
-   * Find the throne holder for a mode. 王座 还要求本月活跃 (≥ THRONE_MONTHLY_MIN_GAMES 场). Ties at the top
-   * rating produce no throne holder, so the result is deterministic and 不随 iteration order 摆动.
+   * The throne holder for a mode: the single furthest-along 齐天大圣 with at least {@link
+   * #THRONE_MIN_GAMES} games in the last {@link #THRONE_WINDOW_DAYS} days. A tie at the top
+   * produces no holder, so the result does not depend on iteration order.
    */
   public Player findThrone(GameMode mode) {
-    LocalDateTime[] monthRange = currentMonthUtcRange();
-    Map<Long, Integer> monthly = monthlyGamesByPlayer(mode, monthRange[0], monthRange[1]);
+    LocalDateTime now = LocalDateTime.now(ZONE_UTC);
+    Map<Long, Integer> recent =
+        monthlyGamesByPlayer(mode, now.minusDays(THRONE_WINDOW_DAYS), now.plusMinutes(1));
     List<Player> qualified =
         playerRepo.findAll().stream()
             .filter(p -> !p.isBot())
             .filter(p -> getGames(p, mode) >= RANKED_MIN_GAMES)
-            .filter(p -> getRating(p, mode) >= LV3_CUTOFF)
-            .filter(p -> monthly.getOrDefault(p.getId(), 0) >= THRONE_MONTHLY_MIN_GAMES)
+            .filter(p -> Ladder.tierOf(getLadder(p, mode).level()) == Tier.LV3)
+            .filter(p -> recent.getOrDefault(p.getId(), 0) >= THRONE_MIN_GAMES)
             .toList();
     if (qualified.isEmpty()) return null;
-    double topRating =
-        qualified.stream().mapToDouble(p -> getRating(p, mode)).max().orElse(Double.NaN);
-    List<Player> top = qualified.stream().filter(p -> getRating(p, mode) == topRating).toList();
-    return top.size() == 1 ? top.get(0) : null;
+    double top =
+        qualified.stream().mapToDouble(p -> Ladder.sortKey(getLadder(p, mode))).max().orElseThrow();
+    List<Player> best =
+        qualified.stream().filter(p -> Ladder.sortKey(getLadder(p, mode)) == top).toList();
+    return best.size() == 1 ? best.get(0) : null;
   }
 
   /**
@@ -258,55 +207,85 @@ public class TierService {
     return throne != null ? throne.getId() : null;
   }
 
-  /** Snapshot of one player's tier for a historical month. */
-  public record MonthlyTierInfo(Tier tier, double skillRating, int gamesNeeded) {}
+  /**
+   * One player's tier for a historical month. {@code sortScore} orders players within that month;
+   * the ladder fields are null for months from before 段位战.
+   */
+  public record MonthlyTierInfo(
+      Tier tier,
+      double sortScore,
+      int gamesNeeded,
+      Integer stars,
+      Double ladderPoints,
+      Integer starCap) {}
 
   /**
-   * Look up historical tiers for every player who has a snapshot for (mode, year, month). Throne =
-   * single highest-rating snapshot meeting LV3 cutoff + ≥ {@link #RANKED_MIN_GAMES} cumulative + ≥
-   * {@link #THRONE_MONTHLY_MIN_GAMES} that month. Returns map by playerId.
+   * Historical tiers for every player who has a snapshot for (mode, year, month). Months written by
+   * 段位战 read the ladder; older months read the ELO rating with its old cutoffs. Throne = the single
+   * best snapshot that is in the top tier with ≥ {@link #RANKED_MIN_GAMES} games overall and ≥
+   * {@link #THRONE_MIN_GAMES} that month.
    */
   public Map<Long, MonthlyTierInfo> computeMonthlySnapshotTiers(
       GameMode mode, int year, int month) {
     List<PlayerMonthlySkill> rows = monthlySkillRepo.findByModeAndYearAndMonth(mode, year, month);
     if (rows.isEmpty()) return Map.of();
 
+    Map<Long, Double> score = new HashMap<>();
+    Map<Long, Tier> base = new HashMap<>();
+    for (PlayerMonthlySkill s : rows) {
+      Long id = s.getPlayer().getId();
+      if (s.getLadderLevel() != null) {
+        score.put(id, Ladder.sortKey(new Ladder.State(s.getLadderLevel(), s.getLadderPoints())));
+        base.put(id, Ladder.tierOf(s.getLadderLevel()));
+      } else {
+        double r = s.getSkillRating();
+        score.put(id, r);
+        base.put(id, r < LV2_CUTOFF ? Tier.LV1 : r < LV3_CUTOFF ? Tier.LV2 : Tier.LV3);
+      }
+    }
+
     List<PlayerMonthlySkill> throneCandidates =
         rows.stream()
-            .filter(s -> s.getSkillRating() >= LV3_CUTOFF)
+            .filter(s -> base.get(s.getPlayer().getId()) == Tier.LV3)
             .filter(s -> s.getGames() >= RANKED_MIN_GAMES)
-            .filter(s -> s.getMonthlyGames() >= THRONE_MONTHLY_MIN_GAMES)
+            .filter(s -> s.getMonthlyGames() >= THRONE_MIN_GAMES)
             .toList();
     Long throneId = null;
     if (!throneCandidates.isEmpty()) {
-      double topRating =
+      double top =
           throneCandidates.stream()
-              .mapToDouble(PlayerMonthlySkill::getSkillRating)
+              .mapToDouble(s -> score.get(s.getPlayer().getId()))
               .max()
-              .orElse(Double.NaN);
-      List<PlayerMonthlySkill> top =
-          throneCandidates.stream().filter(s -> s.getSkillRating() == topRating).toList();
-      if (top.size() == 1) {
-        throneId = top.get(0).getPlayer().getId();
+              .orElseThrow();
+      List<PlayerMonthlySkill> best =
+          throneCandidates.stream().filter(s -> score.get(s.getPlayer().getId()) == top).toList();
+      if (best.size() == 1) {
+        throneId = best.get(0).getPlayer().getId();
       }
     }
 
     Map<Long, MonthlyTierInfo> result = new HashMap<>();
     for (PlayerMonthlySkill s : rows) {
+      Long id = s.getPlayer().getId();
       Tier tier;
       if (s.getGames() < RANKED_MIN_GAMES) {
         tier = Tier.UNRANKED;
-      } else if (s.getSkillRating() < LV2_CUTOFF) {
-        tier = Tier.LV1;
-      } else if (s.getSkillRating() < LV3_CUTOFF) {
-        tier = Tier.LV2;
-      } else if (throneId != null && throneId.equals(s.getPlayer().getId())) {
+      } else if (id.equals(throneId)) {
         tier = Tier.LV4_THRONE;
       } else {
-        tier = Tier.LV3;
+        tier = base.get(id);
       }
       int needed = tier == Tier.UNRANKED ? Math.max(0, RANKED_MIN_GAMES - s.getGames()) : 0;
-      result.put(s.getPlayer().getId(), new MonthlyTierInfo(tier, s.getSkillRating(), needed));
+      Integer level = s.getLadderLevel();
+      result.put(
+          id,
+          new MonthlyTierInfo(
+              tier,
+              score.get(id),
+              needed,
+              level != null ? Ladder.stars(level) : null,
+              s.getLadderPoints(),
+              level != null ? Ladder.starCap(level) : null));
     }
     return result;
   }
@@ -380,75 +359,38 @@ public class TierService {
   // ===== Backfill =====
 
   /**
-   * Reset all players' skill state and replay every completed session in chronological order. At
-   * each PT month boundary we cross during replay, write end-of-month snapshots and apply the soft
-   * reset (mirroring what the scheduled cron would have done). After replay, snapshots exist for
-   * every past calendar month so historical tier views work.
+   * Seeds every player's ladder from the completed sessions on record, replayed oldest first. Only
+   * the live ladder state is written: past sessions keep the delta shown at their 结算, past months
+   * keep the tier they were shown with, and game counts are left alone. Everyone starts over at
+   * {@link Ladder.State#start} each run, so it is safe to run again.
    */
-  public BackfillResult backfillAllHistory() {
-    // 1. Reset live state.
+  public BackfillResult backfillLadder() {
     List<Player> all = playerRepo.findAll();
     for (Player p : all) {
       for (GameMode mode : GameMode.values()) {
-        setRating(p, mode, INITIAL_RATING);
-        setGames(p, mode, 0);
-        setPeak(p, mode, INITIAL_RATING);
+        setLadder(p, mode, Ladder.State.start());
       }
     }
-    playerRepo.saveAll(all);
 
-    // 2. Wipe historical snapshots so this is idempotent.
-    monthlySkillRepo.deleteAllInBatch();
-
-    // 3. Replay sessions chronologically, snapshotting + resetting at each PT month boundary.
     List<GameSession> sessions =
-        sessionRepo.findByStatusOrderByCreatedAtDesc(SessionStatus.COMPLETED);
-    sessions = new ArrayList<>(sessions);
-    sessions.sort(Comparator.comparing(GameSession::getCreatedAt));
+        new ArrayList<>(sessionRepo.findByStatusOrderByCreatedAtDesc(SessionStatus.COMPLETED));
+    sessions.sort(
+        Comparator.comparing(GameSession::getCreatedAt).thenComparing(GameSession::getId));
 
-    YearMonth currentMonth = null;
-    YearMonth currentPtMonth = YearMonth.from(java.time.LocalDate.now(ZONE_PACIFIC));
-
+    Map<GameMode, Map<Long, Integer>> gamesSoFar = new java.util.EnumMap<>(GameMode.class);
     int processed = 0;
     int skipped = 0;
     for (GameSession s : sessions) {
-      YearMonth sessionMonth = ymPacific(s.getCreatedAt());
-      if (currentMonth == null) {
-        currentMonth = sessionMonth;
-      } else if (sessionMonth.isAfter(currentMonth)) {
-        // Close out every month from currentMonth up to (but not including) sessionMonth.
-        while (currentMonth.isBefore(sessionMonth)) {
-          snapshotMonth(currentMonth.getYear(), currentMonth.getMonthValue());
-          monthlyReset();
-          currentMonth = currentMonth.plusMonths(1);
-        }
-      }
-
-      Map<Long, Integer> scores = aggregateSessionScores(s);
-      if (scores.isEmpty()) {
+      Map<Long, Integer> games = gamesSoFar.computeIfAbsent(s.getGameMode(), m -> new HashMap<>());
+      if (rate(s, aggregateSessionScores(s), games)) {
+        processed++;
+      } else {
         skipped++;
-        continue;
-      }
-      onSessionCompleted(s, scores);
-      processed++;
-    }
-
-    // 4. Close out any past months remaining (after the last session's month, up to but excluding
-    //    the current PT month — current month never gets a snapshot until its cron fires).
-    if (currentMonth != null) {
-      while (currentMonth.isBefore(currentPtMonth)) {
-        snapshotMonth(currentMonth.getYear(), currentMonth.getMonthValue());
-        monthlyReset();
-        currentMonth = currentMonth.plusMonths(1);
       }
     }
-
-    log.info("Backfill complete: {} sessions processed, {} skipped", processed, skipped);
+    playerRepo.saveAll(all);
+    log.info("Ladder backfill complete: {} sessions processed, {} skipped", processed, skipped);
     return new BackfillResult(processed, skipped);
-  }
-
-  private YearMonth ymPacific(LocalDateTime utc) {
-    return YearMonth.from(utc.atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC).toLocalDate());
   }
 
   /** Aggregate total score per player across all rounds of a session. */
@@ -471,8 +413,9 @@ public class TierService {
   // ===== Per-mode getters/setters =====
 
   /**
-   * 这三个 setter 是 switch <b>语句</b>, 编译器不像 switch 表达式那样强制穷尽. 新增 GameMode 又漏改 setter 时, 没有 default 会静默
-   * no-op, 让那个模式的 rating/games/peak 永远不更新 —— 宁可直接抛.
+   * The setters are switch <b>statements</b>, which the compiler does not check for exhaustiveness
+   * the way it checks switch expressions. A GameMode added later and missed here would silently
+   * never update — so throw instead.
    */
   private static IllegalArgumentException unhandledMode(GameMode mode) {
     return new IllegalArgumentException("Unhandled GameMode: " + mode);
@@ -484,15 +427,6 @@ public class TierService {
       case RIICHI -> p.getSkillRiichi();
       case DONGBEI -> p.getSkillDongbei();
     };
-  }
-
-  private void setRating(Player p, GameMode mode, double v) {
-    switch (mode) {
-      case GUOBIAO -> p.setSkillGuobiao(v);
-      case RIICHI -> p.setSkillRiichi(v);
-      case DONGBEI -> p.setSkillDongbei(v);
-      default -> throw unhandledMode(mode);
-    }
   }
 
   private int getGames(Player p, GameMode mode) {
@@ -524,17 +458,29 @@ public class TierService {
     };
   }
 
-  private void setPeak(Player p, GameMode mode, double v) {
-    switch (mode) {
-      case GUOBIAO -> p.setPeakSkillGuobiao(v);
-      case RIICHI -> p.setPeakSkillRiichi(v);
-      case DONGBEI -> p.setPeakSkillDongbei(v);
-      default -> throw unhandledMode(mode);
-    }
+  public static Ladder.State getLadder(Player p, GameMode mode) {
+    return switch (mode) {
+      case GUOBIAO -> new Ladder.State(p.getLadderLevelGuobiao(), p.getLadderPointsGuobiao());
+      case RIICHI -> new Ladder.State(p.getLadderLevelRiichi(), p.getLadderPointsRiichi());
+      case DONGBEI -> new Ladder.State(p.getLadderLevelDongbei(), p.getLadderPointsDongbei());
+    };
   }
 
-  private void bumpPeak(Player p, GameMode mode) {
-    double current = getRating(p, mode);
-    if (current > getPeak(p, mode)) setPeak(p, mode, current);
+  private void setLadder(Player p, GameMode mode, Ladder.State s) {
+    switch (mode) {
+      case GUOBIAO -> {
+        p.setLadderLevelGuobiao(s.level());
+        p.setLadderPointsGuobiao(s.points());
+      }
+      case RIICHI -> {
+        p.setLadderLevelRiichi(s.level());
+        p.setLadderPointsRiichi(s.points());
+      }
+      case DONGBEI -> {
+        p.setLadderLevelDongbei(s.level());
+        p.setLadderPointsDongbei(s.points());
+      }
+      default -> throw unhandledMode(mode);
+    }
   }
 }

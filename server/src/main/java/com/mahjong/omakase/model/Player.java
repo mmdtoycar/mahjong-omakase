@@ -79,6 +79,25 @@ public class Player {
   @Column(nullable = false, columnDefinition = "double default 1500.0")
   private double peakSkillDongbei = 1500.0;
 
+  // ===== 段位战 (per mode): level 0..8 and points into the current star — see Ladder =====
+  @Column(nullable = false, columnDefinition = "int default 3")
+  private int ladderLevelGuobiao = 3;
+
+  @Column(nullable = false, columnDefinition = "int default 3")
+  private int ladderLevelRiichi = 3;
+
+  @Column(nullable = false, columnDefinition = "int default 3")
+  private int ladderLevelDongbei = 3;
+
+  @Column(nullable = false, columnDefinition = "double default 50.0")
+  private double ladderPointsGuobiao = 50.0;
+
+  @Column(nullable = false, columnDefinition = "double default 50.0")
+  private double ladderPointsRiichi = 50.0;
+
+  @Column(nullable = false, columnDefinition = "double default 50.0")
+  private double ladderPointsDongbei = 50.0;
+
   public Player(String userName, String firstName, String lastName) {
     this.userName = userName;
     this.firstName = firstName;

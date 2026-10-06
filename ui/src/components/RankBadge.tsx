@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { TierKey, tierLabel } from '../types'
-import { skillRatingText } from '../utils/format'
+import { ladderPointsText, skillRatingText } from '../utils/format'
 
 interface Props {
   tier?: TierKey | null
@@ -10,6 +10,11 @@ interface Props {
   gamesNeeded?: number
   /** Optional rating overlay shown beside the image (md/lg only). Unranked ratings render as "XXXX(?)". */
   rating?: number
+  /** 段位战 stars (1-3), drawn under the emblem the way 雀魂 does. */
+  stars?: number
+  /** 段位战 points into the current star; shown instead of {@link rating} when given with {@link starCap}. */
+  points?: number
+  starCap?: number
   /** Player userName — used to detect BOT and render 🤖 instead of UNRANKED placeholder. */
   userName?: string
   /** Click target — links to player detail / profile / etc. */
@@ -30,6 +35,9 @@ export const RankBadge: React.FC<Props> = ({
   size = 'sm',
   gamesNeeded,
   rating,
+  stars,
+  points,
+  starCap,
   userName,
   onClick,
   className,
@@ -49,6 +57,19 @@ export const RankBadge: React.FC<Props> = ({
   const isThrone = tier === 'LV4_THRONE'
   const showProgress = tier === 'UNRANKED' && typeof gamesNeeded === 'number' && gamesNeeded > 0
   const progressPlayed = typeof gamesNeeded === 'number' ? Math.max(0, 5 - gamesNeeded) : 0
+  const ladder = points !== undefined && starCap ? ladderPointsText(points, starCap) : null
+  const score = ladder ?? (rating !== undefined ? rating.toFixed(0) : null)
+  // The throne is a title above the stars, so it shows the halo alone.
+  const starRow =
+    stars && !isThrone ? (
+      <span className="rank-badge-stars">
+        {[1, 2, 3].map((i) => (
+          <span key={i} className={i > stars ? 'rank-badge-star-empty' : undefined}>
+            ★
+          </span>
+        ))}
+      </span>
+    ) : null
 
   // BOT: bots are always UNRANKED but show 🤖 instead of "新"/"X/5" — they don't earn tiers.
   if (isBot && size === 'sm') {
@@ -84,7 +105,11 @@ export const RankBadge: React.FC<Props> = ({
     return (
       <div className={`rank-badge rank-badge-unranked rank-badge-${size} ${className ?? ''}`} onClick={onClick}>
         <div>{showProgress ? `${progressPlayed}/5` : '未定段'}</div>
-        {rating !== undefined && <span className="rank-badge-rating">{skillRatingText(rating, 'UNRANKED')}</span>}
+        {ladder ? (
+          <span className="rank-badge-rating">{ladder}(?)</span>
+        ) : (
+          rating !== undefined && <span className="rank-badge-rating">{skillRatingText(rating, 'UNRANKED')}</span>
+        )}
       </div>
     )
   }
@@ -96,11 +121,14 @@ export const RankBadge: React.FC<Props> = ({
         className={`rank-badge rank-badge-${size}${isThrone ? ' rank-badge-throne' : ''} ${className ?? ''}`}
         onClick={onClick}
       >
-        <span className="rank-badge-fallback">{label.slice(0, 1)}</span>
+        <span className="rank-badge-emblem">
+          <span className="rank-badge-fallback">{label.slice(0, 1)}</span>
+          {starRow}
+        </span>
         {size !== 'sm' && (
           <span className="rank-badge-meta">
             <span className="rank-badge-name">{label}</span>
-            {rating !== undefined && <span className="rank-badge-rating">{rating.toFixed(0)}</span>}
+            {score && <span className="rank-badge-rating">{score}</span>}
           </span>
         )}
       </span>
@@ -113,11 +141,14 @@ export const RankBadge: React.FC<Props> = ({
       className={`rank-badge rank-badge-${size}${isThrone ? ' rank-badge-throne' : ''} ${className ?? ''}`}
       onClick={onClick}
     >
-      <img src={src} alt={label} className="rank-badge-img" onError={() => setImgFailed(true)} />
+      <span className="rank-badge-emblem">
+        <img src={src} alt={label} className="rank-badge-img" onError={() => setImgFailed(true)} />
+        {starRow}
+      </span>
       {size !== 'sm' && (
         <span className="rank-badge-meta">
           <span className="rank-badge-name">{label}</span>
-          {rating !== undefined && <span className="rank-badge-rating">{rating.toFixed(0)}</span>}
+          {score && <span className="rank-badge-rating">{score}</span>}
         </span>
       )}
     </span>

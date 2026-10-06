@@ -184,7 +184,16 @@ export default function ProfilePage() {
                   {(() => {
                     const info =
                       selectedMode === 'GUOBIAO' ? tier.guobiao : selectedMode === 'RIICHI' ? tier.riichi : tier.dongbei
-                    return <RankBadge tier={info.tier} size="lg" rating={info.rating} gamesNeeded={info.gamesNeeded} />
+                    return (
+                      <RankBadge
+                        tier={info.tier}
+                        size="lg"
+                        stars={info.stars}
+                        points={info.points}
+                        starCap={info.starCap}
+                        gamesNeeded={info.gamesNeeded}
+                      />
+                    )
                   })()}
                 </div>
               )}

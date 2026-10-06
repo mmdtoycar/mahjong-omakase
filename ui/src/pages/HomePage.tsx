@@ -7,7 +7,7 @@ import { RankBadge } from '../components/RankBadge'
 import { deriveGameState, getWindName } from '../utils/gameState'
 import { rankByScore } from '../logic/ranking'
 import { nameFontSize } from '../utils/fontSize'
-import { rankMedal, skillRatingText } from '../utils/format'
+import { rankMedal, tierScoreText } from '../utils/format'
 import { MSG } from '../constants'
 import { useIsMobile } from '../hooks/useIsMobile'
 
@@ -140,6 +140,7 @@ export default function HomePage() {
                               <RankBadge
                                 tier={player.tier}
                                 size="sm"
+                                stars={player.stars ?? undefined}
                                 gamesNeeded={undefined}
                                 userName={player.userName}
                               />
@@ -150,7 +151,7 @@ export default function HomePage() {
                                 {player.userName}
                               </span>
                             </span>
-                            <span className="player-score">{skillRatingText(player.skillRating, player.tier)}</span>
+                            <span className="player-score">{tierScoreText(player)}</span>
                           </div>
                         </div>
                       ))

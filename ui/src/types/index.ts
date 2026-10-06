@@ -59,6 +59,11 @@ export interface TierInfo {
   /** When unranked: 5 - games (counts down to ranked debut for THIS mode). 0 once ranked. */
   gamesNeeded: number
   peakRating: number
+  /** 段位战 stars within the tier, 1 to 3. */
+  stars: number
+  /** 段位战 points into the current star, out of {@link starCap}. */
+  points: number
+  starCap: number
 }
 
 export interface PlayerTierResponse {
@@ -175,8 +180,13 @@ export interface PlayerStats {
   meldWins: number
   recordedHandWins: number
   tier?: TierKey | null
+  /** Sort order within the month: 段位战 position, or the old rating for months before 段位战. */
   skillRating?: number
   gamesNeeded?: number
+  /** 段位战 stars, points into the star and the star's cap. Null for months before 段位战. */
+  stars?: number | null
+  ladderPoints?: number | null
+  starCap?: number | null
 }
 
 export interface Season {

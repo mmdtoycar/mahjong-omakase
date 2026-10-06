@@ -10,8 +10,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Runs the monthly skill rating snapshot + soft-reset on the 1st of each month at 00:00 PT.
- * Snapshot first (captures end-of-month state of the just-ended month), THEN soft-reset.
+ * Snapshots the just-ended month's tiers on the 1st of each month at 00:00 PT, for the historical
+ * tier view. 段位战 carries over between months, so nothing is reset.
  */
 @Slf4j
 @Component
@@ -26,9 +26,8 @@ public class MonthlyResetJob {
   @Scheduled(cron = "0 0 0 1 * *", zone = "America/Los_Angeles")
   public void runMonthlyReset() {
     YearMonth justEnded = YearMonth.from(LocalDate.now(ZONE_PACIFIC)).minusMonths(1);
-    log.info("Monthly skill snapshot + reset starting (snapshot for {})", justEnded);
+    log.info("Monthly tier snapshot starting for {}", justEnded);
     tierService.snapshotMonth(justEnded.getYear(), justEnded.getMonthValue());
-    tierService.monthlyReset();
-    log.info("Monthly skill snapshot + reset done");
+    log.info("Monthly tier snapshot done");
   }
 }
