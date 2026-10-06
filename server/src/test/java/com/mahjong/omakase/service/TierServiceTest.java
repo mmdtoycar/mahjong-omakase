@@ -208,7 +208,7 @@ public class TierServiceTest {
     assertEquals(-1, Ladder.gain(new int[] {2}, 4, 0, GameMode.RIICHI, 9, false), 1e-9);
     assertEquals(-3, Ladder.gain(new int[] {3}, 4, -90000, GameMode.RIICHI, 9, false), 1e-9);
     assertEquals(-3, Ladder.gain(new int[] {2}, 3, 0, GameMode.RIICHI, 9, false), 1e-9);
-    // A table of nothing but 斗战圣佛 doubles it.
+    // A second 斗战圣佛 at the table doubles it.
     assertEquals(-6, Ladder.gain(new int[] {3}, 4, 0, GameMode.RIICHI, 9, true), 1e-9);
   }
 
@@ -229,23 +229,28 @@ public class TierServiceTest {
   }
 
   @Test
-  public void anAll斗战圣佛TableDoubles() {
+  public void two斗战圣佛AtATableDouble() {
     Map<Long, Integer> totals = scores(30000, 10000, -10000, -30000);
     GameSession s = session(GameMode.RIICHI, totals, null);
-    for (long id = 1; id <= 4; id++) seatAt(s, id, 9);
+    seatAt(s, 1, 9);
+    seatAt(s, 2, 8);
+    seatAt(s, 3, 8);
+    seatAt(s, 4, 9);
 
     tierService.onSessionCompleted(s, totals);
 
     assertEquals(6, seat(s, 1).getLadderDelta(), 1e-9);
     assertEquals(-6, seat(s, 4).getLadderDelta(), 1e-9);
+    // Doubling is for 魂珠 only.
+    assertEquals(10 + 5, seat(s, 2).getLadderDelta(), 1e-9, "齐天大圣 2nd place, with 素点");
   }
 
   @Test
-  public void oneSeatBelow斗战圣佛MeansNoDoubling() {
+  public void aLone斗战圣佛IsNotDoubled() {
     Map<Long, Integer> totals = scores(30000, 10000, -10000, -30000);
     GameSession s = session(GameMode.RIICHI, totals, null);
-    for (long id = 1; id <= 3; id++) seatAt(s, id, 9);
-    seatAt(s, 4, 8);
+    seatAt(s, 1, 9);
+    for (long id = 2; id <= 4; id++) seatAt(s, id, 8);
 
     tierService.onSessionCompleted(s, totals);
 

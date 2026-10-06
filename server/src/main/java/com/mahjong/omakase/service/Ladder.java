@@ -16,6 +16,9 @@ public final class Ladder {
   /** 魂珠 on reaching 斗战圣佛; running out drops back to 齐天大圣. */
   public static final int DOU_START = 10;
 
+  /** 斗战圣佛 at one table that double its 魂珠. */
+  public static final int DOU_TO_DOUBLE = 2;
+
   private static final int[] DOU_4 = {3, 1, -1, -3};
   private static final int[] DOU_3 = {3, 0, -3};
 
@@ -82,9 +85,9 @@ public final class Ladder {
     return s.level() * 1000.0 + s.points();
   }
 
-  /** One game's points; ties split their places. 斗战圣佛 gets 魂珠, doubled if all-斗战圣佛. */
+  /** One game's points; ties split their places. 斗战圣佛 gets 魂珠, doubled if another 斗战圣佛 sits in. */
   public static double gain(
-      int[] places, int tableSize, int score, GameMode mode, int level, boolean allDou) {
+      int[] places, int tableSize, int score, GameMode mode, int level, boolean doubled) {
     double placement = 0;
     for (int place : places) {
       placement +=
@@ -94,7 +97,7 @@ public final class Ladder {
     }
     placement /= places.length;
     if (isDou(level)) {
-      return allDou ? placement * 2 : placement;
+      return doubled ? placement * 2 : placement;
     }
     return placement + SOTEN_WEIGHT * score * RIICHI_GAP / gap(mode) / 1000.0;
   }

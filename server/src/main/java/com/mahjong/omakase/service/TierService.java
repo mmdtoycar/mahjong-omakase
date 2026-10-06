@@ -64,15 +64,17 @@ public class TierService {
       log.warn("Session id={} has {} scored players, not rated", session.getId(), table.size());
       return false;
     }
-    // 魂珠 double when everyone at the table is 斗战圣佛 before the game — a bot never is.
+    // 魂珠 double when two or more at the table are 斗战圣佛 before the game — a bot never is.
     Map<Long, Player> seated = new HashMap<>();
     for (GameSessionPlayer gsp : session.getPlayers()) {
       if (gsp.getPlayer() != null) seated.put(gsp.getPlayer().getId(), gsp.getPlayer());
     }
-    boolean allDou =
+    boolean doubled =
         totals.keySet().stream()
-            .map(seated::get)
-            .allMatch(p -> p != null && !p.isBot() && Ladder.isDou(getLadder(p, mode).level()));
+                .map(seated::get)
+                .filter(p -> p != null && !p.isBot() && Ladder.isDou(getLadder(p, mode).level()))
+                .count()
+            >= Ladder.DOU_TO_DOUBLE;
 
     for (GameSessionPlayer gsp : session.getPlayers()) {
       Player p = gsp.getPlayer();
@@ -84,7 +86,7 @@ public class TierService {
           IntStream.range(0, table.size()).filter(i -> table.get(i).equals(score)).toArray();
       int games = gamesBefore != null ? gamesBefore.getOrDefault(p.getId(), 0) : getGames(p, mode);
       Ladder.State before = getLadder(p, mode);
-      double gain = Ladder.gain(places, table.size(), score, mode, before.level(), allDou);
+      double gain = Ladder.gain(places, table.size(), score, mode, before.level(), doubled);
       Ladder.State after = Ladder.apply(before, gain, games < Ladder.PROTECTED_GAMES);
       setLadder(p, mode, after);
       gsp.setLadderDelta(gain);
