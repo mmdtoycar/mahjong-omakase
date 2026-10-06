@@ -163,7 +163,6 @@ export default function StatsPage() {
         recordedHandWins: stat?.recordedHandWins ?? 0,
       }
     })
-    // Only players with games here; a new account starts at 美猴王 and would outrank real players.
     .filter((p) => p.totalGames > 0)
     .sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0))
 
