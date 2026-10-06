@@ -163,6 +163,7 @@ export default function StatsPage() {
         recordedHandWins: stat?.recordedHandWins ?? 0,
       }
     })
+    .filter((p) => p.totalGames > 0)
     .sort((a, b) => (b.skillRating ?? 0) - (a.skillRating ?? 0))
 
   if (loading)
@@ -479,7 +480,7 @@ export default function StatsPage() {
             </div>
             {playerRows.length === 0 && (
               <div className="empty-state">
-                <p>暂无注册玩家。</p>
+                <p>该赛季暂无对局记录。</p>
               </div>
             )}
           </div>
