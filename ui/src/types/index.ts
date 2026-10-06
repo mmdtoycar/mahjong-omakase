@@ -50,7 +50,7 @@ export type TierKey = 'UNRANKED' | 'LV1' | 'LV2' | 'LV3' | 'LV4_THRONE'
 /** 段位与隐藏分信息 (单一模式). */
 export interface TierInfo {
   tier: TierKey
-  /** 0-4 — maps to /rank/lv{level}.png (level 0 = 未定段, no image). */
+  /** 0-4 — maps to /rank/tier/lv{level}.webp (level 0 = 未定段, no image). */
   level: number
   rating: number
   /** Games in this mode (国标 / 立直 / 东北). */

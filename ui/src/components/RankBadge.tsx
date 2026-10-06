@@ -49,8 +49,7 @@ export const RankBadge: React.FC<Props> = ({
   if (!tier) return null
   const isBot = !!userName && userName.toUpperCase() === 'BOT'
   const imageBase = TIER_TO_IMAGE[tier]
-  // Always use _small.png — large versions are 3-6MB and tank performance.
-  const src = imageBase ? `/rank/${imageBase}_small.png` : null
+  const src = imageBase ? `/rank/tier/${imageBase}${size === 'sm' ? '_sm' : ''}.webp` : null
   // Reset failure state when src changes — otherwise a one-time load failure
   // would stick around for later tier/source changes in the same component instance.
   useEffect(() => {
