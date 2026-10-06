@@ -295,6 +295,31 @@ public class TierServiceTest {
   }
 
   @Test
+  public void backfillRefreshes段位战SnapshotsOnly() {
+    Map<Long, Integer> totals = scores(40000, 10000, -20000, -30000);
+    GameSession s = session(GameMode.RIICHI, totals, null);
+    s.setCreatedAt(LocalDateTime.of(2026, 9, 1, 20, 0));
+    s.getRounds().add(round(s, totals));
+    when(playerRepo.findAll())
+        .thenReturn(s.getPlayers().stream().map(GameSessionPlayer::getPlayer).toList());
+    when(sessionRepo.findByStatusOrderByCreatedAtDesc(SessionStatus.COMPLETED))
+        .thenReturn(List.of(s));
+    PlayerMonthlySkill stale = snapshot(1L, 1500, 8, 400.0);
+    PlayerMonthlySkill elo = snapshot(2L, 1600, null, null);
+    for (PlayerMonthlySkill snap : List.of(stale, elo)) {
+      snap.setYear(2026);
+      snap.setMonth(9);
+    }
+    when(monthlyRepo.findAll()).thenReturn(List.of(stale, elo));
+
+    tierService.backfillLadder();
+
+    assertEquals(Ladder.START_LEVEL, stale.getLadderLevel());
+    assertEquals(75 + 30 + 0.5 * 40, stale.getLadderPoints(), 1e-9);
+    assertNull(elo.getLadderLevel(), "a month before 段位战 keeps its ELO tier");
+  }
+
+  @Test
   public void backfillSkipsASessionWithNoRounds() {
     GameSession s = session(GameMode.RIICHI, scores(0, 0, 0, 0), null);
     s.setCreatedAt(LocalDateTime.of(2026, 9, 1, 20, 0));

@@ -285,10 +285,25 @@ public class TierService {
     sessions.sort(
         Comparator.comparing(GameSession::getCreatedAt).thenComparing(GameSession::getId));
 
+    // Month-end snapshots from the 段位战 era follow the replay; older ELO ones are left alone.
+    java.util.NavigableMap<YearMonth, List<PlayerMonthlySkill>> snapshots =
+        new java.util.TreeMap<>();
+    for (PlayerMonthlySkill snap : monthlySkillRepo.findAll()) {
+      if (snap.getLadderLevel() == null) continue;
+      snapshots
+          .computeIfAbsent(YearMonth.of(snap.getYear(), snap.getMonth()), k -> new ArrayList<>())
+          .add(snap);
+    }
+    Map<Long, Player> byId = new HashMap<>();
+    for (Player p : all) byId.put(p.getId(), p);
+
     Map<GameMode, Map<Long, Integer>> gamesSoFar = new java.util.EnumMap<>(GameMode.class);
     int processed = 0;
     int skipped = 0;
     for (GameSession s : sessions) {
+      YearMonth month =
+          YearMonth.from(s.getCreatedAt().atZone(ZONE_UTC).withZoneSameInstant(ZONE_PACIFIC));
+      refreshSnapshots(snapshots.headMap(month, false), byId);
       Map<Long, Integer> scores = aggregateSessionScores(s);
       // A session completed without a single round has nothing to rate.
       if (scores.isEmpty()) {
@@ -298,9 +313,24 @@ public class TierService {
       rate(s, scores, gamesSoFar.computeIfAbsent(s.getGameMode(), m -> new HashMap<>()));
       processed++;
     }
+    refreshSnapshots(snapshots, byId);
     playerRepo.saveAll(all);
     log.info("Ladder backfill complete: {} sessions processed, {} skipped", processed, skipped);
     return new BackfillResult(processed, skipped);
+  }
+
+  /** Writes the replayed state into these months' snapshots, then drops them from the map. */
+  private void refreshSnapshots(
+      Map<YearMonth, List<PlayerMonthlySkill>> months, Map<Long, Player> byId) {
+    for (List<PlayerMonthlySkill> rows : months.values()) {
+      for (PlayerMonthlySkill snap : rows) {
+        Ladder.State state = getLadder(byId.get(snap.getPlayer().getId()), snap.getMode());
+        snap.setLadderLevel(state.level());
+        snap.setLadderPoints(state.points());
+      }
+      monthlySkillRepo.saveAll(rows);
+    }
+    months.clear();
   }
 
   /** Aggregate total score per player across all rounds of a session. */
