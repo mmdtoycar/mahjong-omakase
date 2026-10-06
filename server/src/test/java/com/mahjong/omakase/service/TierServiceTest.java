@@ -259,14 +259,13 @@ public class TierServiceTest {
   }
 
   @Test
-  public void tierFollowsTheLevelOnceRanked() {
+  public void tierFollowsTheLevelFromTheFirstGame() {
     Player p = player(1L);
+    // A new player is 美猴王 before playing at all.
+    assertEquals(Tier.LV2, tierService.computeTier(p, GameMode.DONGBEI));
+
+    p.setGamesDongbei(1);
     p.setLadderLevelDongbei(7);
-
-    p.setGamesDongbei(TierService.RANKED_MIN_GAMES - 1);
-    assertEquals(Tier.UNRANKED, tierService.computeTier(p, GameMode.DONGBEI));
-
-    p.setGamesDongbei(TierService.RANKED_MIN_GAMES);
     assertEquals(Tier.LV3, tierService.computeTier(p, GameMode.DONGBEI));
     p.setLadderLevelDongbei(9);
     assertEquals(Tier.LV4_THRONE, tierService.computeTier(p, GameMode.DONGBEI));
@@ -274,8 +273,9 @@ public class TierServiceTest {
     assertEquals(Tier.LV2, tierService.computeTier(p, GameMode.DONGBEI));
     p.setLadderLevelDongbei(1);
     assertEquals(Tier.LV1, tierService.computeTier(p, GameMode.DONGBEI));
-    // 国标 has no games, so it stays unranked even though 东北 is ranked.
-    assertEquals(Tier.UNRANKED, tierService.computeTier(p, GameMode.GUOBIAO));
+    // Bots are never ranked.
+    p.setBot(true);
+    assertEquals(Tier.UNRANKED, tierService.computeTier(p, GameMode.DONGBEI));
   }
 
   @Test
@@ -332,7 +332,6 @@ public class TierServiceTest {
     GameSession s = session(GameMode.GUOBIAO, totals, null);
     GameSessionPlayer gsp = seat(s, 1);
     Player p = gsp.getPlayer();
-    p.setGamesGuobiao(TierService.RANKED_MIN_GAMES);
     p.setLadderLevelGuobiao(7);
 
     // Not rated yet: the live state.
@@ -345,9 +344,6 @@ public class TierServiceTest {
     assertEquals(2, info.getStars());
     assertEquals(98.0, info.getPoints(), 1e-9);
     assertEquals(150, info.getStarCap());
-
-    p.setGamesGuobiao(TierService.RANKED_MIN_GAMES - 1);
-    assertEquals("UNRANKED", tierService.seatTier(gsp, GameMode.GUOBIAO).getTier());
   }
 
   private PlayerMonthlySkill snapshot(long playerId, double rating, Integer level, Double points) {
@@ -400,5 +396,22 @@ public class TierServiceTest {
     assertEquals(Tier.LV4_THRONE, tiers.get(4L).tier());
     assertEquals(40.0, tiers.get(4L).ladderPoints(), 1e-9);
     assertEquals(0, tiers.get(4L).starCap());
+  }
+
+  @Test
+  public void fiveGamesToRankOnlyAppliesBefore段位战() {
+    PlayerMonthlySkill ladder = snapshot(1L, 1500, 3, 75.0);
+    ladder.setGames(1);
+    PlayerMonthlySkill legacy = snapshot(2L, 1450, null, null);
+    legacy.setGames(TierService.RANKED_MIN_GAMES - 1);
+    when(monthlyRepo.findByModeAndYearAndMonth(GameMode.RIICHI, 2026, 10))
+        .thenReturn(List.of(ladder, legacy));
+
+    Map<Long, TierService.MonthlyTierInfo> tiers =
+        tierService.computeMonthlySnapshotTiers(GameMode.RIICHI, 2026, 10);
+
+    assertEquals(Tier.LV2, tiers.get(1L).tier());
+    assertEquals(Tier.UNRANKED, tiers.get(2L).tier());
+    assertEquals(1, tiers.get(2L).gamesNeeded());
   }
 }

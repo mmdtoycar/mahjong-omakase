@@ -35,6 +35,8 @@ public class TierService {
   // Tier cutoffs of the old ELO rating, for months whose snapshots predate 段位战.
   public static final double LV2_CUTOFF = 1400.0;
   public static final double LV3_CUTOFF = 1500.0;
+
+  /** Games before a player was ranked, in months before 段位战. */
   public static final int RANKED_MIN_GAMES = 5;
 
   /** Games that month for the single 斗战圣佛 of months before 段位战. */
@@ -141,9 +143,9 @@ public class TierService {
     log.info("Snapshot {}/{} wrote {} rows", year, month, written);
   }
 
-  /** Unranked until {@link #RANKED_MIN_GAMES}, then the ladder level's tier. */
+  /** The ladder level's tier from the first game; bots are never ranked. */
   public Tier computeTier(Player p, GameMode mode) {
-    if (getGames(p, mode) < RANKED_MIN_GAMES) return Tier.UNRANKED;
+    if (p.isBot()) return Tier.UNRANKED;
     return Ladder.tierOf(getLadder(p, mode).level());
   }
 
@@ -201,7 +203,7 @@ public class TierService {
     for (PlayerMonthlySkill s : rows) {
       Long id = s.getPlayer().getId();
       Tier tier;
-      if (s.getGames() < RANKED_MIN_GAMES) {
+      if (s.getLadderLevel() == null && s.getGames() < RANKED_MIN_GAMES) {
         tier = Tier.UNRANKED;
       } else if (id.equals(throneId)) {
         tier = Tier.LV4_THRONE;
@@ -267,8 +269,7 @@ public class TierService {
     Player p = gsp.getPlayer();
     if (gsp.getLadderLevelAfter() == null) return TierInfo.of(this, p, mode);
     Ladder.State after = new Ladder.State(gsp.getLadderLevelAfter(), gsp.getLadderPointsAfter());
-    Tier t = computeTier(p, mode) == Tier.UNRANKED ? Tier.UNRANKED : Ladder.tierOf(after.level());
-    return TierInfo.ofLadder(t, after);
+    return TierInfo.ofLadder(Ladder.tierOf(after.level()), after);
   }
 
   // ===== Backfill =====
