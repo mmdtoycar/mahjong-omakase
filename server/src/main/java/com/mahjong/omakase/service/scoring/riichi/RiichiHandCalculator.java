@@ -25,25 +25,25 @@ public final class RiichiHandCalculator {
         List<Yaku> yaku = YakuDetector.detect(trial, allTiles, winTile, options);
         if (yaku.stream().allMatch(y -> "宝牌".equals(y.name()))) continue;
 
-        int yakumanCount = (int) yaku.stream().filter(Yaku::yakuman).count();
+        boolean yakuman = yaku.stream().anyMatch(Yaku::yakuman);
         int han;
         int fu;
-        if (yakumanCount > 0) {
-          han = yakumanCount * 13;
+        if (yakuman) {
+          han = 13;
           fu = 0;
         } else {
           han = yaku.stream().mapToInt(Yaku::han).sum();
           fu = FuCalculator.fu(trial, winTile, options);
         }
-        HandResult result = score(han, fu, options.seatWind() == 1, yakumanCount, yaku);
+        HandResult result = score(han, fu, options.seatWind() == 1, yakuman, yaku);
         if (best == null || isBetter(result, best)) best = result;
       }
     }
     return Optional.ofNullable(best);
   }
 
-  static HandResult score(int han, int fu, boolean dealer, int yakumanCount, List<Yaku> yaku) {
-    int basic = basicPoints(han, fu, yakumanCount);
+  static HandResult score(int han, int fu, boolean dealer, boolean yakuman, List<Yaku> yaku) {
+    int basic = basicPoints(han, fu, yakuman);
     int ron;
     int tsumoDealer;
     int tsumoNonDealer;
@@ -56,12 +56,11 @@ public final class RiichiHandCalculator {
       tsumoDealer = roundUp100(basic * 2);
       tsumoNonDealer = roundUp100(basic);
     }
-    return new HandResult(
-        han, fu, yaku, yakumanCount > 0, yakumanCount, ron, tsumoDealer, tsumoNonDealer);
+    return new HandResult(han, fu, yaku, yakuman, ron, tsumoDealer, tsumoNonDealer);
   }
 
-  private static int basicPoints(int han, int fu, int yakumanCount) {
-    if (yakumanCount > 0) return 8000 * yakumanCount;
+  private static int basicPoints(int han, int fu, boolean yakuman) {
+    if (yakuman) return 8000;
     if (han >= 11) return 6000;
     if (han >= 8) return 4000;
     if (han >= 6) return 3000;

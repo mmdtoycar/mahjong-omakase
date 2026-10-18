@@ -48,7 +48,6 @@ export interface CalcResult {
   yakuList: YakuResult[]
   fuDetails: FuDetail[]
   isYakuman: boolean
-  yakumanCount: number
   score: {
     ron: number
     tsumoDealer: number

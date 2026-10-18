@@ -9,7 +9,6 @@ public record HandResult(
     int fu,
     List<Yaku> yaku,
     boolean yakuman,
-    int yakumanCount,
     int ron,
     int tsumoDealer,
     int tsumoNonDealer) {

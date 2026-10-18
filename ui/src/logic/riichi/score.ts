@@ -10,8 +10,8 @@ const BAIMAN = 4000
 const SANBAIMAN = 6000
 const YAKUMAN = 8000
 
-function getBasePoints(han: number, fu: number, yakumanCount: number): number {
-  if (yakumanCount > 0) return YAKUMAN * yakumanCount
+function getBasePoints(han: number, fu: number, isYakuman: boolean): number {
+  if (isYakuman) return YAKUMAN
   if (han >= 11) return SANBAIMAN
   if (han >= 8) return BAIMAN
   if (han >= 6) return HANEMAN
@@ -29,9 +29,9 @@ export function calculateScore(
   han: number,
   fu: number,
   isDealer: boolean,
-  yakumanCount = 0
+  isYakuman = false
 ): { ron: number; tsumoDealer: number; tsumoNonDealer: number } {
-  const base = getBasePoints(han, fu, yakumanCount)
+  const base = getBasePoints(han, fu, isYakuman)
   if (isDealer) {
     const ron = roundUp100(base * 6)
     const tsumo = roundUp100(base * 2)
@@ -65,14 +65,13 @@ export function calculateHand(
       if (!yakuList.some((y) => y.name !== '宝牌')) continue
 
       const isYakuman = yakuList.some((y) => y.isYakuman)
-      const yakumanCount = yakuList.filter((y) => y.isYakuman).length
 
       let han: number
       let fu: number
       let fuDetails: { reason: string; fu: number }[] = []
 
       if (isYakuman) {
-        han = yakumanCount * 13
+        han = 13
         fu = 0
       } else {
         han = yakuList.reduce((sum, y) => sum + y.han, 0)
@@ -82,9 +81,9 @@ export function calculateHand(
       }
 
       const isDealer = options.zifeng === 1
-      const score = calculateScore(han, fu, isDealer, isYakuman ? yakumanCount : 0)
+      const score = calculateScore(han, fu, isDealer, isYakuman)
 
-      const result: CalcResult = { han, fu, yakuList, fuDetails, isYakuman, yakumanCount, score }
+      const result: CalcResult = { han, fu, yakuList, fuDetails, isYakuman, score }
 
       if (!bestResult || isBetterResult(result, bestResult)) {
         bestResult = result

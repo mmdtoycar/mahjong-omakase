@@ -372,8 +372,14 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         <div className={`result-preview-mini ${huResult.yakuList.length === 0 ? 'error' : ''}`}>
           <div className="result-main-row">
             <div className="score-badge small">
-              <span className="score-num">{huResult.han}</span>
-              <span className="score-unit">番</span>
+              {huResult.isYakuman ? (
+                <span className="score-num">役满</span>
+              ) : (
+                <>
+                  <span className="score-num">{huResult.han}</span>
+                  <span className="score-unit">番</span>
+                </>
+              )}
             </div>
             <div className="pattern-list">
               {huResult.yakuList.map((y, i) => (

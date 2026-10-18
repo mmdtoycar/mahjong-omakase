@@ -7,7 +7,7 @@ import { RankBadge, TierScore } from '../components/RankBadge'
 import { getWindName } from '../utils/gameState'
 import { rankByScore } from '../logic/ranking'
 import { nameFontSize } from '../utils/fontSize'
-import { rankMedal } from '../utils/format'
+import { fanLabel, rankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { useIsMobile } from '../hooks/useIsMobile'
 
@@ -159,7 +159,7 @@ export default function HomePage() {
                     <div className="best-hand-summary">
                       <span className="best-hand-label">🏆 本月最高和牌</span>
                       <div className="best-hand-value">
-                        {data.best.fanCount} 番 · {data.best.winnerName}
+                        {fanLabel(mode.key, data.best.fanCount, data.best.fanDetails)} · {data.best.winnerName}
                         <div className="best-hand-summary-detail">{data.best.fanDetails}</div>
                       </div>
                     </div>

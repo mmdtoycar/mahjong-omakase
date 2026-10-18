@@ -1,5 +1,5 @@
 import { MSG } from '../constants'
-import { PlayerInfo, TierKey, tierLabel } from '../types'
+import { GameModeKey, PlayerInfo, TierKey, tierLabel } from '../types'
 
 /**
  * Abbreviates a name to initials.
@@ -105,4 +105,9 @@ export function tierScoreText(row: {
   if (row.ladderPoints == null || row.starCap == null) return skillRatingText(row.skillRating, row.tier)
   const val = ladderPointsText(row.ladderPoints, row.starCap)
   return !row.tier || row.tier === 'UNRANKED' ? `${val}(?)` : val
+}
+
+export function fanLabel(mode: GameModeKey, fanCount: number, fanDetails: string): string {
+  // Only a yakuman yaku is worth 13 han on its own.
+  return mode === 'RIICHI' && fanDetails.includes('(13)') ? '役满' : `${fanCount} 番`
 }

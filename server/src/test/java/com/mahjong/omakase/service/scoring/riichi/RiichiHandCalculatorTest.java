@@ -75,7 +75,6 @@ class RiichiHandCalculatorTest {
       assertThat(r.han()).as(where).isEqualTo(expected.get("han").asInt());
       assertThat(r.fu()).as(where).isEqualTo(expected.get("fu").asInt());
       assertThat(r.yakuman()).as(where).isEqualTo(expected.get("yakuman").asBoolean());
-      assertThat(r.yakumanCount()).as(where).isEqualTo(expected.get("yakumanCount").asInt());
       assertThat(r.ron()).as(where).isEqualTo(expected.get("ron").asInt());
       assertThat(r.tsumoDealer()).as(where).isEqualTo(expected.get("tsumoDealer").asInt());
       assertThat(r.tsumoNonDealer()).as(where).isEqualTo(expected.get("tsumoNonDealer").asInt());

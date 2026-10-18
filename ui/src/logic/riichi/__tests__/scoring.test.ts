@@ -38,7 +38,7 @@ describe('Score Calculation', () => {
     })
 
     it('a yakuman non-dealer = 32000 ron', () => {
-      expect(calculateScore(13, 0, false, 1).ron).toBe(32000)
+      expect(calculateScore(13, 0, false, true).ron).toBe(32000)
     })
 
     it('dealer mangan = 12000 ron', () => {
@@ -107,13 +107,12 @@ describe('Score Calculation', () => {
     })
 
     it('13+ han without a yakuman stays sanbaiman', () => {
-      expect(calculateScore(13, 30, false, 0).ron).toBe(24000)
-      expect(calculateScore(26, 30, true, 0).ron).toBe(36000)
+      expect(calculateScore(13, 30, false).ron).toBe(24000)
+      expect(calculateScore(26, 30, true).ron).toBe(36000)
     })
 
-    it('double yakuman only when yakumanCount=2', () => {
-      const s = calculateScore(26, 0, false, 2)
-      expect(s.ron).toBe(64000)
+    it('yakuman never stacks', () => {
+      expect(calculateScore(13, 0, false, true).ron).toBe(32000)
     })
   })
 })
