@@ -538,6 +538,7 @@ export const PracticePage: React.FC = () => {
             analyses={discardAnalyses}
             selectedDiscard={userDiscard}
             onSelectRow={(tile) => setUserDiscard(tile)}
+            defaultExpanded={searchParams?.get('table') === '1'}
           />
 
           {/* Bottom Next Button */}

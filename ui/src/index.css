@@ -4685,35 +4685,84 @@ table.auto-table {
   line-height: 1.35;
 }
 
-/* Discard Analysis Table */
+/* Discard Analysis Table (Collapsible) */
 .discard-analysis-card {
-  padding: 18px 20px;
+  padding: 16px 20px;
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 12px;
+  transition: all 0.2s ease;
 }
 
-.discard-table-header {
+.discard-analysis-card.card-collapsed {
+  padding: 14px 18px;
+}
+
+.btn-toggle-discard-table {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+}
+
+.discard-table-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .table-header-icon {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.discard-table-header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .table-header-title {
   font-size: 1.05rem;
   color: var(--primary);
   margin: 0;
+  font-weight: 700;
+}
+
+.table-header-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.table-toggle-pill {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--sol-blue);
+  background: rgb(38 139 210 / 12%);
+  border: 1px solid rgb(38 139 210 / 30%);
+  padding: 4px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.table-toggle-pill.pill-active {
+  background: rgb(0 0 0 / 8%);
+  color: var(--text-muted);
+  border-color: var(--border);
 }
 
 .table-responsive-wrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .discard-analysis-table {
@@ -4736,6 +4785,11 @@ table.auto-table {
   padding: 8px 10px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  white-space: nowrap;
+}
+
+.discard-analysis-table td.cell-acceptance-tiles {
+  white-space: normal;
 }
 
 .discard-table-row {
@@ -4805,11 +4859,18 @@ table.auto-table {
   font-size: 1rem;
 }
 
+.cell-acceptance-tiles {
+  max-width: 360px;
+}
+
 .acceptance-tiles-list {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 2px 0;
 }
 
 .acceptance-mini-pill {
@@ -4853,6 +4914,35 @@ table.auto-table {
 .shape-subtext {
   font-size: 0.72rem;
   color: var(--text-muted);
+}
+
+@media (width <= 640px) {
+  .discard-analysis-card {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .discard-analysis-card.card-collapsed {
+    padding: 10px 14px;
+  }
+
+  .btn-toggle-discard-table {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .table-header-title {
+    font-size: 0.95rem;
+  }
+
+  .table-toggle-pill {
+    font-size: 0.72rem;
+    padding: 3px 8px;
+  }
+
+  .cell-acceptance-tiles {
+    max-width: 240px;
+  }
 }
 
 .bottom-action-banner {
