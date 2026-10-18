@@ -49,14 +49,23 @@ export function analyzeHandStructure(tiles: Tile[]): HandStructure {
   const countOf = (t: Tile) => remaining.filter((x) => x.equals(t)).length
   const findTile = (suit: string, rank: number) => remaining.find((x) => x.suit === suit && x.rank === rank)
 
-  // 1. Detect Special Complex Shapes First (中膨, 两坎, 延伸四连形)
+  // 1. Detect Special Complex Shapes First (中膨, 两坎)
+  // Only detect when they are genuine isolated complex shapes and do not steal from complete melds
   for (const s of ['m', 'p', 's'] as ('m' | 'p' | 's')[]) {
     // 中膨形 (Nakabukure: r-1, r, r, r+1)
     for (let r = 2; r <= 7; r++) {
       const t1 = findTile(s, r - 1)
       const t2Count = remaining.filter((x) => x.suit === s && x.rank === r).length
       const t3 = findTile(s, r + 1)
-      if (t1 && t2Count >= 2 && t3) {
+      if (
+        t1 &&
+        t2Count === 2 &&
+        t3 &&
+        countOf(t1) === 1 &&
+        countOf(t3) === 1 &&
+        !findTile(s, r - 2) &&
+        !findTile(s, r + 2)
+      ) {
         const shapeTiles = [t1, new Tile(s, r), new Tile(s, r), t3]
         blocks.push({
           type: 'taatsu-complex',
@@ -75,20 +84,28 @@ export function analyzeHandStructure(tiles: Tile[]): HandStructure {
       const t1 = findTile(s, r)
       const t2 = findTile(s, r + 2)
       const t3 = findTile(s, r + 4)
-      if (t1 && t2 && t3 && countOf(t1) === 1 && countOf(t2) === 1 && countOf(t3) === 1) {
-        // Ensure not part of consecutive sequence
-        if (!findTile(s, r + 1) && !findTile(s, r + 3)) {
-          const shapeTiles = [t1, t2, t3]
-          blocks.push({
-            type: 'taatsu-complex',
-            name: '两坎复合形',
-            label: `${r}${r + 2}${r + 4}${s} (两坎)`,
-            tiles: shapeTiles,
-            quality: 'good',
-            description: `进 ${r + 1}${s} 或 ${r + 3}${s} 均成顺子，等同于 8 张受入，进张面媲美两面！`,
-          })
-          removeTiles(shapeTiles)
-        }
+      if (
+        t1 &&
+        t2 &&
+        t3 &&
+        countOf(t1) === 1 &&
+        countOf(t2) === 1 &&
+        countOf(t3) === 1 &&
+        !findTile(s, r - 1) &&
+        !findTile(s, r + 1) &&
+        !findTile(s, r + 3) &&
+        !findTile(s, r + 5)
+      ) {
+        const shapeTiles = [t1, t2, t3]
+        blocks.push({
+          type: 'taatsu-complex',
+          name: '两坎复合形',
+          label: `${r}${r + 2}${r + 4}${s} (两坎)`,
+          tiles: shapeTiles,
+          quality: 'good',
+          description: `进 ${r + 1}${s} 或 ${r + 3}${s} 均成顺子，等同于 8 张受入，进张面媲美两面！`,
+        })
+        removeTiles(shapeTiles)
       }
     }
   }
@@ -113,29 +130,7 @@ export function analyzeHandStructure(tiles: Tile[]): HandStructure {
     }
   }
 
-  // 3. Extract Pairs if they would avoid breaking obvious taatsus
-  // We extract pairs first if countOf(t) == 2, unless t is part of an isolated sequence
-  for (let i = 0; i < remaining.length; ) {
-    const t = remaining[i]
-    if (countOf(t) >= 2) {
-      // Check if extracting this pair leaves adjacent tiles in reasonable shape
-      const pairTiles = [t, t]
-      blocks.push({
-        type: 'jantou',
-        name: '雀头/对子',
-        label: `${t.rank}${t.suit} 对子`,
-        tiles: pairTiles,
-        quality: t.isHonor ? 'good' : 'excellent',
-        description: '雀头候补，或与其他对子形成双碰待牌。',
-      })
-      removeTiles(pairTiles)
-      i = 0
-    } else {
-      i++
-    }
-  }
-
-  // 4. Extract Shunzi (顺子)
+  // 3. Extract Shunzi (顺子) - complete melds take priority over pairs to avoid breaking hands like 112233m
   for (let i = 0; i < remaining.length; ) {
     const t = remaining[i]
     if (t.isNumber && t.rank <= 7) {
@@ -157,6 +152,26 @@ export function analyzeHandStructure(tiles: Tile[]): HandStructure {
       }
     }
     i++
+  }
+
+  // 4. Extract Pairs (雀头/对子)
+  for (let i = 0; i < remaining.length; ) {
+    const t = remaining[i]
+    if (countOf(t) >= 2) {
+      const pairTiles = [t, t]
+      blocks.push({
+        type: 'jantou',
+        name: '雀头/对子',
+        label: `${t.rank}${t.suit} 对子`,
+        tiles: pairTiles,
+        quality: t.isHonor ? 'good' : 'excellent',
+        description: '雀头候补，或与其他对子形成双碰待牌。',
+      })
+      removeTiles(pairTiles)
+      i = 0
+    } else {
+      i++
+    }
   }
 
   // 5. Extract Two-sided (两面) and Terminal-edge (边张)

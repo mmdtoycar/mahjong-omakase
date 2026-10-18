@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { Tile } from '../../shared/tiles'
-import { analyzeAllDiscards } from '../ukeire'
+import { analyzeAllDiscards, isGoodShapeTenpai } from '../ukeire'
 
 function parseTiles(str: string): Tile[] {
   const tiles: Tile[] = []
@@ -47,5 +47,19 @@ describe('ukeire analysis', () => {
     const hand = parseTiles('23m45p79s123s456s77m8m')
     const analyses = analyzeAllDiscards(hand)
     expect(analyses.length).toBeGreaterThan(0)
+  })
+
+  it('accurately identifies good-shape tenpai vs shanpon tenpai', () => {
+    // Shanpon on 3m and 6m: 33m 66m 123p 456s 789s (13 tiles, tenpai waiting on 3m or 6m)
+    const shanponHand = parseTiles('33m66m123p456s789s')
+    expect(isGoodShapeTenpai(shanponHand)).toBe(false)
+
+    // True Ryanmen on 3m and 6m: 45m 11p 123s 456s 789s (13 tiles, waiting on 3m or 6m)
+    const ryanmenHand = parseTiles('45m11p123s456s789s')
+    expect(isGoodShapeTenpai(ryanmenHand)).toBe(true)
+
+    // Multi-sided wait (sanmenchan) on 1m, 4m, 7m: 23456m 11p 123s 456s (13 tiles)
+    const sanmenHand = parseTiles('23456m11p123s456s')
+    expect(isGoodShapeTenpai(sanmenHand)).toBe(true)
   })
 })

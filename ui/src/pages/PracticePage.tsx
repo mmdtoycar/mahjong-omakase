@@ -106,11 +106,12 @@ export const PracticePage: React.FC = () => {
     return organizeHandWithDrawn(raw)
   }, [practiceMode, currentCuratedQuestion, infiniteHand])
 
-  // Analyses
+  // Analyses: compute lazily when user has answered or in infinite mode to prevent blocking main thread
   const discardAnalyses: DiscardAnalysis[] = useMemo(() => {
     if (currentHandTiles.length === 0) return []
+    if (practiceMode === 'curated' && !hasAnswered) return []
     return analyzeAllDiscards(currentHandTiles)
-  }, [currentHandTiles])
+  }, [currentHandTiles, practiceMode, hasAnswered])
 
   const handStructure: HandStructure = useMemo(() => {
     if (currentHandTiles.length === 0) {

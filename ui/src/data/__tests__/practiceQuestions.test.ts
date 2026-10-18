@@ -25,9 +25,18 @@ describe('PRACTICE_QUESTIONS verification', () => {
         expect(found, `Optimal discard ${d} must be in hand for question ${q.id}`).toBe(true)
       }
 
-      // Verify that ukeire analysis runs smoothly
+      // Verify that ukeire analysis runs smoothly and matches optimal discards
       const analyses = analyzeAllDiscards(tiles)
       expect(analyses.length).toBeGreaterThan(0)
+
+      const engineOptimal = analyses.filter((a) => a.isOptimal).map((a) => a.discardTile.toString())
+      const hasMatch = q.optimalDiscards.some((d) => engineOptimal.includes(d))
+      expect(
+        hasMatch,
+        `Question ${q.id} optimal discards [${q.optimalDiscards.join(
+          ', '
+        )}] must match engine optimal discards [${engineOptimal.join(', ')}]`
+      ).toBe(true)
 
       // Verify block analyzer runs smoothly
       const blocks = analyzeHandStructure(tiles)

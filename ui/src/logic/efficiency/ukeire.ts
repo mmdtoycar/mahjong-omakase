@@ -19,42 +19,123 @@ export interface DiscardAnalysis {
   tag: 'optimal' | 'viable' | 'blunder'
 }
 
+function canFormMelds(counts: number[], meldsLeft: number, idx = 0): boolean {
+  if (meldsLeft === 0) {
+    for (let i = 0; i < 34; i++) {
+      if (counts[i] !== 0) return false
+    }
+    return true
+  }
+  while (idx < 34 && counts[idx] === 0) idx++
+  if (idx >= 34) return false
+
+  // Triplet
+  if (counts[idx] >= 3) {
+    counts[idx] -= 3
+    if (canFormMelds(counts, meldsLeft - 1, idx)) {
+      counts[idx] += 3
+      return true
+    }
+    counts[idx] += 3
+  }
+
+  // Sequence
+  if (idx < 27 && idx % 9 <= 6 && counts[idx + 1] > 0 && counts[idx + 2] > 0) {
+    counts[idx]--
+    counts[idx + 1]--
+    counts[idx + 2]--
+    if (canFormMelds(counts, meldsLeft - 1, idx)) {
+      counts[idx]++
+      counts[idx + 1]++
+      counts[idx + 2]++
+      return true
+    }
+    counts[idx]++
+    counts[idx + 1]++
+    counts[idx + 2]++
+  }
+
+  return false
+}
+
+function canForm1PairAnd3Melds(counts11: number[]): boolean {
+  for (let p = 0; p < 34; p++) {
+    if (counts11[p] >= 2) {
+      counts11[p] -= 2
+      if (canFormMelds(counts11, 3, 0)) {
+        counts11[p] += 2
+        return true
+      }
+      counts11[p] += 2
+    }
+  }
+  return false
+}
+
+function isSequenceCompletionWin(tenpai13Counts: number[], winIdx: number): boolean {
+  if (winIdx >= 27) return false
+  const rank = (winIdx % 9) + 1 // 1..9
+
+  const candidateSeqs: [number, number, number][] = []
+  if (rank <= 7) candidateSeqs.push([winIdx, winIdx + 1, winIdx + 2])
+  if (rank >= 2 && rank <= 8) candidateSeqs.push([winIdx - 1, winIdx, winIdx + 1])
+  if (rank >= 3) candidateSeqs.push([winIdx - 2, winIdx - 1, winIdx])
+
+  tenpai13Counts[winIdx]++
+  let completesSequence = false
+  for (const [a, b, c] of candidateSeqs) {
+    if (tenpai13Counts[a] > 0 && tenpai13Counts[b] > 0 && tenpai13Counts[c] > 0) {
+      tenpai13Counts[a]--
+      tenpai13Counts[b]--
+      tenpai13Counts[c]--
+      if (canForm1PairAnd3Melds(tenpai13Counts)) {
+        completesSequence = true
+      }
+      tenpai13Counts[a]++
+      tenpai13Counts[b]++
+      tenpai13Counts[c]++
+      if (completesSequence) break
+    }
+  }
+  tenpai13Counts[winIdx]--
+  return completesSequence
+}
+
 /**
  * Checks if a tenpai hand has a good-shape wait (好形听牌).
- * A good shape typically means:
- * - At least 2 winning tile types (e.g. 2-sided ryanmen or 3-sided sequence wait)
- * - Wait tiles are consecutive or sequence-based (excluding shanpon/tanki)
+ * A good shape wait is:
+ * - 3 or more winning tile types (multi-sided wait), or
+ * - 2 winning tile types from a two-sided sequence wait (两面听牌) where both tiles complete sequences,
+ *   excluding shanpon (双碰) and tanki (单骑).
  */
 export function isGoodShapeTenpai(tenpai13Tiles: Tile[]): boolean {
-  const winningTiles: Tile[] = []
+  const winningIndices: number[] = []
   const counts = tilesToCounts(tenpai13Tiles)
 
   for (let idx = 0; idx < 34; idx++) {
     if (counts[idx] < 4) {
       counts[idx]++
-      // If adding this tile results in Agari (-1 shanten)
       const testTiles = [...tenpai13Tiles, indexToTile(idx)]
       if (calculateShanten(testTiles) === -1) {
-        winningTiles.push(indexToTile(idx))
+        winningIndices.push(idx)
       }
       counts[idx]--
     }
   }
 
-  // If there are at least 2 distinct winning tile types
-  if (winningTiles.length >= 2) {
-    // Check if wait is ryanmen / sequence-based (not pure shanpon)
-    // In a pure shanpon, winning tiles are from 2 pairs waiting for triplets.
-    // If it's a sequence wait (like 45 waiting on 3,6), the winning tiles are in the same suit and separated by 3: e.g. 6 - 3 = 3.
-    // Or multi-sided sequence wait like 23456 waiting on 1,4,7 (diff = 3 or 6).
-    const isSequenceWait = winningTiles.some((w1, i) =>
-      winningTiles.some((w2, j) => i !== j && w1.suit === w2.suit && Math.abs(w1.rank - w2.rank) === 3)
-    )
-    if (isSequenceWait) return true
+  // Multi-sided sequence waits (3 or more winning tile types) are always good shape
+  if (winningIndices.length >= 3) {
+    return true
+  }
 
-    // Shanpon (双碰) is technically a 2-type wait (up to 4 remaining tiles), but usually categorized as愚形 in riichi theory.
-    // However, if winningTiles has 3 or more types (e.g. 3-sided wait), it's definitely good shape!
-    if (winningTiles.length >= 3) return true
+  // 2-type wait: must be two-sided sequence wait (两面), never shanpon (双碰)
+  if (winningIndices.length === 2) {
+    const w1 = indexToTile(winningIndices[0])
+    const w2 = indexToTile(winningIndices[1])
+    if (w1.suit !== w2.suit || Math.abs(w1.rank - w2.rank) !== 3) {
+      return false
+    }
+    return winningIndices.every((idx) => isSequenceCompletionWin(counts, idx))
   }
 
   return false

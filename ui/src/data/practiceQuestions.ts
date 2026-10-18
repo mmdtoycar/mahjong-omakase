@@ -386,20 +386,20 @@ export const PRACTICE_QUESTIONS: PracticeQuestion[] = [
     title: '三对子手牌的雀头取舍',
     subtitle: '手里有3个对子，是留着碰牌还是拆掉一个？',
     conceptTags: ['三对子处理', '定雀头', '对子拆解'],
-    hand: '2m 2m 5m 6m 4p 4p 7p 8p 8s 8s 2s 3s 4s 1m',
+    hand: '2m 2m 5m 6m 4p 4p 7p 8p 8s 8s 2s 3s 4s 9m',
     roundWind: '东',
     seatWind: '西',
     turnNumber: 5,
     doraIndicator: '3s',
-    optimalDiscards: ['1m'],
+    optimalDiscards: ['9m'],
     viableDiscards: ['2m', '4p', '8s'],
-    coachTakeaway: '手牌搭子充足时，先清理单张孤张 1m；如果四对子或六块超额，再拆弱对子。',
+    coachTakeaway: '手牌搭子充足时，先清理单张孤张 9m；如果四对子或六块超额，再拆弱对子。',
     coachExplanation:
       '【局况解析】：当前为【东场·西家】。' +
       '手牌拥有 22m、44p、88s 三个对子，同时有 56m、78p 两面，以及 234s 完成顺子。' +
-      '此时手中还有一张孤张 1m。手牌结构已经非常充盈，1m 既不是搭子也不是对子，果断切除 1m 即可让手牌进入极佳的一向听！',
+      '此时手中还有一张孤张 9m。手牌结构已经非常充盈，9m 既不是搭子也不是对子，果断切除 9m 即可让手牌进入极佳的一向听！',
     mistakeExplanations: {
-      '2m': '在还有废牌 1m 的情况下直接拆 22m 对子是舍近求远，浪费了摸 2m 成暗刻的机会。',
+      '2m': '在还有废牌 9m 的情况下直接拆 22m 对子是舍近求远，浪费了摸 2m 成暗刻的机会。',
     },
   },
 
@@ -413,18 +413,18 @@ export const PRACTICE_QUESTIONS: PracticeQuestion[] = [
     title: '隐藏的8张进张：两坎结构',
     subtitle: '千万不要把 246 误当成两张分散的散牌！',
     conceptTags: ['两坎结构', '复合搭子', '受入倍增'],
-    hand: '2m 4m 6m 2p 3p 7p 8p 3s 4s 7s 7s 9p 1z 1z',
+    hand: '2m 4m 6m 2p 3p 7p 8p 9p 2s 3s 4s 7s 7s 1z',
     roundWind: '东',
     seatWind: '南',
     turnNumber: 6,
     doraIndicator: '5s',
-    optimalDiscards: ['9p'],
+    optimalDiscards: ['1z'],
     viableDiscards: ['6m', '2m'],
     coachTakeaway: '两坎（246 或 357）进中间两张牌（3,5）均成顺子，受入高达 8 张，媲美两面！',
     coachExplanation:
       '【局况解析】：当前为【东场·南家】。' +
       '手牌万子 246m 是经典的【两坎结构（Ryankan）】。摸 3m 形成 234m 顺子留下 6m 孤张；摸 5m 形成 456m 顺子留下 2m 孤张。总进张是 3m（4张）+ 5m（4张）= 8张！' +
-      '很多新手看到 246m 觉得很别扭，随手把 6m 切了，瞬间让进张折损一半。手牌已有 5 块，孤张 9p 毫无价值，果断切 9p 锁定两坎！',
+      '很多新手看到 246m 觉得很别扭，随手把 6m 切了，瞬间让进张折损一半。手牌已有 5 块，孤张 1z 毫无价值，果断切 1z 锁定两坎！',
     mistakeExplanations: {
       '6m': '新手致命失误！切 6m 会将强大的两坎结构（8张进张）降级为脆弱的单坎张 24m（仅4张进张），进张损失高达 50%！',
       '2m': '同理，切 2m 拆毁两坎，严重降效。',
@@ -483,18 +483,18 @@ export const PRACTICE_QUESTIONS: PracticeQuestion[] = [
     title: '四连形（延伸两面）的延展性',
     subtitle: '2345 不仅仅是一副顺子加单张',
     conceptTags: ['四连形', '延伸两面', '双头单骑'],
-    hand: '2m 3m 4m 5m 6p 7p 2s 3s 6s 7s 9s 9s 1z 1z',
+    hand: '2m 3m 4m 5m 6p 7p 8p 3s 4s 6s 7s 9s 9s 1z',
     roundWind: '东',
     seatWind: '西',
     turnNumber: 5,
     doraIndicator: '4p',
     optimalDiscards: ['1z'],
     viableDiscards: ['2m', '5m'],
-    coachTakeaway: '四连形（2345）进 1, 4, 2, 5 均产生强力演化，听牌时更是优质的延展双头待牌！',
+    coachTakeaway: '四连形（2345）进 1, 4, 6 均产生强力演化，切莫因为看似 4 张牌就急于修剪！',
     coachExplanation:
       '【局况解析】：当前为【东场·西家】。' +
-      '2345m 拥有 4 个进张点：摸 1m 变为 123m + 45m（两面）；摸 4m 变为 234m + 45m；摸 6m 变为 234m + 56m。' +
-      '切莫因为 2345m 看着像 4 张牌就急于修剪成 3 张。当前手牌 6 块稍多，先切无用字牌 1z 对子中的一张，保留四连形的变化。',
+      '2345m 拥有丰富进张：摸 1m 变为 123m + 45m（两面）；摸 4m 变为 234m + 45m；摸 6m 变为 234m + 56m。' +
+      '切莫因为 2345m 看着像 4 张牌就急于修剪成 3 张。当前手牌 5 块已定，先切无用客风字牌 1z，保留四连形的变化。',
     mistakeExplanations: {
       '5m': '切 5m 把四连形退回普通顺子 234m，丧失了摸 1m, 4m, 6m 的连环好形扩展机会。',
     },
@@ -724,7 +724,7 @@ export const PRACTICE_QUESTIONS: PracticeQuestion[] = [
     title: '纯牌效与染手的平衡',
     subtitle: '多门子齐整时，切莫盲目强转清一色',
     conceptTags: ['染手误区', '纯牌效优先', '速度考量'],
-    hand: '2m 3m 4m 5m 6m 7m 3p 4p 5p 6s 7s 8s 9m 9m',
+    hand: '2m 3m 4m 5m 6m 7m 8m 8m 9m 3p 4p 5p 6s 7s',
     roundWind: '东',
     seatWind: '西',
     turnNumber: 7,
@@ -734,7 +734,7 @@ export const PRACTICE_QUESTIONS: PracticeQuestion[] = [
     coachTakeaway: '门清全好形面子齐备时，纯牌效一向听立直速度极快，强转混一色/清一色会导致严重降速！',
     coachExplanation:
       '【局况解析】：当前为【东场·西家】。' +
-      '新手常看到自己有 23456799m 就想“做万子清一色”，把 345p、678s 这些已经完成的顺子拆掉。' +
+      '新手常看到自己有 234567889m 就想“做万子清一色”，把 345p、67s 这些已经完成的面子搭子拆掉。' +
       '这是严重的实战失误！当前手牌只需切一张 9m，立刻进入极其强大的两面听牌（立直+平和+自摸起步），速度极快，和牌率极高。切 9m 维持最纯粹的牌效！',
     mistakeExplanations: {
       '3p': '拆 345p 顺子强行做染手，会让手牌从听牌边缘退回三向听，实战中极易被对手先制立直击毙。',
