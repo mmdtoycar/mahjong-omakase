@@ -57,7 +57,6 @@ class RecomputeServiceTest {
                 gsp.setSeat(i + 1);
                 s.getPlayers().add(gsp);
               }
-              // Seats: 0 = dealer of 东1, 1 = dealer of 东2, 2 = dealer of 东3.
               round(s, players, 0, 1, null, null, Map.of(0, 7700, 1, -7700));
               round(s, players, -1, -1, null, "0,1", Map.of(0, 1500, 1, 1500, 2, -1500, 3, -1500));
               round(s, players, -1, -1, "0", "0", Map.of(0, 2000, 1, -1000, 2, -1000, 3, -1000));

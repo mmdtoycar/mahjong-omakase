@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** A hand's han and fu are worth what the real table says, whatever the page thought. */
 class RiichiScoreCalculatorTest {
 
   private static final List<Long> TABLE = List.of(1L, 2L, 3L, 4L);

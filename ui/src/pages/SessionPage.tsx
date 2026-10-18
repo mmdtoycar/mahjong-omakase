@@ -114,7 +114,7 @@ export default function SessionPage() {
     []
   )
 
-  // 轮询和手动刷新可能乱序返回, 只采用比已显示的更新的那一次.
+  // Apply only the newest response when several overlap.
   const requestSeq = useRef(0)
   const shownSeq = useRef(0)
   const load = async () => {
@@ -131,7 +131,7 @@ export default function SessionPage() {
     load().catch((e: unknown) => setError(parseError(e)))
   }, [id])
 
-  // 任何设备录入完一局, 服务器会通知到这里, 这样本场和庄家始终是最新的.
+  // Reload whenever the server reports a change.
   const inProgress = session?.status === 'IN_PROGRESS'
   useEffect(() => {
     if (!inProgress) return
@@ -235,7 +235,6 @@ export default function SessionPage() {
       const confirmedHand = winHand && !isChomboManual ? { ...winHandToLabel(winHand), isSelfDraw } : undefined
       const sampleIds = photoSampleIds.length > 0 ? photoSampleIds : undefined
       if (isRiichi) {
-        // 把整手牌和和牌情况发给服务器, 庄家、风、本场、番符和点数都由它按真实的牌桌来算.
         await addRound(session.id, {
           winnerId: Number(winnerId),
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),

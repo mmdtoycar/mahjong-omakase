@@ -18,7 +18,7 @@ public class EventsController {
 
   @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public ResponseBodyEmitter listen(HttpServletResponse response) {
-    // A proxy that buffers would hold every event back until the connection closes.
+    // Proxies must not buffer the stream.
     response.setHeader("X-Accel-Buffering", "no");
     response.setHeader("Cache-Control", "no-cache");
     return events.subscribe();

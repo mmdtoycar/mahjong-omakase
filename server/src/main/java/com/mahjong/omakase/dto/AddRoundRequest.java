@@ -42,10 +42,7 @@ public class AddRoundRequest {
 
   private String winHand;
 
-  /**
-   * How a Riichi hand was won, beyond its tiles. When it comes with {@link #winHand} the server
-   * scores the hand itself, against the real dealer, winds and 本场.
-   */
+  /** How a Riichi hand was won beyond its tiles; with winHand the server scores it. */
   private HandSituation handSituation;
 
   private String fanDetails;

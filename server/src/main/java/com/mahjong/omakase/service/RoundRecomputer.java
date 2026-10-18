@@ -20,9 +20,7 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 
 /**
- * Re-scores Riichi wins that were recorded against a stale table. A round stores only its points,
- * so the dealer, 本场 and 供托 it was scored with are found by trying each state the table went through
- * before it, and keeping the one that explains the stored points exactly.
+ * Re-scores Riichi wins recorded against a stale table, by finding the state that explains them.
  */
 @Component
 public class RoundRecomputer {
@@ -39,7 +37,7 @@ public class RoundRecomputer {
 
   public record Result(List<Change> changed, List<Unresolved> unresolved) {}
 
-  /** Fixes every Riichi session in place; the caller decides whether the transaction commits. */
+  /** Fixes the given Riichi sessions in place. */
   public Result recompute(List<GameSession> sessions) {
     List<Change> changed = new ArrayList<>();
     List<Unresolved> unresolved = new ArrayList<>();
@@ -109,7 +107,6 @@ public class RoundRecomputer {
     return out;
   }
 
-  /** {@code fixed} is null when the round is fine or could not be worked out ({@code problem}). */
   private record Outcome(Map<Long, Integer> fixed, String reason, String problem) {}
 
   /** One state the page may have been showing, and the hand value it implies. */

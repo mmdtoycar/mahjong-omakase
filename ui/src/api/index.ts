@@ -22,11 +22,7 @@ function getAuthHeaders(headers: Record<string, string> = {}): Record<string, st
   return headers
 }
 
-/**
- * Calls {@code onChange} whenever any game changes, as the server announces it, and once more each
- * time the connection comes back, so nothing that happened while it was down is missed. Returns
- * the function that stops listening.
- */
+/** Calls onChange when the server reports a change, and again after each reconnect. Returns a stop function. */
 export function listenForChanges(onChange: () => void): () => void {
   let stopped = false
   let connection: AbortController | null = null
@@ -51,14 +47,12 @@ export function listenForChanges(onChange: () => void): () => void {
           buffer = events.pop() ?? ''
           if (events.some((e) => e.includes('event:changed'))) onChange()
         }
-      } catch {
-        // Dropped or refused: wait a moment and connect again.
-      }
+      } catch {}
       if (!stopped) await new Promise((resolve) => setTimeout(resolve, 3000))
     }
   }
 
-  // A phone that was asleep keeps a connection that is dead without saying so; start a fresh one.
+  // A sleeping phone keeps a dead connection; start a new one.
   const onVisible = () => {
     if (!document.hidden) connection?.abort()
   }

@@ -88,10 +88,8 @@ public class AdminController {
   }
 
   /**
-   * Replays all completed sessions into everyone's 段位战 and each game's result; safe to re-run.
-   * {@code recomputeRounds} first re-scores Riichi wins that were recorded against a stale table,
-   * ({@code sessionIds} limits that to those sessions), and {@code dryRun} reports what would
-   * change without keeping any of it.
+   * Replays completed sessions into the ladder; optionally re-scores stale rounds, or only
+   * previews.
    */
   @PostMapping("/tier/backfill")
   public RecomputeService.Report backfillTier(

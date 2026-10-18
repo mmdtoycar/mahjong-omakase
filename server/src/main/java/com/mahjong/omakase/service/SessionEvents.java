@@ -28,7 +28,7 @@ public class SessionEvents {
     return page;
   }
 
-  /** Sent once the change is committed, so a page that reloads straight away sees it. */
+  /** Sent after commit, so a page that reloads right away sees the change. */
   public void changed() {
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
       TransactionSynchronizationManager.registerSynchronization(
@@ -47,16 +47,13 @@ public class SessionEvents {
     for (ResponseBodyEmitter page : pages) send(page, "event:changed\ndata:1\n\n");
   }
 
-  /** Keeps idle connections open through proxies and notices the ones that have gone. */
+  /** Keeps idle connections alive and drops dead ones. */
   @Scheduled(fixedRate = 15000)
   public void heartbeat() {
     for (ResponseBodyEmitter page : pages) send(page, ":ping\n\n");
   }
 
-  /**
-   * Each event goes out as one write: a phone's network stack holds back tiny trailing pieces, so
-   * an event sent as "event:", "data:", "1", "\n\n" would only arrive with the next one.
-   */
+  // One write per event: some network stacks hold back tiny trailing pieces.
   private void send(ResponseBodyEmitter page, String event) {
     try {
       page.send(event, MediaType.TEXT_PLAIN);

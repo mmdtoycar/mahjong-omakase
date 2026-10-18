@@ -22,7 +22,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.CacheManager;
 
-/** A finished game moved everyone's ladder and game count, so deleting it must take that back. */
 class GameServiceDeleteSessionTest {
 
   private final GameSessionRepository sessionRepo = mock(GameSessionRepository.class);

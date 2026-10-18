@@ -13,9 +13,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**
- * The server scores a hand the way the scoring page previews it. Two sets of hands hold it to that:
- * the page's own calculator ran 1500 generated hands (the fixture), and 1000 real Tenhou hands.
- * Change a rule in one place and these fail until the other agrees.
+ * The server scores a hand like the scoring page; generated and real Tenhou hands hold the two
+ * together.
  */
 class RiichiHandCalculatorTest {
 
@@ -88,8 +87,6 @@ class RiichiHandCalculatorTest {
           .isEqualTo(yaku);
     }
   }
-
-  // --- the Tenhou reference hands, as the page's own test reads them ---
 
   private static List<Tile> tenhouTiles(String text) {
     List<Tile> out = new ArrayList<>();

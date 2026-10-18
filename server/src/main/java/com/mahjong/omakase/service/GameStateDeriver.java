@@ -11,14 +11,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Dealer, wind, 本场 and 供托 of a session, replayed from the rounds recorded so far. */
+/** Dealer, wind, 本场 and 供托, replayed from the rounds so far. */
 public final class GameStateDeriver {
 
   private static final String[] WIND_NAMES = {"东", "南", "西", "北"};
 
   private GameStateDeriver() {}
 
-  /** {@code prevalentWind} 1=东 .. 4=北; {@code kyoutaku} is the riichi sticks carried, in points. */
+  /** prevalentWind is 1=东 .. 4=北; kyoutaku is the carried riichi sticks, in points. */
   public record State(
       int dealerSeat,
       long dealerPlayerId,
@@ -29,15 +29,13 @@ public final class GameStateDeriver {
       String displayName,
       int playerCount) {}
 
-  /**
-   * What the state depends on in one finished round. Tenpai and riichi are null when unrecorded.
-   */
+  /** Tenpai and riichi are null when unrecorded. */
   public record RoundFacts(
       Long winnerId, List<Long> tenpai, List<Long> riichi, Map<Long, Integer> scores) {}
 
   public record Seat(long playerId, Integer seat) {}
 
-  /** The state before each round, then after the last: {@code size() == rounds + 1}. */
+  /** The state before each round, then after the last. */
   public static List<State> deriveAll(GameSession session) {
     List<Seat> seats =
         session.getPlayers().stream()
@@ -145,7 +143,7 @@ public final class GameStateDeriver {
 
   private static boolean dealerTenpai(RoundFacts round, long dealerId) {
     if (round.tenpai() != null) return round.tenpai().contains(dealerId);
-    // Rounds from before tenpai was recorded: 全员未听 reads as 连庄 by the point delta.
+    // Older rounds have no tenpai list: read the dealer's points.
     return round.scores().getOrDefault(dealerId, 0) >= 0;
   }
 

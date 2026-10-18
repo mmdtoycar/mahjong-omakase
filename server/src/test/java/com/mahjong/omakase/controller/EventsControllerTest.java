@@ -10,7 +10,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-/** Open pages hear about a change as it happens, instead of asking again and again. */
 class EventsControllerTest {
 
   private final SessionEvents events = new SessionEvents();

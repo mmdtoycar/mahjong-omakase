@@ -95,14 +95,14 @@ class GameStateDeriverTest {
   @Test
   void sessionThreeSixtyEightLabelsEveryHand() {
     List<RoundFacts> rounds = new ArrayList<>();
-    rounds.add(win(1)); // 东1: dealer wins
+    rounds.add(win(1));
     rounds.add(new RoundFacts(null, List.of(1L, 4L), null, Map.of()));
     rounds.add(new RoundFacts(null, List.of(1L), List.of(1L), Map.of()));
     rounds.add(new RoundFacts(null, List.of(10L, 2L), List.of(10L), Map.of()));
-    rounds.add(new RoundFacts(4L, null, List.of(10L), Map.of())); // 东2(4): dealer tsumo
-    rounds.add(win(2)); // 东2(5): a non-dealer takes it
-    rounds.add(win(4)); // 东3
-    rounds.add(win(4)); // 东4
+    rounds.add(new RoundFacts(4L, null, List.of(10L), Map.of()));
+    rounds.add(win(2));
+    rounds.add(win(4));
+    rounds.add(win(4));
 
     List<State> states = GameStateDeriver.deriveAll(GameMode.RIICHI, TABLE_368, rounds);
 

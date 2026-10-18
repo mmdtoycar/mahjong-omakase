@@ -24,7 +24,7 @@ public class SessionDetailResponse {
   private Map<Long, Integer> totalScores;
   private double startingPoints;
 
-  /** Dealer, wind, 本场 and 供托 for the next round, worked out on the server. */
+  /** Table state for the next round. */
   private GameStateDeriver.State gameState;
 
   /** 每位玩家本场对局的段位分变化. Empty while the session is in progress. */
@@ -75,7 +75,7 @@ public class SessionDetailResponse {
     private List<Long> riichiPlayerIds;
     private List<Long> tenpaiPlayerIds;
 
-    /** The round's wind and 本场 as the table saw it, e.g. 东2(4). */
+    /** The round's wind and 本场, e.g. 东2(4). */
     private String label;
   }
 }

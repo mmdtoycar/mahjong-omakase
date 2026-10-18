@@ -122,11 +122,11 @@ export interface RoundInfo {
   prevalentWind?: number
   riichiPlayerIds?: number[]
   tenpaiPlayerIds?: number[] // for drawn games; undefined on legacy rounds
-  /** 这一局开局时的场风/本场, 如 东2(4) — 服务器按之前的局推算. */
+  /** Wind and 本场 when the round started, e.g. 东2(4). */
   label?: string
 }
 
-/** 庄家、场风、本场、供托 — 全部由服务器按已录入的局推算. */
+/** Table state, worked out by the server. */
 export interface GameState {
   dealerSeat: number
   dealerPlayerId: number
@@ -153,7 +153,7 @@ export interface SessionDetail {
   startingPoints: number
   /** 每位玩家本场对局的段位分变化; 进行中的对局为空. */
   ratingDeltas?: Record<number, number>
-  /** 下一局的庄家、场风、本场、供托. */
+  /** Table state for the next round. */
   gameState: GameState
 }
 

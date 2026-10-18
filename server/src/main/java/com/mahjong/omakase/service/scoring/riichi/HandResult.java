@@ -3,7 +3,7 @@ package com.mahjong.omakase.service.scoring.riichi;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/** A scored hand. The three amounts are for the winner being the dealer or not, as scored. */
+/** A scored hand. */
 public record HandResult(
     int han,
     int fu,

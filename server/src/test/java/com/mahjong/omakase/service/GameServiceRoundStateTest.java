@@ -21,7 +21,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.CacheManager;
 
-/** The dealer, 本场 and 供托 of a new round come from the table, not from the page. */
 class GameServiceRoundStateTest {
 
   private final GameService service =
@@ -156,7 +155,6 @@ class GameServiceRoundStateTest {
   @Test
   void theWindsComeFromTheTable() {
     GameSession s = afterOneDraw(GameMode.RIICHI); // 东2(1), so 南 is the seat after the dealer
-    // 南 pair and 南 triplet: a yakuhai only for the player whose seat wind is 南 (player 3).
     String hand = "2s3s4s5m6m7m9p9p2z2z^2z[7p8p9p]";
 
     AddRoundRequest r = ronOnHand(3L, hand, false);
@@ -168,7 +166,6 @@ class GameServiceRoundStateTest {
   void aHandWithNoYakuIsRefused() {
     GameSession s = afterOneDraw(GameMode.RIICHI);
 
-    // Called, no tanyao or yakuhai, nothing to score.
     String noYaku = "2p3p4p7p7p1s2s3s5m6m^7m[7s8s9s]";
 
     assertThatThrownBy(() -> service.applyServerState(s, ronOnHand(3L, noYaku, false)))

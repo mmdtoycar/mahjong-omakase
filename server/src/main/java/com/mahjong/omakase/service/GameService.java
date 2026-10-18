@@ -81,7 +81,7 @@ public class GameService {
   /**
    * Wipes every derived-state cache. Called from every write path that could change session list,
    * player stats, home summary, or active seasons. Cheaper than fine-grained per-cache eviction —
-   * caches refill on the next read. Open pages are told at the same time, so they reload.
+   * caches refill on the next read. Also tells open pages to reload.
    */
   public void evictAllCaches() {
     for (String name : cacheManager.getCacheNames()) {
@@ -530,10 +530,7 @@ public class GameService {
     evictAllCaches();
   }
 
-  /**
-   * Dealer, 本场 and 供托 come from the rounds already stored, never from the page, and a Riichi hand
-   * sent as tiles is scored here against that table.
-   */
+  /** Takes dealer, 本场 and 供托 from the stored rounds; a Riichi hand sent as tiles is scored here. */
   void applyServerState(GameSession session, AddRoundRequest request) {
     GameMode mode = session.getGameMode();
     if (mode != GameMode.RIICHI && mode != GameMode.DONGBEI) return;
@@ -656,7 +653,7 @@ public class GameService {
     boolean wasRated = session.getStatus() == SessionStatus.COMPLETED;
     sessionRepo.delete(session);
     log.info("Deleted session id={}", sessionId);
-    // A finished game moved everyone's ladder and game count; replaying takes that back.
+    // Replay to undo the deleted game's ladder and game count.
     if (wasRated) tierService.backfillLadder();
     rederiveDiscoveriesForSeason(mode, sessionTime);
     evictAllCaches();

@@ -4,10 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Scores a winning Riichi hand from its tiles: the best reading by points, then han, then fu. The
- * same rules as the calculator on the scoring page, which previews what this decides.
- */
+/** Scores a winning Riichi hand from its tiles, by the same rules as the scoring page preview. */
 public final class RiichiHandCalculator {
 
   private static final int MANGAN = 2000;
@@ -79,10 +76,7 @@ public final class RiichiHandCalculator {
     return (int) Math.ceil(value / 100.0) * 100;
   }
 
-  /**
-   * When the winning tile fits more than one concealed group, each is tried as the one it
-   * completed.
-   */
+  /** Every concealed group the winning tile could have completed is tried. */
   private static List<Combination> tries(Combination combination, Tile winTile) {
     if (combination.kokushi() || combination.chiitoitsu()) return List.of(combination);
 

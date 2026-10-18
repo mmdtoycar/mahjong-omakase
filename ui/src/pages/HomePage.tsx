@@ -38,7 +38,7 @@ export default function HomePage() {
 
     loadSummary(false)
 
-    // 服务器一通知有对局变化就静默刷新, 让"正在进行的对局"随每局结束自动更新.
+    // Reload when the server reports a change.
     const stopListening = listenForChanges(() => void loadSummary(true))
 
     return () => {

@@ -58,10 +58,7 @@ public class RecomputeService {
   private final TierService tierService;
   private final RoundRecomputer roundRecomputer;
 
-  /**
-   * With {@code dryRun} nothing is kept: the same work runs and is rolled back. {@code sessionIds}
-   * limits which sessions have their rounds re-scored; the ladder replay always covers everything.
-   */
+  /** dryRun rolls everything back; sessionIds limits which sessions are re-scored. */
   public Report run(boolean recomputeRounds, boolean dryRun, Collection<Long> sessionIds) {
     List<GameSession> sessions = sessionRepo.findAll();
     Map<Long, List<Placement>> placementsBefore = new HashMap<>();

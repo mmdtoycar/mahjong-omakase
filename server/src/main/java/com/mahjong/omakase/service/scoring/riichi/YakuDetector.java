@@ -119,8 +119,6 @@ final class YakuDetector {
     return yaku;
   }
 
-  // --- checks ---
-
   private static boolean isPinfu(Combination combination, Tile winTile, GameOptions options) {
     return combination.groups().stream().allMatch(m -> m.kind() == Kind.SHUNZI)
         && !FuCalculator.isYakuhaiPair(combination.pair(), options)
@@ -279,8 +277,6 @@ final class YakuDetector {
     for (int r = 2; r <= 8; r++) if (counts.getOrDefault(r, 0) < 1) return false;
     return true;
   }
-
-  // --- situational ---
 
   private static void addRiichi(List<Yaku> yaku, GameOptions options, boolean concealed) {
     if (!concealed) return;

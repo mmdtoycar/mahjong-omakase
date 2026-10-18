@@ -5,12 +5,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Every total a Riichi hand can be worth, so a stored total can be traced back to its hand. */
+/** Every total a Riichi hand can be worth. */
 public final class RiichiScoreTable {
 
   private static final int[] FU = {20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 110};
 
-  /** One way to reach a basic point value. A yakuman, or 13 han counted, is one yakuman. */
+  /** One way to reach a basic point value. */
   private record Hand(int han, int fu, int basic, boolean ron, boolean tsumo) {}
 
   private static final List<Hand> HANDS = hands();
@@ -21,7 +21,7 @@ public final class RiichiScoreTable {
     List<Hand> out = new ArrayList<>();
     for (int han = 1; han <= 12; han++) {
       for (int fu : FU) {
-        // 20 fu only comes from a 平和 tsumo and 25 fu from 七对子, both at least 2 han.
+        // 20 fu is a 平和 tsumo and 25 fu is 七对子, both at least 2 han.
         if ((fu == 20 || fu == 25) && han < 2) continue;
         out.add(
             new Hand(han, fu, RiichiScoreCalculator.calculateBasicPoints(han, fu), fu != 20, true));
@@ -44,10 +44,7 @@ public final class RiichiScoreTable {
         : roundUp100(basic * 2) + (others - 1) * roundUp100(basic);
   }
 
-  /**
-   * The basic points that make {@code total}; empty when no hand is worth that. {@code hanHint}
-   * narrows the answer to that han when it fits, and is ignored when it does not.
-   */
+  /** Basic points that make {@code total}, narrowed to hanHint when that fits. */
   public static Set<Integer> basicsFor(
       int total, boolean dealer, boolean selfDraw, int players, Integer hanHint) {
     Set<Integer> all = new HashSet<>();
