@@ -10,7 +10,7 @@ public final class RiichiScoreTable {
 
   private static final int[] FU = {20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 110};
 
-  /** One way to reach a basic point value. Yakuman count as 13 han each. */
+  /** One way to reach a basic point value. A yakuman, or 13 han counted, is one yakuman. */
   private record Hand(int han, int fu, int basic, boolean ron, boolean tsumo) {}
 
   private static final List<Hand> HANDS = hands();
@@ -27,9 +27,7 @@ public final class RiichiScoreTable {
             new Hand(han, fu, RiichiScoreCalculator.calculateBasicPoints(han, fu), fu != 20, true));
       }
     }
-    for (int yakuman = 1; yakuman <= 6; yakuman++) {
-      out.add(new Hand(13 * yakuman, 0, 8000 * yakuman, true, true));
-    }
+    out.add(new Hand(13, 0, 8000, true, true));
     return out;
   }
 

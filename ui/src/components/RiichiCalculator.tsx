@@ -79,7 +79,7 @@ interface RiichiCalculatorProps {
     fanDetails?: string,
     fanCount?: number,
     tsumoDetail?: { dealer: number; nonDealer: number } | null,
-    fu?: number
+    options?: GameOptions
   ) => void
   onError?: (msg: string | null) => void
   initialOptions?: Partial<GameOptions>
@@ -227,7 +227,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       } else {
         outputScore = huResult.score.ron
       }
-      onSelectScore(outputScore, handStr, fanDetailsStr, huResult.han, tsumoInfo, huResult.fu)
+      onSelectScore(outputScore, handStr, fanDetailsStr, huResult.han, tsumoInfo, options)
       onError?.(null)
     } else if (currentCount === 14) {
       onSelectScore(null)
@@ -236,7 +236,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       onSelectScore(null)
       onError?.(null)
     }
-  }, [huResult, onSelectScore, onError, currentCount, concealedTiles, melds, options.doraCount, playerCount])
+  }, [huResult, onSelectScore, onError, currentCount, concealedTiles, melds, options, playerCount])
 
   const displayConcealed = useMemo(() => {
     const sorted = [...concealedTiles].sort((a, b) => a.compareTo(b))

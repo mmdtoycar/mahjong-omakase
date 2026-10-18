@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { fetchSessionDetail, addRound, deleteRound, completeSession, listenForChanges } from '../api'
-import { SessionDetail, PlayerInfo, RoundInfo } from '../types'
+import { SessionDetail, PlayerInfo, RoundInfo, AddRoundData } from '../types'
 import { rankByScore } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { RiichiCalculator } from '../components/RiichiCalculator'
@@ -14,11 +14,26 @@ import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
 import { PhotoRecognitionModal, RecognizedHand, winHandToLabel } from '../components/PhotoRecognitionModal'
 import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
-import { Meld as RiichiMeld } from '../logic/riichi/types'
+import { Meld as RiichiMeld, GameOptions } from '../logic/riichi/types'
 import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
 import { nextWinSelection } from '../logic/shared/winSelection'
 
 const ROUND_COL_PX = 68
+
+/** The part of a win the tiles do not say, as the server wants it. */
+function handSituation(o: GameOptions | null): AddRoundData['handSituation'] {
+  return {
+    riichi: !!o?.isRiichi,
+    doubleRiichi: !!o?.isDoubleRiichi,
+    ippatsu: !!o?.isYifa,
+    chankan: !!o?.isQianggang,
+    rinshan: !!o?.isLingshang,
+    haitei: !!o?.isHaidi,
+    tenhou: !!o?.isTianhu,
+    chiihou: !!o?.isDihu,
+    dora: o?.doraCount ?? 0,
+  }
+}
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -38,7 +53,7 @@ export default function SessionPage() {
   const [winHand, setWinHand] = useState<string>('')
   const [fanDetails, setFanDetails] = useState<string>('')
   const [fanCount, setFanCount] = useState<number>(0)
-  const [fu, setFu] = useState<number>(0)
+  const [handOptions, setHandOptions] = useState<GameOptions | null>(null)
   const [tsumoDetail, setTsumoDetail] = useState<{ dealer: number; nonDealer: number } | null>(null)
   const [isChomboManual, setIsChomboManual] = useState(false)
   const [calcError, setCalcError] = useState('')
@@ -78,21 +93,21 @@ export default function SessionPage() {
       details?: string,
       fCount?: number,
       tsumo?: { dealer: number; nonDealer: number } | null,
-      handFu?: number
+      options?: GameOptions
     ) => {
       if (s !== null) {
         setScore(String(s))
         setWinHand(hand || '')
         setFanDetails(details || '')
         setFanCount(fCount || 0)
-        setFu(handFu || 0)
+        setHandOptions(options ?? null)
         setTsumoDetail(tsumo || null)
       } else {
         setScore('')
         setWinHand('')
         setFanDetails('')
         setFanCount(0)
-        setFu(0)
+        setHandOptions(null)
         setTsumoDetail(null)
       }
     },
@@ -220,16 +235,11 @@ export default function SessionPage() {
       const confirmedHand = winHand && !isChomboManual ? { ...winHandToLabel(winHand), isSelfDraw } : undefined
       const sampleIds = photoSampleIds.length > 0 ? photoSampleIds : undefined
       if (isRiichi) {
-        // 番和符发给服务器, 由它按真实的庄家和本场算点数.
+        // 把整手牌和和牌情况发给服务器, 庄家、风、本场、番符和点数都由它按真实的牌桌来算.
         await addRound(session.id, {
           winnerId: Number(winnerId),
-          fan: fanCount,
-          fu: Math.max(20, fu),
-          dealerId: gameState.dealerPlayerId,
-          honba: gameState.honba,
-          kyoutaku: gameState.kyoutaku,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
-          fanCount,
+          handSituation: handSituation(handOptions),
           winHand,
           fanDetails,
           riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
@@ -240,7 +250,6 @@ export default function SessionPage() {
         await addRound(session.id, {
           winnerId: Number(winnerId),
           fan: parseInt(fan),
-          dealerId: gameState.dealerPlayerId,
           bimenPlayerIds,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
           fanCount: parseInt(fan),

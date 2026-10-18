@@ -30,7 +30,7 @@ public class RiichiScoreCalculator implements ScoreCalculator {
     if (fan < 1) throw new IllegalArgumentException("Fan must be at least 1");
     if (fu < 20) throw new IllegalArgumentException("Fu must be at least 20");
 
-    if (fan >= 13) return 8000 * (fan / 13); // Yakuman, 13 han each
+    if (fan >= 13) return 8000; // Yakuman, or counted at 13 han or more
     if (fan >= 11) return 6000; // Sanbaiman
     if (fan >= 8) return 4000; // Baiman
     if (fan >= 6) return 3000; // Haneman

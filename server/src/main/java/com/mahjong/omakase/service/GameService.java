@@ -5,6 +5,10 @@ import com.mahjong.omakase.model.*;
 import com.mahjong.omakase.repository.*;
 import com.mahjong.omakase.service.handler.GameModeHandler;
 import com.mahjong.omakase.service.scoring.RankCalculator;
+import com.mahjong.omakase.service.scoring.riichi.GameOptions;
+import com.mahjong.omakase.service.scoring.riichi.HandParser;
+import com.mahjong.omakase.service.scoring.riichi.HandResult;
+import com.mahjong.omakase.service.scoring.riichi.RiichiHandCalculator;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -527,34 +531,70 @@ public class GameService {
   }
 
   /**
-   * Dealer, 本场 and 供托 come from the rounds already stored, never from the page. A page that was
-   * behind is still served: it is scored against the real table, and only noted in the log.
+   * Dealer, 本场 and 供托 come from the rounds already stored, never from the page, and a Riichi hand
+   * sent as tiles is scored here against that table.
    */
   void applyServerState(GameSession session, AddRoundRequest request) {
     GameMode mode = session.getGameMode();
     if (mode != GameMode.RIICHI && mode != GameMode.DONGBEI) return;
 
     GameStateDeriver.State state = GameStateDeriver.derive(session);
-    boolean behind =
-        (request.getDealerId() != null && request.getDealerId() != state.dealerPlayerId())
-            || (mode == GameMode.RIICHI
-                && ((request.getHonba() != null && request.getHonba() != state.honba())
-                    || (request.getKyoutaku() != null
-                        && request.getKyoutaku() != state.kyoutaku())));
-    if (behind) {
-      log.info(
-          "Page was behind for session id={}: sent dealer={} honba={} kyoutaku={}, table is {}",
-          session.getId(),
-          request.getDealerId(),
-          request.getHonba(),
-          request.getKyoutaku(),
-          state);
-    }
     request.setDealerId(state.dealerPlayerId());
     if (mode == GameMode.RIICHI) {
       request.setHonba(state.honba());
       request.setKyoutaku(state.kyoutaku());
+      scoreHand(session, request, state);
     }
+  }
+
+  private void scoreHand(
+      GameSession session, AddRoundRequest request, GameStateDeriver.State state) {
+    String text = request.getWinHand();
+    if (request.isDrawnGame()
+        || request.getHandSituation() == null
+        || text == null
+        || text.isBlank()) {
+      return;
+    }
+    HandParser.Hand hand = HandParser.parse(text);
+    int tiles = hand.concealed().size() + 1 + 3 * hand.melds().size();
+    if (tiles != 14) throw new IllegalArgumentException("手牌张数不对");
+
+    int players = session.getPlayers().size();
+    int seat = 0;
+    int index = 0;
+    for (GameSessionPlayer gsp : session.getPlayers()) {
+      index++;
+      if (gsp.getPlayer() != null && gsp.getPlayer().getId().equals(request.getWinnerId())) {
+        seat = gsp.getSeat() != null ? gsp.getSeat() : index;
+      }
+    }
+    int seatWind = (seat - state.dealerSeat() + players) % players + 1;
+
+    AddRoundRequest.HandSituation s = request.getHandSituation();
+    GameOptions options =
+        new GameOptions(
+            request.isSelfDraw(),
+            state.prevalentWind(),
+            seatWind,
+            s.isRiichi(),
+            s.isDoubleRiichi(),
+            s.isIppatsu(),
+            s.isChankan(),
+            s.isRinshan(),
+            s.isHaitei(),
+            s.isTenhou(),
+            s.isChiihou(),
+            s.getDora());
+    HandResult result =
+        RiichiHandCalculator.calculate(hand.concealed(), hand.melds(), hand.winTile(), options)
+            .orElseThrow(() -> new IllegalArgumentException("和牌不成立 — 无役"));
+
+    request.setScore(result.total(seatWind == 1, request.isSelfDraw(), players));
+    request.setFan(null);
+    request.setFu(null);
+    request.setFanCount(result.han());
+    request.setFanDetails(result.yakuText());
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {

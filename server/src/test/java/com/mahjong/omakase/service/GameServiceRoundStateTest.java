@@ -1,6 +1,7 @@
 package com.mahjong.omakase.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import com.mahjong.omakase.dto.AddRoundRequest;
@@ -120,5 +121,78 @@ class GameServiceRoundStateTest {
     service.applyServerState(afterOneDraw(GameMode.GUOBIAO), r);
 
     assertThat(r.getDealerId()).isNull();
+  }
+
+  /** Session 368's 东3 hand: 立直 一杯口 and a dora, 3 han 40 fu. */
+  private static final String HAND = "2p3p4p7p7p1s2s3s6s6s7s8s8s^7s";
+
+  private static AddRoundRequest ronOnHand(long winner, String hand, boolean riichi) {
+    AddRoundRequest r = request(null, null, null);
+    r.setWinnerId(winner);
+    r.setDealInPlayerId(4L);
+    r.setWinHand(hand);
+    AddRoundRequest.HandSituation situation = new AddRoundRequest.HandSituation();
+    situation.setRiichi(riichi);
+    situation.setDora(1);
+    r.setHandSituation(situation);
+    return r;
+  }
+
+  @Test
+  void aHandSentAsTilesIsScoredAgainstTheRealDealer() {
+    GameSession s = afterOneDraw(GameMode.RIICHI); // 东2(1): player 2 deals
+
+    AddRoundRequest nonDealer = ronOnHand(3L, HAND, true);
+    service.applyServerState(s, nonDealer);
+    assertThat(nonDealer.getScore()).isEqualTo(5200);
+    assertThat(nonDealer.getFanCount()).isEqualTo(3);
+    assertThat(nonDealer.getFanDetails()).isEqualTo("立直(1), 一杯口(1), 宝牌(1)");
+
+    AddRoundRequest dealer = ronOnHand(2L, HAND, true);
+    service.applyServerState(s, dealer);
+    assertThat(dealer.getScore()).isEqualTo(7700);
+  }
+
+  @Test
+  void theWindsComeFromTheTable() {
+    GameSession s = afterOneDraw(GameMode.RIICHI); // 东2(1), so 南 is the seat after the dealer
+    // 南 pair and 南 triplet: a yakuhai only for the player whose seat wind is 南 (player 3).
+    String hand = "2s3s4s5m6m7m9p9p2z2z^2z[7p8p9p]";
+
+    AddRoundRequest r = ronOnHand(3L, hand, false);
+    service.applyServerState(s, r);
+    assertThat(r.getFanDetails()).contains("役牌:自风牌").doesNotContain("役牌:场风牌");
+  }
+
+  @Test
+  void aHandWithNoYakuIsRefused() {
+    GameSession s = afterOneDraw(GameMode.RIICHI);
+
+    // Called, no tanyao or yakuhai, nothing to score.
+    String noYaku = "2p3p4p7p7p1s2s3s5m6m^7m[7s8s9s]";
+
+    assertThatThrownBy(() -> service.applyServerState(s, ronOnHand(3L, noYaku, false)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("无役");
+  }
+
+  @Test
+  void aHandThatIsNotFourteenTilesIsRefused() {
+    GameSession s = afterOneDraw(GameMode.RIICHI);
+
+    assertThatThrownBy(() -> service.applyServerState(s, ronOnHand(3L, "2p3p4p^7s", true)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void aRequestWithoutHandSituationKeepsItsScore() {
+    GameSession s = afterOneDraw(GameMode.RIICHI);
+    AddRoundRequest r = request(null, null, null);
+    r.setWinHand(HAND);
+    r.setScore(3900);
+
+    service.applyServerState(s, r);
+
+    assertThat(r.getScore()).isEqualTo(3900);
   }
 }

@@ -32,9 +32,9 @@ class RiichiScoreCalculatorTest {
   }
 
   @Test
-  void doubleYakumanIsTwiceAYakuman() {
-    assertThat(ron(26, 20, 1L, 0)).containsEntry(2L, 64000);
+  void thirteenHanOrMoreIsOneYakuman() {
     assertThat(ron(13, 20, 1L, 0)).containsEntry(2L, 32000);
+    assertThat(ron(26, 20, 1L, 0)).containsEntry(2L, 32000);
   }
 
   @Test

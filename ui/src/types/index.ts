@@ -178,6 +178,18 @@ export interface AddRoundData {
   tenpaiPlayerIds?: number[] // for drawn games
   riichiPlayerIds?: number[] // players who declared riichi
   winHand?: string
+  /** 立直麻将: how the hand was won beyond its tiles; with winHand the server scores the hand. */
+  handSituation?: {
+    riichi: boolean
+    doubleRiichi: boolean
+    ippatsu: boolean
+    chankan: boolean
+    rinshan: boolean
+    haitei: boolean
+    tenhou: boolean
+    chiihou: boolean
+    dora: number
+  }
   fanDetails?: string
   fanCount?: number
   prevalentWind?: number
