@@ -162,7 +162,7 @@ class RiichiHandCalculatorTest {
               h.get("han").asInt(),
               h.get("fu").asInt(),
               h.get("isDealer").asBoolean(),
-              0,
+              false,
               List.of());
       int expected = h.get("pointValue").asInt();
       assertThat(score.total(h.get("isDealer").asBoolean(), h.get("isTsumo").asBoolean(), 4))

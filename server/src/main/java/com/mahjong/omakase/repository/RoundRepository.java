@@ -11,28 +11,36 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface RoundRepository extends JpaRepository<Round, Long> {
+  /** A yakuman outranks any han count; its yaku is the only one recorded as (13). */
+  String RANK = "(CASE WHEN r.fanDetails LIKE '%(13)%' THEN r.fanCount + 1000 ELSE r.fanCount END)";
+
   int countByGameSessionId(Long gameSessionId);
 
-  @Query("SELECT MAX(r.fanCount) FROM Round r")
+  @Query("SELECT MAX(" + RANK + ") FROM Round r")
   Integer findMaxFanCount();
 
-  @Query("SELECT MAX(r.fanCount) FROM Round r WHERE r.gameSession.gameMode = :mode")
+  @Query("SELECT MAX(" + RANK + ") FROM Round r WHERE r.gameSession.gameMode = :mode")
   Integer findMaxFanCountByMode(@Param("mode") GameMode mode);
 
-  List<Round> findByFanCount(Integer fanCount);
+  @Query("SELECT r FROM Round r WHERE " + RANK + " = :fanCount")
+  List<Round> findByFanCount(@Param("fanCount") Integer fanCount);
 
-  @Query("SELECT r FROM Round r WHERE r.fanCount = :fanCount AND r.gameSession.gameMode = :mode")
+  @Query("SELECT r FROM Round r WHERE " + RANK + " = :fanCount AND r.gameSession.gameMode = :mode")
   List<Round> findByFanCountAndMode(
       @Param("fanCount") Integer fanCount, @Param("mode") GameMode mode);
 
   @Query(
-      "SELECT MAX(r.fanCount) FROM Round r JOIN r.gameSession s"
+      "SELECT MAX("
+          + RANK
+          + ") FROM Round r JOIN r.gameSession s"
           + " WHERE s.createdAt >= :start AND s.createdAt < :end")
   Integer findMaxFanCountByDateRange(
       @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
   @Query(
-      "SELECT MAX(r.fanCount) FROM Round r JOIN r.gameSession s"
+      "SELECT MAX("
+          + RANK
+          + ") FROM Round r JOIN r.gameSession s"
           + " WHERE s.gameMode = :mode AND s.createdAt >= :start AND s.createdAt < :end")
   Integer findMaxFanCountByModeAndDateRange(
       @Param("mode") GameMode mode,
@@ -41,7 +49,9 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
 
   @Query(
       "SELECT r FROM Round r JOIN r.gameSession s"
-          + " WHERE r.fanCount = :fanCount AND s.createdAt >= :start AND s.createdAt < :end")
+          + " WHERE "
+          + RANK
+          + " = :fanCount AND s.createdAt >= :start AND s.createdAt < :end")
   List<Round> findByFanCountAndDateRange(
       @Param("fanCount") Integer fanCount,
       @Param("start") LocalDateTime start,
@@ -49,7 +59,9 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
 
   @Query(
       "SELECT r FROM Round r JOIN r.gameSession s"
-          + " WHERE r.fanCount = :fanCount AND s.gameMode = :mode"
+          + " WHERE "
+          + RANK
+          + " = :fanCount AND s.gameMode = :mode"
           + " AND s.createdAt >= :start AND s.createdAt < :end")
   List<Round> findByFanCountAndModeAndDateRange(
       @Param("fanCount") Integer fanCount,
