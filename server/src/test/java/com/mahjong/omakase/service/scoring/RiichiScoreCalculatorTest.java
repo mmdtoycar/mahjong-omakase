@@ -31,9 +31,8 @@ class RiichiScoreCalculatorTest {
   }
 
   @Test
-  void thirteenHanOrMoreIsOneYakuman() {
+  void thirteenHanIsHowAYakumanIsEntered() {
     assertThat(ron(13, 20, 1L, 0)).containsEntry(2L, 32000);
-    assertThat(ron(26, 20, 1L, 0)).containsEntry(2L, 32000);
   }
 
   @Test

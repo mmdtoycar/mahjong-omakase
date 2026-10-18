@@ -12,7 +12,6 @@ const YAKUMAN = 8000
 
 function getBasePoints(han: number, fu: number, yakumanCount: number): number {
   if (yakumanCount > 0) return YAKUMAN * yakumanCount
-  if (han >= 13) return YAKUMAN
   if (han >= 11) return SANBAIMAN
   if (han >= 8) return BAIMAN
   if (han >= 6) return HANEMAN

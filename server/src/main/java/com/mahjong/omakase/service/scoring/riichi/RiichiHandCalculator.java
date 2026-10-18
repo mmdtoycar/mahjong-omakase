@@ -62,7 +62,6 @@ public final class RiichiHandCalculator {
 
   private static int basicPoints(int han, int fu, int yakumanCount) {
     if (yakumanCount > 0) return 8000 * yakumanCount;
-    if (han >= 13) return 8000;
     if (han >= 11) return 6000;
     if (han >= 8) return 4000;
     if (han >= 6) return 3000;
