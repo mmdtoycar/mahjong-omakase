@@ -59,6 +59,7 @@ class GameServiceStatsTest {
           mock(PlayerMonthlySkillRepository.class),
           mock(CacheManager.class),
           mock(RecognitionSampleStore.class),
+          mock(SessionEvents.class),
           List.of());
 
   private static GameSession session(long id, GameMode mode, SessionStatus status) {

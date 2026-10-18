@@ -290,8 +290,7 @@ public class TierServiceTest {
     assertEquals(30 + 0.5 * 40, first.getLadderDelta(), 1e-9);
     assertEquals(Ladder.START_LEVEL, first.getLadderLevelAfter());
     assertEquals(75 + 30 + 0.5 * 40, first.getLadderPointsAfter(), 1e-9);
-    // History does not count as games played; those counters were already right.
-    assertEquals(0, first.getPlayer().getGamesRiichi());
+    assertEquals(1, first.getPlayer().getGamesRiichi());
   }
 
   @Test
@@ -317,6 +316,26 @@ public class TierServiceTest {
     assertEquals(Ladder.START_LEVEL, stale.getLadderLevel());
     assertEquals(75 + 30 + 0.5 * 40, stale.getLadderPoints(), 1e-9);
     assertNull(elo.getLadderLevel(), "a month before 段位战 keeps its ELO tier");
+  }
+
+  @Test
+  public void backfillMakesGameCountsFollowTheSessionsThatExist() {
+    Map<Long, Integer> totals = scores(40000, 10000, -20000, -30000);
+    GameSession s = session(GameMode.RIICHI, totals, null);
+    s.setCreatedAt(LocalDateTime.of(2026, 9, 1, 20, 0));
+    s.getRounds().add(round(s, totals));
+    List<Player> players = s.getPlayers().stream().map(GameSessionPlayer::getPlayer).toList();
+    // Counters left over from games that have since been deleted.
+    players.forEach(p -> p.setGamesRiichi(7));
+    players.forEach(p -> p.setGamesGuobiao(3));
+    when(playerRepo.findAll()).thenReturn(players);
+    when(sessionRepo.findByStatusOrderByCreatedAtDesc(SessionStatus.COMPLETED))
+        .thenReturn(List.of(s));
+
+    tierService.backfillLadder();
+
+    players.forEach(p -> assertEquals(1, p.getGamesRiichi()));
+    players.forEach(p -> assertEquals(0, p.getGamesGuobiao()));
   }
 
   @Test

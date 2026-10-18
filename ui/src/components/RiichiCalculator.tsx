@@ -78,7 +78,8 @@ interface RiichiCalculatorProps {
     hand?: string,
     fanDetails?: string,
     fanCount?: number,
-    tsumoDetail?: { dealer: number; nonDealer: number } | null
+    tsumoDetail?: { dealer: number; nonDealer: number } | null,
+    options?: GameOptions
   ) => void
   onError?: (msg: string | null) => void
   initialOptions?: Partial<GameOptions>
@@ -226,7 +227,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       } else {
         outputScore = huResult.score.ron
       }
-      onSelectScore(outputScore, handStr, fanDetailsStr, huResult.han, tsumoInfo)
+      onSelectScore(outputScore, handStr, fanDetailsStr, huResult.han, tsumoInfo, options)
       onError?.(null)
     } else if (currentCount === 14) {
       onSelectScore(null)
@@ -235,7 +236,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       onSelectScore(null)
       onError?.(null)
     }
-  }, [huResult, onSelectScore, onError, currentCount, concealedTiles, melds, options.doraCount, playerCount])
+  }, [huResult, onSelectScore, onError, currentCount, concealedTiles, melds, options, playerCount])
 
   const displayConcealed = useMemo(() => {
     const sorted = [...concealedTiles].sort((a, b) => a.compareTo(b))
@@ -371,8 +372,14 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
         <div className={`result-preview-mini ${huResult.yakuList.length === 0 ? 'error' : ''}`}>
           <div className="result-main-row">
             <div className="score-badge small">
-              <span className="score-num">{huResult.han}</span>
-              <span className="score-unit">番</span>
+              {huResult.isYakuman ? (
+                <span className="score-num">役满</span>
+              ) : (
+                <>
+                  <span className="score-num">{huResult.han}</span>
+                  <span className="score-unit">番</span>
+                </>
+              )}
             </div>
             <div className="pattern-list">
               {huResult.yakuList.map((y, i) => (

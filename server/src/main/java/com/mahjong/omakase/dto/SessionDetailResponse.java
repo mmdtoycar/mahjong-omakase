@@ -1,5 +1,6 @@
 package com.mahjong.omakase.dto;
 
+import com.mahjong.omakase.service.GameStateDeriver;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -22,6 +23,9 @@ public class SessionDetailResponse {
   private List<RoundInfo> rounds;
   private Map<Long, Integer> totalScores;
   private double startingPoints;
+
+  /** Table state for the next round. */
+  private GameStateDeriver.State gameState;
 
   /** 每位玩家本场对局的段位分变化. Empty while the session is in progress. */
   private Map<Long, Double> ratingDeltas = Collections.emptyMap();
@@ -70,5 +74,8 @@ public class SessionDetailResponse {
     private Integer prevalentWind;
     private List<Long> riichiPlayerIds;
     private List<Long> tenpaiPlayerIds;
+
+    /** The round's wind and 本场, e.g. 东2(4). */
+    private String label;
   }
 }

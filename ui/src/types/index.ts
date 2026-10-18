@@ -122,6 +122,20 @@ export interface RoundInfo {
   prevalentWind?: number
   riichiPlayerIds?: number[]
   tenpaiPlayerIds?: number[] // for drawn games; undefined on legacy rounds
+  /** Wind and 本场 when the round started, e.g. 东2(4). */
+  label?: string
+}
+
+/** Table state, worked out by the server. */
+export interface GameState {
+  dealerSeat: number
+  dealerPlayerId: number
+  prevalentWind: number // 1=东, 2=南, 3=西, 4=北
+  handNumber: number // 1-based within current wind
+  honba: number // consecutive dealer continuations
+  kyoutaku: number // accumulated riichi sticks (in points)
+  displayName: string // e.g. "东1" or "第3/4局"
+  playerCount: number
 }
 
 export interface SessionDetail {
@@ -139,6 +153,8 @@ export interface SessionDetail {
   startingPoints: number
   /** 每位玩家本场对局的段位分变化; 进行中的对局为空. */
   ratingDeltas?: Record<number, number>
+  /** Table state for the next round. */
+  gameState: GameState
 }
 
 export interface ConfirmedHand {
@@ -162,6 +178,18 @@ export interface AddRoundData {
   tenpaiPlayerIds?: number[] // for drawn games
   riichiPlayerIds?: number[] // players who declared riichi
   winHand?: string
+  /** 立直麻将: how the hand was won beyond its tiles; with winHand the server scores the hand. */
+  handSituation?: {
+    riichi: boolean
+    doubleRiichi: boolean
+    ippatsu: boolean
+    chankan: boolean
+    rinshan: boolean
+    haitei: boolean
+    tenhou: boolean
+    chiihou: boolean
+    dora: number
+  }
   fanDetails?: string
   fanCount?: number
   prevalentWind?: number
@@ -268,7 +296,7 @@ export interface BestRound {
   winnerId: number
   winnerName: string
   winHand: string
-  fanDetails: string
+  fanDetails: string | null
   fanCount: number
   scores: Record<number, number>
   dealInPlayerId: number | null

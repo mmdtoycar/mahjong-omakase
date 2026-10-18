@@ -1,24 +1,39 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
-import { SessionDetail, PlayerInfo, RoundInfo } from '../types'
+import { fetchSessionDetail, addRound, deleteRound, completeSession, listenForChanges } from '../api'
+import { SessionDetail, PlayerInfo, RoundInfo, AddRoundData } from '../types'
 import { rankByScore } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
 import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
 import { tableNameFontSize } from '../utils/fontSize'
 import { useIsMobile } from '../hooks/useIsMobile'
-import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
+import { getWindName } from '../utils/gameState'
 import { scoreClass, parseError, seatRankMedal, ladderResultText, ladderMoveText } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
 import { PhotoRecognitionModal, RecognizedHand, winHandToLabel } from '../components/PhotoRecognitionModal'
 import { Meld as GuobiaoMeld } from '../logic/guobiao/types'
-import { Meld as RiichiMeld } from '../logic/riichi/types'
+import { Meld as RiichiMeld, GameOptions } from '../logic/riichi/types'
 import { ImportedHand, toGuobiaoMelds, toRiichiMelds } from '../logic/shared/importedHand'
 import { nextWinSelection } from '../logic/shared/winSelection'
 
 const ROUND_COL_PX = 68
+
+/** The part of a win the tiles do not say, as the server wants it. */
+function handSituation(o: GameOptions | null): AddRoundData['handSituation'] {
+  return {
+    riichi: !!o?.isRiichi,
+    doubleRiichi: !!o?.isDoubleRiichi,
+    ippatsu: !!o?.isYifa,
+    chankan: !!o?.isQianggang,
+    rinshan: !!o?.isLingshang,
+    haitei: !!o?.isHaidi,
+    tenhou: !!o?.isTianhu,
+    chiihou: !!o?.isDihu,
+    dora: o?.doraCount ?? 0,
+  }
+}
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -38,6 +53,7 @@ export default function SessionPage() {
   const [winHand, setWinHand] = useState<string>('')
   const [fanDetails, setFanDetails] = useState<string>('')
   const [fanCount, setFanCount] = useState<number>(0)
+  const [handOptions, setHandOptions] = useState<GameOptions | null>(null)
   const [tsumoDetail, setTsumoDetail] = useState<{ dealer: number; nonDealer: number } | null>(null)
   const [isChomboManual, setIsChomboManual] = useState(false)
   const [calcError, setCalcError] = useState('')
@@ -76,34 +92,51 @@ export default function SessionPage() {
       hand?: string,
       details?: string,
       fCount?: number,
-      tsumo?: { dealer: number; nonDealer: number } | null
+      tsumo?: { dealer: number; nonDealer: number } | null,
+      options?: GameOptions
     ) => {
       if (s !== null) {
         setScore(String(s))
         setWinHand(hand || '')
         setFanDetails(details || '')
         setFanCount(fCount || 0)
+        setHandOptions(options ?? null)
         setTsumoDetail(tsumo || null)
       } else {
         setScore('')
         setWinHand('')
         setFanDetails('')
         setFanCount(0)
+        setHandOptions(null)
         setTsumoDetail(null)
       }
     },
     []
   )
 
+  // Apply only the newest response when several overlap.
+  const requestSeq = useRef(0)
+  const shownSeq = useRef(0)
   const load = async () => {
+    const seq = ++requestSeq.current
     const detail = await fetchSessionDetail(Number(id))
-    setSession(detail)
+    if (seq > shownSeq.current) {
+      shownSeq.current = seq
+      setSession(detail)
+    }
     setError('')
   }
 
   useEffect(() => {
     load().catch((e: unknown) => setError(parseError(e)))
   }, [id])
+
+  // Reload whenever the server reports a change.
+  const inProgress = session?.status === 'IN_PROGRESS'
+  useEffect(() => {
+    if (!inProgress) return
+    return listenForChanges(() => void load().catch(() => undefined))
+  }, [id, inProgress])
 
   if (!session)
     return (
@@ -202,15 +235,10 @@ export default function SessionPage() {
       const confirmedHand = winHand && !isChomboManual ? { ...winHandToLabel(winHand), isSelfDraw } : undefined
       const sampleIds = photoSampleIds.length > 0 ? photoSampleIds : undefined
       if (isRiichi) {
-        const scoreVal = parseInt(score)
         await addRound(session.id, {
           winnerId: Number(winnerId),
-          score: scoreVal,
-          dealerId: gameState.dealerPlayerId,
-          honba: gameState.honba,
-          kyoutaku: gameState.kyoutaku,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
-          fanCount: fanCount || scoreVal,
+          handSituation: handSituation(handOptions),
           winHand,
           fanDetails,
           riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
@@ -221,7 +249,6 @@ export default function SessionPage() {
         await addRound(session.id, {
           winnerId: Number(winnerId),
           fan: parseInt(fan),
-          dealerId: gameState.dealerPlayerId,
           bimenPlayerIds,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
           fanCount: parseInt(fan),
@@ -292,7 +319,7 @@ export default function SessionPage() {
   const ratingDelta = (playerId: number) => session.ratingDeltas?.[playerId]
   const formatDelta = (d: number) => `${d > 0 ? '+' : ''}${d.toFixed(1)}`
 
-  const gameState = deriveGameState(session)
+  const gameState = session.gameState
 
   const winnerIndex = session.players.findIndex((p) => String(p.id) === winnerId)
 
@@ -307,10 +334,7 @@ export default function SessionPage() {
   const winnerMenfeng =
     winnerIndex !== -1 ? getPlayerMenfeng(getPlayerSeat(session.players[winnerIndex], winnerIndex)) : 1
 
-  const getRoundLabel = (round: RoundInfo) => {
-    const state = deriveRoundState(session, round.roundNumber)
-    return state.displayName
-  }
+  const getRoundLabel = (round: RoundInfo) => round.label ?? ''
 
   const fixedColPx = ROUND_COL_PX + (session.status === 'IN_PROGRESS' ? 32 : 0)
   const playerColStyle = {

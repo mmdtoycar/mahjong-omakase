@@ -37,8 +37,8 @@ describe('Score Calculation', () => {
       expect(calculateScore(11, 30, false).ron).toBe(24000)
     })
 
-    it('13han yakuman non-dealer = 32000 ron', () => {
-      expect(calculateScore(13, 0, false).ron).toBe(32000)
+    it('a yakuman non-dealer = 32000 ron', () => {
+      expect(calculateScore(13, 0, false, true).ron).toBe(32000)
     })
 
     it('dealer mangan = 12000 ron', () => {
@@ -106,14 +106,13 @@ describe('Score Calculation', () => {
       expect(result!.yakuList.some((y) => y.name !== '宝牌')).toBe(true)
     })
 
-    it('26+ han non-yakuman = kazoe yakuman (single)', () => {
-      const s = calculateScore(26, 30, false, 0)
-      expect(s.ron).toBe(32000)
+    it('13+ han without a yakuman stays sanbaiman', () => {
+      expect(calculateScore(13, 30, false).ron).toBe(24000)
+      expect(calculateScore(26, 30, true).ron).toBe(36000)
     })
 
-    it('double yakuman only when yakumanCount=2', () => {
-      const s = calculateScore(26, 0, false, 2)
-      expect(s.ron).toBe(64000)
+    it('yakuman never stacks', () => {
+      expect(calculateScore(13, 0, false, true).ron).toBe(32000)
     })
   })
 })

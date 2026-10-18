@@ -314,6 +314,12 @@ public class TierService {
       processed++;
     }
     refreshSnapshots(snapshots, byId);
+    // The counters follow the sessions that exist, so a deleted game no longer counts.
+    for (Player p : all) {
+      for (GameMode mode : GameMode.values()) {
+        setGames(p, mode, gamesSoFar.getOrDefault(mode, Map.of()).getOrDefault(p.getId(), 0));
+      }
+    }
     playerRepo.saveAll(all);
     log.info("Ladder backfill complete: {} sessions processed, {} skipped", processed, skipped);
     return new BackfillResult(processed, skipped);
@@ -365,7 +371,7 @@ public class TierService {
     };
   }
 
-  private int getGames(Player p, GameMode mode) {
+  public static int getGames(Player p, GameMode mode) {
     return switch (mode) {
       case GUOBIAO -> p.getGamesGuobiao();
       case RIICHI -> p.getGamesRiichi();

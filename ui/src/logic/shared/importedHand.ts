@@ -45,9 +45,10 @@ export function toGuobiaoMelds(melds: RecognizedMeld[]): GuobiaoMeld[] {
 const RIICHI_MELD_TYPE = { shun: 'shunzi', ke: 'kezi', gang: 'gangzi' } as const
 
 export function toRiichiMelds(melds: RecognizedMeld[]): RiichiMeld[] {
-  return melds.map((m) => ({
-    type: RIICHI_MELD_TYPE[meldKind(m.type, m.tiles)],
-    tiles: m.tiles,
-    isOpen: m.isOpen,
-  }))
+  return melds.map((m) => {
+    const kind = meldKind(m.type, m.tiles)
+    // A called sequence is written with the called tile first; the lowest tile decides what it scores.
+    const tiles = kind === 'shun' ? [...m.tiles].sort((a, b) => a.compareTo(b)) : m.tiles
+    return { type: RIICHI_MELD_TYPE[kind], tiles, isOpen: m.isOpen }
+  })
 }
