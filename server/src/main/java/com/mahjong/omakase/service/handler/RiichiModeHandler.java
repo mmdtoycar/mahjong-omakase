@@ -76,15 +76,18 @@ public class RiichiModeHandler implements GameModeHandler {
               sessionPlayerIds, request.getWinnerId(), request.getDealInPlayerId(), params);
     }
 
-    applyRiichiSticks(request, sessionPlayerIds, scores);
-
-    List<Long> riichiIds = request.getRiichiPlayerIds();
-    if (riichiIds != null && !riichiIds.isEmpty()) {
-      int riichiPool = new HashSet<>(riichiIds).size() * 1000;
-      scores.merge(request.getWinnerId(), riichiPool, Integer::sum);
-    }
-
+    settleRiichiSticks(
+        request.getRiichiPlayerIds(), sessionPlayerIds, request.getWinnerId(), scores);
     return scores;
+  }
+
+  /** Each riichi player pays a stick and the winner collects them all. */
+  public static void settleRiichiSticks(
+      List<Long> riichiIds, List<Long> playerIds, Long winnerId, Map<Long, Integer> scores) {
+    addRiichiSticks(riichiIds, playerIds, scores);
+    if (riichiIds != null && !riichiIds.isEmpty()) {
+      scores.merge(winnerId, new HashSet<>(riichiIds).size() * 1000, Integer::sum);
+    }
   }
 
   private Map<Long, Integer> calculateDrawnGame(
@@ -125,7 +128,11 @@ public class RiichiModeHandler implements GameModeHandler {
 
   private void applyRiichiSticks(
       AddRoundRequest request, List<Long> sessionPlayerIds, Map<Long, Integer> scores) {
-    List<Long> riichiIds = request.getRiichiPlayerIds();
+    addRiichiSticks(request.getRiichiPlayerIds(), sessionPlayerIds, scores);
+  }
+
+  private static void addRiichiSticks(
+      List<Long> riichiIds, List<Long> sessionPlayerIds, Map<Long, Integer> scores) {
     if (riichiIds != null) {
       Set<Long> uniqueRiichiIds = new HashSet<>(riichiIds);
       for (Long id : uniqueRiichiIds) {
@@ -137,7 +144,7 @@ public class RiichiModeHandler implements GameModeHandler {
     }
   }
 
-  private Map<Long, Integer> calculateDirectScore(
+  public static Map<Long, Integer> calculateDirectScore(
       int score,
       List<Long> playerIds,
       Long winnerId,

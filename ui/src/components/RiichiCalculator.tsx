@@ -78,7 +78,8 @@ interface RiichiCalculatorProps {
     hand?: string,
     fanDetails?: string,
     fanCount?: number,
-    tsumoDetail?: { dealer: number; nonDealer: number } | null
+    tsumoDetail?: { dealer: number; nonDealer: number } | null,
+    fu?: number
   ) => void
   onError?: (msg: string | null) => void
   initialOptions?: Partial<GameOptions>
@@ -226,7 +227,7 @@ export const RiichiCalculator: React.FC<RiichiCalculatorProps> = ({
       } else {
         outputScore = huResult.score.ron
       }
-      onSelectScore(outputScore, handStr, fanDetailsStr, huResult.han, tsumoInfo)
+      onSelectScore(outputScore, handStr, fanDetailsStr, huResult.han, tsumoInfo, huResult.fu)
       onError?.(null)
     } else if (currentCount === 14) {
       onSelectScore(null)

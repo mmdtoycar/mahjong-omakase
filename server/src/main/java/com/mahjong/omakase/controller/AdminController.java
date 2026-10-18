@@ -4,7 +4,7 @@ import com.mahjong.omakase.dto.SessionSummaryResponse;
 import com.mahjong.omakase.model.Player;
 import com.mahjong.omakase.service.AdminAuthService;
 import com.mahjong.omakase.service.GameService;
-import com.mahjong.omakase.service.TierService;
+import com.mahjong.omakase.service.RecomputeService;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -18,13 +18,13 @@ import org.springframework.web.server.ResponseStatusException;
 public class AdminController {
 
   private final GameService gameService;
-  private final TierService tierService;
+  private final RecomputeService recomputeService;
   private final AdminAuthService adminAuth;
 
   public AdminController(
-      GameService gameService, TierService tierService, AdminAuthService adminAuth) {
+      GameService gameService, RecomputeService recomputeService, AdminAuthService adminAuth) {
     this.gameService = gameService;
-    this.tierService = tierService;
+    this.recomputeService = recomputeService;
     this.adminAuth = adminAuth;
   }
 
@@ -87,15 +87,28 @@ public class AdminController {
     return Map.of("message", "Session deleted");
   }
 
-  /** Replays all completed sessions into everyone's 段位战 and each game's result; safe to re-run. */
+  /**
+   * Replays all completed sessions into everyone's 段位战 and each game's result; safe to re-run.
+   * {@code recomputeRounds} first re-scores Riichi wins that were recorded against a stale table,
+   * ({@code sessionIds} limits that to those sessions), and {@code dryRun} reports what would
+   * change without keeping any of it.
+   */
   @PostMapping("/tier/backfill")
-  public Map<String, Object> backfillTier(
-      @RequestHeader(value = "Authorization", required = false) String authHeader) {
+  public RecomputeService.Report backfillTier(
+      @RequestHeader(value = "Authorization", required = false) String authHeader,
+      @RequestParam(defaultValue = "false") boolean recomputeRounds,
+      @RequestParam(defaultValue = "false") boolean dryRun,
+      @RequestParam(required = false) List<Long> sessionIds) {
     requireAdmin(authHeader);
-    TierService.BackfillResult r = tierService.backfillLadder();
-    gameService.evictAllCaches();
+    RecomputeService.Report r = recomputeService.run(recomputeRounds, dryRun, sessionIds);
+    if (!dryRun) gameService.evictAllCaches();
     log.info(
-        "Admin triggered ladder backfill: processed={} skipped={}", r.processed(), r.skipped());
-    return Map.of("processed", r.processed(), "skipped", r.skipped());
+        "Admin backfill: recomputeRounds={} dryRun={} processed={} skipped={} roundsFixed={}",
+        recomputeRounds,
+        dryRun,
+        r.processed(),
+        r.skipped(),
+        r.rounds().size());
+    return r;
   }
 }

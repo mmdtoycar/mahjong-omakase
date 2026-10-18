@@ -22,6 +22,56 @@ function getAuthHeaders(headers: Record<string, string> = {}): Record<string, st
   return headers
 }
 
+/**
+ * Calls {@code onChange} whenever any game changes, as the server announces it, and once more each
+ * time the connection comes back, so nothing that happened while it was down is missed. Returns
+ * the function that stops listening.
+ */
+export function listenForChanges(onChange: () => void): () => void {
+  let stopped = false
+  let connection: AbortController | null = null
+  let connectedBefore = false
+
+  const run = async () => {
+    while (!stopped) {
+      connection = new AbortController()
+      try {
+        const res = await fetch(`${API}/events`, { headers: getAuthHeaders(), signal: connection.signal })
+        if (!res.ok || !res.body) throw new Error(`events ${res.status}`)
+        if (connectedBefore) onChange()
+        connectedBefore = true
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const events = buffer.split('\n\n')
+          buffer = events.pop() ?? ''
+          if (events.some((e) => e.includes('event:changed'))) onChange()
+        }
+      } catch {
+        // Dropped or refused: wait a moment and connect again.
+      }
+      if (!stopped) await new Promise((resolve) => setTimeout(resolve, 3000))
+    }
+  }
+
+  // A phone that was asleep keeps a connection that is dead without saying so; start a fresh one.
+  const onVisible = () => {
+    if (!document.hidden) connection?.abort()
+  }
+  document.addEventListener('visibilitychange', onVisible)
+  void run()
+
+  return () => {
+    stopped = true
+    connection?.abort()
+    document.removeEventListener('visibilitychange', onVisible)
+  }
+}
+
 async function handleResponse<T = void>(res: Response): Promise<T> {
   if (!res.ok) {
     const raw = await res.text().catch(() => '')

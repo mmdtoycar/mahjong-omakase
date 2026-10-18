@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchSessionDetail, addRound, deleteRound, completeSession } from '../api'
+import { fetchSessionDetail, addRound, deleteRound, completeSession, listenForChanges } from '../api'
 import { SessionDetail, PlayerInfo, RoundInfo } from '../types'
 import { rankByScore } from '../logic/ranking'
 import { GuobiaoCalculator } from '../components/GuobiaoCalculator'
@@ -8,7 +8,7 @@ import { RiichiCalculator } from '../components/RiichiCalculator'
 import { MahjongHand } from '../components/MahjongHand'
 import { tableNameFontSize } from '../utils/fontSize'
 import { useIsMobile } from '../hooks/useIsMobile'
-import { deriveGameState, deriveRoundState, getWindName } from '../utils/gameState'
+import { getWindName } from '../utils/gameState'
 import { scoreClass, parseError, seatRankMedal, ladderResultText, ladderMoveText } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
@@ -38,6 +38,7 @@ export default function SessionPage() {
   const [winHand, setWinHand] = useState<string>('')
   const [fanDetails, setFanDetails] = useState<string>('')
   const [fanCount, setFanCount] = useState<number>(0)
+  const [fu, setFu] = useState<number>(0)
   const [tsumoDetail, setTsumoDetail] = useState<{ dealer: number; nonDealer: number } | null>(null)
   const [isChomboManual, setIsChomboManual] = useState(false)
   const [calcError, setCalcError] = useState('')
@@ -76,34 +77,51 @@ export default function SessionPage() {
       hand?: string,
       details?: string,
       fCount?: number,
-      tsumo?: { dealer: number; nonDealer: number } | null
+      tsumo?: { dealer: number; nonDealer: number } | null,
+      handFu?: number
     ) => {
       if (s !== null) {
         setScore(String(s))
         setWinHand(hand || '')
         setFanDetails(details || '')
         setFanCount(fCount || 0)
+        setFu(handFu || 0)
         setTsumoDetail(tsumo || null)
       } else {
         setScore('')
         setWinHand('')
         setFanDetails('')
         setFanCount(0)
+        setFu(0)
         setTsumoDetail(null)
       }
     },
     []
   )
 
+  // 轮询和手动刷新可能乱序返回, 只采用比已显示的更新的那一次.
+  const requestSeq = useRef(0)
+  const shownSeq = useRef(0)
   const load = async () => {
+    const seq = ++requestSeq.current
     const detail = await fetchSessionDetail(Number(id))
-    setSession(detail)
+    if (seq > shownSeq.current) {
+      shownSeq.current = seq
+      setSession(detail)
+    }
     setError('')
   }
 
   useEffect(() => {
     load().catch((e: unknown) => setError(parseError(e)))
   }, [id])
+
+  // 任何设备录入完一局, 服务器会通知到这里, 这样本场和庄家始终是最新的.
+  const inProgress = session?.status === 'IN_PROGRESS'
+  useEffect(() => {
+    if (!inProgress) return
+    return listenForChanges(() => void load().catch(() => undefined))
+  }, [id, inProgress])
 
   if (!session)
     return (
@@ -202,15 +220,16 @@ export default function SessionPage() {
       const confirmedHand = winHand && !isChomboManual ? { ...winHandToLabel(winHand), isSelfDraw } : undefined
       const sampleIds = photoSampleIds.length > 0 ? photoSampleIds : undefined
       if (isRiichi) {
-        const scoreVal = parseInt(score)
+        // 番和符发给服务器, 由它按真实的庄家和本场算点数.
         await addRound(session.id, {
           winnerId: Number(winnerId),
-          score: scoreVal,
+          fan: fanCount,
+          fu: Math.max(20, fu),
           dealerId: gameState.dealerPlayerId,
           honba: gameState.honba,
           kyoutaku: gameState.kyoutaku,
           dealInPlayerId: isSelfDraw ? null : Number(dealInPlayerId),
-          fanCount: fanCount || scoreVal,
+          fanCount,
           winHand,
           fanDetails,
           riichiPlayerIds: riichiPlayerIds.length > 0 ? riichiPlayerIds : undefined,
@@ -292,7 +311,7 @@ export default function SessionPage() {
   const ratingDelta = (playerId: number) => session.ratingDeltas?.[playerId]
   const formatDelta = (d: number) => `${d > 0 ? '+' : ''}${d.toFixed(1)}`
 
-  const gameState = deriveGameState(session)
+  const gameState = session.gameState
 
   const winnerIndex = session.players.findIndex((p) => String(p.id) === winnerId)
 
@@ -307,10 +326,7 @@ export default function SessionPage() {
   const winnerMenfeng =
     winnerIndex !== -1 ? getPlayerMenfeng(getPlayerSeat(session.players[winnerIndex], winnerIndex)) : 1
 
-  const getRoundLabel = (round: RoundInfo) => {
-    const state = deriveRoundState(session, round.roundNumber)
-    return state.displayName
-  }
+  const getRoundLabel = (round: RoundInfo) => round.label ?? ''
 
   const fixedColPx = ROUND_COL_PX + (session.status === 'IN_PROGRESS' ? 32 : 0)
   const playerColStyle = {

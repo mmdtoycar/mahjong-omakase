@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchHomeSummary } from '../api'
+import { fetchHomeSummary, listenForChanges } from '../api'
 import { GAME_MODES, SessionDetail, PlayerStats, BestRound, getCurrentSeason } from '../types'
 import { GameCard } from '../components/GameCard'
 import { RankBadge, TierScore } from '../components/RankBadge'
-import { deriveGameState, getWindName } from '../utils/gameState'
+import { getWindName } from '../utils/gameState'
 import { rankByScore } from '../logic/ranking'
 import { nameFontSize } from '../utils/fontSize'
 import { rankMedal } from '../utils/format'
@@ -38,21 +38,13 @@ export default function HomePage() {
 
     loadSummary(false)
 
-    // 轮询静默刷新(仅前台), 让"正在进行的对局"随每局结束自动更新.
-    const timer = setInterval(() => {
-      if (!document.hidden) void loadSummary(true)
-    }, 5000)
-    // 切回该窗口/标签时立即刷新一次, 不用等下个轮询周期.
-    const onVisible = () => {
-      if (!document.hidden) void loadSummary(true)
-    }
-    document.addEventListener('visibilitychange', onVisible)
+    // 服务器一通知有对局变化就静默刷新, 让"正在进行的对局"随每局结束自动更新.
+    const stopListening = listenForChanges(() => void loadSummary(true))
 
     return () => {
       isActive = false
       controller.abort()
-      clearInterval(timer)
-      document.removeEventListener('visibilitychange', onVisible)
+      stopListening()
     }
   }, [currentSeason.year, currentSeason.month])
 
@@ -82,7 +74,7 @@ export default function HomePage() {
         ) : (
           <div className="active-games-grid">
             {activeSessions.map((s) => {
-              const state = deriveGameState(s)
+              const state = s.gameState
               const ranked = rankByScore(s.players, (p) => s.totalScores[p.id] || 0)
               return (
                 <GameCard

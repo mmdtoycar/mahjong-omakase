@@ -42,6 +42,7 @@ public class GameService {
   private final PlayerMonthlySkillRepository monthlySkillRepo;
   private final CacheManager cacheManager;
   private final RecognitionSampleStore sampleStore;
+  private final SessionEvents events;
   private final Map<GameMode, GameModeHandler> handlers;
 
   public GameService(
@@ -55,6 +56,7 @@ public class GameService {
       PlayerMonthlySkillRepository monthlySkillRepo,
       CacheManager cacheManager,
       RecognitionSampleStore sampleStore,
+      SessionEvents events,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
@@ -66,6 +68,7 @@ public class GameService {
     this.monthlySkillRepo = monthlySkillRepo;
     this.cacheManager = cacheManager;
     this.sampleStore = sampleStore;
+    this.events = events;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
@@ -74,13 +77,14 @@ public class GameService {
   /**
    * Wipes every derived-state cache. Called from every write path that could change session list,
    * player stats, home summary, or active seasons. Cheaper than fine-grained per-cache eviction —
-   * caches refill on the next read.
+   * caches refill on the next read. Open pages are told at the same time, so they reload.
    */
   public void evictAllCaches() {
     for (String name : cacheManager.getCacheNames()) {
       var cache = cacheManager.getCache(name);
       if (cache != null) cache.clear();
     }
+    events.changed();
   }
 
   @EventListener(ApplicationReadyEvent.class)
@@ -378,6 +382,17 @@ public class GameService {
                 Collectors.toMap(
                     gsp -> gsp.getPlayer().getId(), gsp -> gsp.getPlayer().getUserName()));
 
+    List<GameStateDeriver.State> states = GameStateDeriver.deriveAll(session);
+    Map<Integer, String> labels = new HashMap<>();
+    List<Round> ordered =
+        session.getRounds().stream()
+            .sorted(Comparator.comparingInt(Round::getRoundNumber))
+            .toList();
+    for (int i = 0; i < ordered.size(); i++) {
+      labels.put(ordered.get(i).getRoundNumber(), states.get(i).displayName());
+    }
+    resp.setGameState(states.get(states.size() - 1));
+
     resp.setRounds(
         session.getRounds().stream()
             .map(
@@ -414,7 +429,8 @@ public class GameService {
                       dealInName,
                       round.getPrevalentWind(),
                       riichiIds,
-                      tenpaiIds);
+                      tenpaiIds,
+                      labels.get(round.getRoundNumber()));
                 })
             .collect(Collectors.toList()));
 
@@ -477,6 +493,8 @@ public class GameService {
       }
     }
 
+    applyServerState(session, request);
+
     GameModeHandler handler = getHandler(session.getGameMode());
     Map<Long, Integer> computedScores = handler.calculateRoundScores(request, sessionPlayerIds);
 
@@ -506,6 +524,37 @@ public class GameService {
           request.getPhotoSampleIds(), sessionId, nextRoundNumber, request.getConfirmedHand());
     }
     evictAllCaches();
+  }
+
+  /**
+   * Dealer, 本场 and 供托 come from the rounds already stored, never from the page. A page that was
+   * behind is still served: it is scored against the real table, and only noted in the log.
+   */
+  void applyServerState(GameSession session, AddRoundRequest request) {
+    GameMode mode = session.getGameMode();
+    if (mode != GameMode.RIICHI && mode != GameMode.DONGBEI) return;
+
+    GameStateDeriver.State state = GameStateDeriver.derive(session);
+    boolean behind =
+        (request.getDealerId() != null && request.getDealerId() != state.dealerPlayerId())
+            || (mode == GameMode.RIICHI
+                && ((request.getHonba() != null && request.getHonba() != state.honba())
+                    || (request.getKyoutaku() != null
+                        && request.getKyoutaku() != state.kyoutaku())));
+    if (behind) {
+      log.info(
+          "Page was behind for session id={}: sent dealer={} honba={} kyoutaku={}, table is {}",
+          session.getId(),
+          request.getDealerId(),
+          request.getHonba(),
+          request.getKyoutaku(),
+          state);
+    }
+    request.setDealerId(state.dealerPlayerId());
+    if (mode == GameMode.RIICHI) {
+      request.setHonba(state.honba());
+      request.setKyoutaku(state.kyoutaku());
+    }
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -564,8 +613,11 @@ public class GameService {
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
     GameMode mode = session.getGameMode();
     LocalDateTime sessionTime = session.getCreatedAt();
+    boolean wasRated = session.getStatus() == SessionStatus.COMPLETED;
     sessionRepo.delete(session);
     log.info("Deleted session id={}", sessionId);
+    // A finished game moved everyone's ladder and game count; replaying takes that back.
+    if (wasRated) tierService.backfillLadder();
     rederiveDiscoveriesForSeason(mode, sessionTime);
     evictAllCaches();
   }
