@@ -33,6 +33,7 @@ export function listenForChanges(onChange: () => void): () => void {
       connection = new AbortController()
       try {
         const res = await fetch(`${API}/events`, { headers: getAuthHeaders(), signal: connection.signal })
+        if (res.status === 401 || res.status === 403) return
         if (!res.ok || !res.body) throw new Error(`events ${res.status}`)
         if (connectedBefore) onChange()
         connectedBefore = true

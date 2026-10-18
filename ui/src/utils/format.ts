@@ -107,7 +107,11 @@ export function tierScoreText(row: {
   return !row.tier || row.tier === 'UNRANKED' ? `${val}(?)` : val
 }
 
-export function fanLabel(mode: GameModeKey, fanCount: number, fanDetails: string): string {
-  // Only a yakuman yaku is worth 13 han on its own.
-  return mode === 'RIICHI' && fanDetails.includes('(13)') ? '役满' : `${fanCount} 番`
+// Only a yakuman yaku is worth 13 han on its own; 13 dora is not one.
+export function isYakuman(mode: GameModeKey, fanDetails: string | null): boolean {
+  return mode === 'RIICHI' && !!fanDetails && fanDetails.includes('(13)') && !fanDetails.includes('宝牌')
+}
+
+export function fanLabel(mode: GameModeKey, fanCount: number, fanDetails: string | null): string {
+  return isYakuman(mode, fanDetails) ? '役满' : `${fanCount} 番`
 }

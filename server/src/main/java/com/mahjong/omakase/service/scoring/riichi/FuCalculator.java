@@ -36,7 +36,7 @@ final class FuCalculator {
     if (concealed && !options.tsumo()) fu += 10;
     if (options.tsumo()) fu += 2;
     for (Meld m : groups) {
-      boolean ronTarget = !options.tsumo() && m.first().equals(winTile);
+      boolean ronTarget = !options.tsumo() && m.completedByWin();
       fu += groupFu(m, ronTarget);
     }
     fu += pairFu(pair, options);

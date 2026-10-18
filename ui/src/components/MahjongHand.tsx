@@ -2,7 +2,7 @@ import React from 'react'
 
 interface Props {
   hand?: string
-  details?: string
+  details?: string | null
 }
 
 const TILE_MAP: Record<string, string> = {
@@ -143,7 +143,7 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
               return (
                 <span key={idx} className="pattern-tag">
                   {name}
-                  {count ? `x${count}` : ''} {totalScore === '13' ? '役满' : `+${totalScore}`}
+                  {count ? `x${count}` : ''} {totalScore === '13' && name !== '宝牌' ? '役满' : `+${totalScore}`}
                 </span>
               )
             }

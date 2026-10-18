@@ -39,7 +39,7 @@ export function calculateFu(
 
   // Meld fu
   for (const m of groups) {
-    const isRonTarget = !options.isTsumo && m.tiles[0].equals(winTile)
+    const isRonTarget = !options.isTsumo && !!m.completedByWin
     const fu = getMeldFu(m, isRonTarget)
     if (fu > 0) {
       baseFu += fu

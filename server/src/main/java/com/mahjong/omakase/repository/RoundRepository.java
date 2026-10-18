@@ -11,8 +11,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface RoundRepository extends JpaRepository<Round, Long> {
-  /** A yakuman outranks any han count; its yaku is the only one recorded as (13). */
-  String RANK = "(CASE WHEN r.fanDetails LIKE '%(13)%' THEN r.fanCount + 1000 ELSE r.fanCount END)";
+  /** A yakuman outranks any han count; it is the only hand with a 13-han yaku other than 宝牌. */
+  String RANK =
+      "(CASE WHEN r.fanDetails LIKE '%(13)%' AND r.fanDetails NOT LIKE '%宝牌%'"
+          + " THEN r.fanCount + 1000 ELSE r.fanCount END)";
 
   int countByGameSessionId(Long gameSessionId);
 

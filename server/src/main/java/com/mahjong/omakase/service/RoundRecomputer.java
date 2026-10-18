@@ -51,6 +51,7 @@ public class RoundRecomputer {
   private void recompute(GameSession session, List<Change> changed, List<Unresolved> unresolved) {
     int players = session.getPlayers().size();
     if (players != 3 && players != 4) return;
+    if (session.getPlayers().stream().anyMatch(gsp -> gsp.getPlayer() == null)) return;
 
     List<State> states = GameStateDeriver.deriveAll(session);
     List<Round> rounds =

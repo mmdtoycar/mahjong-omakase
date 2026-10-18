@@ -7,7 +7,7 @@ import { RankBadge, TierScore } from '../components/RankBadge'
 import { getWindName } from '../utils/gameState'
 import { rankByScore } from '../logic/ranking'
 import { nameFontSize } from '../utils/fontSize'
-import { fanLabel, rankMedal } from '../utils/format'
+import { fanLabel, isYakuman, rankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { useIsMobile } from '../hooks/useIsMobile'
 
@@ -161,7 +161,9 @@ export default function HomePage() {
                       <div className="best-hand-value">
                         {fanLabel(mode.key, data.best.fanCount, data.best.fanDetails)} · {data.best.winnerName}
                         <div className="best-hand-summary-detail">
-                          {data.best.fanDetails.replace(/\(13\)/g, ' 役满')}
+                          {isYakuman(mode.key, data.best.fanDetails)
+                            ? data.best.fanDetails?.replace(/\(13\)/g, ' 役满')
+                            : data.best.fanDetails}
                         </div>
                       </div>
                     </div>

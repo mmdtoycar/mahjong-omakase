@@ -296,7 +296,7 @@ export interface BestRound {
   winnerId: number
   winnerName: string
   winHand: string
-  fanDetails: string
+  fanDetails: string | null
   fanCount: number
   scores: Record<number, number>
   dealInPlayerId: number | null
