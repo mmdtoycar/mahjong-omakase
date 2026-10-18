@@ -18,7 +18,10 @@ public final class GameStateDeriver {
 
   private GameStateDeriver() {}
 
-  /** prevalentWind is 1=东 .. 4=北; kyoutaku is the carried riichi sticks, in points. */
+  /**
+   * prevalentWind is 1=东 .. 4=北; kyoutaku is the carried riichi sticks, in points. Exact is false
+   * once an earlier draw left no way to tell whether the dealer was tenpai.
+   */
   public record State(
       int dealerSeat,
       long dealerPlayerId,
@@ -27,7 +30,8 @@ public final class GameStateDeriver {
       int honba,
       int kyoutaku,
       String displayName,
-      int playerCount) {}
+      int playerCount,
+      boolean exact) {}
 
   /** Tenpai and riichi are null when unrecorded. */
   public record RoundFacts(
@@ -88,7 +92,8 @@ public final class GameStateDeriver {
                 0,
                 0,
                 "第" + (i + 1) + "/" + n + "局",
-                n));
+                n,
+                true));
       }
       return states;
     }
@@ -98,6 +103,7 @@ public final class GameStateDeriver {
     int hand = 1;
     int honba = 0;
     int kyoutaku = 0;
+    boolean exact = true;
     for (int i = 0; i <= rounds.size(); i++) {
       Seat dealer = bySeat.get(seatIndex);
       String windHand = WIND_NAMES[(wind - 1) % 4] + hand;
@@ -110,13 +116,15 @@ public final class GameStateDeriver {
               honba,
               kyoutaku,
               honba > 0 ? windHand + "(" + honba + ")" : windHand,
-              n));
+              n,
+              exact));
       if (i == rounds.size()) break;
 
       RoundFacts round = rounds.get(i);
       if (round.riichi() != null) kyoutaku += round.riichi().size() * 1000;
       if (round.winnerId() != null) kyoutaku = 0;
 
+      if (mode == GameMode.RIICHI && isGuess(round, dealer.playerId())) exact = false;
       boolean stays = dealerStays(mode, round, dealer.playerId());
       if (!stays) {
         seatIndex = (seatIndex + 1) % n;
@@ -145,6 +153,13 @@ public final class GameStateDeriver {
     if (round.tenpai() != null) return round.tenpai().contains(dealerId);
     // Older rounds have no tenpai list: read the dealer's points.
     return round.scores().getOrDefault(dealerId, 0) >= 0;
+  }
+
+  /** No tenpai list, and the dealer's points cancel out: all tenpai and all noten look the same. */
+  private static boolean isGuess(RoundFacts round, long dealerId) {
+    if (round.winnerId() != null || round.tenpai() != null) return false;
+    boolean riichi = round.riichi() != null && round.riichi().contains(dealerId);
+    return round.scores().getOrDefault(dealerId, 0) + (riichi ? 1000 : 0) == 0;
   }
 
   private static List<Long> parseIds(String raw) {

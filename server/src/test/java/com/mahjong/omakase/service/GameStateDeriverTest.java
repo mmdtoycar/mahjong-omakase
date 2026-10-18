@@ -68,6 +68,13 @@ class GameStateDeriverTest {
     RoundFacts dealerNoten =
         new RoundFacts(null, null, null, Map.of(1L, -1500, 2L, 1500, 3L, 1500, 4L, -1500));
     assertThat(after(dealerNoten).displayName()).isEqualTo("东2(1)");
+    assertThat(after(dealerNoten).exact()).isTrue();
+  }
+
+  @Test
+  void aDrawWithoutATenpaiListAndZeroPointsForTheDealerCannotBeTold() {
+    RoundFacts allZero = new RoundFacts(null, null, null, Map.of(1L, 0, 2L, 0, 3L, 0, 4L, 0));
+    assertThat(after(allZero).exact()).isFalse();
   }
 
   @Test

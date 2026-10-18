@@ -149,6 +149,9 @@ public class RoundRecomputer {
       else stale.add(g);
     }
     if (truth != null) return new Outcome(null, null, null);
+    if (!states.get(index).exact()) {
+      return new Outcome(null, null, "前面有流局没存听牌名单, 且庄家净得失为 0, 无法确定庄家");
+    }
     if (stale.isEmpty()) {
       return new Outcome(null, null, "分数不能用这一场里任何一个状态解释, 需要人工核对");
     }
