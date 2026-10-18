@@ -143,7 +143,7 @@ export const MahjongHand: React.FC<Props> = ({ hand, details }) => {
               return (
                 <span key={idx} className="pattern-tag">
                   {name}
-                  {count ? `x${count}` : ''} +{totalScore}
+                  {count ? `x${count}` : ''} {totalScore === '13' ? '役满' : `+${totalScore}`}
                 </span>
               )
             }
