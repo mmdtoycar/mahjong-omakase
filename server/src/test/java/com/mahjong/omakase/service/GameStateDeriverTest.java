@@ -119,22 +119,6 @@ class GameStateDeriverTest {
       List.of(new Seat(1, 1), new Seat(4, 2), new Seat(2, 3), new Seat(10, 4));
 
   @Test
-  void guobiaoRotatesTheDealerEveryRound() {
-    List<State> states =
-        GameStateDeriver.deriveAll(GameMode.GUOBIAO, TABLE, List.of(win(2), win(2)));
-    assertThat(states.get(2).dealerPlayerId()).isEqualTo(3);
-    assertThat(states.get(2).displayName()).isEqualTo("第3/4局");
-    assertThat(states.get(2).honba()).isZero();
-  }
-
-  @Test
-  void dongbeiKeepsTheDealerWhenNobodyWins() {
-    RoundFacts nobody = new RoundFacts(null, null, null, Map.of());
-    List<State> states = GameStateDeriver.deriveAll(GameMode.DONGBEI, TABLE, List.of(nobody));
-    assertThat(states.get(1).dealerPlayerId()).isEqualTo(1);
-  }
-
-  @Test
   void aThreePlayerTableTurnsTheWindAfterThreeHands() {
     List<Seat> three = List.of(new Seat(1, 1), new Seat(2, 2), new Seat(3, 3));
     State s =

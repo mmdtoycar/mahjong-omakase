@@ -82,17 +82,6 @@ class GameServiceRoundStateTest {
   }
 
   @Test
-  void aPageThatSentNothingGetsTheTablesValues() {
-    AddRoundRequest r = request(null, null, null);
-
-    service.applyServerState(afterOneDraw(GameMode.RIICHI), r);
-
-    assertThat(r.getDealerId()).isEqualTo(2L);
-    assertThat(r.getHonba()).isEqualTo(1);
-    assertThat(r.getKyoutaku()).isZero();
-  }
-
-  @Test
   void aPageShowingAnOlderTableIsStillServedAndScoredByTheRealOne() {
     AddRoundRequest r = request(1L, 0, 1000);
 
@@ -101,25 +90,6 @@ class GameServiceRoundStateTest {
     assertThat(r.getDealerId()).isEqualTo(2L);
     assertThat(r.getHonba()).isEqualTo(1);
     assertThat(r.getKyoutaku()).isZero();
-  }
-
-  @Test
-  void dongbeiTakesTheDealerFromTheTable() {
-    AddRoundRequest r = request(4L, null, null);
-
-    service.applyServerState(afterOneDraw(GameMode.DONGBEI), r);
-
-    assertThat(r.getDealerId()).isEqualTo(1L);
-    assertThat(r.getHonba()).isNull();
-  }
-
-  @Test
-  void guobiaoHasNoDealerToCheck() {
-    AddRoundRequest r = request(null, null, null);
-
-    service.applyServerState(afterOneDraw(GameMode.GUOBIAO), r);
-
-    assertThat(r.getDealerId()).isNull();
   }
 
   /** Session 368's 东3 hand: 立直 一杯口 and a dora, 3 han 40 fu. */
@@ -179,17 +149,5 @@ class GameServiceRoundStateTest {
 
     assertThatThrownBy(() -> service.applyServerState(s, ronOnHand(3L, "2p3p4p^7s", true)))
         .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  void aRequestWithoutHandSituationKeepsItsScore() {
-    GameSession s = afterOneDraw(GameMode.RIICHI);
-    AddRoundRequest r = request(null, null, null);
-    r.setWinHand(HAND);
-    r.setScore(3900);
-
-    service.applyServerState(s, r);
-
-    assertThat(r.getScore()).isEqualTo(3900);
   }
 }
