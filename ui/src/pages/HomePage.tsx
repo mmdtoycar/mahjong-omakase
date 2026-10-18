@@ -160,7 +160,9 @@ export default function HomePage() {
                       <span className="best-hand-label">🏆 本月最高和牌</span>
                       <div className="best-hand-value">
                         {fanLabel(mode.key, data.best.fanCount, data.best.fanDetails)} · {data.best.winnerName}
-                        <div className="best-hand-summary-detail">{data.best.fanDetails}</div>
+                        <div className="best-hand-summary-detail">
+                          {data.best.fanDetails.replace(/\(13\)/g, ' 役满')}
+                        </div>
                       </div>
                     </div>
                   )}
