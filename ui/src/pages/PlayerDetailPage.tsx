@@ -18,8 +18,14 @@ export default function PlayerDetailPage() {
     setPlayer(null)
     setTier(null)
     setError('')
+    const playerId = Number(id)
+    if (!Number.isInteger(playerId) || playerId <= 0) {
+      setError('玩家不存在')
+      setLoading(false)
+      return
+    }
     setLoading(true)
-    Promise.all([fetchPlayerDetail(Number(id)), fetchPlayerTier(Number(id))])
+    Promise.all([fetchPlayerDetail(playerId), fetchPlayerTier(playerId)])
       .then(([p, t]) => {
         setPlayer(p)
         setTier(t)

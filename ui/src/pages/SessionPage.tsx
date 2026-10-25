@@ -118,8 +118,10 @@ export default function SessionPage() {
   const requestSeq = useRef(0)
   const shownSeq = useRef(0)
   const load = async () => {
+    const sessionId = Number(id)
+    if (!Number.isInteger(sessionId) || sessionId <= 0) throw new Error('对局不存在')
     const seq = ++requestSeq.current
-    const detail = await fetchSessionDetail(Number(id))
+    const detail = await fetchSessionDetail(sessionId)
     if (seq > shownSeq.current) {
       shownSeq.current = seq
       setSession(detail)

@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -75,6 +76,14 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", message));
   }
 
+  /** A path or query value of the wrong type, e.g. a page that sent "NaN" as an id. */
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<Map<String, String>> handleTypeMismatch(
+      MethodArgumentTypeMismatchException e, HttpServletRequest request) {
+    log.warn("Bad value for '{}' on {}", e.getName(), request.getRequestURI());
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "请求参数格式不对"));
+  }
+
   @ExceptionHandler({ClientAbortException.class, AsyncRequestNotUsableException.class})
   public void handleClientDisconnect(Exception e) {
     log.debug("Client disconnected before the response was written: {}", e.getMessage());
@@ -95,8 +104,9 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(Exception.class)
-  public ResponseEntity<Map<String, String>> handleGeneral(Exception e) {
-    log.error("Unexpected error", e);
+  public ResponseEntity<Map<String, String>> handleGeneral(
+      Exception e, HttpServletRequest request) {
+    log.error("Unexpected error on {} {}", request.getMethod(), request.getRequestURI(), e);
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(Map.of("message", "An unexpected error occurred"));
   }
