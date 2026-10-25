@@ -10,7 +10,7 @@ type Tab = 'games' | 'players'
 const currentSeason = getCurrentSeason()
 
 import { statFontSize, tableNameFontSize } from '../utils/fontSize'
-import { parseError, rankMedal } from '../utils/format'
+import { fanLabel, parseError, rankMedal } from '../utils/format'
 import { MSG } from '../constants'
 import { useActiveSeasons } from '../hooks/useActiveSeasons'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -380,7 +380,9 @@ export default function StatsPage() {
                 {monthlyBestRounds.map((round) => (
                   <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">
-                      <span className="best-hand-fan-count">{round.fanCount} 番</span>
+                      <span className="best-hand-fan-count">
+                        {fanLabel(gameMode, round.fanCount, round.fanDetails)}
+                      </span>
                       <span className="best-hand-players">
                         <span className="winner-label">赢家:</span> {round.winnerName}
                         <span className="ml-2">({round.dealInPlayerId != null ? '点炮' : '自摸'})</span>
@@ -409,7 +411,9 @@ export default function StatsPage() {
                 {bestRounds.map((round) => (
                   <div key={`${round.sessionId}-${round.roundNumber}`} className="best-hand-item">
                     <div className="best-hand-meta">
-                      <span className="best-hand-fan-count">{round.fanCount} 番</span>
+                      <span className="best-hand-fan-count">
+                        {fanLabel(gameMode, round.fanCount, round.fanDetails)}
+                      </span>
                       <span className="best-hand-players">
                         <span className="winner-label">赢家:</span> {round.winnerName}
                         <span className="ml-2">({round.dealInPlayerId != null ? '点炮' : '自摸'})</span>

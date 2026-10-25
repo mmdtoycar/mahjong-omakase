@@ -5,6 +5,10 @@ import com.mahjong.omakase.model.*;
 import com.mahjong.omakase.repository.*;
 import com.mahjong.omakase.service.handler.GameModeHandler;
 import com.mahjong.omakase.service.scoring.RankCalculator;
+import com.mahjong.omakase.service.scoring.riichi.GameOptions;
+import com.mahjong.omakase.service.scoring.riichi.HandParser;
+import com.mahjong.omakase.service.scoring.riichi.HandResult;
+import com.mahjong.omakase.service.scoring.riichi.RiichiHandCalculator;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -42,6 +46,7 @@ public class GameService {
   private final PlayerMonthlySkillRepository monthlySkillRepo;
   private final CacheManager cacheManager;
   private final RecognitionSampleStore sampleStore;
+  private final SessionEvents events;
   private final Map<GameMode, GameModeHandler> handlers;
 
   public GameService(
@@ -55,6 +60,7 @@ public class GameService {
       PlayerMonthlySkillRepository monthlySkillRepo,
       CacheManager cacheManager,
       RecognitionSampleStore sampleStore,
+      SessionEvents events,
       List<GameModeHandler> handlerList) {
     this.playerRepo = playerRepo;
     this.sessionRepo = sessionRepo;
@@ -66,6 +72,7 @@ public class GameService {
     this.monthlySkillRepo = monthlySkillRepo;
     this.cacheManager = cacheManager;
     this.sampleStore = sampleStore;
+    this.events = events;
     this.handlers =
         handlerList.stream()
             .collect(Collectors.toMap(GameModeHandler::getGameMode, Function.identity()));
@@ -74,13 +81,14 @@ public class GameService {
   /**
    * Wipes every derived-state cache. Called from every write path that could change session list,
    * player stats, home summary, or active seasons. Cheaper than fine-grained per-cache eviction —
-   * caches refill on the next read.
+   * caches refill on the next read. Also tells open pages to reload.
    */
   public void evictAllCaches() {
     for (String name : cacheManager.getCacheNames()) {
       var cache = cacheManager.getCache(name);
       if (cache != null) cache.clear();
     }
+    events.changed();
   }
 
   @EventListener(ApplicationReadyEvent.class)
@@ -378,6 +386,17 @@ public class GameService {
                 Collectors.toMap(
                     gsp -> gsp.getPlayer().getId(), gsp -> gsp.getPlayer().getUserName()));
 
+    List<GameStateDeriver.State> states = GameStateDeriver.deriveAll(session);
+    Map<Integer, String> labels = new HashMap<>();
+    List<Round> ordered =
+        session.getRounds().stream()
+            .sorted(Comparator.comparingInt(Round::getRoundNumber))
+            .toList();
+    for (int i = 0; i < ordered.size(); i++) {
+      labels.put(ordered.get(i).getRoundNumber(), states.get(i).displayName());
+    }
+    resp.setGameState(states.get(states.size() - 1));
+
     resp.setRounds(
         session.getRounds().stream()
             .map(
@@ -414,7 +433,8 @@ public class GameService {
                       dealInName,
                       round.getPrevalentWind(),
                       riichiIds,
-                      tenpaiIds);
+                      tenpaiIds,
+                      labels.get(round.getRoundNumber()));
                 })
             .collect(Collectors.toList()));
 
@@ -477,6 +497,8 @@ public class GameService {
       }
     }
 
+    applyServerState(session, request);
+
     GameModeHandler handler = getHandler(session.getGameMode());
     Map<Long, Integer> computedScores = handler.calculateRoundScores(request, sessionPlayerIds);
 
@@ -506,6 +528,70 @@ public class GameService {
           request.getPhotoSampleIds(), sessionId, nextRoundNumber, request.getConfirmedHand());
     }
     evictAllCaches();
+  }
+
+  /** Takes dealer, 本场 and 供托 from the stored rounds; a Riichi hand sent as tiles is scored here. */
+  void applyServerState(GameSession session, AddRoundRequest request) {
+    GameMode mode = session.getGameMode();
+    if (mode != GameMode.RIICHI && mode != GameMode.DONGBEI) return;
+
+    GameStateDeriver.State state = GameStateDeriver.derive(session);
+    request.setDealerId(state.dealerPlayerId());
+    if (mode == GameMode.RIICHI) {
+      request.setHonba(state.honba());
+      request.setKyoutaku(state.kyoutaku());
+      scoreHand(session, request, state);
+    }
+  }
+
+  private void scoreHand(
+      GameSession session, AddRoundRequest request, GameStateDeriver.State state) {
+    String text = request.getWinHand();
+    if (request.isDrawnGame()
+        || request.getHandSituation() == null
+        || text == null
+        || text.isBlank()) {
+      return;
+    }
+    HandParser.Hand hand = HandParser.parse(text);
+    int tiles = hand.concealed().size() + 1 + 3 * hand.melds().size();
+    if (tiles != 14) throw new IllegalArgumentException("手牌张数不对");
+
+    int players = session.getPlayers().size();
+    int seat = 0;
+    int index = 0;
+    for (GameSessionPlayer gsp : session.getPlayers()) {
+      index++;
+      if (gsp.getPlayer() != null && gsp.getPlayer().getId().equals(request.getWinnerId())) {
+        seat = gsp.getSeat() != null ? gsp.getSeat() : index;
+      }
+    }
+    int seatWind = (seat - state.dealerSeat() + players) % players + 1;
+
+    AddRoundRequest.HandSituation s = request.getHandSituation();
+    GameOptions options =
+        new GameOptions(
+            request.isSelfDraw(),
+            state.prevalentWind(),
+            seatWind,
+            s.isRiichi(),
+            s.isDoubleRiichi(),
+            s.isIppatsu(),
+            s.isChankan(),
+            s.isRinshan(),
+            s.isHaitei(),
+            s.isTenhou(),
+            s.isChiihou(),
+            s.getDora());
+    HandResult result =
+        RiichiHandCalculator.calculate(hand.concealed(), hand.melds(), hand.winTile(), options)
+            .orElseThrow(() -> new IllegalArgumentException("和牌不成立 — 无役"));
+
+    request.setScore(result.total(seatWind == 1, request.isSelfDraw(), players));
+    request.setFan(null);
+    request.setFu(null);
+    request.setFanCount(result.han());
+    request.setFanDetails(result.yakuText());
   }
 
   public void deleteRound(Long sessionId, int roundNumber) {
@@ -564,8 +650,11 @@ public class GameService {
             .orElseThrow(() -> new NoSuchElementException("Session not found"));
     GameMode mode = session.getGameMode();
     LocalDateTime sessionTime = session.getCreatedAt();
+    boolean wasRated = session.getStatus() == SessionStatus.COMPLETED;
     sessionRepo.delete(session);
     log.info("Deleted session id={}", sessionId);
+    // Replay to undo the deleted game's ladder and game count.
+    if (wasRated) tierService.backfillLadder();
     rederiveDiscoveriesForSeason(mode, sessionTime);
     evictAllCaches();
   }

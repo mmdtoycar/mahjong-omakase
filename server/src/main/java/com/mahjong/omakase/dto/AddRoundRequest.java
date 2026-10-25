@@ -42,6 +42,9 @@ public class AddRoundRequest {
 
   private String winHand;
 
+  /** How a Riichi hand was won beyond its tiles; with winHand the server scores it. */
+  private HandSituation handSituation;
+
   private String fanDetails;
 
   @Min(value = 0, message = "Fan count must be non-negative")
@@ -58,6 +61,21 @@ public class AddRoundRequest {
 
   /** The hand the calculator actually ended up with, in the recognisers' own label shape. */
   private JsonNode confirmedHand;
+
+  @Data
+  public static class HandSituation {
+    private boolean riichi;
+    private boolean doubleRiichi;
+    private boolean ippatsu;
+    private boolean chankan;
+    private boolean rinshan;
+    private boolean haitei;
+    private boolean tenhou;
+    private boolean chiihou;
+
+    @Min(value = 0, message = "Dora count must be non-negative")
+    private int dora;
+  }
 
   public RoundType getParsedRoundType() {
     return RoundType.fromString(roundType);
