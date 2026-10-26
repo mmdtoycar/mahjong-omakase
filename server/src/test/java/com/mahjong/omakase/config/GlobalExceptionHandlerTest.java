@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -54,11 +56,26 @@ class GlobalExceptionHandlerTest {
     assertThat(response.getBody()).containsEntry("message", "请求被拒绝");
   }
 
+  /** A page that sent "NaN" as an id used to get a 500 "An unexpected error occurred". */
+  @Test
+  void answersA400ForAnIdThatIsNotANumber() {
+    MethodArgumentTypeMismatchException e =
+        new MethodArgumentTypeMismatchException("NaN", Long.class, "id", null, null);
+
+    ResponseEntity<Map<String, String>> response =
+        handler.handleTypeMismatch(e, new MockHttpServletRequest("GET", "/api/sessions/NaN"));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(response.getBody()).containsEntry("message", "请求参数格式不对");
+  }
+
   /** Anything genuinely unexpected still answers 500 without leaking internals. */
   @Test
   void stillHidesTrulyUnexpectedFailures() {
     ResponseEntity<Map<String, String>> response =
-        handler.handleGeneral(new NullPointerException("some internal detail"));
+        handler.handleGeneral(
+            new NullPointerException("some internal detail"),
+            new MockHttpServletRequest("GET", "/api/sessions/1"));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     assertThat(response.getBody()).containsEntry("message", "An unexpected error occurred");
