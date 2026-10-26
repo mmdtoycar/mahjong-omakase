@@ -30,6 +30,9 @@ public final class Ladder {
   private static final int[] PLACE_POINTS_3 = {30, 0};
   private static final int[] LAST_POINTS_3 = {0, -25, -40};
 
+  /** A game over by 东4 counts 2/3 of the placement points; Tenhou's 东南 pays 1.5× its 东风. */
+  private static final double EAST_ONLY_SHARE = 2.0 / 3;
+
   /** 素点 counts half, so placement stays the bulk of every game. */
   private static final double SOTEN_WEIGHT = 0.5;
 
@@ -87,7 +90,13 @@ public final class Ladder {
 
   /** One game's points; ties split their places. 斗战圣佛 gets 魂珠, doubled if another 斗战圣佛 sits in. */
   public static double gain(
-      int[] places, int tableSize, int score, GameMode mode, int level, boolean doubled) {
+      int[] places,
+      int tableSize,
+      int score,
+      GameMode mode,
+      int level,
+      boolean doubled,
+      boolean eastOnly) {
     double placement = 0;
     for (int place : places) {
       placement +=
@@ -99,6 +108,7 @@ public final class Ladder {
     if (isDou(level)) {
       return doubled ? placement * 2 : placement;
     }
+    if (eastOnly) placement *= EAST_ONLY_SHARE;
     return placement + SOTEN_WEIGHT * score / sotenUnit(mode);
   }
 

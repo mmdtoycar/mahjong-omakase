@@ -73,6 +73,7 @@ public class TierService {
                 .filter(p -> p != null && !p.isBot() && Ladder.isDou(getLadder(p, mode).level()))
                 .count()
             >= Ladder.DOU_TO_DOUBLE;
+    boolean eastOnly = mode == GameMode.RIICHI && endedInEast(session);
 
     for (GameSessionPlayer gsp : session.getPlayers()) {
       Player p = gsp.getPlayer();
@@ -84,7 +85,8 @@ public class TierService {
           IntStream.range(0, table.size()).filter(i -> table.get(i).equals(score)).toArray();
       int games = gamesBefore != null ? gamesBefore.getOrDefault(p.getId(), 0) : getGames(p, mode);
       Ladder.State before = getLadder(p, mode);
-      double gain = Ladder.gain(places, table.size(), score, mode, before.level(), doubled);
+      double gain =
+          Ladder.gain(places, table.size(), score, mode, before.level(), doubled, eastOnly);
       Ladder.State after = Ladder.apply(before, gain, games < Ladder.PROTECTED_GAMES);
       setLadder(p, mode, after);
       gsp.setLadderDelta(gain);
@@ -99,6 +101,12 @@ public class TierService {
       incrementGames(p, mode);
       playerRepo.save(p);
     }
+  }
+
+  /** The last hand was played in 东, so the game ran no longer than a 东风战. */
+  private static boolean endedInEast(GameSession session) {
+    int rounds = session.getRounds().size();
+    return rounds > 0 && GameStateDeriver.deriveAll(session).get(rounds - 1).prevalentWind() == 1;
   }
 
   /** Upserts each player's current state for (year, month), for modes they have played. */
