@@ -172,15 +172,15 @@ public class TierServiceTest {
   @Test
   public void lastPlaceCostsMoreTheHigherTheTier() {
     int[] last = {3};
-    assertEquals(0, Ladder.gain(last, 4, 0, GameMode.RIICHI, 0, false), 1e-9);
-    assertEquals(-30, Ladder.gain(last, 4, 0, GameMode.RIICHI, 3, false), 1e-9);
-    assertEquals(-50, Ladder.gain(last, 4, 0, GameMode.RIICHI, 6, false), 1e-9);
+    assertEquals(0, Ladder.gain(last, 4, 0, GameMode.RIICHI, 0, false, false), 1e-9);
+    assertEquals(-30, Ladder.gain(last, 4, 0, GameMode.RIICHI, 3, false, false), 1e-9);
+    assertEquals(-50, Ladder.gain(last, 4, 0, GameMode.RIICHI, 6, false, false), 1e-9);
     // One share of 素点 is half a point: 1000 立直 points, 8 国标 or 2 东北.
-    assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 1000, GameMode.RIICHI, 3, false), 1e-9);
-    assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 8, GameMode.GUOBIAO, 3, false), 1e-9);
-    assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 2, GameMode.DONGBEI, 3, false), 1e-9);
+    assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 1000, GameMode.RIICHI, 3, false, false), 1e-9);
+    assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 8, GameMode.GUOBIAO, 3, false, false), 1e-9);
+    assertEquals(30.5, Ladder.gain(new int[] {0}, 4, 2, GameMode.DONGBEI, 3, false, false), 1e-9);
     // Three at the table: 1st and 2nd, then a tier-dependent last.
-    assertEquals(-25, Ladder.gain(new int[] {2}, 3, 0, GameMode.RIICHI, 3, false), 1e-9);
+    assertEquals(-25, Ladder.gain(new int[] {2}, 3, 0, GameMode.RIICHI, 3, false, false), 1e-9);
   }
 
   @Test
@@ -194,13 +194,17 @@ public class TierServiceTest {
   @Test
   public void 斗战圣佛Counts魂珠ByPlacementAlone() {
     // 素点 does not count, however big.
-    assertEquals(3, Ladder.gain(new int[] {0}, 4, 90000, GameMode.RIICHI, 9, false), 1e-9);
-    assertEquals(1, Ladder.gain(new int[] {1}, 4, 0, GameMode.RIICHI, 9, false), 1e-9);
-    assertEquals(-1, Ladder.gain(new int[] {2}, 4, 0, GameMode.RIICHI, 9, false), 1e-9);
-    assertEquals(-3, Ladder.gain(new int[] {3}, 4, -90000, GameMode.RIICHI, 9, false), 1e-9);
-    assertEquals(-3, Ladder.gain(new int[] {2}, 3, 0, GameMode.RIICHI, 9, false), 1e-9);
+    assertEquals(3, Ladder.gain(new int[] {0}, 4, 90000, GameMode.RIICHI, 9, false, false), 1e-9);
+    assertEquals(1, Ladder.gain(new int[] {1}, 4, 0, GameMode.RIICHI, 9, false, false), 1e-9);
+    assertEquals(-1, Ladder.gain(new int[] {2}, 4, 0, GameMode.RIICHI, 9, false, false), 1e-9);
+    assertEquals(-3, Ladder.gain(new int[] {3}, 4, -90000, GameMode.RIICHI, 9, false, false), 1e-9);
+    assertEquals(-3, Ladder.gain(new int[] {2}, 3, 0, GameMode.RIICHI, 9, false, false), 1e-9);
+    // A 东风战 pays +2/+1/-1/-2, or +2/0/-2 with three.
+    assertEquals(2, Ladder.gain(new int[] {0}, 4, 0, GameMode.RIICHI, 9, false, true), 1e-9);
+    assertEquals(1, Ladder.gain(new int[] {1}, 4, 0, GameMode.RIICHI, 9, false, true), 1e-9);
+    assertEquals(-2, Ladder.gain(new int[] {2}, 3, 0, GameMode.RIICHI, 9, false, true), 1e-9);
     // A second 斗战圣佛 at the table doubles it.
-    assertEquals(-6, Ladder.gain(new int[] {3}, 4, 0, GameMode.RIICHI, 9, true), 1e-9);
+    assertEquals(-6, Ladder.gain(new int[] {3}, 4, 0, GameMode.RIICHI, 9, true, false), 1e-9);
   }
 
   @Test
@@ -287,9 +291,10 @@ public class TierServiceTest {
     // The replay starts everyone over, so the earlier 齐天大圣 level is gone.
     GameSessionPlayer first = seat(s, 1);
     assertEquals(Ladder.START_LEVEL, first.getLadderLevelBefore());
-    assertEquals(30 + 0.5 * 40, first.getLadderDelta(), 1e-9);
+    // One hand ends in 东1: a 东风战, so half the 30 for 1st.
+    assertEquals(15 + 0.5 * 40, first.getLadderDelta(), 1e-9);
     assertEquals(Ladder.START_LEVEL, first.getLadderLevelAfter());
-    assertEquals(75 + 30 + 0.5 * 40, first.getLadderPointsAfter(), 1e-9);
+    assertEquals(75 + 15 + 0.5 * 40, first.getLadderPointsAfter(), 1e-9);
     assertEquals(1, first.getPlayer().getGamesRiichi());
   }
 
@@ -314,7 +319,7 @@ public class TierServiceTest {
     tierService.backfillLadder();
 
     assertEquals(Ladder.START_LEVEL, stale.getLadderLevel());
-    assertEquals(75 + 30 + 0.5 * 40, stale.getLadderPoints(), 1e-9);
+    assertEquals(75 + 15 + 0.5 * 40, stale.getLadderPoints(), 1e-9);
     assertNull(elo.getLadderLevel(), "a month before 段位战 keeps its ELO tier");
   }
 
@@ -349,6 +354,34 @@ public class TierServiceTest {
 
     assertEquals(new TierService.BackfillResult(0, 1), tierService.backfillLadder());
     assertNull(seat(s, 1).getLadderDelta());
+  }
+
+  @Test
+  public void aGameOverBy东4CountsHalfThePlacement() {
+    Map<Long, Integer> totals = scores(20000, 10000, -10000, -20000);
+    GameSession east = session(GameMode.RIICHI, totals, null);
+    nonDealerWins(east, 4);
+    GameSession south = session(GameMode.RIICHI, totals, null);
+    nonDealerWins(south, 5);
+
+    tierService.onSessionCompleted(east, totals);
+    tierService.onSessionCompleted(south, totals);
+
+    assertEquals(15 + 10, seat(east, 1).getLadderDelta(), 1e-9);
+    assertEquals(30 + 10, seat(south, 1).getLadderDelta(), 1e-9);
+    assertEquals(-15 - 10, seat(east, 4).getLadderDelta(), 1e-9);
+  }
+
+  /** Each hand is won off the dealer's seat, so the 5th hand is played in 南1. */
+  private static void nonDealerWins(GameSession s, int hands) {
+    long[] winners = {2, 1, 1, 1, 1};
+    for (int i = 0; i < hands; i++) {
+      Round r = new Round();
+      r.setGameSession(s);
+      r.setRoundNumber(i + 1);
+      r.setWinnerId(winners[i]);
+      s.getRounds().add(r);
+    }
   }
 
   private static Round round(GameSession s, Map<Long, Integer> totals) {

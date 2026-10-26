@@ -21,6 +21,8 @@ public final class Ladder {
 
   private static final int[] DOU_4 = {3, 1, -1, -3};
   private static final int[] DOU_3 = {3, 0, -3};
+  private static final int[] DOU_4_EAST = {2, 1, -1, -2};
+  private static final int[] DOU_3_EAST = {2, 0, -2};
 
   /** Points that fill each star, 灵明石猴 1 星 to 齐天大圣 3 星; 齐天大圣's rise so 斗战圣佛 is hard to reach. */
   private static final int[] STAR_CAP = {100, 100, 100, 150, 150, 150, 300, 400, 500};
@@ -29,6 +31,9 @@ public final class Ladder {
   private static final int[] LAST_POINTS_4 = {0, -30, -50};
   private static final int[] PLACE_POINTS_3 = {30, 0};
   private static final int[] LAST_POINTS_3 = {0, -25, -40};
+
+  /** A game over by 东4 counts half the placement points, as on 雀魂. */
+  private static final double EAST_ONLY_SHARE = 0.5;
 
   /** 素点 counts half, so placement stays the bulk of every game. */
   private static final double SOTEN_WEIGHT = 0.5;
@@ -87,19 +92,29 @@ public final class Ladder {
 
   /** One game's points; ties split their places. 斗战圣佛 gets 魂珠, doubled if another 斗战圣佛 sits in. */
   public static double gain(
-      int[] places, int tableSize, int score, GameMode mode, int level, boolean doubled) {
+      int[] places,
+      int tableSize,
+      int score,
+      GameMode mode,
+      int level,
+      boolean doubled,
+      boolean eastOnly) {
     double placement = 0;
     for (int place : places) {
       placement +=
-          isDou(level)
-              ? (tableSize == 3 ? DOU_3 : DOU_4)[place]
-              : placePoints(place, tableSize, level / 3);
+          isDou(level) ? dou(tableSize, eastOnly)[place] : placePoints(place, tableSize, level / 3);
     }
     placement /= places.length;
     if (isDou(level)) {
       return doubled ? placement * 2 : placement;
     }
+    if (eastOnly) placement *= EAST_ONLY_SHARE;
     return placement + SOTEN_WEIGHT * score / sotenUnit(mode);
+  }
+
+  private static int[] dou(int tableSize, boolean eastOnly) {
+    if (tableSize == 3) return eastOnly ? DOU_3_EAST : DOU_3;
+    return eastOnly ? DOU_4_EAST : DOU_4;
   }
 
   private static int placePoints(int place, int tableSize, int tier) {
