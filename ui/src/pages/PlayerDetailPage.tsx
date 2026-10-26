@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchPlayerDetail, fetchPlayerTier } from '../api'
 import { PlayerDetail, PlayerTierResponse } from '../types'
-import { abbrName, scoreClass, parseError } from '../utils/format'
+import { abbrName, scoreClass, parseError, parseRouteId } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
 
@@ -18,8 +18,8 @@ export default function PlayerDetailPage() {
     setPlayer(null)
     setTier(null)
     setError('')
-    const playerId = Number(id)
-    if (!Number.isInteger(playerId) || playerId <= 0) {
+    const playerId = parseRouteId(id)
+    if (playerId === null) {
       setError('玩家不存在')
       setLoading(false)
       return

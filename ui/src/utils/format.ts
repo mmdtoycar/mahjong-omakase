@@ -115,3 +115,10 @@ export function isYakuman(mode: GameModeKey, fanDetails: string | null): boolean
 export function fanLabel(mode: GameModeKey, fanCount: number, fanDetails: string | null): string {
   return isYakuman(mode, fanDetails) ? '役满' : `${fanCount} 番`
 }
+
+/** A route id of decimal digits only; hex or scientific notation is rejected too. */
+export function parseRouteId(id: string | undefined): number | null {
+  if (!id || !/^\d+$/.test(id)) return null
+  const n = Number(id)
+  return Number.isSafeInteger(n) && n > 0 ? n : null
+}

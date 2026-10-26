@@ -9,7 +9,7 @@ import { MahjongHand } from '../components/MahjongHand'
 import { tableNameFontSize } from '../utils/fontSize'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { getWindName } from '../utils/gameState'
-import { scoreClass, parseError, seatRankMedal, ladderResultText, ladderMoveText } from '../utils/format'
+import { scoreClass, parseError, parseRouteId, seatRankMedal, ladderResultText, ladderMoveText } from '../utils/format'
 import { MSG } from '../constants'
 import { RankBadge } from '../components/RankBadge'
 import { PhotoRecognitionModal, RecognizedHand, winHandToLabel } from '../components/PhotoRecognitionModal'
@@ -118,15 +118,20 @@ export default function SessionPage() {
   const requestSeq = useRef(0)
   const shownSeq = useRef(0)
   const load = async () => {
-    const sessionId = Number(id)
-    if (!Number.isInteger(sessionId) || sessionId <= 0) throw new Error('对局不存在')
+    const sessionId = parseRouteId(id)
+    if (sessionId === null) {
+      // Drop the previous session and any response still on its way.
+      shownSeq.current = ++requestSeq.current
+      setSession(null)
+      throw new Error('对局不存在')
+    }
     const seq = ++requestSeq.current
     const detail = await fetchSessionDetail(sessionId)
     if (seq > shownSeq.current) {
       shownSeq.current = seq
       setSession(detail)
+      setError('')
     }
-    setError('')
   }
 
   useEffect(() => {
